@@ -236,14 +236,18 @@ export function CanonicalProductAdvisorOverviewCard({
   return (
     <article className="rounded-[var(--wp-radius-lg)] border border-[color:var(--wp-border)] bg-[color:var(--wp-surface)] shadow-sm flex flex-col gap-0 overflow-hidden">
       {/* ── Card header: logo + identity ── */}
-      <div className="flex flex-wrap items-start gap-3 px-4 pt-4 pb-3">
+      <div className="flex flex-wrap items-center gap-3 px-4 pt-4 pb-3">
         {logoPath ? (
-          <div className="size-11 rounded-xl bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-border)] flex items-center justify-center shrink-0 overflow-hidden">
-            <Image src={logoPath} alt={logoAlt} width={44} height={44} className="object-contain p-1" />
-          </div>
+          <Image
+            src={logoPath}
+            alt={logoAlt}
+            width={88}
+            height={88}
+            className="h-[5.5rem] w-[5.5rem] shrink-0 object-contain"
+          />
         ) : (
           <div
-            className={`size-11 rounded-xl flex items-center justify-center text-sm font-black shrink-0 ${segmentIconColors(contract.segment)}`}
+            className={`h-[5.5rem] w-[5.5rem] rounded-xl flex items-center justify-center text-base font-black shrink-0 ${segmentIconColors(contract.segment)}`}
             aria-hidden
           >
             {initialsFromPartner(product)}

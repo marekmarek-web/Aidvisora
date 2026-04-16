@@ -22,6 +22,7 @@ import type { ContractReviewRow } from "@/lib/ai/review-queue-repository";
 
 const limitMock = vi.fn();
 const insertValuesMock = vi.fn().mockResolvedValue(undefined);
+const updateWhereMock = vi.fn().mockResolvedValue(undefined);
 
 vi.mock("@/lib/auth/require-auth", () => ({
   requireAuthInAction: vi.fn(),
@@ -40,6 +41,11 @@ vi.mock("db", () => ({
     })),
     insert: vi.fn(() => ({
       values: insertValuesMock,
+    })),
+    update: vi.fn(() => ({
+      set: vi.fn(() => ({
+        where: vi.fn(() => updateWhereMock()),
+      })),
     })),
   },
   portalNotifications: {},
@@ -215,9 +221,11 @@ describe("6F Phase 5/6 release gate", () => {
     beforeEach(() => {
       limitMock.mockReset();
       insertValuesMock.mockClear();
+      updateWhereMock.mockClear();
       vi.mocked(sendPushForPortalNotification).mockClear();
       vi.mocked(db.select).mockClear();
       vi.mocked(db.insert).mockClear();
+      vi.mocked(db.update).mockClear();
     });
 
     it("creates advisor_material_request path: deep link targets client detail", async () => {
@@ -247,6 +255,21 @@ describe("6F Phase 5/6 release gate", () => {
         relatedEntityId: "same-id",
       });
       expect(insertValuesMock).not.toHaveBeenCalled();
+    });
+
+    it("terminal material request (splněn) marks prior unread rows read then inserts", async () => {
+      limitMock.mockResolvedValueOnce([]);
+      await createPortalNotification({
+        tenantId: "t1",
+        contactId: "c1",
+        type: "advisor_material_request",
+        title: "Požadavek splněn",
+        body: "Poradce označil váš požadavek na podklady jako splněný.",
+        relatedEntityType: "advisor_material_request",
+        relatedEntityId: "mat-req-uuid",
+      });
+      expect(db.update).toHaveBeenCalled();
+      expect(insertValuesMock).toHaveBeenCalled();
     });
   });
 

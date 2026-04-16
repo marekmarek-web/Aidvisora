@@ -36,7 +36,8 @@ import {
   type ApplyPolicyEnforcementTrace,
 } from "@/lib/ai/apply-policy-enforcement";
 import { validateBeforeApply } from "./pre-apply-validation";
-import type { DocumentReviewEnvelope } from "./document-review-types";
+import type { DocumentReviewEnvelope, PrimaryDocumentType } from "./document-review-types";
+import { getDocumentTypeLabel } from "./document-messages";
 import { applyExtractedFieldAliasNormalizations } from "./extraction-field-alias-normalize";
 import {
   resolveFieldMerge,
@@ -945,8 +946,11 @@ export async function applyContractReview(
           // premiumAmount: manual_required nebo do_not_apply → null (nesmí se zapsat jako finální)
           const premiumAmountRaw = (ep.premiumAmount as string | undefined)?.trim() || null;
           const premiumAnnualRaw = (ep.premiumAnnual as string | undefined)?.trim() || null;
-          const docType = (action.payload.documentType as string)?.trim() || null;
-          const noteParts = [productName, docType].filter(Boolean);
+          const docTypeRaw = (action.payload.documentType as string)?.trim() || null;
+          const docTypeLabel = docTypeRaw
+            ? getDocumentTypeLabel(docTypeRaw as PrimaryDocumentType)
+            : null;
+          const noteParts = [productName, docTypeLabel].filter(Boolean);
           const normalizedStartDate = normalizeDateToISO(effectiveDate) || null;
           const nextNote = noteParts.length ? noteParts.join(" · ") : null;
           if (existingContractId) {

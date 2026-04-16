@@ -9,6 +9,38 @@ import { X } from "lucide-react";
 
 type ToastItem = { id: string; notificationId: string; title: string; href: string };
 
+const TOAST_SHOWN_STORAGE_KEY = "aidv.clientPortal.materialRequestToast.shownIds";
+
+/** Informativní stav — už je na přehledu v kartě „Aktuálně k řešení“; toast jen zdvojoval pozornost. */
+const NO_TOAST_ADVISOR_MATERIAL_TITLES = new Set([
+  "Požadavek splněn",
+  "Požadavek uzavřen",
+]);
+
+function readStoredToastIds(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = sessionStorage.getItem(TOAST_SHOWN_STORAGE_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return new Set();
+    return new Set(parsed.filter((x): x is string => typeof x === "string"));
+  } catch {
+    return new Set();
+  }
+}
+
+function persistToastIds(ids: Set<string>) {
+  try {
+    sessionStorage.setItem(
+      TOAST_SHOWN_STORAGE_KEY,
+      JSON.stringify([...ids].slice(-120)),
+    );
+  } catch {
+    /* quota / private mode */
+  }
+}
+
 /**
  * Toast pro klienta při nové nepřečtené notifikaci od poradce.
  *
@@ -37,19 +69,24 @@ export function ClientMaterialRequestToastStack() {
       const list = await getPortalNotificationsForClient();
       for (const n of list) {
         if (n.type !== "advisor_material_request" || n.readAt) continue;
+        if (NO_TOAST_ADVISOR_MATERIAL_TITLES.has(n.title)) continue;
         if (shownRef.current.has(n.id)) continue;
         shownRef.current.add(n.id);
+        persistToastIds(shownRef.current);
         const href = getPortalNotificationDeepLink(n);
         if (!href) continue;
-        setToasts((prev) => [
-          ...prev.slice(-4),
-          {
-            id: `local-${n.id}`,
-            notificationId: n.id,
-            title: n.title,
-            href,
-          },
-        ]);
+        setToasts((prev) => {
+          if (prev.some((t) => t.notificationId === n.id)) return prev;
+          return [
+            ...prev.slice(-4),
+            {
+              id: `local-${n.id}`,
+              notificationId: n.id,
+              title: n.title,
+              href,
+            },
+          ];
+        });
       }
     } catch {
       /* ignore */
@@ -57,6 +94,9 @@ export function ClientMaterialRequestToastStack() {
   }, []);
 
   useEffect(() => {
+    for (const id of readStoredToastIds()) {
+      shownRef.current.add(id);
+    }
     void poll();
     const t = window.setInterval(() => void poll(), 35_000);
     return () => window.clearInterval(t);

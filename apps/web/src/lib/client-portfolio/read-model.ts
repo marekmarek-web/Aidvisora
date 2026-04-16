@@ -188,7 +188,7 @@ export function portfolioPersonsFromAttributes(
   return raw.filter(isPortfolioPersonEntry);
 }
 
-/** Rizika / připojištění z `portfolio_attributes.risks` (P2 / AI review). */
+/** Pojistné krytí (strukturovaná rizika) z `portfolio_attributes.risks` (P2 / AI review). */
 export function portfolioRisksFromAttributes(
   attributes: Record<string, unknown> | null | undefined,
 ): PortfolioRiskEntry[] {

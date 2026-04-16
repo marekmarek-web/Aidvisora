@@ -12,7 +12,7 @@ import { ContactActivityTimeline } from "./ContactActivityTimeline";
 import { ContactEventsSection } from "./ContactEventsSection";
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { computeAccessVerdict } from "@/lib/auth/access-verdict";
-import { resolveContactIdentityFieldProvenance } from "@/lib/portal/contact-identity-field-provenance";
+import { resolveContactIdentityFieldProvenanceForContactRow } from "@/lib/portal/contact-identity-field-provenance";
 import { hasPermission, type RoleName } from "@/lib/auth/permissions";
 import { resolveIdentityCompleteness, buildIncompleteMessage } from "@/app/portal/contacts/[id]/contact-identity-completeness-logic";
 
@@ -147,7 +147,7 @@ export default async function ContactDetailPage({
           { key: "personalId", label: "Rodné číslo", value: contact.personalId },
           { key: "idCardNumber", label: "Číslo dokladu (OP/pas)", value: contact.idCardNumber },
         ].map(({ key, label, value }) => {
-          const prov = resolveContactIdentityFieldProvenance(key, provenance);
+          const prov = resolveContactIdentityFieldProvenanceForContactRow(key, provenance, contact);
           const displayValue = value?.trim() || null;
           return (
             <p key={key}>
@@ -178,7 +178,7 @@ export default async function ContactDetailPage({
         {/* Adresa */}
         {(() => {
           const parts = [contact.street, contact.city, contact.zip].filter(Boolean);
-          const addressProv = resolveContactIdentityFieldProvenance("street", provenance);
+          const addressProv = resolveContactIdentityFieldProvenanceForContactRow("street", provenance, contact);
           return (
             <p>
               <span className="text-[color:var(--wp-text-muted)]">Adresa:</span>{" "}

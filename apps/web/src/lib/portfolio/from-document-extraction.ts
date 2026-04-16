@@ -17,6 +17,8 @@ import { resolveSegmentFromType } from "@/lib/ai/draft-actions";
 import { computeDraftPremiums } from "@/lib/ai/contract-draft-premiums";
 import { extractedContractSchema, type ExtractedContractSchema } from "@/lib/ai/extraction-schemas";
 import { buildPortfolioAttributesFromExtracted } from "@/lib/portfolio/build-portfolio-attributes-from-extract";
+import { getDocumentTypeLabel } from "@/lib/ai/document-messages";
+import type { PrimaryDocumentType } from "@/lib/ai/document-review-types";
 
 export type SyncPortfolioFromDocumentResult =
   | { ok: true; contractId: string; extractionId: string }
@@ -148,7 +150,8 @@ export async function syncPortfolioDraftFromProcessedDocument(
   const productName = normalized.productName?.trim() || null;
   const contractNumber = normalized.contractNumber?.trim() || null;
   const startDate = normalized.effectiveDate?.trim() || null;
-  const noteParts = [productName, primaryType].filter(Boolean);
+  const docTypeLabel = getDocumentTypeLabel(primaryType as PrimaryDocumentType);
+  const noteParts = [productName, docTypeLabel].filter(Boolean);
 
   const [existing] = await db
     .select({ id: contracts.id })

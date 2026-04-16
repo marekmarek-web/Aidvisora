@@ -12,6 +12,13 @@ export type ContactIdentityHeaderFields = {
   zip?: string | null;
 };
 
+/** Rozšíření pro záložku identity / CRM karty — všechna pole, kde řešíme stale pending. */
+export type ContactIdentityDetailFields = ContactIdentityHeaderFields & {
+  title?: string | null;
+  personalId?: string | null;
+  idCardNumber?: string | null;
+};
+
 function contactHasAddressLine(contact: ContactIdentityHeaderFields): boolean {
   return Boolean(
     (contact.street?.trim() ?? "") ||
@@ -21,13 +28,13 @@ function contactHasAddressLine(contact: ContactIdentityHeaderFields): boolean {
 }
 
 /**
- * Pro badge v hero: nezobrazovat „čeká na potvrzení“, pokud je pole na kontaktu už vyplněné
- * (stale položka v pendingFields z dřívějšího trace).
+ * Po aplikovaném AI Review může `policyEnforcementTrace` stále obsahovat `pendingConfirmationFields`,
+ * i když jsou hodnoty už zapsané v CRM. V takovém případě neukazovat „Čeká na potvrzení“.
  */
-export function resolveContactIdentityFieldProvenanceForHeader(
+export function resolveContactIdentityFieldProvenanceForContactRow(
   fieldKey: string,
   provenance: ContactAiProvenanceResult | null,
-  contact: ContactIdentityHeaderFields,
+  contact: ContactIdentityDetailFields,
 ): { kind: AiProvenanceKind; reviewId: string; confirmedAt?: string | null } | null {
   const base = resolveContactIdentityFieldProvenance(fieldKey, provenance);
   if (!base || base.kind !== "pending_review") return base;
@@ -48,7 +55,19 @@ export function resolveContactIdentityFieldProvenanceForHeader(
     case "birthDate":
       if (contact.birthDate?.trim()) return null;
       break;
+    case "personalId":
+      if (contact.personalId?.trim()) return null;
+      break;
+    case "idCardNumber":
+      if (contact.idCardNumber?.trim()) return null;
+      break;
+    case "title":
+      if (contact.title?.trim()) return null;
+      break;
     case "address":
+    case "street":
+    case "city":
+    case "zip":
       if (contactHasAddressLine(contact)) return null;
       break;
     default:
@@ -56,6 +75,18 @@ export function resolveContactIdentityFieldProvenanceForHeader(
   }
 
   return base;
+}
+
+/**
+ * Pro badge v hero: nezobrazovat „čeká na potvrzení“, pokud je pole na kontaktu už vyplněné
+ * (stale položka v pendingFields z dřívějšího trace).
+ */
+export function resolveContactIdentityFieldProvenanceForHeader(
+  fieldKey: string,
+  provenance: ContactAiProvenanceResult | null,
+  contact: ContactIdentityHeaderFields,
+): { kind: AiProvenanceKind; reviewId: string; confirmedAt?: string | null } | null {
+  return resolveContactIdentityFieldProvenanceForContactRow(fieldKey, provenance, contact);
 }
 
 /**

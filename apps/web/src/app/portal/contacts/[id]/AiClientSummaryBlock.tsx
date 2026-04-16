@@ -1,7 +1,18 @@
 "use client";
 
 import { useState, useTransition, type FormEvent } from "react";
-import { Sparkles, RefreshCw, Loader2, CheckCircle2, AlertTriangle, TrendingUp, ClipboardList, HelpCircle, Plus } from "lucide-react";
+import {
+  Sparkles,
+  RefreshCw,
+  Loader2,
+  CheckCircle2,
+  AlertTriangle,
+  TrendingUp,
+  ClipboardList,
+  HelpCircle,
+  Plus,
+  ChevronDown,
+} from "lucide-react";
 import {
   generateClientSummaryAction,
   getLatestClientGenerations,
@@ -308,8 +319,10 @@ export function AiClientSummaryBlock({
   const [output, setOutput] = useState<ClientGenerationItem | null>(initialSummary);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
   async function handleGenerate() {
+    setExpanded(true);
     setLoading(true);
     setError(null);
     try {
@@ -332,18 +345,36 @@ export function AiClientSummaryBlock({
 
   return (
     <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
-      <div className="px-5 py-4 sm:px-6 sm:py-5 border-b border-[color:var(--wp-surface-card-border)]/60 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+      <div
+        className={`px-5 py-4 sm:px-6 sm:py-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3 ${
+          expanded ? "border-b border-[color:var(--wp-surface-card-border)]/60" : ""
+        }`}
+      >
+        <button
+          type="button"
+          id="ai-client-summary-toggle"
+          aria-expanded={expanded}
+          aria-controls="ai-client-summary-panel"
+          onClick={() => setExpanded((v) => !v)}
+          className="flex flex-1 items-center gap-2 min-w-0 min-h-[44px] text-left rounded-xl -mx-1 px-1 py-1 hover:bg-[color:var(--wp-surface-muted)]/50 transition-colors sm:mr-0"
+        >
           <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-indigo-100 shrink-0">
             <Sparkles size={16} className="text-indigo-600" aria-hidden />
           </div>
-          <h2 className="text-base font-black text-[color:var(--wp-text)]">AI shrnutí klienta</h2>
-        </div>
+          <h2 id="ai-client-summary-heading" className="text-base font-black text-[color:var(--wp-text)]">
+            AI shrnutí klienta
+          </h2>
+          <ChevronDown
+            size={20}
+            className={`ml-auto shrink-0 text-[color:var(--wp-text-tertiary)] transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
+            aria-hidden
+          />
+        </button>
         <button
           type="button"
           onClick={handleGenerate}
           disabled={loading}
-          className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-colors disabled:opacity-50 min-h-[36px]"
+          className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-colors disabled:opacity-50 min-h-[44px] w-full sm:w-auto shrink-0"
         >
           {loading ? (
             <Loader2 size={13} className="animate-spin" />
@@ -353,32 +384,39 @@ export function AiClientSummaryBlock({
           {loading ? "Generuji…" : output ? "Přegenerovat" : "Vygenerovat"}
         </button>
       </div>
-      <div className="p-5 sm:p-6">
-        <AdvisorAiOutputNotice className="mb-4" variant="compact" />
-        {error && (
-          <p className="text-xs text-rose-600 mb-3" role="alert">
-            {error}
-          </p>
-        )}
-        {loading && (
-          <div className="flex items-center gap-2 text-sm text-[color:var(--wp-text-tertiary)]">
-            <Loader2 size={14} className="animate-spin" aria-hidden />
-            <span>Generuji shrnutí…</span>
-          </div>
-        )}
-        {!loading && parsedSections && (
-          <StructuredSummary
-            sections={parsedSections}
-            contactId={contactId}
-            nextStep={nextStep}
-          />
-        )}
-        {!loading && !output && (
-          <p className="text-xs text-[color:var(--wp-text-tertiary)] italic">
-            Klikněte na Vygenerovat pro interní shrnutí — co klient má, co je důležité, co chybí a doporučený další krok.
-          </p>
-        )}
-      </div>
+      {expanded ? (
+        <div
+          id="ai-client-summary-panel"
+          role="region"
+          aria-labelledby="ai-client-summary-heading"
+          className="p-5 sm:p-6"
+        >
+          <AdvisorAiOutputNotice className="mb-4" variant="compact" />
+          {error && (
+            <p className="text-xs text-rose-600 mb-3" role="alert">
+              {error}
+            </p>
+          )}
+          {loading && (
+            <div className="flex items-center gap-2 text-sm text-[color:var(--wp-text-tertiary)]">
+              <Loader2 size={14} className="animate-spin" aria-hidden />
+              <span>Generuji shrnutí…</span>
+            </div>
+          )}
+          {!loading && parsedSections && (
+            <StructuredSummary
+              sections={parsedSections}
+              contactId={contactId}
+              nextStep={nextStep}
+            />
+          )}
+          {!loading && !output && (
+            <p className="text-xs text-[color:var(--wp-text-tertiary)] italic">
+              Klikněte na Vygenerovat pro interní shrnutí — co klient má, co je důležité, co chybí a doporučený další krok.
+            </p>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }

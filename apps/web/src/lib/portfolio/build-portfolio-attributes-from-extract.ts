@@ -120,18 +120,37 @@ function collectPersonsFromInsuredPersons(raw: unknown): PortfolioPersonEntry[] 
 
 function riskLabelFromRow(r: Record<string, unknown>): string | undefined {
   const label =
+    (typeof r.riskLabel === "string" && r.riskLabel.trim()) ||
     (typeof r.label === "string" && r.label.trim()) ||
     (typeof r.name === "string" && r.name.trim()) ||
     (typeof r.coverageName === "string" && r.coverageName.trim()) ||
     (typeof r.riskName === "string" && r.riskName.trim()) ||
-    (typeof r.type === "string" && r.type.trim());
+    (typeof r.type === "string" && r.type.trim()) ||
+    (typeof r.riskType === "string" && r.riskType.trim());
   return label || undefined;
 }
 
+/** Normalizuje pole rizik z AI (včetně JSON stringu v buňce extractedFields). */
 function collectRisksFromList(raw: unknown): PortfolioRiskEntry[] {
-  if (!Array.isArray(raw) || raw.length === 0) return [];
+  let list: unknown = raw;
+  if (typeof raw === "string") {
+    const t = raw.trim();
+    if (!t) return [];
+    if (t.startsWith("[") || t.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(t) as unknown;
+        if (Array.isArray(parsed)) list = parsed;
+        else return [];
+      } catch {
+        return [{ label: t }];
+      }
+    } else {
+      return [{ label: t }];
+    }
+  }
+  if (!Array.isArray(list) || list.length === 0) return [];
   const out: PortfolioRiskEntry[] = [];
-  for (const row of raw.slice(0, 48)) {
+  for (const row of list.slice(0, 48)) {
     if (row == null) continue;
     if (typeof row === "string") {
       const t = row.trim();
@@ -147,15 +166,25 @@ function collectRisksFromList(raw: unknown): PortfolioRiskEntry[] {
     const amount =
       amountRaw != null && amountRaw !== "" ? (typeof amountRaw === "string" ? amountRaw : String(amountRaw)) : undefined;
     const personRef =
-      typeof r.insuredPerson === "string"
-        ? r.insuredPerson.trim()
-        : typeof r.personName === "string"
-          ? r.personName.trim()
-          : typeof r.person === "string"
-            ? r.person.trim()
-            : undefined;
+      typeof r.linkedParticipantName === "string"
+        ? r.linkedParticipantName.trim()
+        : typeof r.linkedParticipant === "string"
+          ? r.linkedParticipant.trim()
+          : typeof r.insuredPerson === "string"
+            ? r.insuredPerson.trim()
+            : typeof r.personName === "string"
+              ? r.personName.trim()
+              : typeof r.person === "string"
+                ? r.person.trim()
+                : undefined;
     const description =
-      typeof r.description === "string" ? r.description.trim() : typeof r.note === "string" ? r.note.trim() : undefined;
+      typeof r.description === "string"
+        ? r.description.trim()
+        : typeof r.notes === "string"
+          ? r.notes.trim()
+          : typeof r.note === "string"
+            ? r.note.trim()
+            : undefined;
     const coverageEnd =
       typeof r.coverageEnd === "string"
         ? r.coverageEnd.trim()
@@ -171,7 +200,9 @@ function collectRisksFromList(raw: unknown): PortfolioRiskEntry[] {
         ? r.monthlyRiskPremium.trim()
         : typeof r.riskPremiumMonthly === "string"
           ? r.riskPremiumMonthly.trim()
-          : undefined;
+          : r.premium != null && r.premium !== ""
+            ? String(r.premium).trim()
+            : undefined;
     out.push({
       label,
       amount,
@@ -251,7 +282,14 @@ export function mergePortfolioAttributesForApply(
 ): Record<string, unknown> {
   const merged: Record<string, unknown> = { ...prev, ...next };
   if (Array.isArray(next.persons)) merged.persons = next.persons;
-  if (Array.isArray(next.risks)) merged.risks = next.risks;
+  if (Array.isArray(next.risks)) {
+    if (next.risks.length > 0) merged.risks = next.risks;
+    else {
+      const prevRisks = prev.risks;
+      if (Array.isArray(prevRisks) && prevRisks.length > 0) merged.risks = prevRisks;
+      else merged.risks = next.risks;
+    }
+  }
   const mergedFunds = mergeInvestmentFundsArrays(prev.investmentFunds, next.investmentFunds);
   if (mergedFunds) merged.investmentFunds = mergedFunds;
 

@@ -5,6 +5,7 @@
 import { describe, it, expect } from "vitest";
 import {
   resolveContactIdentityFieldProvenance,
+  resolveContactIdentityFieldProvenanceForContactRow,
   shouldShowContactIdentityRow,
 } from "../contact-identity-field-provenance";
 import type { ContactAiProvenanceResult } from "@/app/actions/contacts";
@@ -77,6 +78,35 @@ describe("resolveContactIdentityFieldProvenance", () => {
     expect(
       resolveContactIdentityFieldProvenance("birthDate", baseProvenance({})),
     ).toBeNull();
+  });
+});
+
+describe("resolveContactIdentityFieldProvenanceForContactRow (stale pending)", () => {
+  it("hides pending_review when CRM already has personalId", () => {
+    const p = resolveContactIdentityFieldProvenanceForContactRow(
+      "personalId",
+      baseProvenance({ pendingFields: ["personalId"] }),
+      { personalId: "9709132664" },
+    );
+    expect(p).toBeNull();
+  });
+
+  it("hides pending_review for address when street is filled", () => {
+    const p = resolveContactIdentityFieldProvenanceForContactRow(
+      "address",
+      baseProvenance({ pendingFields: ["address"] }),
+      { street: "Rvačov 126", city: "Roudnice nad Labem", zip: "41301" },
+    );
+    expect(p).toBeNull();
+  });
+
+  it("still shows pending when value missing", () => {
+    const p = resolveContactIdentityFieldProvenanceForContactRow(
+      "idCardNumber",
+      baseProvenance({ pendingFields: ["idCardNumber"] }),
+      { idCardNumber: "" },
+    );
+    expect(p?.kind).toBe("pending_review");
   });
 });
 

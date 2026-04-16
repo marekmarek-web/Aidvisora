@@ -62,13 +62,18 @@ function InstitutionAvatar({ name }: { name: string | null }) {
   const logo = resolveInstitutionLogo(name);
   if (logo) {
     return (
-      <div className="w-8 h-8 rounded-lg overflow-hidden bg-white border border-slate-200 flex items-center justify-center shrink-0">
-        <Image src={logo.src} alt={logo.alt} width={32} height={32} className="object-contain" unoptimized />
-      </div>
+      <Image
+        src={logo.src}
+        alt={logo.alt}
+        width={64}
+        height={64}
+        className="h-16 w-16 shrink-0 object-contain"
+        unoptimized
+      />
     );
   }
   return (
-    <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-600 text-xs font-black flex items-center justify-center shrink-0">
+    <div className="h-16 w-16 rounded-lg bg-slate-100 text-slate-600 text-sm font-black flex items-center justify-center shrink-0">
       {institutionInitials(name)}
     </div>
   );

@@ -90,7 +90,7 @@ export function canonicalPortfolioDetailRows(p: CanonicalProduct): { label: stri
       const riskParts: string[] = d.risks.map((risk) =>
         risk.amount ? `${risk.label}: ${risk.amount}` : risk.label,
       );
-      rows.push({ label: "Rizika / připojištění", value: riskParts.join("; ") });
+      rows.push({ label: "Pojistné krytí", value: riskParts.join("; ") });
     }
   } else if (d?.kind === "vehicle") {
     rows.push({ label: "Typ", value: d.subtype === "HAV" ? "Havarijní pojištění" : "Povinné ručení" });

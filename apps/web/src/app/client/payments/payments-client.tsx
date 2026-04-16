@@ -189,12 +189,17 @@ export function ClientPaymentsView({
                 >
                   <div className="p-5 border-b border-slate-50 flex items-start gap-4">
                     {logoOrIcon ? (
-                      <div className="w-12 h-12 rounded-2xl overflow-hidden bg-white border border-slate-200 flex items-center justify-center shrink-0">
-                        <Image src={logoOrIcon.src} alt={logoOrIcon.alt} width={48} height={48} className="object-contain p-1" unoptimized />
-                      </div>
+                      <Image
+                        src={logoOrIcon.src}
+                        alt={logoOrIcon.alt}
+                        width={96}
+                        height={96}
+                        className="h-24 w-24 shrink-0 object-contain"
+                        unoptimized
+                      />
                     ) : (
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${colors.icon}`}>
-                        <CatIcon size={24} strokeWidth={2} />
+                      <div className={`h-24 w-24 rounded-2xl flex items-center justify-center shrink-0 ${colors.icon}`}>
+                        <CatIcon size={28} strokeWidth={2} />
                       </div>
                     )}
                     <div className="min-w-0 flex-1">

@@ -107,6 +107,30 @@ export async function createPortalNotification(params: {
    */
   dedupWindowMinutes?: number;
 }): Promise<void> {
+  /**
+   * Dokončení / uzavření požadavku na podklady: starší nepřečtené řádky pro stejnou entitu
+   * by jinak blokovaly insert (dedup) nebo by se u klienta hromadily jako duplicitní „co řešit“.
+   */
+  const isTerminalAdvisorMaterialRequest =
+    params.type === "advisor_material_request" &&
+    Boolean(params.relatedEntityId) &&
+    (params.title === "Požadavek splněn" || params.title === "Požadavek uzavřen");
+
+  if (isTerminalAdvisorMaterialRequest) {
+    await db
+      .update(portalNotifications)
+      .set({ readAt: new Date() })
+      .where(
+        and(
+          eq(portalNotifications.tenantId, params.tenantId),
+          eq(portalNotifications.contactId, params.contactId),
+          eq(portalNotifications.type, "advisor_material_request"),
+          eq(portalNotifications.relatedEntityId, params.relatedEntityId!),
+          isNull(portalNotifications.readAt),
+        )
+      );
+  }
+
   // 5C: Dedup — skip if an unread notification already exists for same type + entity
   const dedupMinutes = params.dedupWindowMinutes ?? (params.relatedEntityId ? 5 : 0);
   if (dedupMinutes > 0 && params.relatedEntityId) {

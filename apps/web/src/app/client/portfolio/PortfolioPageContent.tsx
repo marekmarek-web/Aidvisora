@@ -200,15 +200,19 @@ function ProductCard({ contract, canonical: p, visibleSourceDocs }: ProductCardP
     <article className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
       {/* Card header — always visible */}
       <div className="p-4 sm:p-5">
-        <div className="flex items-start gap-3">
+        <div className="flex items-center gap-3">
           {/* Logo or initials */}
           {logoPath ? (
-            <div className="w-11 h-11 rounded-xl bg-white border border-slate-100 flex items-center justify-center shrink-0 overflow-hidden shadow-sm">
-              <Image src={logoPath} alt={logoAlt} width={44} height={44} className="object-contain p-1" />
-            </div>
+            <Image
+              src={logoPath}
+              alt={logoAlt}
+              width={88}
+              height={88}
+              className="h-[5.5rem] w-[5.5rem] shrink-0 object-contain"
+            />
           ) : (
             <div
-              className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 text-sm font-black ${segmentCardIconColors(contract.segment)}`}
+              className={`h-[5.5rem] w-[5.5rem] rounded-xl flex items-center justify-center shrink-0 text-base font-black ${segmentCardIconColors(contract.segment)}`}
             >
               {(contract.partnerName ?? contract.productName ?? "?").trim().slice(0, 2).toUpperCase()}
             </div>

@@ -656,14 +656,18 @@ function PortfolioScreen({
                   : null;
               return (
                 <MobileCard key={contract.id} className="p-3.5 space-y-3">
-                  <div className="flex items-start gap-2.5">
+                  <div className="flex items-center gap-2.5">
                     {logoPath ? (
-                      <div className="w-10 h-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center shrink-0 overflow-hidden">
-                        <Image src={logoPath} alt={logoAlt} width={40} height={40} className="object-contain p-0.5" />
-                      </div>
+                      <Image
+                        src={logoPath}
+                        alt={logoAlt}
+                        width={88}
+                        height={88}
+                        className="h-[5.5rem] w-[5.5rem] shrink-0 object-contain"
+                      />
                     ) : (
-                      <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-indigo-600 shrink-0">
-                        <LeadIcon size={18} />
+                      <div className="h-[5.5rem] w-[5.5rem] rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-indigo-600 shrink-0">
+                        <LeadIcon size={28} />
                       </div>
                     )}
                     <div className="min-w-0 flex-1">

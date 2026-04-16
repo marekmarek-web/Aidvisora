@@ -33,7 +33,7 @@ import {
 import { AiReviewProvenanceBadge } from "@/app/components/aidvisora/AiReviewProvenanceBadge";
 import { ContactMergeConflictGuard } from "@/app/portal/contacts/[id]/ContactMergeConflictGuard";
 import {
-  resolveContactIdentityFieldProvenance,
+  resolveContactIdentityFieldProvenanceForContactRow,
   resolveContactIdentityFieldProvenanceForHeader,
   shouldShowContactIdentityRow,
 } from "@/lib/portal/contact-identity-field-provenance";
@@ -255,7 +255,7 @@ function ContactIdentityMobileSection({
       <MobileCard className="p-0 overflow-hidden">
         <div className="divide-y divide-[color:var(--wp-surface-card-border)]">
           {visible.map(({ key, label, icon: Icon, value }) => {
-            const p = resolveContactIdentityFieldProvenance(key, provenance);
+            const p = resolveContactIdentityFieldProvenanceForContactRow(key, provenance, contact);
             return (
               <div key={key} className="px-3.5 py-3 min-w-0">
                 <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">

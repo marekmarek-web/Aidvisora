@@ -242,22 +242,22 @@ function ContractDetailCard({
         }`}
       >
         <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div
-            className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border overflow-hidden ${iconCls}`}
-          >
-            {institutionLogo ? (
-              <Image
-                src={institutionLogo.src}
-                alt={institutionLogo.alt}
-                width={36}
-                height={36}
-                className="object-contain w-8 h-8"
-                unoptimized
-              />
-            ) : (
-              <Icon size={20} strokeWidth={2} />
-            )}
-          </div>
+          {institutionLogo ? (
+            <Image
+              src={institutionLogo.src}
+              alt={institutionLogo.alt}
+              width={64}
+              height={64}
+              className="h-16 w-16 shrink-0 object-contain"
+              unoptimized
+            />
+          ) : (
+            <div
+              className={`h-16 w-16 rounded-xl flex items-center justify-center shrink-0 border ${iconCls}`}
+            >
+              <Icon size={22} strokeWidth={2} />
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2 flex-wrap">
               <h3

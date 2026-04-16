@@ -4,7 +4,7 @@ import type { ContactAiProvenanceResult, ContactRow } from "@/app/actions/contac
 import { AiReviewProvenanceBadge } from "@/app/components/aidvisora/AiReviewProvenanceBadge";
 import { formatDisplayDateCs } from "@/lib/date/format-display-cs";
 import {
-  resolveContactIdentityFieldProvenance,
+  resolveContactIdentityFieldProvenanceForContactRow,
   shouldShowContactIdentityRow,
 } from "@/lib/portal/contact-identity-field-provenance";
 
@@ -67,7 +67,7 @@ export function ContactDetailIdentityTab({ contactId, contact, provenance }: Pro
         ) : (
           <dl className="space-y-5">
             {visibleRows.map(({ key, label, icon: Icon, value }) => {
-              const p = resolveContactIdentityFieldProvenance(key, provenance);
+              const p = resolveContactIdentityFieldProvenanceForContactRow(key, provenance, contact);
               return (
                 <div key={key} className="flex flex-col gap-1">
                   <dt className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
