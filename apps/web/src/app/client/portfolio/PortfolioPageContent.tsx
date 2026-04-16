@@ -10,14 +10,11 @@ import {
   Building2,
   Car,
   ChevronDown,
-  CreditCard,
   HeartPulse,
   Home,
   Landmark,
   PiggyBank,
   Plane,
-  Shield,
-  TrendingUp,
   Users,
 } from "lucide-react";
 import type { ContractRow } from "@/app/actions/contracts";
@@ -34,9 +31,10 @@ import {
   formatPortalPremiumLineCs,
   isFvEligibleSegment,
   portfolioContractStatusLabelCs,
-  resolvePortalFundLogoPath,
+  resolvePortalProductDisplayLogo,
   resolveFvMonthlyContribution,
 } from "@/lib/client-portfolio/portal-portfolio-display";
+import { institutionInitials } from "@/lib/institutions/institution-logo";
 import type { CanonicalProduct } from "@/lib/products/canonical-product-read";
 import { computeSharedFutureValue, SHARED_FV_DISCLAIMER } from "@/lib/fund-library/shared-future-value";
 
@@ -93,41 +91,6 @@ function groupIconColors(g: PortfolioUiGroup): string {
   }
 }
 
-function segmentIconColors(segment: string): string {
-  switch (segment) {
-    case "INV":
-    case "DIP": return "bg-emerald-100 text-emerald-700";
-    case "DPS": return "bg-indigo-100 text-indigo-700";
-    case "ZP": return "bg-purple-100 text-purple-700";
-    case "MAJ":
-    case "ODP": return "bg-blue-100 text-blue-700";
-    case "AUTO_PR":
-    case "AUTO_HAV": return "bg-slate-200 text-slate-700";
-    case "HYPO":
-    case "UVER": return "bg-rose-100 text-rose-700";
-    case "CEST": return "bg-sky-100 text-sky-700";
-    default: return "bg-indigo-100 text-indigo-700";
-  }
-}
-
-function productIcon(segment: string): LucideIcon {
-  switch (segment) {
-    case "INV":
-    case "DIP": return TrendingUp;
-    case "DPS": return PiggyBank;
-    case "HYPO":
-    case "UVER": return CreditCard;
-    case "ZP": return Shield;
-    case "MAJ":
-    case "ODP": return Home;
-    case "AUTO_PR":
-    case "AUTO_HAV": return Car;
-    case "CEST": return Plane;
-    case "FIRMA_POJ": return Building2;
-    default: return Briefcase;
-  }
-}
-
 const PERSON_ROLE_LABELS: Record<string, string> = {
   policyholder: "Pojistník",
   insured: "Pojištěný",
@@ -147,11 +110,9 @@ function ProductCard({ contract, canonical: p, visibleSourceDocs }: ProductCardP
   const [logoError, setLogoError] = useState(false);
 
   const st = portfolioContractStatusLabelCs(contract.portfolioStatus, contract.startDate);
-  const logoPath = resolvePortalFundLogoPath(p);
-  const logoAlt =
-    p.segmentDetail?.kind === "investment" && p.segmentDetail.fundName
-      ? `Logo fondu ${p.segmentDetail.fundName}`
-      : "Logo instituce";
+  const displayLogo = resolvePortalProductDisplayLogo(p);
+  const logoPath = displayLogo?.src ?? null;
+  const logoAlt = displayLogo?.alt ?? "Logo instituce";
 
   const fvEligible = isFvEligibleSegment(contract.segment);
   const fvShared =
@@ -197,9 +158,8 @@ function ProductCard({ contract, canonical: p, visibleSourceDocs }: ProductCardP
         ? "bg-slate-100 text-slate-500 border-slate-200"
         : "bg-amber-50 text-amber-700 border-amber-100";
 
-  const Icon = productIcon(contract.segment);
-  const iconBg = segmentIconColors(contract.segment);
   const showLogo = !!logoPath && !logoError;
+  const initials = institutionInitials(contract.partnerName ?? p.productName);
 
   return (
     <article
@@ -231,8 +191,11 @@ function ProductCard({ contract, canonical: p, visibleSourceDocs }: ProductCardP
               onError={() => setLogoError(true)}
             />
           ) : (
-            <div className={`h-11 w-11 rounded-xl flex items-center justify-center ${iconBg}`}>
-              <Icon size={20} />
+            <div
+              className="h-11 w-11 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-center text-[11px] font-black text-slate-600 shrink-0"
+              aria-hidden
+            >
+              {initials}
             </div>
           )}
         </div>

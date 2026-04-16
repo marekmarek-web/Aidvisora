@@ -12,7 +12,7 @@ import { advisorPrimaryAmountPresentation } from "./advisor-product-overview-for
 import { AdvisorProductFvBlock } from "./advisor-product-fv-block";
 import {
   canonicalPortfolioDetailRows,
-  resolvePortalFundLogoPath,
+  resolvePortalProductDisplayLogo,
   isFvEligibleSegment,
 } from "@/lib/client-portfolio/portal-portfolio-display";
 import { formatDisplayDateCs } from "@/lib/date/format-display-cs";
@@ -214,12 +214,10 @@ export function CanonicalProductAdvisorOverviewCard({
   publishBusy,
 }: CanonicalProductAdvisorOverviewCardProps) {
   const primary = advisorPrimaryAmountPresentation(product, contract);
-  const logoPath = resolvePortalFundLogoPath(product);
+  const displayLogo = resolvePortalProductDisplayLogo(product);
+  const logoPath = displayLogo?.src ?? null;
   const LeadIcon = productIcon(contract.segment);
-  const logoAlt =
-    product.segmentDetail?.kind === "investment" && product.segmentDetail.fundName
-      ? `Logo fondu ${product.segmentDetail.fundName}`
-      : "Logo instituce";
+  const logoAlt = displayLogo?.alt ?? "Logo instituce";
   const d = product.segmentDetail;
   const detailRows = !d ? canonicalPortfolioDetailRows(product) : [];
 

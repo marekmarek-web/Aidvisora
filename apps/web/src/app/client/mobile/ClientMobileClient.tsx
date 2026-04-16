@@ -7,9 +7,7 @@ import {
   AlertCircle,
   Bell,
   Briefcase,
-  Building2,
   Calculator,
-  Car,
   Calendar,
   CheckCircle2,
   ChevronRight,
@@ -17,15 +15,12 @@ import {
   CreditCard,
   FileText,
   FolderOpen,
-  Home,
   LayoutDashboard,
   ListTodo,
   LogOut,
   MessageSquare,
   Paperclip,
   Pencil,
-  PiggyBank,
-  Plane,
   Plus,
   Send,
   Settings,
@@ -66,8 +61,10 @@ import {
   formatPortalPremiumLineCs,
   isFvEligibleSegment,
   portfolioContractStatusLabelCs,
-  resolvePortalFundLogoPath,
+  resolvePortalProductDisplayLogo,
 } from "@/lib/client-portfolio/portal-portfolio-display";
+import { institutionInitials } from "@/lib/institutions/institution-logo";
+import type { CanonicalProduct } from "@/lib/products/canonical-product-read";
 import { computeSharedFutureValue, SHARED_FV_DISCLAIMER } from "@/lib/fund-library/shared-future-value";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
@@ -494,31 +491,36 @@ function contractToCanonicalMobile(c: ClientMobileInitialData["contracts"][numbe
   });
 }
 
-function productIconMobile(segment: string): typeof Briefcase {
-  switch (segment) {
-    case "INV":
-    case "DIP":
-      return TrendingUp;
-    case "DPS":
-      return PiggyBank;
-    case "HYPO":
-    case "UVER":
-      return CreditCard;
-    case "ZP":
-      return Shield;
-    case "MAJ":
-    case "ODP":
-      return Home;
-    case "AUTO_PR":
-    case "AUTO_HAV":
-      return Car;
-    case "CEST":
-      return Plane;
-    case "FIRMA_POJ":
-      return Building2;
-    default:
-      return Briefcase;
-  }
+function PortfolioProductLeadVisual({
+  contract,
+  canonical: p,
+}: {
+  contract: ContractRow;
+  canonical: CanonicalProduct;
+}) {
+  const [logoFailed, setLogoFailed] = useState(false);
+  const displayLogo = resolvePortalProductDisplayLogo(p);
+  const logoPath = displayLogo?.src && !logoFailed ? displayLogo.src : null;
+  const logoAlt = displayLogo?.alt ?? "Logo instituce";
+  const initials = institutionInitials(contract.partnerName ?? p.productName);
+
+  return logoPath ? (
+    <Image
+      src={logoPath}
+      alt={logoAlt}
+      width={88}
+      height={88}
+      className="h-[5.5rem] w-[5.5rem] shrink-0 object-contain"
+      onError={() => setLogoFailed(true)}
+    />
+  ) : (
+    <div
+      className="h-[5.5rem] w-[5.5rem] rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center text-sm font-black text-slate-600 shrink-0"
+      aria-hidden
+    >
+      {initials}
+    </div>
+  );
 }
 
 function PortfolioScreen({
@@ -622,12 +624,6 @@ function PortfolioScreen({
                   : st === "Ukončené"
                     ? "bg-slate-100 text-slate-600 border-slate-200"
                     : "bg-amber-50 text-amber-800 border-amber-100";
-              const LeadIcon = productIconMobile(contract.segment);
-              const logoPath = resolvePortalFundLogoPath(p);
-              const logoAlt =
-                p.segmentDetail?.kind === "investment" && p.segmentDetail.fundName
-                  ? `Logo fondu ${p.segmentDetail.fundName}`
-                  : "Logo instituce";
               const fvShared =
                 isFvEligibleSegment(contract.segment) && p.fvReadiness.fvSourceType
                   ? computeSharedFutureValue({
@@ -657,19 +653,7 @@ function PortfolioScreen({
               return (
                 <MobileCard key={contract.id} className="p-3.5 space-y-3">
                   <div className="flex items-center gap-2.5">
-                    {logoPath ? (
-                      <Image
-                        src={logoPath}
-                        alt={logoAlt}
-                        width={88}
-                        height={88}
-                        className="h-[5.5rem] w-[5.5rem] shrink-0 object-contain"
-                      />
-                    ) : (
-                      <div className="h-[5.5rem] w-[5.5rem] rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-indigo-600 shrink-0">
-                        <LeadIcon size={28} />
-                      </div>
-                    )}
+                    <PortfolioProductLeadVisual contract={contract} canonical={p} />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
