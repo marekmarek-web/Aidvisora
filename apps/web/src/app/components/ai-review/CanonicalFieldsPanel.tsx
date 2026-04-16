@@ -46,7 +46,7 @@ const PARTICIPANT_ROLE_LABELS: Record<string, string> = {
 
 function roleLabel(role: string | undefined): string {
   if (!role) return "Osoba";
-  return PARTICIPANT_ROLE_LABELS[role] ?? "Role osoby — upřesněte podle dokumentu";
+  return PARTICIPANT_ROLE_LABELS[role] ?? role;
 }
 
 function formatAmount(v: string | number | undefined): string {

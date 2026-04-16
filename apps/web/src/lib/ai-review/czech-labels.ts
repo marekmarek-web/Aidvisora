@@ -59,7 +59,7 @@ const SUBTYPE: Record<string, string> = {
 
 /** Neznámé enum hodnoty — bez anglických kódů v UI. */
 function labelUnknownClassifier(kind: string): string {
-  return `${kind} — upřesněte podle dokumentu`;
+  return kind;
 }
 
 export function labelDocumentType(code: string): string {

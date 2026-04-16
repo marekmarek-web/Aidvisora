@@ -277,15 +277,6 @@ export function mapContractReviewToBridgePayload(params: {
     });
   }
 
-  if ((params.review.reasonsForReview ?? []).length > 0) {
-    suggestions.push({
-      id: "review-warnings",
-      label: "Zkontrolovat AI varování v detailu",
-      href: `/portal/contracts/review/${params.review.id}`,
-      type: "analysis",
-    });
-  }
-
   return {
     ...base,
     bridgeSuggestions: suggestions,

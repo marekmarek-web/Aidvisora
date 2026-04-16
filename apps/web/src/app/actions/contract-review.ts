@@ -351,6 +351,31 @@ export async function applyContractReviewDrafts(
     return { ok: false, error: result.error };
   }
 
+  // Hard guard: advisor-confirmed apply with contract actions MUST produce a contract row.
+  // This prevents "ghost success" where apply returns ok:true but createdContractId is null.
+  if (!result.payload.createdContractId) {
+    const draftActionsArr = Array.isArray(row.draftActions)
+      ? (row.draftActions as Array<{ type: string }>)
+      : [];
+    const hasContractAction = draftActionsArr.some(
+      (a) =>
+        a.type === "create_contract" ||
+        a.type === "create_or_update_contract_record" ||
+        a.type === "create_or_update_contract_production",
+    );
+    if (hasContractAction) {
+      captureContractReviewApplyFailure({
+        reviewId: id,
+        tenantId: auth.tenantId,
+        error: "Ghost success guard: contract action present but createdContractId is null",
+      });
+      return {
+        ok: false,
+        error: "Zápis do CRM selhal: smlouva/produkt nebyl vytvořen. Zkontrolujte klasifikaci dokumentu a zkuste znovu.",
+      };
+    }
+  }
+
   const bridgedPayload = mapContractReviewToBridgePayload({
     review: row,
     payload: result.payload,
@@ -543,10 +568,9 @@ export async function applyContractReviewDrafts(
   // Advisor-confirmed apply: supporting doc guard is overridden when advisor explicitly approved.
   const extractedPayloadForOutcome = (row.extractedPayload as Record<string, unknown> | null) ?? {};
   const rawIsSupportingForOutcome = isSupportingDocumentOnly(extractedPayloadForOutcome);
-  const advisorOverrodeForOutcome =
-    rawRow.reviewStatus === "approved" &&
-    (Array.isArray(rawRow.ignoredWarnings) && (rawRow.ignoredWarnings as string[]).length > 0);
-  const isDocumentSupporting = rawIsSupportingForOutcome && !advisorOverrodeForOutcome;
+  // Advisor-confirmed apply: bypass supporting doc guard for outcome computation
+  // (consistent with the bypass in apply-contract-review.ts).
+  const isDocumentSupporting = rawIsSupportingForOutcome && rawRow.reviewStatus !== "approved";
   const computedOutcome = computePublishOutcome(bridgedPayload, isDocumentSupporting);
 
   // Truthful enforcement: log guard violations (non-blocking, advisory only)
@@ -827,7 +851,11 @@ export async function confirmPendingField(
         }
       } else if (fieldKey === "address") {
         contactPatch.street = normalizedValue;
-      } else if (["firstName", "lastName", "email", "phone", "personalId", "birthDate"].includes(fieldKey)) {
+      } else if ([
+        "firstName", "lastName", "email", "phone", "personalId", "birthDate",
+        "idCardNumber", "idCardIssuedBy", "idCardValidUntil", "idCardIssuedAt",
+        "generalPractitioner", "city", "zip", "street",
+      ].includes(fieldKey)) {
         contactPatch[fieldKey] = normalizedValue;
       }
       if (Object.keys(contactPatch).length > 1) {

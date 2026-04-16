@@ -129,12 +129,12 @@ const FV_SOURCE_LABELS: Record<string, string> = {
 
 export function labelDocType(code: string): string {
   if (!code?.trim()) return "Neurčeno";
-  return DOC_TYPE_LABELS[code.trim().toLowerCase()] ?? "Typ dokumentu — upřesněte podle dokumentu";
+  return DOC_TYPE_LABELS[code.trim().toLowerCase()] ?? code.trim();
 }
 
 export function labelProductFamily(code: string): string {
   if (!code?.trim()) return "Neurčeno";
-  return PRODUCT_FAMILY_LABELS[code.trim().toLowerCase()] ?? "Rodina produktu — upřesněte podle dokumentu";
+  return PRODUCT_FAMILY_LABELS[code.trim().toLowerCase()] ?? code.trim();
 }
 
 /**

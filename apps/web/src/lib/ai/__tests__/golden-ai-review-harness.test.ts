@@ -38,7 +38,7 @@ const { mockChainable } = vi.hoisted(() => {
     chain.orderBy = vi.fn().mockImplementation(self);
     chain.insert = vi.fn().mockImplementation(self);
     chain.values = vi.fn().mockImplementation(self);
-    chain.returning = vi.fn().mockResolvedValue([]);
+    chain.returning = vi.fn().mockResolvedValue([{ id: "mock-contract-id" }]);
     chain.onConflictDoUpdate = vi.fn().mockResolvedValue(undefined);
     chain.update = vi.fn().mockImplementation(self);
     chain.set = vi.fn().mockImplementation(self);
@@ -382,9 +382,8 @@ describe("GH07 — G09 AML/servisní: sensitiveAttachmentOnly warns (fail-open)"
 
 // ── GH08: applyContractReview — publishHints are audit-only (non-blocking) ───
 
-describe("GH08 — applyContractReview: publishHints no longer hard-block CRM apply", () => {
-  it("returns ok:true and logs guard when publishHints.contractPublishable=false", async () => {
-    vi.mocked(capturePublishGuardFailure).mockClear();
+describe("GH08 — applyContractReview: publishHints/sensitive flags never block advisor-confirmed apply", () => {
+  it("advisor-confirmed apply succeeds and creates contract despite publishHints.contractPublishable=false", async () => {
     const row = baseRow();
     (row.extractedPayload as Record<string, unknown>).publishHints = {
       contractPublishable: false,
@@ -392,20 +391,24 @@ describe("GH08 — applyContractReview: publishHints no longer hard-block CRM ap
     };
     const result = await applyContractReview({ reviewId: BASE_REVIEW_ID, tenantId: TENANT_ID, userId: USER_ID, row });
     expect(result.ok).toBe(true);
-    expect(vi.mocked(capturePublishGuardFailure)).toHaveBeenCalled();
+    if (result.ok) {
+      expect(result.payload.createdContractId).toBeTruthy();
+    }
   });
 
-  it("returns ok:true when primarySubdocumentType=health_questionnaire (no write block)", async () => {
+  it("advisor-confirmed apply succeeds despite primarySubdocumentType=health_questionnaire", async () => {
     const row = baseRow();
     (row.extractedPayload as Record<string, unknown>).packetMeta = {
       primarySubdocumentType: "health_questionnaire",
     };
     const result = await applyContractReview({ reviewId: BASE_REVIEW_ID, tenantId: TENANT_ID, userId: USER_ID, row });
     expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.payload.createdContractId).toBeTruthy();
+    }
   });
 
-  it("returns ok:true when sensitiveAttachmentOnly=true (logs guard, apply allowed)", async () => {
-    vi.mocked(capturePublishGuardFailure).mockClear();
+  it("advisor-confirmed apply succeeds and creates contract despite sensitiveAttachmentOnly=true", async () => {
     const row = baseRow();
     (row.extractedPayload as Record<string, unknown>).publishHints = {
       contractPublishable: false,
@@ -413,7 +416,9 @@ describe("GH08 — applyContractReview: publishHints no longer hard-block CRM ap
     };
     const result = await applyContractReview({ reviewId: BASE_REVIEW_ID, tenantId: TENANT_ID, userId: USER_ID, row });
     expect(result.ok).toBe(true);
-    expect(vi.mocked(capturePublishGuardFailure)).toHaveBeenCalled();
+    if (result.ok) {
+      expect(result.payload.createdContractId).toBeTruthy();
+    }
   });
 });
 

@@ -784,11 +784,11 @@ export async function applyContractReview(
   // for the document classification. Only truly supporting docs (payslip, bank statement)
   // that the advisor did NOT override remain guarded.
   const rawIsSupporting = isSupportingDocumentOnly(extractedPayloadForEnforcement);
-  const advisorOverrodeClassification =
-    row.reviewStatus === "approved" &&
-    (Array.isArray((row as Record<string, unknown>).ignoredWarnings) &&
-      ((row as Record<string, unknown>).ignoredWarnings as string[]).length > 0);
-  const isSupporting = rawIsSupporting && !advisorOverrodeClassification;
+  // Advisor-confirmed apply: bypass supporting document guard entirely.
+  // When advisor explicitly approved the review, they take responsibility for
+  // document classification — sensitive attachments, bundles, etc. must not
+  // silently prevent contract creation (the "ghost success" bug).
+  const isSupporting = rawIsSupporting && row.reviewStatus !== "approved";
 
   // Kolektory pro enforcement trace
   let contactEnforcementResult: ReturnType<typeof enforceContactPayload> | undefined;

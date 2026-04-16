@@ -71,7 +71,7 @@ const initialState: ExtractionReviewState = {
 };
 
 const APPLY_GATE_REASON_LABELS: Record<string, string> = {
-  PROPOSAL_NOT_FINAL: "Dokument je klasifikován jako modelace nebo nefinální projekce.",
+  PROPOSAL_NOT_FINAL: "Dokument je klasifikován jako modelace nebo kalkulace — po potvrzení poradcem lze zapsat jako finální smlouvu.",
   NON_FINAL_LIFECYCLE: "Životní cyklus odpovídá modelaci, kalkulaci nebo ilustraci — nikoli finální smlouvě.",
   LOW_CLASSIFICATION_CONFIDENCE: "Typ dokumentu není rozpoznaný dost jistě.",
   LOW_EXTRACTION_CONFIDENCE: "Extrakce má nižší jistotu a potřebuje kontrolu.",
@@ -88,12 +88,12 @@ const APPLY_GATE_REASON_LABELS: Record<string, string> = {
   PAYMENT_MISSING_INSTITUTION: "Chybí příjemce nebo produkt platby — doplňte ručně.",
   PAYMENT_NEEDS_HUMAN_REVIEW: "Platební údaje potřebují ruční kontrolu.",
   PAYMENT_LOW_CONFIDENCE: "Platební údaje mají nízkou jistotu — ověřte v dokumentu.",
-  PUBLISH_HINTS_NOT_PUBLISHABLE: "Dokument není označen jako finální smlouva — ověřte typ a doplňte chybějící údaje.",
-  PUBLISH_HINTS_SENSITIVE_ATTACHMENT_ONLY: "Dokument obsahuje citlivou přílohu (zdravotní dotazník, AML) — hlavní data byla vytěžena, citlivé sekce ke kontrole.",
-  PUBLISH_HINTS_NEEDS_SPLIT: "Dokument obsahuje více logických sekcí — ověřte, zda jsou všechny údaje správně přiřazeny.",
-  PUBLISH_HINTS_NEEDS_MANUAL_VALIDATION: "Dokument vyžaduje ruční ověření před uložením.",
+  PUBLISH_HINTS_NOT_PUBLISHABLE: "Dokument nebyl automaticky označen jako finální smlouva — po schválení poradcem bude zapsán.",
+  PUBLISH_HINTS_SENSITIVE_ATTACHMENT_ONLY: "Dokument obsahuje citlivou přílohu (zdravotní dotazník, AML) — hlavní data vytěžena, citlivé sekce evidovány interně.",
+  PUBLISH_HINTS_NEEDS_SPLIT: "Dokument obsahuje více logických sekcí — ověřte, zda jsou údaje správně přiřazeny.",
+  PUBLISH_HINTS_NEEDS_MANUAL_VALIDATION: "Dokument vyžaduje kontrolu poradcem před zápisem.",
   PACKET_BUNDLE_WITH_SENSITIVE_ATTACHMENT:
-    "Nahrávka obsahuje více dokumentů v jednom souboru včetně citlivé přílohy — ověřte správnou sekci před zápisem.",
+    "Soubor obsahuje více dokumentů včetně citlivé přílohy — po schválení poradcem bude zapsán.",
   PAYMENT_INSTRUCTION_MISCLASSIFIED_AS_CONTRACT: "Platební instrukce byly rozpoznány jako smlouva — ověřte typ dokumentu.",
 };
 
