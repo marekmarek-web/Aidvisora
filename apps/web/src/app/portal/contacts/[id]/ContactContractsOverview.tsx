@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   Shield,
   TrendingUp,
@@ -144,6 +144,7 @@ function ContractDetailCard({
   const [deleting, setDeleting] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const product = mapContractToCanonicalProduct(contract);
   const Icon = productIcon(product.segment);
@@ -213,7 +214,10 @@ function ContractDetailCard({
   }
 
   function handleEdit() {
-    router.push(`${pathname}?tab=smlouvy&edit=${encodeURIComponent(contract.id)}`);
+    const p = new URLSearchParams(searchParams.toString());
+    p.delete("add");
+    p.set("edit", contract.id);
+    router.replace(`${pathname}?${p.toString()}`, { scroll: false });
   }
 
   function handleVypoved() {
@@ -619,6 +623,7 @@ export function ContactContractsOverview({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     getContractsByContact(contactId)
@@ -641,7 +646,10 @@ export function ContactContractsOverview({
   }
 
   function handleAddProduct() {
-    router.push(`${pathname}?tab=smlouvy&add=1`);
+    const p = new URLSearchParams(searchParams.toString());
+    p.set("add", "1");
+    p.delete("edit");
+    router.replace(`${pathname}?${p.toString()}`, { scroll: false });
   }
 
   const groups = groupContracts(contracts);

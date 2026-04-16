@@ -18,8 +18,9 @@ function buildContactDetailHref(
   opts?: { addContract?: boolean }
 ): string {
   const p = new URLSearchParams(baseQueryNoTab);
-  p.set("tab", tab);
-  if (opts?.addContract && tab === "smlouvy") p.set("add", "1");
+  const resolvedTab: ContactTabId = opts?.addContract ? "prehled" : tab;
+  p.set("tab", resolvedTab);
+  if (opts?.addContract) p.set("add", "1");
   else p.delete("add");
   const q = p.toString();
   return `/portal/contacts/${contactId}?${q}`;
@@ -120,7 +121,7 @@ export function ContactProductsPreview({
           ))
         )}
         <Link
-          href={buildContactDetailHref(contactId, baseQueryNoTab, "smlouvy", { addContract: true })}
+          href={buildContactDetailHref(contactId, baseQueryNoTab, "prehled", { addContract: true })}
           scroll={false}
           className="w-full py-4 border-2 border-dashed border-[color:var(--wp-surface-card-border)] rounded-2xl text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2 mt-2 min-h-[44px]"
         >

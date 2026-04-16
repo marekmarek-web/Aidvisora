@@ -8,7 +8,7 @@ import { ArrowLeft, Mail, Phone, MapPin, Calendar, MessageSquare, Briefcase } fr
 import { getContact, getContactAiProvenance, type ContactAiProvenanceResult } from "@/app/actions/contacts";
 import { getHouseholdForContact } from "@/app/actions/households";
 import { AiReviewProvenanceBadge } from "@/app/components/aidvisora/AiReviewProvenanceBadge";
-import { ContractsSection } from "@/app/dashboard/contacts/[id]/ContractsSection";
+import { ContactContractModals, ContractsListSection } from "@/app/dashboard/contacts/[id]/ContractsSection";
 import { ContactManualPaymentSection } from "./ContactManualPaymentSection";
 import { ContactActivityTimeline } from "@/app/dashboard/contacts/[id]/ContactActivityTimeline";
 import { ClientFinancialSummary } from "@/app/components/contacts/ClientFinancialSummary";
@@ -227,7 +227,7 @@ function ContactTabBody({
                   <p className="text-sm text-[color:var(--wp-text-secondary)] py-4">Načítám sekci smluv…</p>
                 }
               >
-                <ContractsSection contactId={contactId} />
+                <ContractsListSection contactId={contactId} />
               </Suspense>
               <div className="mt-6">
                 <Suspense fallback={null}>
@@ -630,6 +630,9 @@ export default async function ContactDetailPage({ params, searchParams }: PagePr
           }
         >
           <ContactTabNav activeTab={tab} baseQueryNoTab={baseQueryNoTab} />
+        </Suspense>
+        <Suspense fallback={null}>
+          <ContactContractModals contactId={contactId} />
         </Suspense>
         <div className="pt-6 pb-8">
           <ContactTabBody

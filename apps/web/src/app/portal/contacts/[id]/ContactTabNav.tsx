@@ -13,8 +13,11 @@ import {
 function buildHref(pathname: string, tab: ContactTabId, baseQueryNoTab: string): string {
   const p = new URLSearchParams(baseQueryNoTab);
   p.set("tab", tab);
-  // `add=1` jen u záložky Produkty — jinak by wizard zůstal „otevřený“ v URL
-  if (tab !== "smlouvy") p.delete("add");
+  // `add` / `edit` jen u Přehledu a Produkty — jinak by wizard nebo úprava zůstaly v URL
+  if (tab !== "prehled" && tab !== "smlouvy") {
+    p.delete("add");
+    p.delete("edit");
+  }
   const q = p.toString();
   return q ? `${pathname}?${q}` : `${pathname}?tab=${tab}`;
 }
