@@ -614,6 +614,8 @@ export async function updateContract(
     /** Klientský portál – sekce Moje portfolio */
     visibleToClient?: boolean;
     portfolioStatus?: string;
+    /** "one_time" = jednorázová, "regular" = pravidelná, null = neznámo */
+    paymentType?: "one_time" | "regular" | null;
   }
 ) {
   try {
@@ -632,6 +634,7 @@ export async function updateContract(
       startDate: form.startDate ?? "",
       anniversaryDate: form.anniversaryDate ?? "",
       note: form.note ?? "",
+      paymentType: form.paymentType ?? null,
     };
 
     const validation = validateContractFormForSubmit(full);

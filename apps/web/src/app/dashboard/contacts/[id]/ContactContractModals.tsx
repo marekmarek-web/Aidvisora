@@ -14,16 +14,26 @@ import { NewContractWizard } from "@/app/components/aidvisora/NewContractWizard"
 import { DocumentUploadZone } from "@/app/components/upload/DocumentUploadZone";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import { ContractParametersFields } from "@/app/components/aidvisora/ContractParametersFields";
-import { FileText } from "lucide-react";
+import { FileText, Building2, Package, Settings2 } from "lucide-react";
 import {
   initialContractFormState,
   resetContractFormForNewSegment,
   validateContractFormForSubmit,
 } from "@/lib/contracts/contract-form-payload";
 import type { ContractFormState } from "@/lib/contracts/contract-form-payload";
-import { segmentUsesAnnualPremiumPrimaryInput } from "@/lib/contracts/contract-segment-wizard-config";
+import { getSegmentUiGroup, segmentUsesAnnualPremiumPrimaryInput } from "@/lib/contracts/contract-segment-wizard-config";
 import { annualPremiumFromMonthlyInput } from "@/lib/contracts/annual-premium-from-monthly";
 import { WizardShell, WizardHeader, WizardBody } from "@/app/components/wizard";
+
+function SectionDivider({ icon: Icon, label }: { icon: React.ElementType; label: string }) {
+  return (
+    <div className="flex items-center gap-2 pt-2">
+      <Icon size={14} className="text-[color:var(--wp-text-tertiary)] shrink-0" />
+      <span className="text-xs font-semibold text-[color:var(--wp-text-tertiary)] uppercase tracking-wide">{label}</span>
+      <div className="flex-1 h-px bg-[color:var(--wp-border)]" />
+    </div>
+  );
+}
 
 export function ContactContractModals({ contactId }: { contactId: string }) {
   const router = useRouter();
@@ -130,6 +140,16 @@ export function ContactContractModals({ contactId }: { contactId: string }) {
     if (segmentUsesAnnualPremiumPrimaryInput(c.segment) && !premiumAnnual.trim() && premiumAmount.trim()) {
       premiumAnnual = annualPremiumFromMonthlyInput(premiumAmount);
     }
+    // Derive paymentType from portfolioAttributes.paymentFrequency
+    const paymentFreq = String(
+      (c.portfolioAttributes as Record<string, unknown>)?.paymentFrequency ?? ""
+    ).toLowerCase();
+    const paymentType: "one_time" | "regular" | null =
+      /jednorázov|jednorazov|one.?time|lump.?sum|single/.test(paymentFreq)
+        ? "one_time"
+        : paymentFreq
+          ? "regular"
+          : null;
     setForm({
       segment: c.segment,
       partnerId: c.partnerId ?? "",
@@ -142,6 +162,7 @@ export function ContactContractModals({ contactId }: { contactId: string }) {
       startDate: c.startDate ?? "",
       anniversaryDate: c.anniversaryDate ?? "",
       note: c.note ?? "",
+      paymentType,
     });
     setPickerValue({
       partnerId: c.partnerId ?? "",
@@ -151,10 +172,11 @@ export function ContactContractModals({ contactId }: { contactId: string }) {
     });
   }, []);
 
-  /** Deep link: ?edit=<contractId> (libovolná záložka kontaktu) */
+  /** Deep link: ?edit=<contractId> — otevře modal okamžitě ze cache, nečeká na loading */
   useEffect(() => {
     const editId = searchParams.get("edit");
-    if (!editId || loading) return;
+    if (!editId) return;
+    // Open immediately if contract is in cache; if list is empty, wait for data
     const c = list.find((x) => x.id === editId);
     if (!c) return;
     startEdit(c);
@@ -162,7 +184,7 @@ export function ContactContractModals({ contactId }: { contactId: string }) {
     p.delete("edit");
     const q = p.toString();
     router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
-  }, [searchParams, list, loading, pathname, router, startEdit]);
+  }, [searchParams, list, pathname, router, startEdit]);
 
   useEffect(() => {
     if (!editingId || loading) return;
@@ -192,75 +214,123 @@ export function ContactContractModals({ contactId }: { contactId: string }) {
         >
           <WizardHeader title="Upravit smlouvu" onClose={closeEdit} />
           <WizardBody withSlide={false}>
-            <form onSubmit={handleSubmitEdit} className="space-y-2 max-w-md">
-              <div>
-                <label className="block text-xs font-medium text-[color:var(--wp-text-muted)]">Segment</label>
-                <CustomDropdown
-                  value={form.segment}
-                  onChange={(seg) => {
-                    setForm((f) => resetContractFormForNewSegment(f, seg));
-                    setPickerValue({ partnerId: "", productId: "" });
-                  }}
-                  options={segments.map((s) => ({ id: s, label: segmentLabel(s) }))}
-                  placeholder="Segment"
-                  icon={FileText}
-                />
+            <form onSubmit={handleSubmitEdit} className="space-y-4">
+
+              {/* Sekce: Segment */}
+              <SectionDivider icon={FileText} label="Segment" />
+              <CustomDropdown
+                value={form.segment}
+                onChange={(seg) => {
+                  setForm((f) => resetContractFormForNewSegment(f, seg));
+                  setPickerValue({ partnerId: "", productId: "" });
+                }}
+                options={segments.map((s) => ({ id: s, label: segmentLabel(s) }))}
+                placeholder="Segment"
+                icon={FileText}
+              />
+
+              {/* Sekce: Partner a produkt */}
+              <SectionDivider icon={Building2} label="Partner a produkt" />
+              <ProductPicker
+                segment={form.segment}
+                value={pickerValue}
+                onChange={(v) => {
+                  setPickerValue(v);
+                  setForm((f) => ({
+                    ...f,
+                    partnerId: v.partnerId,
+                    productId: v.productId,
+                    partnerName: v.partnerName ?? f.partnerName,
+                    productName: v.productName ?? f.productName,
+                  }));
+                }}
+              />
+              <div className="space-y-2">
+                <div>
+                  <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">
+                    Partner (instituce)
+                  </label>
+                  <input
+                    value={form.partnerName}
+                    onChange={(e) => setForm((f) => ({ ...f, partnerName: e.target.value }))}
+                    placeholder="např. AMUNDI, Uniqa pojišťovna"
+                    className="w-full rounded-lg border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-card)] px-3 py-2 text-sm text-[color:var(--wp-text)] placeholder:text-[color:var(--wp-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 min-h-[44px]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">
+                    Produkt / název
+                  </label>
+                  <input
+                    value={form.productName}
+                    onChange={(e) => setForm((f) => ({ ...f, productName: e.target.value }))}
+                    placeholder="např. Pokyn k jednorázové investici, Život & radost"
+                    className="w-full rounded-lg border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-card)] px-3 py-2 text-sm text-[color:var(--wp-text)] placeholder:text-[color:var(--wp-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 min-h-[44px]"
+                  />
+                </div>
               </div>
-              <div>
-                <ProductPicker
-                  segment={form.segment}
-                  value={pickerValue}
-                  onChange={(v) => {
-                    setPickerValue(v);
-                    setForm((f) => ({
-                      ...f,
-                      partnerId: v.partnerId,
-                      productId: v.productId,
-                      partnerName: v.partnerName ?? f.partnerName,
-                      productName: v.productName ?? f.productName,
-                    }));
-                  }}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-[color:var(--wp-text-muted)]">Partner / Produkt (text)</label>
-                <input
-                  value={form.partnerName}
-                  onChange={(e) => setForm((f) => ({ ...f, partnerName: e.target.value }))}
-                  placeholder="název partnera"
-                  className="w-full rounded border border-monday-border px-2 py-1.5 text-sm"
-                />
-                <input
-                  value={form.productName}
-                  onChange={(e) => setForm((f) => ({ ...f, productName: e.target.value }))}
-                  placeholder="název produktu"
-                  className="w-full rounded border border-monday-border px-2 py-1.5 text-sm mt-1"
-                />
-              </div>
+
+              {/* Sekce: Parametry smlouvy */}
+              <SectionDivider icon={Package} label="Parametry smlouvy" />
+
+              {/* Typ platby pro investice */}
+              {getSegmentUiGroup(form.segment) === "investment" && (
+                <div className="flex items-center gap-3 rounded-lg border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-muted)] px-3 py-2.5">
+                  <span className="text-xs font-medium text-[color:var(--wp-text-muted)] shrink-0">Typ platby:</span>
+                  <div className="flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setForm((f) => ({ ...f, paymentType: "regular", premiumAnnual: f.premiumAmount ? f.premiumAmount : "" }))}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                        form.paymentType !== "one_time"
+                          ? "bg-indigo-600 text-white"
+                          : "bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] border border-[color:var(--wp-border)]"
+                      }`}
+                    >
+                      Pravidelná
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setForm((f) => ({ ...f, paymentType: "one_time", premiumAnnual: "" }))}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                        form.paymentType === "one_time"
+                          ? "bg-amber-500 text-white"
+                          : "bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] border border-[color:var(--wp-border)]"
+                      }`}
+                    >
+                      Jednorázová
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <ContractParametersFields
                 form={form}
                 setForm={setForm}
                 classes={{
-                  label: "block text-xs font-medium text-[color:var(--wp-text-muted)]",
-                  input: "w-full rounded border border-monday-border px-2 py-1.5 text-sm min-h-[44px]",
+                  label: "block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1",
+                  input: "w-full rounded-lg border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-card)] px-3 py-2 text-sm text-[color:var(--wp-text)] focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 min-h-[44px]",
                 }}
               />
-              <div className="flex flex-col gap-2 rounded border border-[color:var(--wp-border)] p-3 bg-[color:var(--wp-surface-muted)]">
-                <label className="flex items-center gap-3 min-h-[44px] cursor-pointer">
+
+              {/* Sekce: Nastavení */}
+              <SectionDivider icon={Settings2} label="Nastavení" />
+              <div className="rounded-xl border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-muted)] divide-y divide-[color:var(--wp-border)]">
+                <label className="flex items-center gap-3 min-h-[48px] px-4 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={visibleToClientEdit}
                     onChange={(e) => setVisibleToClientEdit(e.target.checked)}
-                    className="h-5 w-5 rounded border-monday-border"
+                    className="h-5 w-5 rounded border-[color:var(--wp-border)] accent-indigo-600"
                   />
                   <span className="text-sm text-[color:var(--wp-text)]">Zobrazit v klientské zóně (Moje portfolio)</span>
                 </label>
-                <div>
-                  <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">Stav v portfoliu</label>
+                <div className="px-4 py-3">
+                  <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1.5">Stav v portfoliu</label>
                   <select
                     value={portfolioStatusEdit}
                     onChange={(e) => setPortfolioStatusEdit(e.target.value)}
-                    className="w-full rounded border border-monday-border px-2 py-2 text-sm min-h-[44px]"
+                    className="w-full rounded-lg border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-card)] px-3 py-2 text-sm text-[color:var(--wp-text)] focus:outline-none focus:ring-2 focus:ring-indigo-500/30 min-h-[44px]"
                   >
                     <option value="active">Aktivní</option>
                     <option value="ended">Ukončené</option>
@@ -269,8 +339,10 @@ export function ContactContractModals({ contactId }: { contactId: string }) {
                   </select>
                 </div>
               </div>
+
+              {/* Nahrát PDF */}
               <div>
-                <label className="block text-xs font-medium text-[color:var(--wp-text-muted)] mb-1">Nahrát smlouvu (PDF)</label>
+                <label className="block text-xs font-semibold text-[color:var(--wp-text-muted)] mb-1.5">Nahrát smlouvu (PDF)</label>
                 <DocumentUploadZone
                   key={`${contactId}-${form.segment}-${editingId}`}
                   contactId={contactId}
@@ -281,18 +353,24 @@ export function ContactContractModals({ contactId }: { contactId: string }) {
                   className="p-0 border-0 bg-transparent"
                 />
               </div>
-              {submitError && <p className="text-sm text-red-600" role="alert">{submitError}</p>}
-              <div className="flex gap-2">
+
+              {submitError && (
+                <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2" role="alert">
+                  {submitError}
+                </p>
+              )}
+
+              <div className="flex gap-2 pt-1">
                 <button
                   type="submit"
-                  className="rounded px-3 py-1.5 text-sm font-semibold text-white bg-monday-blue"
+                  className="flex-1 sm:flex-none rounded-xl px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors min-h-[44px]"
                 >
-                  Uložit
+                  Uložit změny
                 </button>
                 <button
                   type="button"
                   onClick={closeEdit}
-                  className="rounded px-3 py-1.5 text-sm font-semibold border border-[color:var(--wp-border-strong)] text-[color:var(--wp-text-muted)]"
+                  className="flex-1 sm:flex-none rounded-xl px-5 py-2.5 text-sm font-semibold border border-[color:var(--wp-border)] text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] transition-colors min-h-[44px]"
                 >
                   Zrušit
                 </button>

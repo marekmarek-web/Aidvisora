@@ -922,11 +922,22 @@ export async function applyContractReview(
             resolveContractReferenceForApply(ep, action.payload, extractedPayloadForEnforcement) ??
             (ep.contractNumber as string)?.trim() ??
             null;
-          const productName = (ep.productName as string)?.trim() || null;
+          const rawProductName = (ep.productName as string)?.trim() || null;
           const institutionName =
             (ep.institutionName as string)?.trim() ||
             (action.payload.institutionName as string)?.trim() ||
             null;
+          // Strip institution name prefix from product name when AI concatenates them
+          const productName = (() => {
+            if (!rawProductName || !institutionName) return rawProductName;
+            const instLower = institutionName.toLowerCase();
+            const prodLower = rawProductName.toLowerCase();
+            if (prodLower.startsWith(instLower)) {
+              const stripped = rawProductName.slice(institutionName.length).replace(/^[\s\-–·:]+/, "").trim();
+              return stripped || rawProductName;
+            }
+            return rawProductName;
+          })();
           const effectiveDate = (ep.effectiveDate as string)?.trim() || null;
           const segment = resolveSegmentForContractApply(action.payload, extractedPayloadForEnforcement);
           const existingContractId = await findExistingContractId(

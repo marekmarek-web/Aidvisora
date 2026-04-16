@@ -97,13 +97,13 @@ export function getCtaForOpportunity(
       const contractId = entityIds?.contractId;
       if (contractId) {
         return {
-          href: `${prefix}/portal/contacts/${contactId}?tab=smlouvy&contractId=${contractId}`,
+          href: `${prefix}/portal/contacts/${contactId}?tab=prehled&contractId=${contractId}`,
           label: opportunity.recommendedAction,
           sameTab: true,
         };
       }
       return {
-        href: `${prefix}/portal/contacts/${contactId}?tab=smlouvy`,
+        href: `${prefix}/portal/contacts/${contactId}?tab=prehled`,
         label: opportunity.recommendedAction,
         sameTab: true,
       };
@@ -124,13 +124,13 @@ export function getCtaForOpportunity(
       const contractId = entityIds?.contractId;
       if (contractId) {
         return {
-          href: `${prefix}/portal/contacts/${contactId}?tab=smlouvy&contractId=${contractId}`,
+          href: `${prefix}/portal/contacts/${contactId}?tab=prehled&contractId=${contractId}`,
           label: opportunity.recommendedAction,
           sameTab: true,
         };
       }
       return {
-        href: `${prefix}/portal/contacts/${contactId}?tab=smlouvy`,
+        href: `${prefix}/portal/contacts/${contactId}?tab=prehled`,
         label: opportunity.recommendedAction,
         sameTab: true,
       };

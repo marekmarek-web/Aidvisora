@@ -241,13 +241,13 @@ export function CanonicalProductAdvisorOverviewCard({
           <Image
             src={logoPath}
             alt={logoAlt}
-            width={88}
-            height={88}
-            className="h-[5.5rem] w-[5.5rem] shrink-0 object-contain"
+            width={114}
+            height={114}
+            className="h-[7.125rem] w-[7.125rem] shrink-0 object-contain"
           />
         ) : (
           <div
-            className={`h-[5.5rem] w-[5.5rem] rounded-xl flex items-center justify-center text-base font-black shrink-0 ${segmentIconColors(contract.segment)}`}
+            className={`h-[7.125rem] w-[7.125rem] rounded-xl flex items-center justify-center text-base font-black shrink-0 ${segmentIconColors(contract.segment)}`}
             aria-hidden
           >
             {initialsFromPartner(product)}

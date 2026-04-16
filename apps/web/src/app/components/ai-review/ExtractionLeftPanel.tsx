@@ -831,40 +831,134 @@ function PendingFieldRow({
   );
 }
 
+function ManualFieldRow({
+  fieldKey,
+  scope,
+  onConfirmManualField,
+}: {
+  fieldKey: string;
+  scope: "contact" | "contract" | "payment";
+  onConfirmManualField?: (fieldKey: string, scope: "contact" | "contract" | "payment", value: string) => Promise<void>;
+}) {
+  const [value, setValue] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (confirmed) {
+    return (
+      <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2">
+        <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
+        <div className="flex-1 min-w-0">
+          <div className="text-[10px] font-black uppercase tracking-wide text-emerald-700">{humanizeEnforcementFieldKey(fieldKey)}</div>
+          <div className="text-xs font-semibold text-emerald-900 truncate">{value}</div>
+        </div>
+        <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100 rounded px-1.5 py-0.5">Zapsáno</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-rose-300 bg-rose-50/60 px-3 py-2.5 space-y-1.5">
+      <div className="text-[10px] font-black uppercase tracking-wide text-rose-700 flex items-center gap-1">
+        <Pencil size={10} className="shrink-0" />
+        {humanizeEnforcementFieldKey(fieldKey)}
+      </div>
+      <div className="flex items-center gap-1.5">
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => {
+            setValue(e.target.value);
+            setError(null);
+          }}
+          placeholder="Doplňte ručně…"
+          className="flex-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-rose-300 bg-white focus:outline-none focus:ring-2 focus:ring-rose-400 focus:border-rose-400 placeholder:text-rose-300 text-[color:var(--wp-text)]"
+        />
+        {onConfirmManualField && (
+          <button
+            type="button"
+            disabled={busy || !value.trim()}
+            onClick={async () => {
+              if (!value.trim()) return;
+              setBusy(true);
+              setError(null);
+              try {
+                await onConfirmManualField(fieldKey, scope, value.trim());
+                setConfirmed(true);
+              } catch (e) {
+                setError(e instanceof Error ? e.message : "Chyba při zápisu.");
+              } finally {
+                setBusy(false);
+              }
+            }}
+            className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+            title="Potvrdit a zapsat do CRM"
+          >
+            {busy ? (
+              <span className="w-3.5 h-3.5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Check size={14} />
+            )}
+          </button>
+        )}
+      </div>
+      {error && (
+        <p className="text-[10px] font-semibold text-rose-700">{error}</p>
+      )}
+    </div>
+  );
+}
+
 function EnforcementResultCard({
   doc,
   onConfirmPendingField,
+  onConfirmManualField,
+  onConfirmAllPendingFields,
 }: {
   doc: ExtractionDocument;
   onConfirmPendingField?: (fieldKey: string, scope: "contact" | "contract" | "payment") => Promise<void>;
+  onConfirmManualField?: (fieldKey: string, scope: "contact" | "contract" | "payment", value: string) => Promise<void>;
+  onConfirmAllPendingFields?: () => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
+  const [confirmAllBusy, setConfirmAllBusy] = useState(false);
   const trace = doc.applyResultPayload?.policyEnforcementTrace;
   if (!doc.isApplied || !trace) return null;
 
   const s = trace.summary;
   const isSupporting = trace.supportingDocumentGuard;
 
-  // Auto-open pokud jsou pending pole k potvrzení
-  const hasPending = s.totalPendingConfirmation > 0 && !isSupporting;
+  // Auto-open pokud jsou pending nebo manual pole
+  const hasPending = (s.totalPendingConfirmation > 0 || (s.totalManualRequired ?? 0) > 0) && !isSupporting;
+
+  const hasManual = (s.totalManualRequired ?? 0) > 0;
+  const borderClass = hasManual ? "border-rose-300" : hasPending ? "border-amber-300" : "border-emerald-200";
+  const headerColor = hasManual ? "text-rose-800" : hasPending ? "text-amber-800" : "text-emerald-800";
+  const headerIcon = hasManual
+    ? <Pencil size={14} className="text-rose-600" />
+    : hasPending
+      ? <Clock size={14} className="text-amber-600" />
+      : <CheckCircle2 size={14} className="text-emerald-600" />;
+  const headerLabel = isSupporting
+    ? "Výsledek zpracování podkladu"
+    : hasManual && hasPending
+      ? `Výsledek zápisu — ${s.totalManualRequired} k doplnění, ${s.totalPendingConfirmation} k potvrzení`
+      : hasManual
+        ? `Výsledek zápisu — ${s.totalManualRequired} ${s.totalManualRequired === 1 ? "pole vyžaduje" : "polí vyžaduje"} ruční doplnění`
+        : hasPending
+          ? `Výsledek zápisu — ${s.totalPendingConfirmation} čeká na potvrzení`
+          : "Výsledek zápisu do CRM";
 
   return (
-    <div className={`bg-[color:var(--wp-surface-card)] rounded-[20px] border shadow-sm overflow-hidden ${hasPending ? "border-amber-300" : "border-emerald-200"}`}>
+    <div className={`bg-[color:var(--wp-surface-card)] rounded-[20px] border shadow-sm overflow-hidden ${borderClass}`}>
       <button
         onClick={() => setOpen(!open)}
         className="w-full px-5 md:px-6 py-4 flex items-center justify-between text-left"
       >
-        <span className={`text-[11px] font-black uppercase tracking-widest flex items-center gap-2 ${hasPending ? "text-amber-800" : "text-emerald-800"}`}>
-          {hasPending ? (
-            <Clock size={14} className="text-amber-600" />
-          ) : (
-            <CheckCircle2 size={14} className="text-emerald-600" />
-          )}
-          {isSupporting
-            ? "Výsledek zpracování podkladu"
-            : hasPending
-              ? `Výsledek zápisu — ${s.totalPendingConfirmation} čeká na potvrzení`
-              : "Výsledek zápisu do CRM"}
+        <span className={`text-[11px] font-black uppercase tracking-widest flex items-center gap-2 ${headerColor}`}>
+          {headerIcon}
+          {headerLabel}
         </span>
         {open ? (
           <ChevronDown size={16} className="text-[color:var(--wp-text-tertiary)]" />
@@ -970,15 +1064,20 @@ function EnforcementResultCard({
                           ))}
                         </div>
                       )}
-                      {/* Manual required pole */}
+                      {/* Manual required pole — editovatelný input s checkmarkem */}
                       {e.manualRequiredFields.length > 0 && (
-                        <div className="flex flex-wrap gap-1 items-center">
-                          <ApplyResultBadge status="manual" />
-                          <span className="text-[10px] text-[color:var(--wp-text-tertiary)]">—</span>
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-1">
+                            <ApplyResultBadge status="manual" />
+                            <span className="text-[10px] text-[color:var(--wp-text-tertiary)]">— doplňte ručně a potvrďte</span>
+                          </div>
                           {e.manualRequiredFields.map((f) => (
-                            <span key={f} className="text-[10px] font-semibold text-[color:var(--wp-text)] bg-[color:var(--wp-surface-muted)] rounded px-1.5 py-0.5">
-                              {humanizeEnforcementFieldKey(f)}
-                            </span>
+                            <ManualFieldRow
+                              key={f}
+                              fieldKey={f}
+                              scope={scope}
+                              onConfirmManualField={onConfirmManualField}
+                            />
                           ))}
                         </div>
                       )}
@@ -1001,8 +1100,36 @@ function EnforcementResultCard({
             </div>
           )}
 
-          {/* Pending confirmation call-to-action */}
-          {s.totalPendingConfirmation > 0 && !isSupporting && (
+          {/* Pending confirmation — "Potvrdit vše" tlačítko */}
+          {s.totalPendingConfirmation > 0 && !isSupporting && onConfirmAllPendingFields && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50/60 px-3 py-2.5 flex items-center justify-between gap-3">
+              <p className="text-xs font-bold text-amber-900 leading-snug flex items-start gap-1.5">
+                <Clock size={13} className="shrink-0 mt-0.5 text-amber-600" />
+                {s.totalPendingConfirmation} {s.totalPendingConfirmation === 1 ? "pole čeká" : "polí čeká"} na potvrzení
+              </p>
+              <button
+                type="button"
+                disabled={confirmAllBusy}
+                onClick={async () => {
+                  setConfirmAllBusy(true);
+                  try {
+                    await onConfirmAllPendingFields();
+                  } finally {
+                    setConfirmAllBusy(false);
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wide text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg px-3 py-1.5 transition-colors disabled:opacity-50 shrink-0"
+              >
+                {confirmAllBusy ? (
+                  <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <CheckCircle2 size={13} />
+                )}
+                {confirmAllBusy ? "Potvrzuji…" : "Potvrdit vše"}
+              </button>
+            </div>
+          )}
+          {s.totalPendingConfirmation > 0 && !isSupporting && !onConfirmAllPendingFields && (
             <div className="rounded-xl border border-amber-200 bg-amber-50/60 px-3 py-2.5">
               <p className="text-xs font-bold text-amber-900 leading-snug flex items-start gap-1.5">
                 <Clock size={13} className="shrink-0 mt-0.5 text-amber-600" />
@@ -1012,11 +1139,11 @@ function EnforcementResultCard({
           )}
 
           {/* Manual required call-to-action */}
-          {s.totalManualRequired > 0 && !isSupporting && (
+          {(s.totalManualRequired ?? 0) > 0 && !isSupporting && (
             <div className="rounded-xl border border-rose-200 bg-rose-50/60 px-3 py-2.5">
               <p className="text-xs font-bold text-rose-900 leading-snug flex items-start gap-1.5">
                 <Pencil size={13} className="shrink-0 mt-0.5 text-rose-600" />
-                {s.totalManualRequired} {s.totalManualRequired === 1 ? "pole vyžaduje" : "polí vyžaduje"} ruční doplnění — automatický zápis nebyl možný. Doplňte data ručně v záznamu.
+                {s.totalManualRequired} {s.totalManualRequired === 1 ? "pole vyžaduje" : "polí vyžaduje"} ruční doplnění — zadejte hodnotu do pole výše a potvrďte checkmarkem.
               </p>
             </div>
           )}
@@ -2095,6 +2222,10 @@ type LeftPanelProps = {
   onExecuteDraftAction?: (action: DraftAction) => void | Promise<void>;
   /** Fáze 11: Per-field pending confirmation */
   onConfirmPendingField?: (fieldKey: string, scope: "contact" | "contract" | "payment") => Promise<void>;
+  /** Fáze 12: Ruční doplnění manual_required polí */
+  onConfirmManualField?: (fieldKey: string, scope: "contact" | "contract" | "payment", value: string) => Promise<void>;
+  /** Fáze 12b: Bulk potvrzení všech pending polí najednou */
+  onConfirmAllPendingFields?: () => Promise<void>;
   /** Fáze 1 fix: propagate create/apply callbacks for WorkActionsCard */
   onConfirmCreateNew?: () => void;
   onApproveAndApply?: (editedFields: Record<string, string>, options?: { overrideGateReasons?: string[]; overrideReason?: string }) => void | Promise<void>;
@@ -2113,6 +2244,8 @@ export function ExtractionLeftPanel({
   onToggleGroup,
   onExecuteDraftAction,
   onConfirmPendingField,
+  onConfirmManualField,
+  onConfirmAllPendingFields,
   onConfirmCreateNew,
   onApproveAndApply,
   onSelectClient,
@@ -2206,7 +2339,12 @@ export function ExtractionLeftPanel({
 
           <div data-section="recommendations" className="space-y-6">
             {showCrmMappingProposal ? <CrmMappingProposalCard doc={doc} /> : null}
-            <EnforcementResultCard doc={doc} onConfirmPendingField={onConfirmPendingField} />
+            <EnforcementResultCard
+              doc={doc}
+              onConfirmPendingField={onConfirmPendingField}
+              onConfirmManualField={onConfirmManualField}
+              onConfirmAllPendingFields={onConfirmAllPendingFields}
+            />
             <WorkActionsCard
               doc={doc}
               onExecuteDraftAction={onExecuteDraftAction}

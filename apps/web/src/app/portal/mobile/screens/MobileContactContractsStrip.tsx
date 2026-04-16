@@ -60,10 +60,10 @@ export function MobileContactContractsStrip({ contactId }: { contactId: string }
       <MobileSection title="Produkty / smlouvy">
         <EmptyState title="Žádné smlouvy" description="Přidejte produkt v desktopovém portálu nebo přes AI Review." />
         <Link
-          href={`/portal/contacts/${contactId}?tab=smlouvy`}
+          href={`/portal/contacts/${contactId}?tab=prehled`}
           className="mt-3 block w-full min-h-[44px] rounded-xl border border-indigo-200 bg-indigo-50 text-center text-sm font-bold text-indigo-800 py-3 px-4"
         >
-          Otevřít smlouvy v portálu
+          Otevřít přehled v portálu
         </Link>
       </MobileSection>
     );
@@ -120,7 +120,7 @@ export function MobileContactContractsStrip({ contactId }: { contactId: string }
         })}
       </ul>
       <Link
-        href={`/portal/contacts/${contactId}?tab=smlouvy`}
+        href={`/portal/contacts/${contactId}?tab=prehled`}
         className="mt-3 block w-full text-center text-xs font-bold text-indigo-700 min-h-[44px] py-2"
       >
         Celý přehled v portálu

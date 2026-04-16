@@ -24,6 +24,8 @@ function annualizeByFrequency(base: number, frequencyRaw: string): number {
   if (/month|měsíč|mesic|monthly|měs|mes/.test(f)) return base * 12;
   if (/week|týden|tyden|weekly/.test(f)) return base * 52;
   if (/day|denně|denne|daily/.test(f)) return base * 365;
+  // One-time / lump sum — no annualization
+  if (/jednorázov|jednorazov|one.?time|lump.?sum|single.?prem/.test(f)) return base;
   // Default: treat as monthly instalment (common for ŽP / penze / invest)
   return base * 12;
 }
@@ -86,6 +88,12 @@ export function computeDraftPremiumsFromEnvelope(
   if (segment === "HYPO" || segment === "UVER") {
     const s = String(base);
     return { premiumAmount: s, premiumAnnual: s };
+  }
+
+  // One-time payment — no annualization, premiumAnnual stays null
+  const isOneTime = /jednorázov|jednorazov|one.?time|lump.?sum|single.?prem/.test(freq.toLowerCase());
+  if (isOneTime) {
+    return { premiumAmount: String(base), premiumAnnual: null };
   }
 
   const rawAnnual = parseMoneyInput(fieldValue(envelope, "annualPremium"));

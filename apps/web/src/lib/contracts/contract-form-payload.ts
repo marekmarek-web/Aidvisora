@@ -32,6 +32,8 @@ export type ContractFormState = {
   startDate: string;
   anniversaryDate: string;
   note: string;
+  /** "one_time" = jednorázová platba (investiční pokyn); "regular" = pravidelná; null = neznámo */
+  paymentType: "one_time" | "regular" | null;
 };
 
 /** Payload pro createContract / updateContract (normalizovaný). */
@@ -232,7 +234,7 @@ export function contractFormAnnualPillLabel(form: ContractFormState): string | n
 
 const EMPTY_STEP2: Pick<
   ContractFormState,
-  "premiumAmount" | "premiumAnnual" | "contractNumber" | "startDate" | "anniversaryDate" | "note"
+  "premiumAmount" | "premiumAnnual" | "contractNumber" | "startDate" | "anniversaryDate" | "note" | "paymentType"
 > = {
   premiumAmount: "",
   premiumAnnual: "",
@@ -240,6 +242,7 @@ const EMPTY_STEP2: Pick<
   startDate: "",
   anniversaryDate: "",
   note: "",
+  paymentType: null,
 };
 
 /** Po změně segmentu: partner/produkt + pole kroku 2 vyčistit (volá se z wizardu). */
@@ -270,4 +273,5 @@ export const initialContractFormState = (): ContractFormState => ({
   startDate: "",
   anniversaryDate: "",
   note: "",
+  paymentType: null,
 });

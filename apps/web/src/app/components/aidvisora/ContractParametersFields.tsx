@@ -27,13 +27,21 @@ type Props = {
 export function ContractParametersFields({ form, setForm, classes }: Props) {
   const showPremium = segmentShowsPremiumOrContributionFields(form.segment);
   const annualPrimary = segmentUsesAnnualPremiumPrimaryInput(form.segment);
-  const annualPill = contractFormAnnualPillLabel(form);
+  const isOneTime = form.paymentType === "one_time";
+  const annualPill = isOneTime ? null : contractFormAnnualPillLabel(form);
 
   return (
     <div className="space-y-6">
       {showPremium ? (
         <div>
-          <label className={classes.label}>{getMonthlyAmountFieldLabel(form.segment)}</label>
+          <div className="flex items-center gap-2 flex-wrap mb-1">
+            <label className={classes.label}>{getMonthlyAmountFieldLabel(form.segment, form.paymentType)}</label>
+            {isOneTime && (
+              <span className="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                Jednorázová
+              </span>
+            )}
+          </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
             <input
               type="number"
@@ -48,6 +56,12 @@ export function ContractParametersFields({ form, setForm, classes }: Props) {
                     ...f,
                     premiumAnnual: v,
                     premiumAmount: monthlyPremiumFromAnnualInput(v),
+                  }));
+                } else if (isOneTime) {
+                  setForm((f) => ({
+                    ...f,
+                    premiumAmount: v,
+                    premiumAnnual: "",
                   }));
                 } else {
                   setForm((f) => ({
@@ -69,7 +83,7 @@ export function ContractParametersFields({ form, setForm, classes }: Props) {
               </span>
             ) : null}
           </div>
-          <p className="text-xs text-slate-400 mt-1">{getMonthlyAmountHelperText(form.segment)}</p>
+          <p className="text-xs text-slate-400 mt-1">{getMonthlyAmountHelperText(form.segment, form.paymentType)}</p>
         </div>
       ) : null}
 

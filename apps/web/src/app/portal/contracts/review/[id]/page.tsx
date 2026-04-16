@@ -11,6 +11,8 @@ import {
   confirmCreateNewClient,
   linkContractReviewFileToContactDocuments,
   confirmPendingField,
+  confirmManualField,
+  confirmAllPendingFields,
   persistFinalContractOverride,
 } from "@/app/actions/contract-review";
 import { useToast } from "@/app/components/Toast";
@@ -548,11 +550,43 @@ export default function ContractReviewDetailPage() {
       const result = await confirmPendingField(id, fieldKey, scope);
       if (result.ok) {
         toast.showToast(`Pole "${fieldKey}" potvrzeno a zapsáno.`, "success");
-        // Optimistic update — refresh dat pro přepočet počtů
         load();
       } else {
         toast.showToast(result.error ?? "Potvrzení selhalo.", "error");
         throw new Error(result.error);
+      }
+    },
+    [id, toast, load]
+  );
+
+  /** Fáze 12: Ruční doplnění manual_required pole handler */
+  const handleConfirmManualField = useCallback(
+    async (fieldKey: string, scope: "contact" | "contract" | "payment", value: string) => {
+      const result = await confirmManualField(id, fieldKey, scope, value);
+      if (result.ok) {
+        toast.showToast(`Pole "${fieldKey}" doplněno a zapsáno do CRM.`, "success");
+        load();
+      } else {
+        toast.showToast(result.error ?? "Zápis selhal.", "error");
+        throw new Error(result.error);
+      }
+    },
+    [id, toast, load]
+  );
+
+  /** Fáze 12b: Bulk potvrzení všech prefill_confirm polí najednou */
+  const handleConfirmAllPendingFields = useCallback(
+    async () => {
+      const result = await confirmAllPendingFields(id);
+      if (result.ok) {
+        if (result.confirmedCount > 0) {
+          toast.showToast(`${result.confirmedCount} ${result.confirmedCount === 1 ? "pole potvrzeno" : "polí potvrzeno"} a zapsáno do CRM.`, "success");
+        } else {
+          toast.showToast("Žádná pole k potvrzení.", "info");
+        }
+        load();
+      } else {
+        toast.showToast(result.error ?? "Hromadné potvrzení selhalo.", "error");
       }
     },
     [id, toast, load]
@@ -685,6 +719,8 @@ export default function ContractReviewDetailPage() {
         onConfirmCreateNew={handleConfirmCreateNew}
         onConfirmFinalContract={handleConfirmFinalContract}
         onConfirmPendingField={handleConfirmPendingField}
+        onConfirmManualField={handleConfirmManualField}
+        onConfirmAllPendingFields={handleConfirmAllPendingFields}
         isApproving={actionLoading === "approve"}
         actionLoading={actionLoading}
         onRefreshPdf={loadPdf}

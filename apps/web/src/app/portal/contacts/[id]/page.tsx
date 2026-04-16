@@ -9,7 +9,7 @@ import { getContact, getContactAiProvenance, type ContactAiProvenanceResult } fr
 import { getHouseholdForContact } from "@/app/actions/households";
 import { AiReviewProvenanceBadge } from "@/app/components/aidvisora/AiReviewProvenanceBadge";
 import { ContactContractModals, ContractsListSection } from "@/app/dashboard/contacts/[id]/ContractsSection";
-import { ContactManualPaymentSection } from "./ContactManualPaymentSection";
+import { ContactPortfolioWithPaymentModal } from "./ContactPortfolioWithPaymentModal";
 import { ContactActivityTimeline } from "@/app/dashboard/contacts/[id]/ContactActivityTimeline";
 import { ClientFinancialSummary } from "@/app/components/contacts/ClientFinancialSummary";
 import { ContactTabNav } from "./ContactTabNav";
@@ -23,7 +23,7 @@ import { ContactHouseholdCard } from "./ContactHouseholdCard";
 import { ContactNotesSection } from "./ContactNotesSection";
 import { ContactOverviewKpi } from "./ContactOverviewKpi";
 import { ContactLastNotePreview } from "./ContactLastNotePreview";
-import { ContactContractsOverview } from "./ContactContractsOverview";
+
 import { AiClientSummaryBlock } from "./AiClientSummaryBlock";
 import { getLatestClientGenerations } from "@/app/actions/ai-generations";
 import { ClientCoverageWidget } from "@/app/components/contacts/ClientCoverageWidget";
@@ -176,7 +176,20 @@ function ContactTabBody({
           {household ? (
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
               <div className="xl:col-span-2 space-y-6">
-                <ContactContractsOverview contactId={contactId} baseQueryNoTab={baseQueryNoTab} />
+                <ContactPortfolioWithPaymentModal contactId={contactId} baseQueryNoTab={baseQueryNoTab} />
+                <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
+                  <div className="p-6 space-y-6">
+                    <Suspense fallback={<p className="text-sm text-[color:var(--wp-text-secondary)] py-4">Načítám smlouvy…</p>}>
+                      <ContractsListSection contactId={contactId} />
+                    </Suspense>
+                    <div>
+                      <Suspense fallback={null}>
+                        <ProductsFvSummarySection contactId={contactId} />
+                      </Suspense>
+                    </div>
+                    <ClientFinancialSummary contactId={contactId} />
+                  </div>
+                </div>
                 <ClientCoverageWidget contactId={contactId} />
                 <AiClientSummaryBlock
                   contactId={contactId}
@@ -192,7 +205,20 @@ function ContactTabBody({
           ) : (
             <div className="space-y-6">
               <div className="space-y-6">
-                <ContactContractsOverview contactId={contactId} baseQueryNoTab={baseQueryNoTab} />
+                <ContactPortfolioWithPaymentModal contactId={contactId} baseQueryNoTab={baseQueryNoTab} />
+                <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
+                  <div className="p-6 space-y-6">
+                    <Suspense fallback={<p className="text-sm text-[color:var(--wp-text-secondary)] py-4">Načítám smlouvy…</p>}>
+                      <ContractsListSection contactId={contactId} />
+                    </Suspense>
+                    <div>
+                      <Suspense fallback={null}>
+                        <ProductsFvSummarySection contactId={contactId} />
+                      </Suspense>
+                    </div>
+                    <ClientFinancialSummary contactId={contactId} />
+                  </div>
+                </div>
                 <ClientCoverageWidget contactId={contactId} />
                 <AiClientSummaryBlock
                   contactId={contactId}
@@ -214,31 +240,6 @@ function ContactTabBody({
         <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
           <div className="p-6">
             <DynamicClientTimeline contactId={contactId} />
-          </div>
-        </div>
-      );
-    case "smlouvy":
-      return (
-        <div className="space-y-6 md:space-y-8">
-          <div className="rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
-            <div className="p-6">
-              <Suspense
-                fallback={
-                  <p className="text-sm text-[color:var(--wp-text-secondary)] py-4">Načítám sekci smluv…</p>
-                }
-              >
-                <ContractsListSection contactId={contactId} />
-              </Suspense>
-              <div className="mt-6">
-                <Suspense fallback={null}>
-                  <ProductsFvSummarySection contactId={contactId} />
-                </Suspense>
-              </div>
-              <ClientFinancialSummary contactId={contactId} />
-              <div className="mt-6 pt-6 border-t border-[color:var(--wp-surface-card-border)]">
-                <ContactManualPaymentSection contactId={contactId} />
-              </div>
-            </div>
           </div>
         </div>
       );

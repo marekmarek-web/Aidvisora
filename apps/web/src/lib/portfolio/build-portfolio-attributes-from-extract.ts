@@ -150,11 +150,16 @@ function collectRisksFromList(raw: unknown): PortfolioRiskEntry[] {
   }
   if (!Array.isArray(list) || list.length === 0) return [];
   const out: PortfolioRiskEntry[] = [];
+  const seenInList = new Set<string>();
   for (const row of list.slice(0, 48)) {
     if (row == null) continue;
     if (typeof row === "string") {
       const t = row.trim();
-      if (t) out.push({ label: t });
+      if (!t) continue;
+      const k = normalizeRiskLabel(t) + "||";
+      if (seenInList.has(k)) continue;
+      seenInList.add(k);
+      out.push({ label: t });
       continue;
     }
     if (typeof row !== "object") continue;
@@ -203,16 +208,35 @@ function collectRisksFromList(raw: unknown): PortfolioRiskEntry[] {
           : r.premium != null && r.premium !== ""
             ? String(r.premium).trim()
             : undefined;
-    out.push({
+    const entry: PortfolioRiskEntry = {
       label,
       amount,
       ...(coverageEnd ? { coverageEnd } : {}),
       ...(monthlyRiskPremium ? { monthlyRiskPremium } : {}),
       personRef,
       description,
-    });
+    };
+    const k = riskDedupKey(entry);
+    if (seenInList.has(k)) continue;
+    seenInList.add(k);
+    out.push(entry);
   }
   return out;
+}
+
+function normalizeRiskLabel(label: string): string {
+  return label.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function normalizeRiskAmount(amount: string | undefined): string {
+  if (!amount) return "";
+  // Strip whitespace and non-numeric chars to compare numeric values
+  const n = parseFloat(amount.replace(/\s/g, "").replace(/[^\d.-]/g, ""));
+  return Number.isFinite(n) ? String(Math.round(n)) : amount.trim().toLowerCase();
+}
+
+function riskDedupKey(r: PortfolioRiskEntry): string {
+  return `${normalizeRiskLabel(r.label ?? "")}|${normalizeRiskAmount(r.amount)}|${(r.personRef ?? "").toLowerCase().trim()}`;
 }
 
 function mergeRiskLists(lists: PortfolioRiskEntry[][]): PortfolioRiskEntry[] {
@@ -220,7 +244,7 @@ function mergeRiskLists(lists: PortfolioRiskEntry[][]): PortfolioRiskEntry[] {
   const out: PortfolioRiskEntry[] = [];
   for (const list of lists) {
     for (const r of list) {
-      const key = `${r.label}|${r.amount ?? ""}|${r.personRef ?? ""}`;
+      const key = riskDedupKey(r);
       if (seen.has(key)) continue;
       seen.add(key);
       out.push(r);

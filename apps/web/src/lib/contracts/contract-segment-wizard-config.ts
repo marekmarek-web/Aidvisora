@@ -46,8 +46,9 @@ export function segmentUsesAnnualPremiumPrimaryInput(segment: string): boolean {
   return isContractSegmentCode(segment) && segment === "MAJ";
 }
 
-export function getMonthlyAmountFieldLabel(segment: string): string {
+export function getMonthlyAmountFieldLabel(segment: string, paymentType?: "one_time" | "regular" | null): string {
   if (getSegmentUiGroup(segment) === "investment") {
+    if (paymentType === "one_time") return "Jednorázová investice Kč";
     return "Pravidelná platba (měsíční) Kč";
   }
   if (segmentUsesAnnualPremiumPrimaryInput(segment)) {
@@ -56,8 +57,9 @@ export function getMonthlyAmountFieldLabel(segment: string): string {
   return "Pojistné (měsíční) Kč";
 }
 
-export function getMonthlyAmountHelperText(segment: string): string {
+export function getMonthlyAmountHelperText(segment: string, paymentType?: "one_time" | "regular" | null): string {
   if (getSegmentUiGroup(segment) === "investment") {
+    if (paymentType === "one_time") return "Jednorázová platba — roční příspěvek se nepočítá.";
     return "Roční příspěvek se dopočítá automaticky (× 12).";
   }
   if (segmentUsesAnnualPremiumPrimaryInput(segment)) {

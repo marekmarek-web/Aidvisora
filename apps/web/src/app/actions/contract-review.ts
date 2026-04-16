@@ -1144,3 +1144,360 @@ export async function acknowledgeContactMergeConflicts(
 
   return { ok: true };
 }
+
+// ─── Fáze 12: Ruční doplnění manual_required pole ─────────────────────────────
+
+export type ConfirmManualFieldResult =
+  | { ok: true; updatedPayload: import("@/lib/ai/review-queue-repository").ApplyResultPayload }
+  | { ok: false; error: string };
+
+/**
+ * Potvrdí manuálně zadanou hodnotu pro manual_required pole.
+ *
+ * Na rozdíl od confirmPendingField:
+ * - Přijme hodnotu zadanou poradcem (value param)
+ * - Zapíše ji přímo do contacts/contracts/client_payment_setups
+ * - Přesune pole z manualRequiredFields do autoAppliedFields v trace
+ * - Idempotentní: opakované volání se stejnou nebo novou hodnotou je bezpečné
+ */
+export async function confirmManualField(
+  reviewId: string,
+  fieldKey: string,
+  scope: "contact" | "contract" | "payment",
+  value: string,
+): Promise<ConfirmManualFieldResult> {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, "documents:write")) {
+    return { ok: false, error: "Nemáte oprávnění." };
+  }
+
+  const trimmedValue = value?.trim() ?? "";
+  if (!trimmedValue) {
+    return { ok: false, error: "Hodnota nesmí být prázdná." };
+  }
+
+  const row = await getContractReviewById(reviewId, auth.tenantId);
+  if (!row) return { ok: false, error: "Položka nenalezena." };
+
+  if (row.reviewStatus !== "applied") {
+    return { ok: false, error: "Ruční doplnění je možné jen u aplikovaných kontrol." };
+  }
+
+  const trace = row.applyResultPayload?.policyEnforcementTrace;
+  if (!trace) {
+    return { ok: false, error: "Enforcement trace nenalezen — nelze ověřit stav pole." };
+  }
+
+  if (trace.supportingDocumentGuard && (scope === "contract" || scope === "payment")) {
+    return { ok: false, error: "Podpůrný dokument nemůže mít potvrzení smluvních nebo platebních polí." };
+  }
+
+  const scopeEnforcement = scope === "contact"
+    ? trace.contactEnforcement
+    : scope === "contract"
+      ? trace.contractEnforcement
+      : trace.paymentEnforcement;
+
+  if (!scopeEnforcement) {
+    return { ok: false, error: `Scope "${scope}" nemá enforcement data.` };
+  }
+
+  if (!scopeEnforcement.manualRequiredFields.includes(fieldKey)) {
+    return { ok: false, error: `Pole "${fieldKey}" není ve stavu "vyžaduje ruční doplnění" pro scope "${scope}".` };
+  }
+
+  // Zjisti target ID pro scope
+  let targetId: string | null = null;
+  if (scope === "contact") {
+    targetId = row.applyResultPayload?.createdClientId ?? row.applyResultPayload?.linkedClientId ?? null;
+  } else if (scope === "contract") {
+    targetId = row.applyResultPayload?.createdContractId ?? null;
+  } else if (scope === "payment") {
+    targetId = row.applyResultPayload?.createdPaymentSetupId ?? null;
+  }
+
+  // Zapiš hodnotu do příslušné DB tabulky
+  if (targetId) {
+    if (scope === "contact") {
+      const contactPatch: Record<string, unknown> = { updatedAt: new Date() };
+      if (fieldKey === "fullName") {
+        const parts = trimmedValue.split(/\s+/).filter(Boolean);
+        if (parts.length === 1) {
+          contactPatch.firstName = parts[0];
+        } else {
+          contactPatch.firstName = parts.slice(0, -1).join(" ");
+          contactPatch.lastName = parts.slice(-1).join(" ");
+        }
+      } else if (fieldKey === "address") {
+        contactPatch.street = trimmedValue;
+      } else if ([
+        "firstName", "lastName", "email", "phone", "personalId", "birthDate",
+        "idCardNumber", "idCardIssuedBy", "idCardValidUntil", "idCardIssuedAt",
+        "generalPractitioner", "city", "zip", "street",
+      ].includes(fieldKey)) {
+        contactPatch[fieldKey] = trimmedValue;
+      }
+      if (Object.keys(contactPatch).length > 1) {
+        await db
+          .update(contacts)
+          .set(contactPatch)
+          .where(and(eq(contacts.id, targetId), eq(contacts.tenantId, auth.tenantId)));
+      }
+    }
+
+    if (scope === "contract") {
+      const contractPatch: Record<string, unknown> = { updatedAt: new Date() };
+      if (fieldKey === "institutionName" || fieldKey === "insurer" || fieldKey === "provider") {
+        contractPatch.partnerName = trimmedValue;
+      } else if (fieldKey === "productName") {
+        contractPatch.productName = trimmedValue;
+      } else if (fieldKey === "contractNumber") {
+        contractPatch.contractNumber = trimmedValue;
+      } else if (fieldKey === "policyStartDate" || fieldKey === "effectiveDate" || fieldKey === "startDate") {
+        contractPatch.startDate = trimmedValue;
+      } else if (fieldKey === "premiumAmount" || fieldKey === "totalMonthlyPremium") {
+        contractPatch.premiumAmount = trimmedValue;
+      } else if (fieldKey === "premiumAnnual" || fieldKey === "annualPremium") {
+        contractPatch.premiumAnnual = trimmedValue;
+      }
+      if (Object.keys(contractPatch).length > 1) {
+        await db
+          .update(contracts)
+          .set(contractPatch)
+          .where(and(eq(contracts.id, targetId), eq(contracts.tenantId, auth.tenantId)));
+      }
+    }
+
+    if (scope === "payment") {
+      const paymentPatch: Record<string, unknown> = { updatedAt: new Date() };
+      if (fieldKey === "variableSymbol" || fieldKey === "vs") {
+        paymentPatch.variableSymbol = trimmedValue;
+      } else if (fieldKey === "iban" || fieldKey === "accountNumber") {
+        paymentPatch.iban = trimmedValue;
+      } else if (fieldKey === "paymentAmount" || fieldKey === "monthlyPremium" || fieldKey === "premiumAmount") {
+        paymentPatch.amount = trimmedValue;
+      } else if (fieldKey === "paymentFrequency" || fieldKey === "frequency") {
+        paymentPatch.frequency = trimmedValue;
+      }
+      if (Object.keys(paymentPatch).length > 1) {
+        await db
+          .update(clientPaymentSetups)
+          .set(paymentPatch)
+          .where(and(eq(clientPaymentSetups.id, targetId), eq(clientPaymentSetups.tenantId, auth.tenantId)));
+      }
+
+      // Ověř, zda jsou všechna manual_required payment pole nyní potvrzena
+      const existingConfirmed = row.applyResultPayload?.confirmedFieldsTrace ?? {};
+      const alreadyConfirmedManual = Object.keys(existingConfirmed).filter(
+        (k) => (existingConfirmed[k] as { scope: string })?.scope === "payment" &&
+          scopeEnforcement.manualRequiredFields.includes(k)
+      );
+      const remainingManual = scopeEnforcement.manualRequiredFields.filter(
+        (f) => f !== fieldKey && !alreadyConfirmedManual.includes(f)
+      );
+      const allPaymentPendingConfirmed = (scopeEnforcement.pendingConfirmationFields ?? []).every(
+        (f) => existingConfirmed[f]
+      );
+      if (remainingManual.length === 0 && allPaymentPendingConfirmed) {
+        await db
+          .update(clientPaymentSetups)
+          .set({ needsHumanReview: false, visibleToClient: true, updatedAt: new Date() })
+          .where(and(eq(clientPaymentSetups.id, targetId), eq(clientPaymentSetups.tenantId, auth.tenantId)));
+      }
+    }
+  }
+
+  // Audit log
+  await db.insert(auditLog).values({
+    tenantId: auth.tenantId,
+    userId: auth.userId,
+    action: "confirm_manual_field",
+    entityType: "contract_review",
+    entityId: reviewId,
+    meta: { reviewId, fieldKey, scope, targetId, value: trimmedValue },
+  });
+
+  // Aktualizuj trace — přesuň pole z manualRequiredFields do autoAppliedFields
+  const existingConfirmed = row.applyResultPayload?.confirmedFieldsTrace ?? {};
+  const updatedTrace = {
+    ...existingConfirmed,
+    [fieldKey]: {
+      confirmedAt: new Date().toISOString(),
+      confirmedBy: auth.userId,
+      scope,
+      targetId,
+      fromValue: trimmedValue,
+      source: "manual_fill" as const,
+    },
+  };
+
+  const updatedPolicyTrace = {
+    ...trace,
+    [scope === "contact" ? "contactEnforcement" : scope === "contract" ? "contractEnforcement" : "paymentEnforcement"]: {
+      ...scopeEnforcement,
+      manualRequiredFields: scopeEnforcement.manualRequiredFields.filter((f) => f !== fieldKey),
+      autoAppliedFields: [...scopeEnforcement.autoAppliedFields, fieldKey],
+    },
+    summary: {
+      ...trace.summary,
+      totalManualRequired: Math.max(0, (trace.summary.totalManualRequired ?? 0) - 1),
+      totalAutoApplied: trace.summary.totalAutoApplied + 1,
+    },
+  };
+
+  const updatedPayload = {
+    ...row.applyResultPayload!,
+    policyEnforcementTrace: updatedPolicyTrace,
+    confirmedFieldsTrace: updatedTrace,
+  };
+
+  await updateContractReview(reviewId, auth.tenantId, {
+    applyResultPayload: updatedPayload,
+  });
+
+  return { ok: true, updatedPayload };
+}
+
+// ─── Fáze 12b: Bulk potvrzení všech prefill_confirm (pending) polí ─────────────
+
+export type ConfirmAllPendingFieldsResult =
+  | { ok: true; confirmedCount: number; updatedPayload: import("@/lib/ai/review-queue-repository").ApplyResultPayload }
+  | { ok: false; error: string };
+
+/**
+ * Potvrdí všechna prefill_confirm pole (pendingConfirmationFields) najednou.
+ * Ekvivalent opakování confirmPendingField pro každé pole.
+ */
+export async function confirmAllPendingFields(
+  reviewId: string,
+): Promise<ConfirmAllPendingFieldsResult> {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, "documents:write")) {
+    return { ok: false, error: "Nemáte oprávnění." };
+  }
+
+  const row = await getContractReviewById(reviewId, auth.tenantId);
+  if (!row) return { ok: false, error: "Položka nenalezena." };
+
+  if (row.reviewStatus !== "applied") {
+    return { ok: false, error: "Potvrzení polí je možné jen u aplikovaných kontrol." };
+  }
+
+  const trace = row.applyResultPayload?.policyEnforcementTrace;
+  if (!trace) {
+    return { ok: false, error: "Enforcement trace nenalezen." };
+  }
+
+  const scopeKeys: Array<{ scope: "contact" | "contract" | "payment"; enforcement: typeof trace.contactEnforcement }> = [
+    { scope: "contact", enforcement: trace.contactEnforcement },
+    { scope: "contract", enforcement: trace.contractEnforcement },
+    { scope: "payment", enforcement: trace.paymentEnforcement },
+  ];
+
+  const existingConfirmed = row.applyResultPayload?.confirmedFieldsTrace ?? {};
+  let updatedTrace = { ...existingConfirmed };
+  let updatedPolicyTrace = { ...trace };
+  let confirmedCount = 0;
+
+  for (const { scope, enforcement } of scopeKeys) {
+    if (!enforcement) continue;
+    if (trace.supportingDocumentGuard && (scope === "contract" || scope === "payment")) continue;
+
+    let targetId: string | null = null;
+    if (scope === "contact") {
+      targetId = row.applyResultPayload?.createdClientId ?? row.applyResultPayload?.linkedClientId ?? null;
+    } else if (scope === "contract") {
+      targetId = row.applyResultPayload?.createdContractId ?? null;
+    } else if (scope === "payment") {
+      targetId = row.applyResultPayload?.createdPaymentSetupId ?? null;
+    }
+
+    const pendingFields = enforcement.pendingConfirmationFields.filter((f) => !updatedTrace[f]);
+
+    for (const fieldKey of pendingFields) {
+      const extractedFields = (row.extractedPayload as Record<string, unknown> | null)?.extractedFields as
+        | Record<string, { value?: unknown } | undefined>
+        | undefined;
+      const fromValue = extractedFields?.[fieldKey]?.value ?? null;
+      const normalizedValue =
+        fromValue == null ? null : typeof fromValue === "string" ? fromValue.trim() : String(fromValue);
+
+      updatedTrace = {
+        ...updatedTrace,
+        [fieldKey]: {
+          confirmedAt: new Date().toISOString(),
+          confirmedBy: auth.userId,
+          scope,
+          targetId,
+          fromValue: normalizedValue,
+        },
+      };
+      confirmedCount++;
+    }
+
+    if (pendingFields.length > 0) {
+      const enforcementKey = scope === "contact" ? "contactEnforcement" : scope === "contract" ? "contractEnforcement" : "paymentEnforcement";
+      updatedPolicyTrace = {
+        ...updatedPolicyTrace,
+        [enforcementKey]: {
+          ...enforcement,
+          pendingConfirmationFields: enforcement.pendingConfirmationFields.filter((f) => updatedTrace[f]),
+          autoAppliedFields: [...enforcement.autoAppliedFields, ...pendingFields],
+        },
+      };
+
+      // Pro payment scope — odblokuj setup pokud jsou všechna pending potvrzena
+      if (scope === "payment" && targetId) {
+        await db
+          .update(clientPaymentSetups)
+          .set({ needsHumanReview: false, visibleToClient: true, updatedAt: new Date() })
+          .where(and(eq(clientPaymentSetups.id, targetId), eq(clientPaymentSetups.tenantId, auth.tenantId)));
+      }
+    }
+  }
+
+  if (confirmedCount === 0) {
+    return {
+      ok: true,
+      confirmedCount: 0,
+      updatedPayload: row.applyResultPayload!,
+    };
+  }
+
+  const totalPending = Object.values(updatedPolicyTrace).reduce((acc, v) => {
+    if (v && typeof v === "object" && "pendingConfirmationFields" in v) {
+      return acc + (v as { pendingConfirmationFields: string[] }).pendingConfirmationFields.length;
+    }
+    return acc;
+  }, 0);
+
+  updatedPolicyTrace = {
+    ...updatedPolicyTrace,
+    summary: {
+      ...trace.summary,
+      totalPendingConfirmation: totalPending,
+      totalAutoApplied: trace.summary.totalAutoApplied + confirmedCount,
+    },
+  };
+
+  await db.insert(auditLog).values({
+    tenantId: auth.tenantId,
+    userId: auth.userId,
+    action: "confirm_all_pending_fields",
+    entityType: "contract_review",
+    entityId: reviewId,
+    meta: { reviewId, confirmedCount },
+  });
+
+  const updatedPayload = {
+    ...row.applyResultPayload!,
+    policyEnforcementTrace: updatedPolicyTrace,
+    confirmedFieldsTrace: updatedTrace,
+  };
+
+  await updateContractReview(reviewId, auth.tenantId, {
+    applyResultPayload: updatedPayload,
+  });
+
+  return { ok: true, confirmedCount, updatedPayload };
+}

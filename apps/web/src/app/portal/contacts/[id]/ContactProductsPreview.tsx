@@ -64,7 +64,7 @@ export function ContactProductsPreview({
           Sjednané a rozjednané produkty
         </h2>
         <Link
-          href={buildContactDetailHref(contactId, baseQueryNoTab, "smlouvy")}
+          href={buildContactDetailHref(contactId, baseQueryNoTab, "prehled")}
           scroll={false}
           className="text-sm font-black text-indigo-600 hover:text-indigo-800 transition-colors flex items-center gap-1 min-h-[44px]"
         >
@@ -80,13 +80,13 @@ export function ContactProductsPreview({
           </div>
         ) : contracts.length === 0 ? (
           <p className="max-w-prose text-sm leading-relaxed text-[color:var(--wp-text-secondary)]">
-            V tomto náhledu zatím nejsou žádné smlouvy. Přidejte je v záložce Produkty nebo počkejte na zápis z AI Review.
+            V tomto náhledu zatím nejsou žádné smlouvy. Přidejte je v Přehledu nebo počkejte na zápis z AI Review.
           </p>
         ) : (
           contracts.map((c) => (
             <Link
               key={c.id}
-              href={buildContactDetailHref(contactId, baseQueryNoTab, "smlouvy")}
+              href={buildContactDetailHref(contactId, baseQueryNoTab, "prehled")}
               scroll={false}
               className="p-4 rounded-2xl border border-[color:var(--wp-surface-card-border)] hover:border-indigo-200 hover:shadow-md transition-all bg-[color:var(--wp-surface-muted)]/30 group flex flex-col md:flex-row md:items-center justify-between gap-4 min-h-[44px]"
             >

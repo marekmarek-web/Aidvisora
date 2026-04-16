@@ -325,6 +325,10 @@ type Props = {
   onConfirmFinalContract?: (gateReasons: string[]) => void | Promise<void>;
   /** Fáze 11: Per-field pending confirmation */
   onConfirmPendingField?: (fieldKey: string, scope: "contact" | "contract" | "payment") => Promise<void>;
+  /** Fáze 12: Ruční doplnění manual_required polí */
+  onConfirmManualField?: (fieldKey: string, scope: "contact" | "contract" | "payment", value: string) => Promise<void>;
+  /** Fáze 12b: Bulk potvrzení všech pending polí */
+  onConfirmAllPendingFields?: () => Promise<void>;
   isApproving?: boolean;
   actionLoading?: string | null;
   onRefreshPdf?: () => void | Promise<void>;
@@ -348,6 +352,8 @@ export function AIReviewExtractionShell({
   onConfirmCreateNew,
   onConfirmFinalContract,
   onConfirmPendingField,
+  onConfirmManualField,
+  onConfirmAllPendingFields,
   isApproving,
   actionLoading,
   onRefreshPdf,
@@ -780,10 +786,10 @@ export function AIReviewExtractionShell({
                   {/* Product publish → go to client detail */}
                   {isProduct && clientId && (
                     <Link
-                      href={`/portal/contacts/${clientId}?tab=smlouvy`}
+                      href={`/portal/contacts/${clientId}?tab=prehled`}
                       className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-emerald-200 text-[11px] font-black text-emerald-700 hover:bg-emerald-50 transition-colors"
                     >
-                      <Shield size={11} /> Otevřít smlouvy klienta
+                      <Shield size={11} /> Otevřít přehled klienta
                     </Link>
                   )}
                   {/* visibleToClient → portal follow-up */}
@@ -979,6 +985,8 @@ export function AIReviewExtractionShell({
               onToggleGroup={handleToggleGroup}
               onExecuteDraftAction={handleExecuteDraftAction}
               onConfirmPendingField={onConfirmPendingField}
+              onConfirmManualField={onConfirmManualField}
+              onConfirmAllPendingFields={onConfirmAllPendingFields}
               onConfirmCreateNew={onConfirmCreateNew}
               onApproveAndApply={onApproveAndApply}
               onSelectClient={onSelectClient}

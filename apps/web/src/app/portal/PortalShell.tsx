@@ -221,6 +221,9 @@ function PortalShellInner({
     pathname === "/portal/contracts/review" ||
     pathname === "/portal/contracts/review/" ||
     /^\/portal\/contracts\/review\/[^/]+\/?$/.test(pathname);
+  /** Seznam Review smluv — celostránkový scroll v hlavní oblasti (detail zůstává overflow-hidden). */
+  const isAiReviewListPage =
+    pathname === "/portal/contracts/review" || pathname === "/portal/contracts/review/";
   /** Kalendář — vlastní workspace bez globálního top baru (search, +Nový, profil). */
   const isCalendarWorkspace =
     pathname === "/portal/calendar" || pathname.startsWith("/portal/calendar/");
@@ -439,7 +442,9 @@ function PortalShellInner({
             <div className={clsx(
               "wp-portal-main-scroll",
               isAiReviewWorkspace
-                ? "flex flex-col flex-1 min-h-0 overflow-hidden"
+                ? isAiReviewListPage
+                  ? "flex flex-col flex-1 min-h-0 overflow-y-auto"
+                  : "flex flex-col flex-1 min-h-0 overflow-hidden"
                 : hidePortalTopHeader
                   ? isCalendarWorkspace
                     ? "flex flex-col flex-1 min-h-0 overflow-hidden p-0 m-0"

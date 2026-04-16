@@ -4,7 +4,6 @@ export type ContactTabId =
   | "prehled"
   | "detail"
   | "timeline"
-  | "smlouvy"
   | "dokumenty"
   | "zapisky"
   | "podklady"
@@ -27,7 +26,6 @@ export const CONTACT_TAB_LABELS: Record<ContactTabId, string> = {
   prehled: "Přehled",
   detail: "Detail",
   timeline: "Časová osa",
-  smlouvy: "Produkty",
   dokumenty: "Dokumenty",
   zapisky: "Zápisky",
   podklady: "Požadavky na podklady",
@@ -36,13 +34,14 @@ export const CONTACT_TAB_LABELS: Record<ContactTabId, string> = {
   briefing: "Briefing",
 };
 
-/** Starý název záložky v odkazech — přesměruje se na `podklady`. */
+/** Starý název záložky v odkazech — přesměruje se na cílovou záložku. */
 const LEGACY_TAB_ALIASES: Record<string, ContactTabId> = {
   aktivita: "podklady",
+  smlouvy: "prehled",
 };
 
 /** Záložky bez položky v hlavní liště — platné z `?tab=` (deep link z přehledu). */
-const DEEP_LINK_TAB_IDS: ContactTabId[] = ["smlouvy", "ukoly", "obchody"];
+const DEEP_LINK_TAB_IDS: ContactTabId[] = ["ukoly", "obchody"];
 
 function firstString(v: string | string[] | undefined): string | undefined {
   if (v == null) return undefined;

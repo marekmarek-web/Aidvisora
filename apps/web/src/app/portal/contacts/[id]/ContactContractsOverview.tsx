@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
@@ -20,11 +20,11 @@ import {
   Users,
   AlignLeft,
   CheckCircle2,
-  EyeOff,
   FileSignature,
-  Edit2,
+  Pencil,
   Trash2,
   FileText,
+  MoreHorizontal,
 } from "lucide-react";
 import { getContractsByContact } from "@/app/actions/contracts";
 import type { ContractRow } from "@/app/actions/contracts";
@@ -36,6 +36,7 @@ import { ContractProvenanceLine } from "@/app/components/aidvisora/ContractProve
 import { deleteContract } from "@/app/actions/contracts";
 import type { LucideIcon } from "lucide-react";
 import { resolveInstitutionLogo, institutionInitials } from "@/lib/institutions/institution-logo";
+
 
 function productIcon(segment: string | undefined): LucideIcon {
   switch (segment) {
@@ -135,6 +136,8 @@ function ContractDetailCard({
   contactId: string;
   onDelete: (id: string) => void;
 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     payment: true,
     persons: false,
@@ -200,6 +203,18 @@ function ContractDetailCard({
     setOpenSections((prev) => ({ ...prev, [s]: !prev[s] }));
   }
 
+  // Close ... menu when clicking outside
+  useEffect(() => {
+    if (!menuOpen) return;
+    function handleOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [menuOpen]);
+
   async function handleDelete() {
     if (!confirm(`Opravdu smazat smlouvu ${displayName}?`)) return;
     setDeleting(true);
@@ -246,16 +261,16 @@ function ContractDetailCard({
             <Image
               src={institutionLogo.src}
               alt={institutionLogo.alt}
-              width={64}
-              height={64}
-              className="h-16 w-16 shrink-0 object-contain"
+              width={83}
+              height={83}
+              className="h-[83px] w-[83px] shrink-0 object-contain"
               unoptimized
             />
           ) : (
             <div
-              className={`h-16 w-16 rounded-xl flex items-center justify-center shrink-0 border ${iconCls}`}
+              className={`h-[83px] w-[83px] rounded-xl flex items-center justify-center shrink-0 border ${iconCls}`}
             >
-              <Icon size={22} strokeWidth={2} />
+              <Icon size={29} strokeWidth={2} />
             </div>
           )}
           <div className="flex-1 min-w-0">
@@ -281,13 +296,55 @@ function ContractDetailCard({
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-4 pl-13 sm:pl-0">
-          <div className="text-right">
+        <div className="flex items-center gap-2 pl-13 sm:pl-0">
+          <div className="text-right mr-1">
             <span className="block text-[9px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-0.5">
               Platba / pojistné / splátka
             </span>
             <span className="text-sm font-black text-[color:var(--wp-text)]">{premium}</span>
           </div>
+
+          {/* Upravit — vždy viditelné */}
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); handleEdit(); }}
+            title="Upravit smlouvu"
+            className="w-8 h-8 rounded-lg flex items-center justify-center border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-card)] text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 transition-colors shrink-0"
+          >
+            <Pencil size={14} />
+          </button>
+
+          {/* Kontextové menu ... */}
+          <div className="relative shrink-0" ref={menuRef}>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v); }}
+              title="Další akce"
+              className="w-8 h-8 rounded-lg flex items-center justify-center border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] transition-colors"
+            >
+              <MoreHorizontal size={14} />
+            </button>
+            {menuOpen && (
+              <div className="absolute right-0 top-full mt-1 w-44 rounded-xl border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-card)] shadow-lg z-20 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setMenuOpen(false); handleVypoved(); }}
+                  className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] transition-colors text-left"
+                >
+                  <FileSignature size={14} /> Výpověď smlouvy
+                </button>
+                <button
+                  type="button"
+                  disabled={deleting}
+                  onClick={(e) => { e.stopPropagation(); setMenuOpen(false); void handleDelete(); }}
+                  className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-rose-600 hover:bg-rose-50 transition-colors text-left disabled:opacity-50"
+                >
+                  <Trash2 size={14} /> {deleting ? "Mazání…" : "Smazat smlouvu"}
+                </button>
+              </div>
+            )}
+          </div>
+
           <div
             className={`w-7 h-7 rounded-full flex items-center justify-center border transition-all duration-200 shrink-0 ${
               isExpanded
@@ -536,39 +593,7 @@ function ContractDetailCard({
             </span>
           </div>
 
-          {/* Action footer */}
-          <div className="px-5 py-4 border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] flex flex-wrap items-center gap-2.5">
-            <button
-              type="button"
-              onClick={handleEdit}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-bold rounded-xl border border-[color:var(--wp-surface-card-border)] text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 transition-colors min-h-[36px]"
-            >
-              <Edit2 size={15} /> Upravit
-            </button>
-            {!inPortal && (
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-bold rounded-xl border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] transition-colors min-h-[36px]"
-              >
-                <EyeOff size={15} /> Skrýt v portálu
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={handleVypoved}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-bold rounded-xl border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] transition-colors min-h-[36px]"
-            >
-              <FileSignature size={15} /> Výpověď
-            </button>
-            <button
-              type="button"
-              disabled={deleting}
-              onClick={handleDelete}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-bold rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 transition-colors ml-auto min-h-[36px] disabled:opacity-50"
-            >
-              <Trash2 size={15} /> {deleting ? "Mazání…" : "Smazat"}
-            </button>
-          </div>
+          {/* Action footer odstraněn — editace smlouvy probíhá výhradně přes modal (tlačítko tužky v hlavičce karty) */}
         </div>
       )}
     </div>
@@ -613,9 +638,11 @@ function groupContracts(
 export function ContactContractsOverview({
   contactId,
   baseQueryNoTab,
+  onOpenPaymentModal,
 }: {
   contactId: string;
   baseQueryNoTab: string;
+  onOpenPaymentModal?: () => void;
 }) {
   const [contracts, setContracts] = useState<ContractRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -669,13 +696,24 @@ export function ContactContractsOverview({
             </p>
           )}
         </div>
-        <button
-          type="button"
-          onClick={handleAddProduct}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all active:scale-95 shrink-0 min-h-[40px]"
-        >
-          <Plus size={15} strokeWidth={2.5} /> Přidat produkt
-        </button>
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:justify-end">
+          {onOpenPaymentModal && (
+            <button
+              type="button"
+              onClick={onOpenPaymentModal}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 text-[color:var(--wp-text)] hover:bg-[color:var(--wp-surface-muted)] text-xs font-black uppercase tracking-widest transition-all shrink-0 min-h-[40px] flex-1 sm:flex-initial"
+            >
+              <PayCard size={15} strokeWidth={2.5} aria-hidden /> Doplnit platební instrukci
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleAddProduct}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all active:scale-95 shrink-0 min-h-[40px] flex-1 sm:flex-initial"
+          >
+            <Plus size={15} strokeWidth={2.5} /> Přidat produkt
+          </button>
+        </div>
       </div>
 
       {/* Body */}

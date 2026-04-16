@@ -263,8 +263,8 @@ export default function ContractReviewListPage() {
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-[color:var(--wp-main-scroll-bg)]">
-      <div className="mx-auto flex min-h-0 w-full max-w-[1200px] flex-1 flex-col gap-6 p-6 md:p-8">
+       <div className="flex min-h-0 flex-col bg-[color:var(--wp-main-scroll-bg)]">
+      <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-6 p-6 md:p-8">
         {/* Header - reference style */}
         <div className="flex shrink-0 flex-col justify-between gap-6 md:flex-row md:items-end">
           <div className="flex items-start gap-4">
@@ -399,7 +399,7 @@ export default function ContractReviewListPage() {
         </div>
 
         {/* List - cards */}
-        <div className="bg-[color:var(--wp-surface-card)] rounded-[32px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col">
+        <div className="bg-[color:var(--wp-surface-card)] rounded-[32px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden flex flex-col">
           <div className="px-6 py-5 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/30 flex items-center justify-between">
             <h2 className="font-black text-[color:var(--wp-text)] text-sm flex items-center gap-2">
               Položky{" "}
@@ -409,7 +409,7 @@ export default function ContractReviewListPage() {
             </h2>
           </div>
 
-          <div className="min-h-[12rem] flex-1 overflow-auto">
+          <div className="min-h-[12rem]">
             {loading && items.length === 0 ? (
               <div className="p-16 flex flex-col items-center justify-center text-center">
                 <RefreshCw size={32} className="animate-spin text-indigo-500 mb-4" />

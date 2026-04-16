@@ -268,7 +268,11 @@ PRAVIDLO ROBUSTNÍ EXTRAKCE INVESTIC:
   "Conseq Invest akciový", "NN Růstový", investiční program + fond.
   Stačí i JEDEN fond s alokací 100 % — vrať ho do funds[].
 - INVESTIČNÍ ČÁSTKA: Hledej "investovaná částka", "jednorázová investice", "cílová částka",
-  "suma k úpisu", "zamýšlená výše investice", "vstupní investice".
+  "suma k úpisu", "zamýšlená výše investice", "vstupní investice", "výše investované částky".
+  investmentAmount = CELKOVÁ investovaná částka klientem (součet všech fondů). Pokud dokument
+  obsahuje tabulku fondů s jednotlivými částkami, sečti je nebo použij explicitně uvedený součet.
+  NESMÍŠ zaměnit investmentAmount s variabilním symbolem, číslem smlouvy (7-10místné číslo),
+  ISIN kódem (začíná 2 písmeny), bankovním číslem účtu ani s kódem zprostředkovatele.
   Pokud číslo existuje v textu, MUSÍ být vyplněno (investmentAmount).
 - INVESTIČNÍ PROFIL / STRATEGIE: Hledej "investiční profil", "strategie", "dynamický",
   "vyvážený", "konzervativní", "růstový" i jako samostatný popis bez nadpisu "strategie".
