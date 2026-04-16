@@ -25,6 +25,20 @@ export function isFvEligibleSegment(segment: string): boolean {
   return segment === "INV" || segment === "DIP" || segment === "DPS";
 }
 
+/**
+ * Resolves the monthly contribution to use for FV computation.
+ * For DPS: prefer participantContributionNumeric from segmentDetail (most truthful source),
+ * fall back to premiumMonthly.
+ * For INV/DIP: use premiumMonthly directly.
+ */
+export function resolveFvMonthlyContribution(p: CanonicalProduct): number | null {
+  if (p.segment === "DPS" && p.segmentDetail?.kind === "pension") {
+    const explicit = p.segmentDetail.participantContributionNumeric;
+    if (explicit != null && explicit > 0) return explicit;
+  }
+  return p.premiumMonthly;
+}
+
 export function resolvePortalFundLogoPath(p: CanonicalProduct): string | null {
   if (p.segmentDetail?.kind === "investment" && p.segmentDetail.resolvedFundId) {
     return fundLibraryLogoPathForPortal(p.segmentDetail.resolvedFundId);
@@ -66,17 +80,17 @@ export function canonicalPortfolioDetailRows(p: CanonicalProduct): { label: stri
         beneficiary: "Oprávněná osoba",
         other: "Osoba",
       };
-      for (const person of d.persons) {
+      const personSummaryParts: string[] = d.persons.map((person) => {
         const roleLabel = PERSON_ROLE_LABELS[person.role] ?? "Osoba";
-        const personDisplay = person.name || (person.birthDate ? `nar. ${formatDisplayDateCs(person.birthDate) || person.birthDate}` : roleLabel);
-        rows.push({ label: roleLabel, value: personDisplay });
-      }
+        return person.name || (person.birthDate ? `nar. ${formatDisplayDateCs(person.birthDate) || person.birthDate}` : roleLabel);
+      });
+      rows.push({ label: "Osoby ve smlouvě", value: personSummaryParts.join(", ") });
     }
     if (d.risks.length) {
-      for (const risk of d.risks) {
-        const riskValue = risk.amount ? `${risk.amount}` : "V evidenci";
-        rows.push({ label: risk.label, value: riskValue });
-      }
+      const riskParts: string[] = d.risks.map((risk) =>
+        risk.amount ? `${risk.label}: ${risk.amount}` : risk.label,
+      );
+      rows.push({ label: "Rizika / připojištění", value: riskParts.join("; ") });
     }
   } else if (d?.kind === "vehicle") {
     rows.push({ label: "Typ", value: d.subtype === "HAV" ? "Havarijní pojištění" : "Povinné ručení" });
@@ -96,8 +110,9 @@ export function canonicalPortfolioDetailRows(p: CanonicalProduct): { label: stri
     if (d.employerContribution) rows.push({ label: "Zaměstnavatel", value: d.employerContribution });
     if (d.stateContributionEstimate) rows.push({ label: "Státní příspěvek (odhad)", value: d.stateContributionEstimate });
     if (d.investmentStrategy) rows.push({ label: "Strategie", value: d.investmentStrategy });
-    if (p.fvReadiness.investmentHorizon) {
-      rows.push({ label: "Investiční horizont", value: p.fvReadiness.investmentHorizon });
+    const pensionHorizon = d.investmentHorizon || p.fvReadiness.investmentHorizon;
+    if (pensionHorizon) {
+      rows.push({ label: "Investiční horizont", value: pensionHorizon });
     }
   } else if (d?.kind === "loan") {
     if (d.lender) rows.push({ label: "Úvěrující", value: d.lender });

@@ -31,6 +31,7 @@ import {
   isFvEligibleSegment,
   portfolioContractStatusLabelCs,
   resolvePortalFundLogoPath,
+  resolveFvMonthlyContribution,
 } from "@/lib/client-portfolio/portal-portfolio-display";
 import type { CanonicalProduct } from "@/lib/products/canonical-product-read";
 import { computeSharedFutureValue, SHARED_FV_DISCLAIMER } from "@/lib/fund-library/shared-future-value";
@@ -209,7 +210,7 @@ export function PortfolioPageContent({ contracts, visibleSourceDocs }: Portfolio
       resolvedFundId: p.fvReadiness.resolvedFundId,
       resolvedFundCategory: p.fvReadiness.resolvedFundCategory,
       investmentHorizon: p.fvReadiness.investmentHorizon,
-      monthlyContribution: p.premiumMonthly,
+      monthlyContribution: resolveFvMonthlyContribution(p),
       annualContribution: p.premiumAnnual,
     });
     if (hit.projectionState === "complete" && hit.projectedFutureValue != null) {
@@ -360,7 +361,7 @@ export function PortfolioPageContent({ contracts, visibleSourceDocs }: Portfolio
                             resolvedFundId: p.fvReadiness.resolvedFundId,
                             resolvedFundCategory: p.fvReadiness.resolvedFundCategory,
                             investmentHorizon: p.fvReadiness.investmentHorizon,
-                            monthlyContribution: p.premiumMonthly,
+                            monthlyContribution: resolveFvMonthlyContribution(p),
                             annualContribution: p.premiumAnnual,
                           })
                         : null;

@@ -2,7 +2,7 @@ import { TrendingUp, PiggyBank, AlertCircle, Info, type LucideIcon } from "lucid
 import { getContractsByContact } from "@/app/actions/contracts";
 import { mapContractToCanonicalProduct } from "@/lib/client-portfolio/canonical-contract-read";
 import type { CanonicalProduct } from "@/lib/client-portfolio/canonical-contract-read";
-import { isFvEligibleSegment } from "@/lib/client-portfolio/portal-portfolio-display";
+import { isFvEligibleSegment, resolveFvMonthlyContribution } from "@/lib/client-portfolio/portal-portfolio-display";
 import {
   computeSharedFutureValue,
   SHARED_FV_DISCLAIMER,
@@ -40,7 +40,7 @@ export async function ProductsFvSummarySection({ contactId }: { contactId: strin
       resolvedFundId: product.fvReadiness.resolvedFundId,
       resolvedFundCategory: product.fvReadiness.resolvedFundCategory,
       investmentHorizon: product.fvReadiness.investmentHorizon,
-      monthlyContribution: product.premiumMonthly,
+      monthlyContribution: resolveFvMonthlyContribution(product),
       annualContribution: product.premiumAnnual,
     });
 

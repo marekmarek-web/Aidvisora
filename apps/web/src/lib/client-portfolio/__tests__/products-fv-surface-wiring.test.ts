@@ -11,7 +11,7 @@ import {
   mapContractToCanonicalProduct,
   type RawContractInput,
 } from "../canonical-contract-read";
-import { isFvEligibleSegment, canonicalPortfolioDetailRows } from "../portal-portfolio-display";
+import { isFvEligibleSegment, canonicalPortfolioDetailRows, resolveFvMonthlyContribution } from "../portal-portfolio-display";
 import { computeSharedFutureValue } from "@/lib/fund-library/shared-future-value";
 
 function makeContract(overrides: Partial<RawContractInput> = {}): RawContractInput {
@@ -319,6 +319,103 @@ describe("Segment-specific rendering: detail rows smoke", () => {
     expect(labels).toContain("Zaměstnavatel");
     expect(labels).toContain("Státní příspěvek (odhad)");
     expect(labels).toContain("Strategie");
+  });
+});
+
+describe("resolveFvMonthlyContribution", () => {
+  it("uses participantContributionNumeric for DPS when available", () => {
+    const product = mapContractToCanonicalProduct(
+      makeContract({
+        segment: "DPS",
+        premiumAmount: "500",
+        portfolioAttributes: {
+          participantContribution: "1500",
+        },
+      }),
+    );
+    expect(resolveFvMonthlyContribution(product)).toBe(1500);
+  });
+
+  it("falls back to premiumMonthly for DPS when participantContribution is missing", () => {
+    const product = mapContractToCanonicalProduct(
+      makeContract({
+        segment: "DPS",
+        premiumAmount: "2000",
+        portfolioAttributes: {},
+      }),
+    );
+    expect(resolveFvMonthlyContribution(product)).toBe(2000);
+  });
+
+  it("uses premiumMonthly for INV", () => {
+    const product = mapContractToCanonicalProduct(
+      makeContract({
+        segment: "INV",
+        premiumAmount: "5000",
+        portfolioAttributes: {},
+      }),
+    );
+    expect(resolveFvMonthlyContribution(product)).toBe(5000);
+  });
+
+  it("produces complete FV for DPS using participantContributionNumeric as monthly", () => {
+    const product = mapContractToCanonicalProduct(
+      makeContract({
+        segment: "DPS",
+        premiumAmount: "300",
+        portfolioAttributes: {
+          participantContribution: "1000",
+          fvSourceType: "heuristic-fallback",
+          resolvedFundCategory: "dps_dynamic",
+          investmentHorizon: "20 let",
+        },
+      }),
+    );
+    const fv = computeSharedFutureValue({
+      fvSourceType: product.fvReadiness.fvSourceType!,
+      resolvedFundId: product.fvReadiness.resolvedFundId,
+      resolvedFundCategory: product.fvReadiness.resolvedFundCategory,
+      investmentHorizon: product.fvReadiness.investmentHorizon,
+      monthlyContribution: resolveFvMonthlyContribution(product),
+      annualContribution: product.premiumAnnual,
+    });
+    expect(fv.projectionState).toBe("complete");
+    expect(fv.monthlyContribution).toBe(1000);
+    expect(fv.projectedFutureValue).not.toBeNull();
+  });
+});
+
+describe("PensionDetail investmentHorizon", () => {
+  it("extracts investmentHorizon from portfolioAttributes into PensionDetail", () => {
+    const product = mapContractToCanonicalProduct(
+      makeContract({
+        segment: "DPS",
+        portfolioAttributes: {
+          investmentHorizon: "25 let",
+          participantContribution: "1000",
+        },
+      }),
+    );
+    expect(product.segmentDetail?.kind).toBe("pension");
+    if (product.segmentDetail?.kind === "pension") {
+      expect(product.segmentDetail.investmentHorizon).toBe("25 let");
+    }
+  });
+
+  it("shows investmentHorizon in detail rows for DPS", () => {
+    const product = mapContractToCanonicalProduct(
+      makeContract({
+        segment: "DPS",
+        portfolioAttributes: {
+          investmentHorizon: "30 let",
+          participantContribution: "500",
+        },
+      }),
+    );
+    const rows = canonicalPortfolioDetailRows(product);
+    const horizonRow = rows.find((r) => r.label === "Investiční horizont");
+    expect(horizonRow).toBeDefined();
+    expect(horizonRow?.value).toBe("30 let");
   });
 });
 

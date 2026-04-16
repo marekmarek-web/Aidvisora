@@ -149,9 +149,11 @@ export type PensionDetail = {
   kind: "pension";
   company: string | null;
   participantContribution: string | null;
+  participantContributionNumeric: number | null;
   employerContribution: string | null;
   stateContributionEstimate: string | null;
   investmentStrategy: string | null;
+  investmentHorizon: string | null;
 };
 
 export type LoanDetail = {
@@ -345,9 +347,11 @@ function buildPensionDetail(
     kind: "pension",
     company: contract.partnerName,
     participantContribution: safeString(attrs.participantContribution),
+    participantContributionNumeric: safeNumber(attrs.participantContribution),
     employerContribution: safeString(attrs.employerContribution),
     stateContributionEstimate: safeString(attrs.stateContributionEstimate),
     investmentStrategy: safeString(attrs.investmentStrategy),
+    investmentHorizon: safeString(attrs.investmentHorizon),
   };
 }
 
