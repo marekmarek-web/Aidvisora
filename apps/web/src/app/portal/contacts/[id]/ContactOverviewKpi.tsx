@@ -1,74 +1,110 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Activity } from "lucide-react";
+import { TrendingUp, Wallet, Shield, CalendarDays } from "lucide-react";
 import { getFinancialSummary } from "@/app/actions/financial";
+
+/** Investiční segmenty — pravidelné vklady do investic, DIP, DPS. */
+const INVEST_SEGMENTS = new Set(["INV", "DIP", "DPS"]);
+/** Pojistné segmenty — všechno mimo investice a úvěry. */
+const INSURANCE_SEGMENTS = new Set(["ZP", "MAJ", "ODP", "AUTO_PR", "AUTO_HAV", "CEST", "FIRMA_POJ"]);
 
 function fmtCZK(value: number): string {
   if (value === 0) return "—";
   return value.toLocaleString("cs-CZ", { maximumFractionDigits: 0 }) + " Kč";
 }
 
-/** Nejstarší rok ze smluv (pro „Klientem od“). */
-function clientSinceYear(timeline: { startDate: string | null }[]): string {
-  const years = timeline
-    .map((t) => t.startDate && t.startDate.slice(0, 4))
-    .filter((y): y is string => !!y);
-  if (years.length === 0) return "—";
-  return String(Math.min(...years.map(Number)));
-}
+type KpiData = {
+  monthlyInvest: number;
+  personalAum: number;
+  monthlyInsurance: number;
+  annualInsurance: number;
+};
 
-const DEFAULT_DATA = {
-  totalMonthly: 0,
-  totalAnnual: 0,
-  contractCount: 0,
-  clientSince: "—",
+const DEFAULT_KPI: KpiData = {
+  monthlyInvest: 0,
+  personalAum: 0,
+  monthlyInsurance: 0,
+  annualInsurance: 0,
 };
 
 export function ContactOverviewKpi({ contactId }: { contactId: string }) {
-  const [data, setData] = useState<{
-    totalMonthly: number;
-    totalAnnual: number;
-    contractCount: number;
-    clientSince: string;
-  } | null>(null);
+  const [data, setData] = useState<KpiData | null>(null);
 
   useEffect(() => {
     getFinancialSummary(contactId)
       .then((s) => {
-        const contractCount = s.bySegment.reduce((acc, seg) => acc + seg.count, 0);
-        setData({
-          totalMonthly: s.totalMonthly,
-          totalAnnual: s.totalAnnual,
-          contractCount,
-          clientSince: clientSinceYear(s.contractTimeline),
-        });
+        let monthlyInvest = 0;
+        let personalAum = 0;
+        let monthlyInsurance = 0;
+        let annualInsurance = 0;
+
+        for (const seg of s.bySegment) {
+          if (INVEST_SEGMENTS.has(seg.segment)) {
+            monthlyInvest += seg.monthlySum;
+            personalAum += seg.annualSum;
+          } else if (INSURANCE_SEGMENTS.has(seg.segment)) {
+            monthlyInsurance += seg.monthlySum;
+            annualInsurance += seg.annualSum;
+          }
+        }
+
+        setData({ monthlyInvest, personalAum, monthlyInsurance, annualInsurance });
       })
       .catch(() => setData(null));
   }, [contactId]);
 
-  const d = data ?? DEFAULT_DATA;
+  const d = data ?? DEFAULT_KPI;
+
+  const kpis = [
+    {
+      label: "Měsíční investice",
+      value: fmtCZK(d.monthlyInvest),
+      icon: TrendingUp,
+      accent: "text-indigo-600",
+      bg: "bg-indigo-50 dark:bg-indigo-950/40",
+    },
+    {
+      label: "Osobní AUM",
+      value: fmtCZK(d.personalAum),
+      icon: Wallet,
+      accent: "text-[color:var(--wp-text)]",
+      bg: "bg-[color:var(--wp-surface-muted)]",
+    },
+    {
+      label: "Měsíční pojistné",
+      value: fmtCZK(d.monthlyInsurance),
+      icon: Shield,
+      accent: "text-emerald-600",
+      bg: "bg-emerald-50 dark:bg-emerald-950/40",
+    },
+    {
+      label: "Roční pojistné",
+      value: fmtCZK(d.annualInsurance),
+      icon: CalendarDays,
+      accent: "text-[color:var(--wp-text)]",
+      bg: "bg-[color:var(--wp-surface-muted)]",
+    },
+  ] as const;
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      <div className="bg-[color:var(--wp-surface-card)] p-5 rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm min-h-[44px]">
-        <span className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1 block">Osobní AUM</span>
-        <div className="text-xl font-black text-[color:var(--wp-text)]">{d.totalAnnual > 0 ? fmtCZK(d.totalAnnual) : "—"}</div>
-      </div>
-      <div className="bg-[color:var(--wp-surface-card)] p-5 rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm min-h-[44px]">
-        <span className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1 block">Měs. investice</span>
-        <div className="text-xl font-black text-emerald-600">{fmtCZK(d.totalMonthly)}</div>
-      </div>
-      <div className="bg-[color:var(--wp-surface-card)] p-5 rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm min-h-[44px]">
-        <span className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1 flex items-center gap-1">
-          Health Score <Activity size={12} aria-hidden />
-        </span>
-        <div className="text-xl font-black text-indigo-600">—</div>
-      </div>
-      <div className="bg-[color:var(--wp-surface-card)] p-5 rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm min-h-[44px]">
-        <span className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1 block">Klientem od</span>
-        <div className="text-xl font-black text-[color:var(--wp-text)]">{d.clientSince}</div>
-      </div>
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      {kpis.map(({ label, value, icon: Icon, accent, bg }) => (
+        <div
+          key={label}
+          className="bg-[color:var(--wp-surface-card)] p-4 sm:p-5 rounded-[20px] border border-[color:var(--wp-surface-card-border)] shadow-sm flex flex-col gap-2"
+        >
+          <div className="flex items-center gap-2">
+            <span className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${bg}`}>
+              <Icon size={14} className={accent} aria-hidden />
+            </span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] leading-tight">
+              {label}
+            </span>
+          </div>
+          <div className={`text-xl font-black leading-none ${accent}`}>{value}</div>
+        </div>
+      ))}
     </div>
   );
 }

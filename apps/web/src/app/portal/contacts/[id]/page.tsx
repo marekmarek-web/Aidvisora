@@ -154,29 +154,26 @@ function ContactTabBody({
     case "prehled":
       return (
         <div className="space-y-6">
-          {/* KPI row */}
+          {/* KPI row — 4 finanční metriky */}
           <ContactOverviewKpi contactId={contactId} />
 
-          {/* Main 2-column grid: products + sidebar */}
+          {/* Pokrytí produktů — samostatná sekce, plná šířka */}
+          <ClientCoverageWidget contactId={contactId} />
+
+          {/* Hlavní 2-sloupcový grid: produkty + sidebar */}
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <div className="xl:col-span-2 space-y-6">
-              {/* Products accordion — centre of the overview */}
               <ContactContractsOverview contactId={contactId} baseQueryNoTab={baseQueryNoTab} />
-
-              {/* AI summary replacing redundant AI utility blocks */}
               <AiClientSummaryBlock
                 contactId={contactId}
                 initialSummary={latestGenerations.clientSummary}
               />
-
-              {/* Financial analysis summary (compact, only when data exists) */}
               <ClientFinancialSummaryBlock contactId={contactId} />
             </div>
 
             <aside className="xl:col-span-1 space-y-6">
               {household && <ContactHouseholdCard household={household} />}
               <ContactLastNotePreview contactId={contactId} />
-              <ClientCoverageWidget contactId={contactId} />
             </aside>
           </div>
         </div>
