@@ -1,6 +1,63 @@
 import type { AiProvenanceKind } from "@/lib/portal/ai-review-provenance";
 import type { ContactAiProvenanceResult } from "@/app/actions/contacts";
 
+export type ContactIdentityHeaderFields = {
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  birthDate?: string | null;
+  street?: string | null;
+  city?: string | null;
+  zip?: string | null;
+};
+
+function contactHasAddressLine(contact: ContactIdentityHeaderFields): boolean {
+  return Boolean(
+    (contact.street?.trim() ?? "") ||
+      (contact.city?.trim() ?? "") ||
+      (contact.zip?.trim() ?? ""),
+  );
+}
+
+/**
+ * Pro badge v hero: nezobrazovat „čeká na potvrzení“, pokud je pole na kontaktu už vyplněné
+ * (stale položka v pendingFields z dřívějšího trace).
+ */
+export function resolveContactIdentityFieldProvenanceForHeader(
+  fieldKey: string,
+  provenance: ContactAiProvenanceResult | null,
+  contact: ContactIdentityHeaderFields,
+): { kind: AiProvenanceKind; reviewId: string; confirmedAt?: string | null } | null {
+  const base = resolveContactIdentityFieldProvenance(fieldKey, provenance);
+  if (!base || base.kind !== "pending_review") return base;
+
+  switch (fieldKey) {
+    case "firstName":
+      if (contact.firstName?.trim()) return null;
+      break;
+    case "lastName":
+      if (contact.lastName?.trim()) return null;
+      break;
+    case "email":
+      if (contact.email?.trim()) return null;
+      break;
+    case "phone":
+      if (contact.phone?.trim()) return null;
+      break;
+    case "birthDate":
+      if (contact.birthDate?.trim()) return null;
+      break;
+    case "address":
+      if (contactHasAddressLine(contact)) return null;
+      break;
+    default:
+      break;
+  }
+
+  return base;
+}
+
 /**
  * Jednotná field-level provenance pro identitní pole kontaktu (desktop + mobile).
  */

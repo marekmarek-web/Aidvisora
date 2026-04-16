@@ -5,6 +5,11 @@ import { hasPermission } from "@/lib/auth/permissions";
 import { db } from "db";
 import { contracts, contractSegments } from "db";
 import { eq, and, asc } from "db";
+import { getContractsByContact } from "@/app/actions/contracts";
+import {
+  computeContactOverviewKpiFromContracts,
+  type ContactOverviewKpiNumbers,
+} from "@/lib/client-portfolio/contact-overview-kpi";
 
 export type FinancialSummary = {
   totalMonthly: number;
@@ -108,4 +113,15 @@ export async function getFinancialSummary(
     missingSegments,
     contractTimeline,
   };
+}
+
+export type ContactOverviewKpi = ContactOverviewKpiNumbers;
+
+/** KPI přehledu kontaktu — kanonický read model + filtr manual / ai_review (jako seznam produktů). */
+export async function getContactOverviewKpi(contactId: string): Promise<ContactOverviewKpi> {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
+
+  const rows = await getContractsByContact(contactId);
+  return computeContactOverviewKpiFromContracts(rows);
 }

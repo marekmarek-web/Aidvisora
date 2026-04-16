@@ -2,12 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { TrendingUp, Wallet, Shield, CalendarDays } from "lucide-react";
-import { getFinancialSummary } from "@/app/actions/financial";
-
-/** Investiční segmenty — pravidelné vklady do investic, DIP, DPS. */
-const INVEST_SEGMENTS = new Set(["INV", "DIP", "DPS"]);
-/** Pojistné segmenty — všechno mimo investice a úvěry. */
-const INSURANCE_SEGMENTS = new Set(["ZP", "MAJ", "ODP", "AUTO_PR", "AUTO_HAV", "CEST", "FIRMA_POJ"]);
+import { getContactOverviewKpi } from "@/app/actions/financial";
 
 function fmtCZK(value: number): string {
   if (value === 0) return "—";
@@ -32,25 +27,8 @@ export function ContactOverviewKpi({ contactId }: { contactId: string }) {
   const [data, setData] = useState<KpiData | null>(null);
 
   useEffect(() => {
-    getFinancialSummary(contactId)
-      .then((s) => {
-        let monthlyInvest = 0;
-        let personalAum = 0;
-        let monthlyInsurance = 0;
-        let annualInsurance = 0;
-
-        for (const seg of s.bySegment) {
-          if (INVEST_SEGMENTS.has(seg.segment)) {
-            monthlyInvest += seg.monthlySum;
-            personalAum += seg.annualSum;
-          } else if (INSURANCE_SEGMENTS.has(seg.segment)) {
-            monthlyInsurance += seg.monthlySum;
-            annualInsurance += seg.annualSum;
-          }
-        }
-
-        setData({ monthlyInvest, personalAum, monthlyInsurance, annualInsurance });
-      })
+    getContactOverviewKpi(contactId)
+      .then((k) => setData(k))
       .catch(() => setData(null));
   }, [contactId]);
 

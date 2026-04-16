@@ -39,7 +39,7 @@ import { InviteToClientZoneButton } from "@/app/dashboard/contacts/[id]/InviteTo
 import { computeAccessVerdict, type AccessVerdict } from "@/lib/auth/access-verdict";
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { formatDisplayDateCs } from "@/lib/date/format-display-cs";
-import { resolveContactIdentityFieldProvenance } from "@/lib/portal/contact-identity-field-provenance";
+import { resolveContactIdentityFieldProvenanceForHeader } from "@/lib/portal/contact-identity-field-provenance";
 import { isMobileUiV1EnabledForRequest } from "@/app/shared/mobile-ui/feature-flag";
 import { hasPermission, type RoleName } from "@/lib/auth/permissions";
 import { resolveIdentityCompleteness, buildIncompleteMessage } from "./contact-identity-completeness-logic";
@@ -157,24 +157,36 @@ function ContactTabBody({
           {/* KPI row — 4 finanční metriky */}
           <ContactOverviewKpi contactId={contactId} />
 
-          {/* Hlavní 2-sloupcový grid: produkty + sidebar */}
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            <div className="xl:col-span-2 space-y-6">
-              <ContactContractsOverview contactId={contactId} baseQueryNoTab={baseQueryNoTab} />
-              {/* Pokrytí produktů — pod Sjednanými produkty */}
-              <ClientCoverageWidget contactId={contactId} />
-              <AiClientSummaryBlock
-                contactId={contactId}
-                initialSummary={latestGenerations.clientSummary}
-              />
-              <ClientFinancialSummaryBlock contactId={contactId} />
+          {household ? (
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+              <div className="xl:col-span-2 space-y-6">
+                <ContactContractsOverview contactId={contactId} baseQueryNoTab={baseQueryNoTab} />
+                <ClientCoverageWidget contactId={contactId} />
+                <AiClientSummaryBlock
+                  contactId={contactId}
+                  initialSummary={latestGenerations.clientSummary}
+                />
+                <ClientFinancialSummaryBlock contactId={contactId} />
+              </div>
+              <aside className="xl:col-span-1 space-y-6">
+                <ContactHouseholdCard household={household} />
+                <ContactLastNotePreview contactId={contactId} />
+              </aside>
             </div>
-
-            <aside className="xl:col-span-1 space-y-6">
-              {household && <ContactHouseholdCard household={household} />}
+          ) : (
+            <div className="space-y-6">
+              <div className="space-y-6">
+                <ContactContractsOverview contactId={contactId} baseQueryNoTab={baseQueryNoTab} />
+                <ClientCoverageWidget contactId={contactId} />
+                <AiClientSummaryBlock
+                  contactId={contactId}
+                  initialSummary={latestGenerations.clientSummary}
+                />
+                <ClientFinancialSummaryBlock contactId={contactId} />
+              </div>
               <ContactLastNotePreview contactId={contactId} />
-            </aside>
-          </div>
+            </div>
+          )}
         </div>
       );
     case "detail":
@@ -452,8 +464,8 @@ export default async function ContactDetailPage({ params, searchParams }: PagePr
                   <ContactTagsEditor contactId={contactId} initialTags={contact.tags ?? []} />
                 </div>
                 {(() => {
-                  const pFirst = resolveContactIdentityFieldProvenance("firstName", contactProvenance);
-                  const pLast = resolveContactIdentityFieldProvenance("lastName", contactProvenance);
+                  const pFirst = resolveContactIdentityFieldProvenanceForHeader("firstName", contactProvenance, contact);
+                  const pLast = resolveContactIdentityFieldProvenanceForHeader("lastName", contactProvenance, contact);
                   const p = pFirst ?? pLast;
                   if (!p) return null;
                   return (
@@ -464,7 +476,7 @@ export default async function ContactDetailPage({ params, searchParams }: PagePr
                 })()}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 mt-4 text-sm font-bold text-[color:var(--wp-text-secondary)]">
                   {contact.email && (() => {
-                    const p = resolveContactIdentityFieldProvenance("email", contactProvenance);
+                    const p = resolveContactIdentityFieldProvenanceForHeader("email", contactProvenance, contact);
                     return (
                       <div className="flex flex-col gap-0.5 min-h-[44px] md:min-h-0 justify-center">
                         <a href={`mailto:${contact.email}`} className="flex items-center gap-2 hover:text-indigo-600 transition-colors">
@@ -480,7 +492,7 @@ export default async function ContactDetailPage({ params, searchParams }: PagePr
                     );
                   })()}
                   {contact.phone && (() => {
-                    const p = resolveContactIdentityFieldProvenance("phone", contactProvenance);
+                    const p = resolveContactIdentityFieldProvenanceForHeader("phone", contactProvenance, contact);
                     return (
                       <div className="flex flex-col gap-0.5 min-h-[44px] md:min-h-0 justify-center">
                         <a href={`tel:${contact.phone!.replace(/\s/g, "")}`} className="flex items-center gap-2 hover:text-indigo-600 transition-colors">
@@ -496,7 +508,7 @@ export default async function ContactDetailPage({ params, searchParams }: PagePr
                     );
                   })()}
                   {addressLine && (() => {
-                    const p = resolveContactIdentityFieldProvenance("address", contactProvenance);
+                    const p = resolveContactIdentityFieldProvenanceForHeader("address", contactProvenance, contact);
                     return (
                       <div className="flex flex-col gap-0.5 min-h-[44px] md:min-h-0 justify-center">
                         <span className="flex items-center gap-2">
@@ -512,7 +524,7 @@ export default async function ContactDetailPage({ params, searchParams }: PagePr
                     );
                   })()}
                   {contact.birthDate && (() => {
-                    const p = resolveContactIdentityFieldProvenance("birthDate", contactProvenance);
+                    const p = resolveContactIdentityFieldProvenanceForHeader("birthDate", contactProvenance, contact);
                     return (
                       <div className="flex flex-col gap-0.5 min-h-[44px] md:min-h-0 justify-center">
                         <span className="flex items-center gap-2">

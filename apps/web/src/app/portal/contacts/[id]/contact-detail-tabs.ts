@@ -39,11 +39,10 @@ export const CONTACT_TAB_LABELS: Record<ContactTabId, string> = {
 /** Starý název záložky v odkazech — přesměruje se na `podklady`. */
 const LEGACY_TAB_ALIASES: Record<string, ContactTabId> = {
   aktivita: "podklady",
-  /** Staré přímé linky na smlouvy/ukoly/obchody → přesměruj na přehled */
-  smlouvy: "prehled",
-  ukoly: "prehled",
-  obchody: "prehled",
 };
+
+/** Záložky bez položky v hlavní liště — platné z `?tab=` (deep link z přehledu). */
+const DEEP_LINK_TAB_IDS: ContactTabId[] = ["smlouvy", "ukoly", "obchody"];
 
 function firstString(v: string | string[] | undefined): string | undefined {
   if (v == null) return undefined;
@@ -56,6 +55,7 @@ export function normalizeContactTab(raw: string | undefined): ContactTabId {
   if (!t) return "prehled";
   if (LEGACY_TAB_ALIASES[t]) return LEGACY_TAB_ALIASES[t];
   if (CONTACT_TAB_IDS.includes(t as ContactTabId)) return t as ContactTabId;
+  if (DEEP_LINK_TAB_IDS.includes(t as ContactTabId)) return t as ContactTabId;
   return "prehled";
 }
 

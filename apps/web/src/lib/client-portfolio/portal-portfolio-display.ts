@@ -126,3 +126,25 @@ export function canonicalPortfolioDetailRows(p: CanonicalProduct): { label: stri
 
   return rows;
 }
+
+/**
+ * Text pro sekci „Poznámky k produktu“ na přehledu — strukturované řádky z kanonického modelu
+ * + volitelná interní poznámka poradce, pokud doplňuje nebo se liší.
+ */
+export function overviewStructuredProductNotesBody(
+  product: CanonicalProduct,
+  advisorNote: string | null | undefined,
+): string {
+  const rows = canonicalPortfolioDetailRows(product);
+  const lines = rows
+    .map((r) => (r.value?.trim() ? `${r.label}: ${r.value}` : ""))
+    .filter(Boolean);
+  const structured = lines.join("\n");
+  const note = (advisorNote ?? "").trim();
+  if (!structured && !note) return "";
+  if (structured && note && note !== structured && !structured.includes(note)) {
+    return `${structured}\n\n— Interní poznámka poradce —\n${note}`;
+  }
+  if (structured) return structured;
+  return note;
+}

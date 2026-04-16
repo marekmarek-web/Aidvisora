@@ -29,6 +29,8 @@ import {
 import { getContractsByContact } from "@/app/actions/contracts";
 import type { ContractRow } from "@/app/actions/contracts";
 import { mapContractToCanonicalProduct } from "@/lib/products/canonical-product-read";
+import { ADVISOR_PRODUCT_SOURCE_KINDS } from "@/lib/client-portfolio/contact-overview-kpi";
+import { overviewStructuredProductNotesBody } from "@/lib/client-portfolio/portal-portfolio-display";
 import { formatDisplayDateCs } from "@/lib/date/format-display-cs";
 import { ContractProvenanceLine } from "@/app/components/aidvisora/ContractProvenanceLine";
 import { deleteContract } from "@/app/actions/contracts";
@@ -136,6 +138,7 @@ function ContractDetailCard({
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     payment: true,
     persons: false,
+    risks: false,
     notes: false,
   });
   const [deleting, setDeleting] = useState(false);
@@ -186,8 +189,11 @@ function ContractDetailCard({
     d?.kind === "life_insurance" ? (d.paymentVariableSymbol ?? null) : null;
   const paymentAccount =
     d?.kind === "life_insurance" ? (d.paymentAccountDisplay ?? null) : null;
-  const notes = (contract as { notes?: string | null; note?: string | null }).notes ??
-    (contract as { notes?: string | null; note?: string | null }).note ?? "";
+  const advisorNote =
+    (contract as { notes?: string | null; note?: string | null }).notes ??
+    contract.note ??
+    "";
+  const notesBody = overviewStructuredProductNotesBody(product, advisorNote);
 
   function toggleSection(s: string) {
     setOpenSections((prev) => ({ ...prev, [s]: !prev[s] }));
@@ -207,11 +213,13 @@ function ContractDetailCard({
   }
 
   function handleEdit() {
-    router.push(`${pathname}?tab=smlouvy`);
+    router.push(`${pathname}?tab=smlouvy&edit=${encodeURIComponent(contract.id)}`);
   }
 
   function handleVypoved() {
-    router.push(`${pathname}?tab=smlouvy`);
+    router.push(
+      `/portal/terminations/new?contactId=${encodeURIComponent(contactId)}&contractId=${encodeURIComponent(contract.id)}`,
+    );
   }
 
   return (
@@ -472,8 +480,8 @@ function ContractDetailCard({
               </div>
             )}
 
-            {/* Notes */}
-            {notes && (
+            {/* Poznámky — strukturovaný výpis z kanonického produktu (+ interní poznámka) */}
+            {notesBody && (
               <div className="border border-[color:var(--wp-surface-card-border)] rounded-xl overflow-hidden bg-[color:var(--wp-surface-card)]">
                 <button
                   type="button"
@@ -499,7 +507,7 @@ function ContractDetailCard({
                 </button>
                 {openSections.notes && (
                   <div className="p-4 text-sm text-[color:var(--wp-text-secondary)] whitespace-pre-wrap">
-                    {notes}
+                    {notesBody}
                   </div>
                 )}
               </div>
@@ -616,8 +624,9 @@ export function ContactContractsOverview({
     getContractsByContact(contactId)
       .then((list) => {
         setLoadError(null);
-        setContracts(list);
-        if (list.length > 0) setExpandedId(list[0].id);
+        const filtered = list.filter((c) => ADVISOR_PRODUCT_SOURCE_KINDS.has(c.sourceKind));
+        setContracts(filtered);
+        if (filtered.length > 0) setExpandedId(filtered[0].id);
       })
       .catch(() => {
         setContracts([]);

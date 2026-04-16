@@ -208,7 +208,7 @@ export function ContractsSection({ contactId }: { contactId: string }) {
     }
   }
 
-  function startEdit(c: ContractRow) {
+  const startEdit = useCallback((c: ContractRow) => {
     setEditingId(c.id);
     setVisibleToClientEdit(c.visibleToClient !== false);
     setPortfolioStatusEdit(c.portfolioStatus ?? "active");
@@ -236,7 +236,20 @@ export function ContractsSection({ contactId }: { contactId: string }) {
       partnerName: c.partnerName ?? undefined,
       productName: c.productName ?? undefined,
     });
-  }
+  }, []);
+
+  /** Deep link z přehledu: ?tab=smlouvy&edit=<contractId> */
+  useEffect(() => {
+    const editId = searchParams.get("edit");
+    if (!editId || loading) return;
+    const c = list.find((x) => x.id === editId);
+    if (!c) return;
+    startEdit(c);
+    const p = new URLSearchParams(searchParams.toString());
+    p.delete("edit");
+    const q = p.toString();
+    router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+  }, [searchParams, list, loading, pathname, router, startEdit]);
 
   if (loading) return <p className="text-[color:var(--wp-text-muted)] text-sm">Načítám smlouvy…</p>;
 

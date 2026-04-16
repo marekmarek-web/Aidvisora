@@ -34,6 +34,7 @@ import { AiReviewProvenanceBadge } from "@/app/components/aidvisora/AiReviewProv
 import { ContactMergeConflictGuard } from "@/app/portal/contacts/[id]/ContactMergeConflictGuard";
 import {
   resolveContactIdentityFieldProvenance,
+  resolveContactIdentityFieldProvenanceForHeader,
   shouldShowContactIdentityRow,
 } from "@/lib/portal/contact-identity-field-provenance";
 import { MobileContactContractsStrip } from "./MobileContactContractsStrip";
@@ -772,8 +773,8 @@ export function ClientProfileScreen({
           <div className="flex-1 min-w-0">
             <h2 className="text-lg font-black text-white truncate">{fullName}</h2>
             {provenance ? (() => {
-              const pFirst = resolveContactIdentityFieldProvenance("firstName", provenance);
-              const pLast = resolveContactIdentityFieldProvenance("lastName", provenance);
+              const pFirst = resolveContactIdentityFieldProvenanceForHeader("firstName", provenance, contact);
+              const pLast = resolveContactIdentityFieldProvenanceForHeader("lastName", provenance, contact);
               const p = pFirst ?? pLast;
               if (!p) return null;
               return (
