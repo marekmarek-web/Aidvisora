@@ -160,6 +160,7 @@ function buildFactInstructions(inputTypeHint: ImageInputType | null, understandi
         "- variable_symbol: variabilní symbol (nebo null)",
         "- due_date: datum splatnosti (nebo null)",
         "- recipient: příjemce platby (nebo null)",
+        "- institution: název banky / pojišťovny / instituce příjemce (nebo null)",
         "- payment_method: způsob platby (QR, příkaz, atd.) nebo null",
         "- is_complete: 'yes'/'no'/'partial' — úplnost platebních údajů",
       ].join("\n");

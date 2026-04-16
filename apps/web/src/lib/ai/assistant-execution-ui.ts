@@ -77,6 +77,13 @@ export type StepPreviewItem = {
   preflightStatus?: "ready" | "needs_input" | "blocked";
   /** When preflight is blocked (e.g. datetime without TZ) — shown in confirmation UI. */
   blockedReason?: string;
+  /** When set, renders an inline text input the advisor must fill before confirming. */
+  inlineInput?: {
+    key: string;
+    label: string;
+    placeholder?: string;
+    prefilled?: string;
+  };
 };
 
 /** Rozšířený model akce dle plánu (6B) — odvozeno od `StepPreviewItem` + runtime stav jen na klientovi. */

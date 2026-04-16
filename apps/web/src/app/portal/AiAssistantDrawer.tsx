@@ -306,6 +306,8 @@ export function AiAssistantDrawer() {
   }, [messages]);
 
   const [stepSelectionByPlanId, setStepSelectionByPlanId] = useState<Record<string, Record<string, boolean>>>({});
+  /** planId → stepId → paramKey → value */
+  const [inlineValuesByPlanId, setInlineValuesByPlanId] = useState<Record<string, Record<string, Record<string, string>>>>({});
 
   useEffect(() => {
     const last = messages[messages.length - 1];
@@ -324,6 +326,16 @@ export function AiAssistantDrawer() {
     setStepSelectionByPlanId((prev) => ({
       ...prev,
       [planId]: { ...prev[planId], [stepId]: !(prev[planId]?.[stepId] ?? true) },
+    }));
+  }, []);
+
+  const handleInlineValueChange = useCallback((planId: string, stepId: string, key: string, value: string) => {
+    setInlineValuesByPlanId((prev) => ({
+      ...prev,
+      [planId]: {
+        ...(prev[planId] ?? {}),
+        [stepId]: { ...(prev[planId]?.[stepId] ?? {}), [key]: value },
+      },
     }));
   }, []);
 
@@ -588,6 +600,8 @@ export function AiAssistantDrawer() {
     ]);
     setChatLoading(true);
     try {
+      const stepParamOverrides = pid && inlineValuesByPlanId[pid] ? inlineValuesByPlanId[pid] : undefined;
+
       const complete = await postAssistantChatStreaming(
         {
           method: "POST",
@@ -600,6 +614,7 @@ export function AiAssistantDrawer() {
               reviewId: activeReviewId,
               channel: "web_drawer",
               selectedStepIds: canSelect ? picked : undefined,
+              stepParamOverrides,
             }),
           ),
         },
@@ -1730,6 +1745,8 @@ export function AiAssistantDrawer() {
                             advisoryHints={(m.executionState.stepPreviews ?? [])
                               .filter(s => (s.validationWarnings?.length ?? 0) > 0)
                               .flatMap(s => s.validationWarnings!.map(w => `${s.label}: ${w}`))}
+                            inlineValues={m.executionState.planId ? inlineValuesByPlanId[m.executionState.planId] ?? {} : {}}
+                            onInlineChange={m.executionState.planId ? (stepId, key, value) => handleInlineValueChange(m.executionState!.planId!, stepId, key, value) : undefined}
                           />
                         )}
                     </>

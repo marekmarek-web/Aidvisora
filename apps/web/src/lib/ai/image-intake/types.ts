@@ -299,6 +299,15 @@ export type ImageIntakeActionCandidate = {
   confidence: number;
   requiresConfirmation: boolean;
   params: Record<string, unknown>;
+  /** When set, the step UI renders an inline text input for the advisor to fill before confirming. */
+  inlineInput?: {
+    key: string;
+    label: string;
+    placeholder?: string;
+    prefilled?: string;
+  };
+  /** Preflight status — drives UI gating in ConfirmationPreviewPanel. */
+  preflightStatus?: "ready" | "needs_input" | "blocked";
 };
 
 export type ImageIntakeActionPlan = {
@@ -930,6 +939,7 @@ export const IMAGE_INTAKE_ALLOWED_INTENTS: ReadonlySet<CanonicalIntentType> = ne
   "draft_portal_message",
   "general_chat",
   "create_contact",
+  "save_payment_setup",
 ]);
 
 /**
@@ -948,4 +958,5 @@ export const IMAGE_INTAKE_ALLOWED_WRITE_ACTIONS: ReadonlySet<WriteActionType> = 
   "attachDocumentToClient",
   "attachDocumentToOpportunity",
   "draftClientPortalMessage",
+  "savePaymentSetup",
 ]);

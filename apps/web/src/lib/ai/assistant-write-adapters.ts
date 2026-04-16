@@ -38,6 +38,7 @@ import { createDraft } from "@/app/actions/communication-drafts";
 import { createContact as createContactAction, updateContact as updateContactAction } from "@/app/actions/contacts";
 import { approveContractForClientPortal, updateContract, createContract as createContractAction } from "@/app/actions/contracts";
 import { upsertCoverageItem } from "@/app/actions/coverage";
+import { createManualPaymentSetup } from "@/app/actions/manual-payment-setup";
 import { sendMessage } from "@/app/actions/messages";
 import { createAdvisorClientRequest } from "../assistant/create-advisor-client-request";
 import { validatePartnerInCatalog, validateProductInCatalog } from "./ratings/toplists";
@@ -969,6 +970,53 @@ export function registerAssistantWriteAdapters(): void {
       return okResult(itemKey, "coverage_item", []);
     } catch (e) {
       return safeErr(e, "upsertContactCoverage");
+    }
+  });
+
+  registerWriteAdapter("savePaymentSetup", async (params, ctx) => {
+    try {
+      const auth = await assertCtx(ctx);
+      if (!hasPermission(auth.roleName, "contacts:write")) return errResult("Chybí oprávnění contacts:write.");
+
+      const contactId = strParam(params, "contactId");
+      if (!contactId) return requiresInputResult("Chybí klient — otevřete detail klienta a zkuste znovu.");
+
+      const providerName = strParam(params, "providerName");
+      if (!providerName) return requiresInputResult("Chybí název instituce (providerName). Doplňte ho v poli Instituce.");
+
+      const accountNumber = strParam(params, "accountNumber") ?? strParam(params, "account_number") ?? "";
+      const iban = strParam(params, "iban") ?? "";
+      const variableSymbol = strParam(params, "variableSymbol") ?? strParam(params, "variable_symbol") ?? "";
+
+      if (!accountNumber && !iban) {
+        return requiresInputResult("Chybí číslo účtu nebo IBAN.");
+      }
+      if (!variableSymbol) {
+        return requiresInputResult("Chybí variabilní symbol.");
+      }
+
+      const segment = strParam(params, "segment") ?? "other";
+      const amount = strParam(params, "amount");
+      const frequency = strParam(params, "frequency");
+      const firstPaymentDate = strParam(params, "firstPaymentDate") ?? strParam(params, "due_date");
+
+      const res = await createManualPaymentSetup({
+        contactId,
+        providerName,
+        segment,
+        accountNumber,
+        iban: iban || undefined,
+        variableSymbol,
+        amount: amount || undefined,
+        frequency: frequency || undefined,
+        firstPaymentDate: firstPaymentDate || undefined,
+        visibleToClient: false,
+      });
+
+      if (!res.ok) return errResult(res.error);
+      return okResult(res.id, "payment_setup", ["Platební instrukce uložena. Viditelnost pro klienta nastavíte ručně v sekci Platby."]);
+    } catch (e) {
+      return safeErr(e, "savePaymentSetup");
     }
   });
 }

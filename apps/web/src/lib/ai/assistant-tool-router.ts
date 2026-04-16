@@ -640,6 +640,8 @@ export type AssistantConfirmationPayload = {
   cancel: boolean;
   /** Když undefined (a ne cancel): potvrdí všechny čekající kroky — kompatibilní s textem „ano". */
   selectedStepIds?: string[];
+  /** Inline param overrides from advisor UI — merged into step params before execution. */
+  stepParamOverrides?: Record<string, Record<string, string>>;
 };
 
 /** 6F: explicitní potvrzení / zrušení bez nutnosti psát „ano" do inputu. Volá se z API těla i z textových aliasů. */
@@ -741,6 +743,18 @@ export async function handleAssistantAwaitingConfirmation(
       confidence: 1,
       sourcesSummary: [],
       sessionId: session.sessionId,
+    };
+  }
+
+  // Apply inline param overrides from the advisor UI before running the plan
+  if (body.stepParamOverrides && Object.keys(body.stepParamOverrides).length > 0) {
+    prepared = {
+      ...prepared,
+      steps: prepared.steps.map((step) => {
+        const overrides = body.stepParamOverrides![step.stepId];
+        if (!overrides) return step;
+        return { ...step, params: { ...step.params, ...overrides } };
+      }),
     };
   }
 

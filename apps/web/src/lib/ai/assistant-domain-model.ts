@@ -85,6 +85,7 @@ export const CANONICAL_INTENT_TYPES = [
   "general_chat",
   "multi_action",
   "switch_client",
+  "save_payment_setup",
 ] as const;
 export type CanonicalIntentType = (typeof CANONICAL_INTENT_TYPES)[number];
 
@@ -184,6 +185,7 @@ export const WRITE_ACTION_TYPES = [
   "sendPortalMessage",
   "createContract",
   "upsertContactCoverage",
+  "savePaymentSetup",
 ] as const;
 export type WriteActionType = (typeof WRITE_ACTION_TYPES)[number];
 

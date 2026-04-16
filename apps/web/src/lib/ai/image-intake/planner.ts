@@ -480,15 +480,38 @@ function planPaymentPortalUpdate(
 
   const paymentParams: Record<string, unknown> = {};
   if (binding.clientId) paymentParams.contactId = binding.clientId;
+
+  let providerNameFromFacts: string | null = null;
+
   for (const f of paymentFields) {
-    paymentParams[f.factKey] = f.value;
+    if (f.factKey === "institution") {
+      // Map institution fact → providerName param
+      providerNameFromFacts = String(f.value).trim();
+      paymentParams.providerName = providerNameFromFacts;
+    } else if (f.factKey === "recipient" && !providerNameFromFacts) {
+      // Fallback: recipient can serve as provider name if institution not extracted
+      providerNameFromFacts = String(f.value).trim();
+      paymentParams.providerName = providerNameFromFacts;
+    } else if (f.factKey === "account_number") {
+      paymentParams.accountNumber = f.value;
+    } else if (f.factKey === "variable_symbol") {
+      paymentParams.variableSymbol = f.value;
+    } else if (f.factKey === "amount") {
+      paymentParams.amount = f.value;
+    } else if (f.factKey === "due_date") {
+      paymentParams.firstPaymentDate = f.value;
+    } else {
+      paymentParams[f.factKey] = f.value;
+    }
   }
 
-  actions.push(
-    makeAction(
-      "create_internal_note",
-      "createInternalNote",
-      "Uložit platební údaje",
+  const providerMissing = !providerNameFromFacts;
+
+  const saveAction: ImageIntakeActionCandidate = {
+    ...makeAction(
+      "save_payment_setup",
+      "savePaymentSetup",
+      "Uložit platební instrukci",
       paymentFields.length > 0
         ? `Rozpoznáno ${paymentFields.length} platebních polí.`
         : "Platební screenshot — údaje k ověření.",
@@ -498,7 +521,18 @@ function planPaymentPortalUpdate(
         _paymentFieldCount: paymentFields.length,
       },
     ),
-  );
+    preflightStatus: providerMissing ? "needs_input" : "ready",
+  };
+
+  if (providerMissing) {
+    saveAction.inlineInput = {
+      key: "providerName",
+      label: "Instituce *",
+      placeholder: "Název banky / pojišťovny",
+    };
+  }
+
+  actions.push(saveAction);
 
   if (binding.clientId) {
     actions.push(
@@ -620,6 +654,7 @@ const PAYMENT_FACT_KEYS = new Set([
   "variable_symbol",
   "due_date",
   "recipient",
+  "institution",
   "payment_method",
   "iban",
   "bank_code",

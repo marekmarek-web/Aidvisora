@@ -47,7 +47,8 @@ function HashToQuerySync({ baseQueryNoTab }: { baseQueryNoTab: string }) {
     const tabPart = parts[0] ?? "";
     const hasAddFromHash = parts.some((x) => x === "add=1");
     const normalized = normalizeContactTab(tabPart);
-    if (!tabPart || normalized === "prehled") return;
+    // Bez `?tab=` migrujeme hash → query; u přehledu jen když je v hash i `add=1` (jinak stačí výchozí stránka).
+    if (!tabPart || (normalized === "prehled" && !hasAddFromHash)) return;
     const p = new URLSearchParams(baseQueryNoTab);
     p.set("tab", normalized);
     if (hasAddFromHash && normalized === "prehled") p.set("add", "1");

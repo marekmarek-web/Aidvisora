@@ -83,6 +83,13 @@ const FINGERPRINT_KEYS_BY_ACTION: Record<WriteActionType, string[]> = {
     "linkedContractId",
     "linkedOpportunityId",
   ],
+  savePaymentSetup: [
+    "contactId",
+    "providerName",
+    "accountNumber",
+    "iban",
+    "variableSymbol",
+  ],
 };
 
 /**

@@ -41,6 +41,8 @@ export type AssistantChatRequestBody = {
   bootstrapPostUploadReviewPlan?: boolean;
   /** 6C: ExecutionStep.stepId values to run; omit to run all pending steps. */
   selectedStepIds?: string[];
+  /** Inline param overrides from advisor — keyed by stepId → paramKey → value. */
+  stepParamOverrides?: Record<string, Record<string, string>>;
   activeContext?: {
     clientId?: string | null;
     opportunityId?: string | null;
@@ -92,6 +94,7 @@ export function buildAssistantConfirmExecutionBody(opts: {
   reviewId?: string | null;
   channel?: AssistantChatRequestBody["channel"];
   selectedStepIds?: string[];
+  stepParamOverrides?: Record<string, Record<string, string>>;
 }): AssistantChatRequestBody {
   const base = buildAssistantChatRequestBody("", {
     sessionId: opts.sessionId,
@@ -106,6 +109,7 @@ export function buildAssistantConfirmExecutionBody(opts: {
     confirmExecution: true,
   };
   if (opts.selectedStepIds !== undefined) out.selectedStepIds = opts.selectedStepIds;
+  if (opts.stepParamOverrides !== undefined) out.stepParamOverrides = opts.stepParamOverrides;
   return out;
 }
 

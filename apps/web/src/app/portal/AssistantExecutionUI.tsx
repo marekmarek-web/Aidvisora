@@ -117,6 +117,9 @@ interface ConfirmationPreviewPanelProps {
   selectable?: boolean;
   stepSelection?: Record<string, boolean>;
   onToggleStep?: (stepId: string) => void;
+  /** Values for inline inputs keyed by stepId → key → value. */
+  inlineValues?: Record<string, Record<string, string>>;
+  onInlineChange?: (stepId: string, key: string, value: string) => void;
 }
 
 export function ConfirmationPreviewPanel({
@@ -127,6 +130,8 @@ export function ConfirmationPreviewPanel({
   selectable = false,
   stepSelection = {},
   onToggleStep,
+  inlineValues = {},
+  onInlineChange,
 }: ConfirmationPreviewPanelProps) {
   if (stepPreviews.length === 0) return null;
 
@@ -237,6 +242,20 @@ export function ConfirmationPreviewPanel({
                 ) : null}
                 {step.description ? (
                   <p className="text-[10px] text-amber-700/90 mt-0.5 font-medium">{step.description}</p>
+                ) : null}
+                {step.inlineInput && step.stepId ? (
+                  <div className="mt-1.5 flex flex-col gap-0.5">
+                    <label className="text-[10px] font-bold text-rose-600">
+                      {step.inlineInput.label}
+                    </label>
+                    <input
+                      type="text"
+                      value={inlineValues[step.stepId]?.[step.inlineInput.key] ?? step.inlineInput.prefilled ?? ""}
+                      onChange={(e) => onInlineChange?.(step.stepId!, step.inlineInput!.key, e.target.value)}
+                      placeholder={step.inlineInput.placeholder}
+                      className="w-full rounded-lg border border-rose-300 bg-rose-50 px-2.5 py-1.5 text-xs text-amber-950 min-h-[34px] outline-none focus:ring-2 focus:ring-rose-100 focus:border-rose-400"
+                    />
+                  </div>
                 ) : null}
                 {blocked && step.blockedReason ? (
                   <p className="text-[10px] text-slate-800 mt-1 font-medium flex gap-1">

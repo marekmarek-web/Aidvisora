@@ -93,7 +93,7 @@ function groupIconColors(g: PortfolioUiGroup): string {
   }
 }
 
-function segmentCardIconColors(segment: string): string {
+function segmentIconColors(segment: string): string {
   switch (segment) {
     case "INV":
     case "DIP": return "bg-emerald-100 text-emerald-700";
@@ -144,6 +144,7 @@ type ProductCardProps = {
 
 function ProductCard({ contract, canonical: p, visibleSourceDocs }: ProductCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const [logoError, setLogoError] = useState(false);
 
   const st = portfolioContractStatusLabelCs(contract.portfolioStatus, contract.startDate);
   const logoPath = resolvePortalFundLogoPath(p);
@@ -196,106 +197,118 @@ function ProductCard({ contract, canonical: p, visibleSourceDocs }: ProductCardP
         ? "bg-slate-100 text-slate-500 border-slate-200"
         : "bg-amber-50 text-amber-700 border-amber-100";
 
+  const Icon = productIcon(contract.segment);
+  const iconBg = segmentIconColors(contract.segment);
+  const showLogo = !!logoPath && !logoError;
+
   return (
-    <article className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-      {/* Card header — always visible */}
-      <div className="p-4 sm:p-5">
-        <div className="flex items-center gap-3">
-          {/* Logo or initials */}
-          {logoPath ? (
+    <article
+      className={`bg-white rounded-2xl border shadow-sm overflow-hidden transition-shadow hover:shadow-md ${
+        expanded ? "border-indigo-200 ring-2 ring-indigo-50" : "border-slate-200"
+      }`}
+    >
+      {/* Header — always visible, clickable when detail available */}
+      <div
+        role={hasDetail ? "button" : undefined}
+        tabIndex={hasDetail ? 0 : undefined}
+        onKeyDown={
+          hasDetail
+            ? (e) => { if (e.key === "Enter" || e.key === " ") setExpanded((v) => !v); }
+            : undefined
+        }
+        onClick={hasDetail ? () => setExpanded((v) => !v) : undefined}
+        className={`flex items-center gap-4 p-4 md:p-5 ${hasDetail ? "cursor-pointer select-none" : ""}`}
+      >
+        {/* Logo or icon — compact 44px */}
+        <div className="shrink-0">
+          {showLogo ? (
             <Image
               src={logoPath}
               alt={logoAlt}
-              width={88}
-              height={88}
-              className="h-[5.5rem] w-[5.5rem] shrink-0 object-contain"
+              width={44}
+              height={44}
+              className="h-11 w-11 object-contain"
+              onError={() => setLogoError(true)}
             />
           ) : (
-            <div
-              className={`h-[5.5rem] w-[5.5rem] rounded-xl flex items-center justify-center shrink-0 text-base font-black ${segmentCardIconColors(contract.segment)}`}
-            >
-              {(contract.partnerName ?? contract.productName ?? "?").trim().slice(0, 2).toUpperCase()}
+            <div className={`h-11 w-11 rounded-xl flex items-center justify-center ${iconBg}`}>
+              <Icon size={20} />
             </div>
           )}
+        </div>
 
-          {/* Title block */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <h4 className="font-bold text-slate-900 text-[14px] leading-tight line-clamp-2">
-                  {contract.productName || "Produkt"}
-                </h4>
-                <p className="text-xs text-slate-500 font-semibold mt-0.5 truncate">
-                  {contract.partnerName || "—"}
-                </p>
-              </div>
+        {/* Main info block */}
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3 justify-between">
+            {/* Left: name + partner */}
+            <div className="min-w-0 flex-1">
+              <h4 className="font-black text-slate-900 text-[15px] leading-snug line-clamp-2">
+                {contract.productName || "Produkt"}
+              </h4>
+              <p className="text-xs text-slate-500 font-semibold mt-0.5 truncate flex items-center gap-1">
+                <Building2 size={11} className="shrink-0 text-slate-400" />
+                {contract.partnerName || "—"}
+              </p>
+            </div>
+            {/* Right: status + premium */}
+            <div className="flex sm:flex-col items-center sm:items-end gap-2 sm:gap-1 shrink-0">
               <span
-                className={`shrink-0 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded border ${statusColors}`}
+                className={`px-2 py-0.5 text-[10px] font-black uppercase tracking-wide rounded border ${statusColors}`}
               >
                 {st}
               </span>
-            </div>
-
-            {/* Segment badge + contract number in one row */}
-            <div className="flex items-center gap-2 flex-wrap mt-2">
-              <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wide rounded-md bg-slate-100 text-slate-500">
-                {p.segmentLabel}
+              <span className="text-[15px] font-black text-slate-900 tabular-nums whitespace-nowrap">
+                {formatPortalPremiumLineCs(contract.premiumAmount, contract.premiumAnnual)}
               </span>
-              {contract.contractNumber ? (
-                <span className="text-[10px] font-bold text-slate-400 font-mono">
-                  č. {contract.contractNumber}
-                </span>
-              ) : null}
-              {contract.startDate ? (
-                <span className="text-[10px] font-medium text-slate-400">
-                  od {formatDisplayDateCs(contract.startDate) || contract.startDate}
-                </span>
-              ) : null}
             </div>
+          </div>
+
+          {/* Meta badges */}
+          <div className="flex items-center gap-2 flex-wrap mt-2">
+            <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wide rounded-md bg-slate-100 text-slate-500">
+              {p.segmentLabel}
+            </span>
+            {contract.contractNumber ? (
+              <span className="text-[10px] font-bold text-slate-400 font-mono">
+                č.&nbsp;{contract.contractNumber}
+              </span>
+            ) : null}
+            {contract.startDate ? (
+              <span className="text-[10px] font-medium text-slate-400">
+                od&nbsp;{formatDisplayDateCs(contract.startDate) || contract.startDate}
+              </span>
+            ) : null}
           </div>
         </div>
 
-        {/* Premium amount — prominent */}
-        <div className="mt-3 flex items-end justify-between gap-2">
-          <div>
-            <span className="block text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
-              Platba / pojistné / splátka
-            </span>
-            <span className="text-[18px] font-black text-slate-900 leading-none">
-              {formatPortalPremiumLineCs(contract.premiumAmount, contract.premiumAnnual)}
-            </span>
+        {/* Expand chevron */}
+        {hasDetail && (
+          <div
+            className={`w-8 h-8 rounded-full flex items-center justify-center border transition-all duration-200 shrink-0 ${
+              expanded
+                ? "bg-indigo-600 text-white border-indigo-600"
+                : "bg-slate-50 text-slate-400 border-slate-200"
+            }`}
+            aria-hidden
+          >
+            <ChevronDown
+              size={16}
+              className={`transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
+            />
           </div>
-          {hasDetail && (
-            <button
-              type="button"
-              onClick={() => setExpanded((v) => !v)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors shrink-0 ${
-                expanded
-                  ? "bg-indigo-600 text-white"
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-              }`}
-              aria-expanded={expanded}
-            >
-              Detail
-              <ChevronDown
-                size={14}
-                className={`transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
-              />
-            </button>
-          )}
-        </div>
+        )}
       </div>
 
       {/* Expanded detail */}
       {expanded && hasDetail && (
-        <div className="border-t border-slate-100 px-4 pb-4 sm:px-5 sm:pb-5 pt-4 space-y-4">
-          {/* Segment detail rows */}
+        <div className="border-t border-slate-100 px-4 pb-5 sm:px-5 pt-4 space-y-4 bg-slate-50/40">
+          {/* Detail rows grid */}
           {detailRows.length > 0 && (
-            <div className="rounded-xl border border-slate-100 bg-slate-50/60 divide-y divide-slate-100 overflow-hidden">
+            <div className="rounded-xl border border-slate-100 bg-white divide-y divide-slate-100 overflow-hidden shadow-sm">
               {detailRows.map((row) => (
-                <div key={row.label} className="flex items-start justify-between gap-3 px-3 py-2.5 text-xs">
-                  <span className="text-slate-500 font-bold shrink-0">{row.label}</span>
-                  <span className="text-slate-800 font-semibold text-right">{row.value}</span>
+                <div key={row.label} className="flex items-start justify-between gap-4 px-4 py-3 text-sm">
+                  <span className="text-slate-500 font-semibold shrink-0">{row.label}</span>
+                  <span className="text-slate-800 font-bold text-right">{row.value}</span>
                 </div>
               ))}
             </div>
@@ -331,9 +344,9 @@ function ProductCard({ contract, canonical: p, visibleSourceDocs }: ProductCardP
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
                 Rizika / krytí
               </p>
-              <div className="rounded-xl border border-slate-100 bg-slate-50/60 divide-y divide-slate-100 overflow-hidden">
+              <div className="rounded-xl border border-slate-100 bg-white divide-y divide-slate-100 overflow-hidden shadow-sm">
                 {risks.map((r, i) => (
-                  <div key={i} className="flex items-center justify-between gap-3 px-3 py-2 text-xs">
+                  <div key={i} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
                     <span className="text-slate-700 font-semibold">{r.label || "—"}</span>
                     {r.amount && (
                       <span className="text-slate-500 font-bold shrink-0">{r.amount}</span>
@@ -344,9 +357,9 @@ function ProductCard({ contract, canonical: p, visibleSourceDocs }: ProductCardP
             </div>
           )}
 
-          {/* FV block — only when complete */}
+          {/* FV block */}
           {fv ? (
-            <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4 space-y-1.5">
+            <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-4 space-y-1.5">
               <p className="text-[10px] font-black uppercase tracking-widest text-indigo-600">
                 Odhad za {fv.horizonYears} let (model)
               </p>
@@ -422,7 +435,6 @@ export function PortfolioPageContent({ contracts, visibleSourceDocs }: Portfolio
 
   const activeGroups = groupOrder.filter((k) => (grouped.get(k)?.length ?? 0) > 0);
 
-  // Annual insurance: monthlyInsurancePremiums × 12 for display
   const annualInsurance = Math.round(metrics.monthlyInsurancePremiums * 12);
 
   let anyFvShown = false;
@@ -444,13 +456,13 @@ export function PortfolioPageContent({ contracts, visibleSourceDocs }: Portfolio
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 client-fade-in">
+    <div className="space-y-8 client-fade-in">
       {/* Page title */}
       <div>
         <h2 className="text-2xl sm:text-3xl font-display font-black text-slate-900 tracking-tight">
           Moje portfolio
         </h2>
-        <p className="text-sm font-medium text-slate-500 mt-1.5 max-w-2xl">
+        <p className="text-sm font-medium text-slate-500 mt-1.5">
           Přehled produktů evidovaných vaším poradcem. Údaje odpovídají stavu smluv — žádné ukázkové hodnoty.
         </p>
       </div>
@@ -471,20 +483,20 @@ export function PortfolioPageContent({ contracts, visibleSourceDocs }: Portfolio
         </div>
       ) : (
         <>
-          {/* ── A. KPI Summary ─────────────────────────────────────────────── */}
+          {/* ── A. KPI Summary ─────────────────────────────────────── */}
           <section aria-label="Souhrn portfolia">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
               {/* Tvorba rezerv */}
-              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 relative overflow-hidden">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                    <TrendingUp size={13} />
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 md:p-5 relative overflow-hidden">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                    <TrendingUp size={14} />
                   </div>
                   <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">
                     Tvorba rezerv
                   </p>
                 </div>
-                <p className="text-[22px] font-black text-slate-900 leading-none">
+                <p className="text-[22px] font-black text-slate-900 leading-none tabular-nums">
                   {metrics.monthlyInvestments.toLocaleString("cs-CZ")} Kč
                 </p>
                 <p className="text-[10px] font-bold text-slate-400 mt-1">měsíčně</p>
@@ -492,34 +504,34 @@ export function PortfolioPageContent({ contracts, visibleSourceDocs }: Portfolio
               </div>
 
               {/* Ochrana — měsíčně */}
-              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 relative overflow-hidden">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
-                    <Shield size={13} />
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 md:p-5 relative overflow-hidden">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                    <Shield size={14} />
                   </div>
                   <p className="text-[9px] font-black text-purple-600 uppercase tracking-widest">
                     Ochrana
                   </p>
                 </div>
-                <p className="text-[22px] font-black text-slate-900 leading-none">
+                <p className="text-[22px] font-black text-slate-900 leading-none tabular-nums">
                   {metrics.monthlyInsurancePremiums.toLocaleString("cs-CZ")} Kč
                 </p>
                 <p className="text-[10px] font-bold text-slate-400 mt-1">měsíční pojistné</p>
                 <div className="absolute -right-3 -bottom-3 w-20 h-20 bg-purple-50 rounded-full blur-2xl pointer-events-none" />
               </div>
 
-              {/* Ochrana — ročně */}
+              {/* Roční pojistné */}
               {annualInsurance > 0 && (
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 relative overflow-hidden">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-7 h-7 rounded-lg bg-violet-50 text-violet-600 flex items-center justify-center shrink-0">
-                      <Shield size={13} />
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 md:p-5 relative overflow-hidden">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-8 h-8 rounded-lg bg-violet-50 text-violet-600 flex items-center justify-center shrink-0">
+                      <Shield size={14} />
                     </div>
                     <p className="text-[9px] font-black text-violet-600 uppercase tracking-widest">
                       Roční pojistné
                     </p>
                   </div>
-                  <p className="text-[22px] font-black text-slate-900 leading-none">
+                  <p className="text-[22px] font-black text-slate-900 leading-none tabular-nums">
                     {annualInsurance.toLocaleString("cs-CZ")} Kč
                   </p>
                   <p className="text-[10px] font-bold text-slate-400 mt-1">ročně</p>
@@ -527,34 +539,34 @@ export function PortfolioPageContent({ contracts, visibleSourceDocs }: Portfolio
                 </div>
               )}
 
-              {/* Závazky */}
+              {/* Závazky / Položky */}
               {metrics.totalLoanPrincipal > 0 ? (
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 relative overflow-hidden">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
-                      <Home size={13} />
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 md:p-5 relative overflow-hidden">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                      <Home size={14} />
                     </div>
                     <p className="text-[9px] font-black text-rose-600 uppercase tracking-widest">
                       Závazky
                     </p>
                   </div>
-                  <p className="text-[22px] font-black text-slate-900 leading-none">
+                  <p className="text-[22px] font-black text-slate-900 leading-none tabular-nums">
                     {metrics.totalLoanPrincipal.toLocaleString("cs-CZ")} Kč
                   </p>
                   <p className="text-[10px] font-bold text-slate-400 mt-1">jistiny úvěrů</p>
                   <div className="absolute -right-3 -bottom-3 w-20 h-20 bg-rose-50 rounded-full blur-2xl pointer-events-none" />
                 </div>
               ) : (
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 relative overflow-hidden">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                      <Briefcase size={13} />
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 md:p-5 relative overflow-hidden">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                      <Briefcase size={14} />
                     </div>
                     <p className="text-[9px] font-black text-indigo-600 uppercase tracking-widest">
                       Položky
                     </p>
                   </div>
-                  <p className="text-[22px] font-black text-slate-900 leading-none">
+                  <p className="text-[22px] font-black text-slate-900 leading-none tabular-nums">
                     {metrics.activeContractCount}
                   </p>
                   <p className="text-[10px] font-bold text-slate-400 mt-1">v přehledu</p>
@@ -567,30 +579,32 @@ export function PortfolioPageContent({ contracts, visibleSourceDocs }: Portfolio
             </p>
           </section>
 
-          {/* ── B. Segment nav chips ────────────────────────────────────────── */}
-          <section aria-label="Skupiny produktů">
-            <div className="flex overflow-x-auto snap-x hide-scrollbar gap-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap pb-1">
-              {activeGroups.map((gk) => {
-                const n = grouped.get(gk)?.length ?? 0;
-                const Icon = groupIcon(gk);
-                const colors = groupIconColors(gk);
-                return (
-                  <div
-                    key={gk}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-sm snap-center shrink-0"
-                  >
-                    <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 ${colors}`}>
-                      <Icon size={11} />
+          {/* ── B. Segment nav chips ─────────────────────────────── */}
+          {activeGroups.length > 1 && (
+            <section aria-label="Skupiny produktů">
+              <div className="flex overflow-x-auto snap-x hide-scrollbar gap-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap pb-1">
+                {activeGroups.map((gk) => {
+                  const n = grouped.get(gk)?.length ?? 0;
+                  const Icon = groupIcon(gk);
+                  const colors = groupIconColors(gk);
+                  return (
+                    <div
+                      key={gk}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-sm snap-center shrink-0"
+                    >
+                      <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 ${colors}`}>
+                        <Icon size={11} />
+                      </div>
+                      <span className="whitespace-nowrap">{PORTFOLIO_GROUP_LABELS[gk]}</span>
+                      <span className="text-slate-400 font-black tabular-nums">{n}</span>
                     </div>
-                    <span className="whitespace-nowrap">{PORTFOLIO_GROUP_LABELS[gk]}</span>
-                    <span className="text-slate-400 font-black tabular-nums">{n}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
+                  );
+                })}
+              </div>
+            </section>
+          )}
 
-          {/* ── C+D. Segmented product list with expandable cards ──────────── */}
+          {/* ── C. Segmented accordion product list ──────────────── */}
           {groupOrder.map((groupKey) => {
             const items = grouped.get(groupKey);
             if (!items?.length) return null;
@@ -598,12 +612,14 @@ export function PortfolioPageContent({ contracts, visibleSourceDocs }: Portfolio
             const iconColors = groupIconColors(groupKey);
             return (
               <section key={groupKey} className="space-y-3">
-                {/* Group header */}
-                <div className="flex items-center gap-2.5">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${iconColors}`}>
-                    <Icon size={16} />
+                {/* Group header with separator */}
+                <div className="flex items-center gap-3 pb-3 border-b border-slate-200">
+                  <div
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${iconColors}`}
+                  >
+                    <Icon size={17} />
                   </div>
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <h3 className="text-base font-black text-slate-900 leading-tight">
                       {PORTFOLIO_GROUP_LABELS[groupKey]}
                     </h3>
@@ -614,8 +630,8 @@ export function PortfolioPageContent({ contracts, visibleSourceDocs }: Portfolio
                   </div>
                 </div>
 
-                {/* Product cards grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                {/* Full-width accordion product list */}
+                <div className="space-y-2">
                   {items.map((contract) => {
                     const canonical = canonicalById.get(contract.id)!;
                     return (
@@ -633,14 +649,14 @@ export function PortfolioPageContent({ contracts, visibleSourceDocs }: Portfolio
           })}
 
           {anyFvShown ? (
-            <p className="text-[11px] text-slate-500 max-w-3xl leading-relaxed">
+            <p className="text-[11px] text-slate-500 leading-relaxed">
               U investičních a penzijních produktů může být uveden odhad budoucí hodnoty zjednodušeným modelem.
               Vždy jde o nezávaznou ilustraci na základě údajů ve smlouvě — ne o příslib výnosu.
             </p>
           ) : null}
 
           {/* CTA footer */}
-          <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 md:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h3 className="text-base font-black text-slate-900">Potřebujete změnu nebo vysvětlení?</h3>
               <p className="text-sm text-slate-500 mt-1 max-w-md">

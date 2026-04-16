@@ -207,6 +207,12 @@ export async function POST(request: Request) {
             ? selectedStepIdsRaw.filter((x: unknown): x is string => typeof x === "string" && x.length > 0)
             : undefined;
 
+          const stepParamOverridesRaw = body.stepParamOverrides;
+          const stepParamOverrides: Record<string, Record<string, string>> | undefined =
+            stepParamOverridesRaw && typeof stepParamOverridesRaw === "object" && !Array.isArray(stepParamOverridesRaw)
+              ? (stepParamOverridesRaw as Record<string, Record<string, string>>)
+              : undefined;
+
           const orchestration =
             body.orchestration === "canonical" || body.useCanonicalOrchestration === true
               ? "canonical"
@@ -524,6 +530,7 @@ export async function POST(request: Request) {
               {
                 cancel: cancelExecution,
                 selectedStepIds: confirmExecution ? selectedStepIds : undefined,
+                stepParamOverrides: confirmExecution ? stepParamOverrides : undefined,
               },
               { tenantId, userId, roleName: membership.roleName },
             );

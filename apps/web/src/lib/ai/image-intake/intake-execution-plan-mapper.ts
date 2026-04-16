@@ -24,6 +24,7 @@ const INTENT_TO_WRITE: Partial<Record<CanonicalIntentType, string>> = {
   update_contact: "updateContact",
   attach_document: "attachDocumentToClient",
   draft_portal_message: "draftClientPortalMessage",
+  save_payment_setup: "savePaymentSetup",
 };
 
 /** Navěšení attach kroků na createContact + odstranění interního flagu z parametrů. */
@@ -59,6 +60,13 @@ export function mapToExecutionPlan(
       ...action.params,
       _imageIntakeSource: intakeId,
     };
+    // Store inlineInput as a hidden param so mapToPreviewItems can surface it in UI
+    if (action.inlineInput) {
+      baseParams._inlineInput = action.inlineInput;
+    }
+    if (action.preflightStatus) {
+      baseParams._preflightStatus = action.preflightStatus;
+    }
     const rawPlanParams = action.params as Record<string, unknown>;
     const isIdentityIntakeAttach =
       isIdentityIntake &&
@@ -111,17 +119,19 @@ const WRITE_ACTION_ADVISOR_DESCRIPTION: Partial<Record<WriteActionType, string>>
   createClientRequest: "Vznikne požadavek klienta k dalšímu zpracování.",
   scheduleCalendarEvent: "Navrhne se událost v kalendáři — ověřte čas a účastníky.",
   createMeetingNote: "Záznam ze schůzky nebo poznámku uložíte k klientovi.",
+  savePaymentSetup: "Interní záznam platební instrukce — viditelnost pro klienta nastavíte ručně po ověření.",
 };
 
 export function mapToPreviewItems(plan: ExecutionPlan): StepPreviewItem[] {
   return plan.steps.map((step) => {
+    const stepParams = step.params as Record<string, unknown> | undefined;
+
     const attachAfterCreate =
       step.action === "attachDocumentToClient" &&
       step.dependsOn.some((depId) => plan.steps.some((s) => s.stepId === depId && s.action === "createContact"));
 
-    const createParams = step.params as Record<string, unknown> | undefined;
     const createContactFromScreenshot =
-      step.action === "createContact" && createParams?._createContactDraftSource === "crm_form_screenshot";
+      step.action === "createContact" && stepParams?._createContactDraftSource === "crm_form_screenshot";
 
     const pf = attachAfterCreate
       ? ({
@@ -130,6 +140,12 @@ export function mapToPreviewItems(plan: ExecutionPlan): StepPreviewItem[] {
           advisorMessage: undefined,
         })
       : computeWriteStepPreflight(step.action, step.params, plan.productDomain);
+
+    // Prefer planner-supplied preflight status (e.g. needs_input when institution is missing)
+    const explicitPreflight = stepParams?._preflightStatus as StepPreviewItem["preflightStatus"] | undefined;
+    const effectivePreflightStatus = explicitPreflight ?? pf.preflightStatus;
+
+    const inlineInput = stepParams?._inlineInput as StepPreviewItem["inlineInput"] | undefined;
 
     const baseDescription =
       createContactFromScreenshot && step.action === "createContact"
@@ -141,10 +157,11 @@ export function mapToPreviewItems(plan: ExecutionPlan): StepPreviewItem[] {
       label: step.label,
       action: step.label,
       description: attachAfterCreate
-        ? `${WRITE_ACTION_ADVISOR_DESCRIPTION[step.action] ?? ""} Kontakt bude doplněn automaticky po kroku „Založit klienta“.`.trim()
+        ? `${WRITE_ACTION_ADVISOR_DESCRIPTION[step.action] ?? ""} Kontakt bude doplněn automaticky po kroku „Založit klienta".`.trim()
         : baseDescription,
-      preflightStatus: pf.preflightStatus,
-      blockedReason: pf.preflightStatus === "blocked" ? pf.advisorMessage : undefined,
+      preflightStatus: effectivePreflightStatus,
+      blockedReason: effectivePreflightStatus === "blocked" ? pf.advisorMessage : undefined,
+      inlineInput,
     };
   });
 }

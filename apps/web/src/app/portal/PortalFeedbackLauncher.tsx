@@ -4,10 +4,12 @@ import { useState, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import { Bug, Lightbulb, Loader2, X } from "lucide-react";
 import { useToast } from "@/app/components/Toast";
+import { useOptionalAiAssistantDrawer } from "./AiAssistantDrawerContext";
 
 export function PortalFeedbackLauncher({ variant = "desktop" }: { variant?: "desktop" | "mobile" }) {
   const pathname = usePathname();
   const toast = useToast();
+  const aiCtx = useOptionalAiAssistantDrawer();
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState<"bug" | "idea">("bug");
   const [title, setTitle] = useState("");
@@ -55,6 +57,10 @@ export function PortalFeedbackLauncher({ variant = "desktop" }: { variant?: "des
   }, [body, category, pathname, reset, title, toast]);
 
   if (variant === "mobile" && process.env.NODE_ENV === "production") {
+    return null;
+  }
+
+  if (aiCtx?.open) {
     return null;
   }
 
