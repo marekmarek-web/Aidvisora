@@ -30,3 +30,13 @@ export function isInternalAdminUser(params: { userId: string; email: string | nu
   const emails = parseList(process.env.AIDV_INTERNAL_ADMIN_EMAILS).map(normalizeEmail);
   return emails.includes(em);
 }
+
+/**
+ * Returns true when the tenant (workspace) itself is on the internal admin allowlist.
+ * Clients invited into an admin workspace inherit full access regardless of their own identity.
+ * Env: `AIDV_INTERNAL_ADMIN_TENANT_IDS` (comma-separated UUIDs).
+ */
+export function isInternalAdminTenant(tenantId: string): boolean {
+  const ids = parseList(process.env.AIDV_INTERNAL_ADMIN_TENANT_IDS);
+  return ids.includes(tenantId);
+}

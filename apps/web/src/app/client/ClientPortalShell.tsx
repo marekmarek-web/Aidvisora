@@ -2,12 +2,18 @@ import { ClientSidebar } from "./ClientSidebar";
 import { ClientPortalTopbar } from "./ClientPortalTopbar";
 import { ClientMaterialRequestToastStack } from "./ClientMaterialRequestToastStack";
 
+export type PortalFeatures = {
+  messagingEnabled: boolean;
+  serviceRequestsEnabled: boolean;
+};
+
 type ClientPortalShellProps = {
   children: React.ReactNode;
   unreadNotificationsCount: number;
   unreadMessagesCount: number;
   fullName: string;
   advisor: { fullName: string; email?: string | null; initials: string } | null;
+  portalFeatures?: PortalFeatures;
 };
 
 export function ClientPortalShell({
@@ -16,6 +22,7 @@ export function ClientPortalShell({
   unreadMessagesCount,
   fullName,
   advisor,
+  portalFeatures,
 }: ClientPortalShellProps) {
   return (
     <div className="client-portal-root flex min-h-screen bg-slate-50 text-slate-800">
@@ -23,6 +30,7 @@ export function ClientPortalShell({
         unreadNotificationsCount={unreadNotificationsCount}
         unreadMessagesCount={unreadMessagesCount}
         advisor={advisor}
+        portalFeatures={portalFeatures}
       />
       <div className="flex flex-col flex-1 min-w-0 ml-12 md:ml-[280px]">
         <ClientPortalTopbar

@@ -4,8 +4,10 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import { NewRequestModal } from "../NewRequestModal";
 
-export function RequestsPageClientActions() {
+export function RequestsPageClientActions({ serviceRequestsEnabled = true }: { serviceRequestsEnabled?: boolean }) {
   const [open, setOpen] = useState(false);
+
+  if (!serviceRequestsEnabled) return null;
 
   return (
     <>

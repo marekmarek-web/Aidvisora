@@ -19,6 +19,7 @@ import {
   ClipboardList,
 } from "lucide-react";
 import { SignOutButton } from "@/app/components/SignOutButton";
+import type { PortalFeatures } from "./ClientPortalShell";
 
 export const CLIENT_SIDEBAR_WIDTH_PX = 280;
 export const CLIENT_SIDEBAR_COLLAPSED_PX = 48;
@@ -30,6 +31,7 @@ type NavItem = {
   match?: string[];
   showBadge?: boolean;
   showMessagesBadge?: boolean;
+  requireFeature?: keyof PortalFeatures;
 };
 
 const VIEWS: NavItem[] = [
@@ -42,14 +44,25 @@ const VIEWS: NavItem[] = [
   },
   { href: "/client/payments", label: "Platby a příkazy", icon: CreditCard },
   { href: "/client/calculators", label: "Kalkulačky", icon: Calculator },
-  { href: "/client/requests", label: "Moje požadavky", icon: ListTodo },
+  {
+    href: "/client/requests",
+    label: "Moje požadavky",
+    icon: ListTodo,
+    requireFeature: "serviceRequestsEnabled",
+  },
   {
     href: "/client/pozadavky-poradce",
     label: "Od poradce",
     icon: ClipboardList,
     match: ["/client/pozadavky-poradce"],
   },
-  { href: "/client/messages", label: "Zprávy poradci", icon: MessageSquare, showMessagesBadge: true },
+  {
+    href: "/client/messages",
+    label: "Zprávy poradci",
+    icon: MessageSquare,
+    showMessagesBadge: true,
+    requireFeature: "messagingEnabled",
+  },
   { href: "/client/documents", label: "Trezor dokumentů", icon: FolderOpen },
   {
     href: "/client/notifications",
@@ -64,10 +77,12 @@ export function ClientSidebar({
   unreadNotificationsCount = 0,
   unreadMessagesCount = 0,
   advisor,
+  portalFeatures,
 }: {
   unreadNotificationsCount?: number;
   unreadMessagesCount?: number;
   advisor?: { fullName: string; email?: string | null; initials: string } | null;
+  portalFeatures?: PortalFeatures;
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -85,7 +100,12 @@ export function ClientSidebar({
     return () => document.removeEventListener("keydown", onKey);
   }, [mobileOpen]);
 
-  const navLinks = VIEWS.map((v) => {
+  const visibleViews = VIEWS.filter((v) => {
+    if (!v.requireFeature) return true;
+    return portalFeatures?.[v.requireFeature] !== false;
+  });
+
+  const navLinks = visibleViews.map((v) => {
     const isMatchAlias = v.match?.some((prefix) => pathname.startsWith(prefix));
     const isActive =
       v.href === "/client"
@@ -207,13 +227,15 @@ export function ClientSidebar({
                 </p>
               </div>
             </div>
-            <Link
-              href="/client/messages"
-              className="w-full py-2 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-indigo-600 hover:text-white transition-colors"
-            >
-              <MessageSquare size={14} />
-              Napsat zprávu
-            </Link>
+            {portalFeatures?.messagingEnabled !== false && (
+              <Link
+                href="/client/messages"
+                className="w-full py-2 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-indigo-600 hover:text-white transition-colors"
+              >
+                <MessageSquare size={14} />
+                Napsat zprávu
+              </Link>
+            )}
           </div>
           <SignOutButton />
         </div>

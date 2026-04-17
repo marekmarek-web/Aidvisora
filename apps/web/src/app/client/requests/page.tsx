@@ -7,7 +7,8 @@ import {
   ClipboardList,
   Clock,
 } from "lucide-react";
-import { requireClientZoneAuth } from "@/lib/auth/require-auth";
+import { requireClientZoneAuth, getCachedSupabaseUser } from "@/lib/auth/require-auth";
+import { getEffectiveTenantSettingsForWorkspaceResolved } from "@/lib/billing/effective-workspace";
 import { getClientRequests } from "@/app/actions/client-portal-requests";
 import { listClientMaterialRequests } from "@/app/actions/advisor-material-requests";
 import {
@@ -21,6 +22,14 @@ import { RequestsPageClientActions } from "./requests-client-actions";
 export default async function ClientRequestsPage() {
   const auth = await requireClientZoneAuth();
   if (!auth.contactId) return null;
+
+  const supabaseUser = await getCachedSupabaseUser().catch(() => null);
+  const portalSettingsResult = await getEffectiveTenantSettingsForWorkspaceResolved({
+    tenantId: auth.tenantId,
+    userId: auth.userId,
+    email: supabaseUser?.email ?? null,
+  }).catch(() => null);
+  const serviceRequestsEnabled = portalSettingsResult?.settings?.["client_portal.allow_service_requests"] ?? true;
 
   const [requestsList, materialRequestsList] = await Promise.all([
     getClientRequests(),
@@ -53,7 +62,7 @@ export default async function ClientRequestsPage() {
             Vaše požadavky na poradce a podklady, které poradce potřebuje od vás.
           </p>
         </div>
-        <RequestsPageClientActions />
+        <RequestsPageClientActions serviceRequestsEnabled={serviceRequestsEnabled} />
       </div>
 
       {!hasAnything ? (

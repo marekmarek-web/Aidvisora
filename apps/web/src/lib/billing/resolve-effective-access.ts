@@ -1,7 +1,7 @@
 import "server-only";
 
 import { db, tenants, eq } from "db";
-import { isInternalAdminUser } from "@/lib/billing/internal-admin";
+import { isInternalAdminUser, isInternalAdminTenant } from "@/lib/billing/internal-admin";
 import { getSubscriptionState } from "@/lib/billing/subscription-state";
 import { computeEffectiveAccessContext, type EffectiveAccessContext } from "@/lib/billing/access-resolution";
 
@@ -41,7 +41,9 @@ export async function resolveEffectiveAccessContext(params: {
       }
     : null;
 
-  const isInternalAdmin = isInternalAdminUser({ userId: params.userId, email: params.email });
+  const isInternalAdmin =
+    isInternalAdminUser({ userId: params.userId, email: params.email }) ||
+    isInternalAdminTenant(params.tenantId);
 
   return computeEffectiveAccessContext({
     now,

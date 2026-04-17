@@ -1,10 +1,11 @@
 import { redirect } from "next/navigation";
 import { cookies, headers } from "next/headers";
-import { requireClientZoneAuth } from "@/lib/auth/require-auth";
+import { requireClientZoneAuth, getCachedSupabaseUser } from "@/lib/auth/require-auth";
 import { getPortalNotificationsUnreadCount } from "@/app/actions/portal-notifications";
 import { getAssignedAdvisorForClient } from "@/app/actions/client-dashboard";
 import { getUnreadAdvisorMessagesForClientCount } from "@/app/actions/messages";
 import { isMobileUiV1EnabledForRequest } from "@/app/shared/mobile-ui/feature-flag";
+import { getEffectiveTenantSettingsForWorkspaceResolved } from "@/lib/billing/effective-workspace";
 import { db, contacts, and, eq } from "db";
 import { ClientPortalShell } from "./ClientPortalShell";
 import { ClientMobileApp } from "./mobile/ClientMobileApp";
@@ -40,6 +41,17 @@ export default async function ClientZoneLayout({
   if (mobileUiEnabled && auth.contactId && useMobileSpa) {
     return <ClientMobileApp />;
   }
+
+  const supabaseUser = await getCachedSupabaseUser().catch(() => null);
+  const portalSettingsResult = await getEffectiveTenantSettingsForWorkspaceResolved({
+    tenantId: auth.tenantId,
+    userId: auth.userId,
+    email: supabaseUser?.email ?? null,
+  }).catch(() => null);
+  const portalFeatures = {
+    messagingEnabled: portalSettingsResult?.settings?.["client_portal.allow_messaging"] ?? true,
+    serviceRequestsEnabled: portalSettingsResult?.settings?.["client_portal.allow_service_requests"] ?? true,
+  };
 
   let unreadNotificationsCount = 0;
   let unreadMessagesCount = 0;
@@ -80,6 +92,7 @@ export default async function ClientZoneLayout({
       unreadMessagesCount={unreadMessagesCount}
       fullName={fullName}
       advisor={advisor}
+      portalFeatures={portalFeatures}
     >
       {children}
     </ClientPortalShell>
