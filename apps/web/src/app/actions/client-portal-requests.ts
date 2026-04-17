@@ -13,7 +13,10 @@ import {
   contacts,
   tenants,
   advisorNotifications,
+  documents,
 } from "db";
+import { createAdminClient } from "@/lib/supabase/server";
+import { notifyAdvisorClientTrezorUpload } from "@/lib/client-portal/notify-advisor-client-self-service";
 import { eq, and, ne, asc, desc, inArray } from "db";
 import {
   stageToClientStatus,
@@ -434,6 +437,101 @@ export async function createClientPortalRequest(params: {
   }
 
   return { success: true, id: newId };
+}
+
+const PORTAL_REQUEST_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
+const PORTAL_REQUEST_ATTACHMENT_MIMES = new Set([
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+
+async function persistClientPortalRequestFiles(opportunityId: string, files: File[]): Promise<void> {
+  if (files.length === 0) return;
+  const auth = await requireAuthInAction();
+  if (auth.roleName !== "Client" || !auth.contactId) return;
+
+  const [opp] = await db
+    .select({ id: opportunities.id })
+    .from(opportunities)
+    .where(
+      and(
+        eq(opportunities.tenantId, auth.tenantId),
+        eq(opportunities.id, opportunityId),
+        eq(opportunities.contactId, auth.contactId),
+      ),
+    )
+    .limit(1);
+  if (!opp) return;
+
+  const admin = createAdminClient();
+  for (const file of files) {
+    if (!(file instanceof File) || !file.size) continue;
+    if (file.size > PORTAL_REQUEST_ATTACHMENT_MAX_BYTES) continue;
+    if (!PORTAL_REQUEST_ATTACHMENT_MIMES.has(file.type)) continue;
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const storagePath = `${auth.tenantId}/${auth.contactId}/portal-request-${opportunityId}-${Date.now()}-${safeName}`;
+    const { error: uploadError } = await admin.storage.from("documents").upload(storagePath, file, { upsert: false });
+    if (uploadError) continue;
+
+    const [docRow] = await db
+      .insert(documents)
+      .values({
+        tenantId: auth.tenantId,
+        contactId: auth.contactId,
+        contractId: null,
+        opportunityId,
+        name: file.name,
+        storagePath,
+        tags: ["požadavek portálu"],
+        mimeType: file.type || null,
+        sizeBytes: file.size,
+        visibleToClient: true,
+        uploadSource: "web",
+        uploadedBy: auth.userId,
+      })
+      .returning({ id: documents.id });
+
+    const documentId = docRow?.id;
+    if (documentId) {
+      await logActivity("document", documentId, "upload", {
+        contactId: auth.contactId,
+        opportunityId,
+        source: "client_portal_request",
+      }).catch(() => {});
+      await notifyAdvisorClientTrezorUpload({
+        tenantId: auth.tenantId,
+        contactId: auth.contactId,
+        documentId,
+        documentLabel: file.name,
+      }).catch(() => {});
+    }
+  }
+}
+
+/**
+ * Vytvoří požadavek z portálu včetně volitelných příloh (`files` v `FormData`).
+ */
+export async function createClientPortalRequestFromForm(
+  formData: FormData
+): Promise<{ success: true; id: string } | { success: false; error: string }> {
+  const caseType = String(formData.get("caseType") ?? "").trim();
+  const subjectRaw = formData.get("subject");
+  const descriptionRaw = formData.get("description");
+  const subject = typeof subjectRaw === "string" ? subjectRaw.trim() || null : null;
+  const description = typeof descriptionRaw === "string" ? descriptionRaw.trim() || null : null;
+  const files = formData.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
+
+  const created = await createClientPortalRequest({
+    caseType: caseType || "jiné",
+    subject,
+    description,
+  });
+  if (!created.success) return created;
+
+  await persistClientPortalRequestFiles(created.id, files);
+  return created;
 }
 
 /**

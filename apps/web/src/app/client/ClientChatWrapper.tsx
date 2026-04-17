@@ -1,9 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Send } from "lucide-react";
-import { getMessages, markMessagesRead, sendMessage } from "@/app/actions/messages";
-import type { MessageRow } from "@/app/actions/messages";
+import { Paperclip, Send } from "lucide-react";
+import {
+  loadThreadMessages,
+  loadThreadAttachmentsByContact,
+  sendPortalMessage,
+  sendPortalMessageWithAttachments,
+  type MessageRow,
+  type MessageAttachmentRow,
+} from "@/app/actions/messages";
 
 const POLL_INTERVAL = 10_000;
 
@@ -13,16 +19,25 @@ type ClientChatWrapperProps = {
 
 export function ClientChatWrapper({ contactId }: ClientChatWrapperProps) {
   const [messages, setMessages] = useState<MessageRow[]>([]);
+  const [attachmentsByMessage, setAttachmentsByMessage] = useState<Record<string, MessageAttachmentRow[]>>({});
   const [body, setBody] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const bottomRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function loadMessages() {
     try {
-      const data = await getMessages(contactId);
-      setMessages(data);
-      markMessagesRead(contactId).catch(() => {});
-    } catch {}
+      const [msgRes, attRes] = await Promise.all([
+        loadThreadMessages(contactId, { markRead: true }),
+        loadThreadAttachmentsByContact(contactId),
+      ]);
+      if (msgRes.ok) setMessages(msgRes.messages);
+      if (attRes.ok) setAttachmentsByMessage(attRes.byMessageId);
+    } catch {
+      /* stejné chování jako dříve — tiché selhání při poll */
+    }
   }
 
   useEffect(() => {
@@ -40,11 +55,33 @@ export function ClientChatWrapper({ contactId }: ClientChatWrapperProps) {
 
   function handleSubmit() {
     const trimmed = body.trim();
-    if (!trimmed) return;
-    setBody("");
+    if (!trimmed && files.length === 0) return;
+    setSendError(null);
+    const toSendFiles = [...files];
     startTransition(async () => {
-      await sendMessage(contactId, trimmed);
-      await loadMessages();
+      try {
+        if (toSendFiles.length > 0) {
+          const formData = new FormData();
+          formData.set("body", trimmed || "(příloha)");
+          toSendFiles.forEach((f) => formData.append("file", f));
+          const sent = await sendPortalMessageWithAttachments(contactId, formData);
+          if (!sent.ok) {
+            setSendError(sent.error);
+            return;
+          }
+        } else {
+          const sent = await sendPortalMessage(contactId, trimmed);
+          if (!sent.ok) {
+            setSendError(sent.error);
+            return;
+          }
+        }
+        setBody("");
+        setFiles([]);
+        await loadMessages();
+      } catch (e) {
+        setSendError(e instanceof Error ? e.message : "Odeslání se nezdařilo.");
+      }
     });
   }
 
@@ -70,6 +107,7 @@ export function ClientChatWrapper({ contactId }: ClientChatWrapperProps) {
 
         {messages.map((message) => {
           const isClientMessage = message.senderType === "client";
+          const attachments = attachmentsByMessage[message.id] ?? [];
           return (
             <div
               key={message.id}
@@ -84,7 +122,29 @@ export function ClientChatWrapper({ contactId }: ClientChatWrapperProps) {
                     : "bg-white border border-slate-100 text-slate-800 rounded-tl-sm"
                 }`}
               >
-                {message.body}
+                <p className="whitespace-pre-wrap break-words">{message.body}</p>
+                {attachments.length > 0 ? (
+                  <div className={`mt-3 space-y-2 ${isClientMessage ? "text-white" : ""}`}>
+                    {attachments.map((a) => (
+                      <div
+                        key={a.id}
+                        className={`rounded-xl border px-3 py-2 text-sm ${
+                          isClientMessage ? "border-white/25 bg-white/10" : "border-slate-200 bg-slate-50"
+                        }`}
+                      >
+                        <a
+                          href={`/api/messages/attachments/${a.id}/download`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`font-medium underline ${isClientMessage ? "text-white" : "text-indigo-600"}`}
+                          title={a.fileName}
+                        >
+                          Příloha: {a.fileName}
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
               </div>
               <span className="text-[10px] font-bold text-slate-400 mt-1.5 px-1">
                 {new Date(message.createdAt).toLocaleTimeString("cs-CZ", {
@@ -99,19 +159,45 @@ export function ClientChatWrapper({ contactId }: ClientChatWrapperProps) {
 
       <div ref={bottomRef} />
 
+      {sendError ? (
+        <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{sendError}</p>
+      ) : null}
+
       <div className="sticky bottom-0 pt-5 bg-gradient-to-t from-slate-50/80 to-transparent">
-        <div className="flex items-end gap-3 bg-white border border-slate-200 rounded-[24px] p-2 focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-400 transition-all">
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
+          className="sr-only"
+          onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
+        />
+        {files.length > 0 ? (
+          <p className="text-xs text-slate-500 mb-2 px-1">
+            {files.length === 1 ? `1 soubor vybrán` : `${files.length} soubory vybrány`}
+          </p>
+        ) : null}
+        <div className="flex items-end gap-2 bg-white border border-slate-200 rounded-[24px] p-2 focus-within:ring-2 focus-within:ring-indigo-100 focus-within:border-indigo-400 transition-all">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="shrink-0 p-3 text-slate-500 hover:text-indigo-600 rounded-xl min-h-[44px] min-w-[44px] flex items-center justify-center"
+            aria-label="Přiložit soubor"
+            title="Přiložit soubor"
+          >
+            <Paperclip size={20} />
+          </button>
           <textarea
             rows={1}
             value={body}
             onChange={(event) => setBody(event.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Napište zprávu svému poradci..."
-            className="flex-1 bg-transparent border-none outline-none py-3 px-4 text-sm font-medium text-slate-700 resize-none max-h-32"
+            className="flex-1 bg-transparent border-none outline-none py-3 px-2 text-sm font-medium text-slate-700 resize-none max-h-32"
           />
           <button
             onClick={handleSubmit}
-            disabled={isPending || !body.trim()}
+            disabled={isPending || (!body.trim() && files.length === 0)}
             className="p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors shadow-md shrink-0 mb-0.5 mr-0.5 disabled:opacity-50 min-h-[44px] min-w-[44px]"
             aria-label="Odeslat zprávu"
           >

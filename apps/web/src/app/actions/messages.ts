@@ -339,6 +339,7 @@ const ATTACHMENT_TYPES = [
  */
 export async function sendMessageWithAttachments(contactId: string, formData: FormData): Promise<string | null> {
   const auth = await requireAuthInAction();
+  await assertCapabilityForAction(auth, "client_portal_messaging");
   const body = (formData.get("body") as string)?.trim() ?? "";
   if (!body) throw new Error("Prázdná zpráva");
 

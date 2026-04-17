@@ -992,15 +992,36 @@ export function ChatMessageBubble({
   body,
   timestamp,
   own,
+  attachments,
 }: {
   body: string;
   timestamp?: string;
   own?: boolean;
+  attachments?: { id: string; fileName: string }[];
 }) {
+  const att = attachments ?? [];
   return (
     <div className={cx("flex", own ? "justify-end" : "justify-start")}>
       <MobileCard className={cx("max-w-[85%] p-3", own && "bg-indigo-600 text-white border-indigo-700")}>
-        <p className="text-sm leading-relaxed">{body}</p>
+        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{body}</p>
+        {att.length > 0 ? (
+          <div className={cx("mt-2 space-y-1.5", own ? "text-indigo-50" : "")}>
+            {att.map((a) => (
+              <a
+                key={a.id}
+                href={`/api/messages/attachments/${a.id}/download`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cx(
+                  "block text-xs font-bold underline break-all min-h-[44px] py-1",
+                  own ? "text-white" : "text-indigo-600",
+                )}
+              >
+                Příloha: {a.fileName}
+              </a>
+            ))}
+          </div>
+        ) : null}
         {timestamp ? <p className={cx("mt-1 text-[11px]", own ? "text-indigo-100" : "text-[color:var(--wp-text-tertiary)]")}>{timestamp}</p> : null}
       </MobileCard>
     </div>

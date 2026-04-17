@@ -10,6 +10,7 @@ const CASE_TYPE_LABELS: Record<string, string> = {
   úvěr: "Úvěr",
   "změna situace": "Změna životní situace",
   "servis smlouvy": "Servis smlouvy",
+  "hlášení pojistné události": "Hlášení pojistné události",
   jiné: "Jiné",
 };
 

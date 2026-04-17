@@ -47,7 +47,7 @@ export function ClientMaterialRequestRespondForm({ requestId }: { requestId: str
         placeholder="Napište textovou odpověď nebo doplnění…"
       />
       <div>
-        <label className="block text-xs font-bold text-slate-500 mb-1">Soubory (PDF, obrázky)</label>
+        <label className="block text-xs font-bold text-slate-500 mb-1">Přiložit soubor (PDF, obrázky)</label>
         <input
           type="file"
           multiple

@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, ChevronRight, X } from "lucide-react";
-import { createClientPortalRequest } from "@/app/actions/client-portal-requests";
+import { Check, ChevronRight, Paperclip, X } from "lucide-react";
+import { createClientPortalRequestFromForm } from "@/app/actions/client-portal-requests";
 
 type NewRequestModalProps = {
   open: boolean;
@@ -55,18 +55,23 @@ const CATEGORIES: RequestCategory[] = [
   {
     id: "ostatni",
     label: "Ostatní",
-    options: [{ caseType: "jiné", label: "Jiný požadavek" }],
+    options: [
+      { caseType: "hlášení pojistné události", label: "Hlášení pojistné události" },
+      { caseType: "jiné", label: "Jiný požadavek" },
+    ],
   },
 ];
 
 export function NewRequestModal({ open, onClose, defaultCaseType }: NewRequestModalProps) {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [isPending, startTransition] = useTransition();
   const [categoryId, setCategoryId] = useState<string>("");
   const [selectedCaseType, setSelectedCaseType] = useState<string>(defaultCaseType ?? "");
   const [requestTitle, setRequestTitle] = useState<string>("");
   const [description, setDescription] = useState<string>("");
+  const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const selectedCategory = useMemo(
@@ -80,6 +85,7 @@ export function NewRequestModal({ open, onClose, defaultCaseType }: NewRequestMo
     setSelectedCaseType(defaultCaseType ?? "");
     setRequestTitle("");
     setDescription("");
+    setFiles([]);
     setError(null);
     onClose();
   }
@@ -88,11 +94,14 @@ export function NewRequestModal({ open, onClose, defaultCaseType }: NewRequestMo
     if (!selectedCaseType) return;
     setError(null);
     startTransition(async () => {
-      const result = await createClientPortalRequest({
-        caseType: selectedCaseType,
-        subject: requestTitle.trim() || null,
-        description: description.trim() || null,
-      });
+      const fd = new FormData();
+      fd.set("caseType", selectedCaseType);
+      fd.set("subject", requestTitle.trim());
+      fd.set("description", description.trim());
+      for (const f of files) {
+        fd.append("files", f);
+      }
+      const result = await createClientPortalRequestFromForm(fd);
       if (!result.success) {
         setError(result.error || "Požadavek se nepodařilo odeslat.");
         return;
@@ -206,13 +215,39 @@ export function NewRequestModal({ open, onClose, defaultCaseType }: NewRequestMo
                 <label className="text-xs text-slate-500 font-bold block mb-2">
                   Detailní popis
                 </label>
-                <textarea
+                               <textarea
                   rows={5}
                   value={description}
                   onChange={(event) => setDescription(event.target.value)}
                   className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all resize-none"
                   placeholder="Upřesněte částku, termín nebo další kontext..."
                 />
+              </div>
+
+              <div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept=".pdf,.jpg,.jpeg,.png,.webp"
+                  className="sr-only"
+                  onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-700 hover:bg-slate-100 transition-colors"
+                >
+                  <Paperclip size={16} className="shrink-0 text-slate-500" />
+                  Přiložit soubor
+                </button>
+                {files.length > 0 ? (
+                  <p className="mt-2 text-xs text-slate-500">
+                    {files.length === 1
+                      ? `Vybrán soubor: ${files[0]?.name ?? ""}`
+                      : `Vybrány soubory (${files.length})`}
+                  </p>
+                ) : null}
               </div>
 
               {error && (

@@ -19,5 +19,6 @@ export const CLIENT_REQUEST_TYPES = [
   { value: "úvěr", label: "Úvěr" },
   { value: "změna situace", label: "Změna životní situace" },
   { value: "servis smlouvy", label: "Servis smlouvy" },
+  { value: "hlášení pojistné události", label: "Hlášení pojistné události" },
   { value: "jiné", label: "Jiné" },
 ] as const;

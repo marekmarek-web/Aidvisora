@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createClientPortalRequest } from "@/app/actions/client-portal-requests";
+import { createClientPortalRequestFromForm } from "@/app/actions/client-portal-requests";
 import { CLIENT_REQUEST_TYPES } from "@/app/lib/client-portal/request-types";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import { HelpCircle } from "lucide-react";
@@ -14,17 +14,19 @@ export function ClientRequestForm() {
   const [caseType, setCaseType] = useState<string>(CLIENT_REQUEST_TYPES[0].value);
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     startTransition(async () => {
-      const result = await createClientPortalRequest({
-        caseType,
-        subject: subject.trim() || null,
-        description: description.trim() || null,
-      });
+      const fd = new FormData();
+      fd.set("caseType", caseType);
+      fd.set("subject", subject.trim());
+      fd.set("description", description.trim());
+      for (const f of files) fd.append("files", f);
+      const result = await createClientPortalRequestFromForm(fd);
       if (result.success) {
         await router.push("/client/requests");
         router.refresh();
@@ -74,6 +76,20 @@ export function ClientRequestForm() {
           rows={4}
           placeholder="Např. refinancování hypotéky, nové životní pojištění, změna bydlení…"
           className="w-full rounded-[var(--wp-radius-sm)] border border-monday-border bg-monday-surface px-3 py-2.5 text-monday-text text-sm resize-y"
+        />
+      </div>
+
+      <div>
+        <label htmlFor="request-files" className="block text-sm font-medium text-monday-text mb-1">
+          Přiložit soubor (nepovinné)
+        </label>
+        <input
+          id="request-files"
+          type="file"
+          multiple
+          accept=".pdf,.jpg,.jpeg,.png,.webp"
+          className="block w-full text-sm text-monday-text min-h-[44px]"
+          onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
         />
       </div>
 

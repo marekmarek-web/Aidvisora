@@ -32,7 +32,7 @@ import { signOutAndRedirectClient } from "@/lib/auth/sign-out-client";
 import { isClientMobileSpaPath } from "@/lib/client-portal/client-mobile-spa-paths";
 import * as Sentry from "@sentry/nextjs";
 import {
-  createClientPortalRequest,
+  createClientPortalRequestFromForm,
   getClientRequests,
 } from "@/app/actions/client-portal-requests";
 import type { ContractRow } from "@/app/actions/contracts";
@@ -69,11 +69,13 @@ import { computeSharedFutureValue, SHARED_FV_DISCLAIMER } from "@/lib/fund-libra
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
 import {
-  getMessages,
+  loadThreadMessages,
+  loadThreadAttachmentsByContact,
   getUnreadAdvisorMessagesForClientCount,
-  markMessagesRead,
-  sendMessageWithAttachments,
+  sendPortalMessage,
+  sendPortalMessageWithAttachments,
   type MessageRow,
+  type MessageAttachmentRow,
 } from "@/app/actions/messages";
 import { clientUpdateProfile } from "@/app/actions/contacts";
 import { addHouseholdMemberFromClient, getClientHouseholdForContact, type ClientHouseholdDetail } from "@/app/actions/households";
@@ -774,6 +776,7 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
   const [notifications, setNotifications] = useState<PortalNotificationRow[]>(initialData.notifications);
   const [household, setHousehold] = useState<ClientHouseholdDetail | null>(initialData.household);
   const [messages, setMessages] = useState<MessageRow[]>([]);
+  const [messageAttachmentsById, setMessageAttachmentsById] = useState<Record<string, MessageAttachmentRow[]>>({});
 
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(initialData.unreadNotificationsCount);
   // exposed via setter used in notification tap handler above
@@ -783,6 +786,7 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
   const [requestCaseType, setRequestCaseType] = useState("hypotéka");
   const [requestSubject, setRequestSubject] = useState("");
   const [requestDescription, setRequestDescription] = useState("");
+  const [requestFiles, setRequestFiles] = useState<File[]>([]);
 
   const [composeBody, setComposeBody] = useState("");
   const [composeFiles, setComposeFiles] = useState<File[]>([]);
@@ -869,9 +873,16 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
     if (!pathname.startsWith("/client/messages")) return;
     startTransition(async () => {
       try {
-        const next = await getMessages(initialData.contactId);
-        setMessages(next);
-        await markMessagesRead(initialData.contactId);
+        const [msgRes, attRes] = await Promise.all([
+          loadThreadMessages(initialData.contactId, { markRead: true }),
+          loadThreadAttachmentsByContact(initialData.contactId),
+        ]);
+        if (msgRes.ok) {
+          setMessages(msgRes.messages);
+        } else {
+          setError(msgRes.error);
+        }
+        if (attRes.ok) setMessageAttachmentsById(attRes.byMessageId);
         const unread = await getUnreadAdvisorMessagesForClientCount();
         setUnreadMessagesCount(unread);
       } catch (e) {
@@ -907,11 +918,12 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
     startTransition(async () => {
       setError(null);
       try {
-        const result = await createClientPortalRequest({
-          caseType: requestCaseType,
-          subject: requestSubject.trim() || null,
-          description: requestDescription.trim() || null,
-        });
+        const fd = new FormData();
+        fd.set("caseType", requestCaseType);
+        fd.set("subject", requestSubject.trim());
+        fd.set("description", requestDescription.trim());
+        for (const f of requestFiles) fd.append("files", f);
+        const result = await createClientPortalRequestFromForm(fd);
         if (!result.success) {
           setError("error" in result ? result.error : "Požadavek se nepodařilo vytvořit.");
           return;
@@ -919,6 +931,7 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
         setRequestModalOpen(false);
         setRequestSubject("");
         setRequestDescription("");
+        setRequestFiles([]);
         setRequests(await getClientRequests());
       } catch (e) {
         setError(e instanceof Error ? e.message : "Požadavek se nepodařilo vytvořit.");
@@ -928,18 +941,34 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
 
   async function sendMessage() {
     const trimmed = composeBody.trim();
-    if (!trimmed) return;
+    if (!trimmed && composeFiles.length === 0) return;
     startTransition(async () => {
       setError(null);
       try {
-        const formData = new FormData();
-        formData.set("body", trimmed);
-        for (const file of composeFiles) formData.append("files", file);
-        await sendMessageWithAttachments(initialData.contactId, formData);
+        if (composeFiles.length > 0) {
+          const formData = new FormData();
+          formData.set("body", trimmed || "(příloha)");
+          for (const file of composeFiles) formData.append("files", file);
+          const sent = await sendPortalMessageWithAttachments(initialData.contactId, formData);
+          if (!sent.ok) {
+            setError(sent.error);
+            return;
+          }
+        } else {
+          const sent = await sendPortalMessage(initialData.contactId, trimmed);
+          if (!sent.ok) {
+            setError(sent.error);
+            return;
+          }
+        }
         setComposeBody("");
         setComposeFiles([]);
-        const next = await getMessages(initialData.contactId);
-        setMessages(next);
+        const [msgRes, attRes] = await Promise.all([
+          loadThreadMessages(initialData.contactId, { markRead: true }),
+          loadThreadAttachmentsByContact(initialData.contactId),
+        ]);
+        if (msgRes.ok) setMessages(msgRes.messages);
+        if (attRes.ok) setMessageAttachmentsById(attRes.byMessageId);
         await refreshBadges();
       } catch (e) {
         setError(e instanceof Error ? e.message : "Zprávu se nepodařilo odeslat.");
@@ -1141,6 +1170,10 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
                           own={message.senderType === "client"}
                           body={message.body}
                           timestamp={new Date(message.createdAt).toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" })}
+                          attachments={messageAttachmentsById[message.id]?.map((a) => ({
+                            id: a.id,
+                            fileName: a.fileName,
+                          }))}
                         />
                       ))}
                     </div>
@@ -1172,8 +1205,12 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
                   className="flex-1 bg-transparent border-none outline-none text-sm text-slate-700 resize-none max-h-24 min-h-[20px] leading-relaxed"
                   placeholder="Napište zprávu svému poradci"
                 />
-                <label className="shrink-0 h-7 w-7 grid place-items-center text-slate-400 hover:text-slate-600 cursor-pointer mb-0.5">
-                  <Paperclip size={15} />
+                <label
+                  className="shrink-0 h-7 w-7 grid place-items-center text-slate-400 hover:text-slate-600 cursor-pointer mb-0.5"
+                  title="Přiložit soubor"
+                >
+                  <span className="sr-only">Přiložit soubor</span>
+                  <Paperclip size={15} aria-hidden />
                   <input
                     type="file"
                     multiple
@@ -1563,6 +1600,7 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
               { id: "pojištění", label: "Pojištění" },
               { id: "změna situace", label: "Změna životní situace" },
               { id: "servis smlouvy", label: "Servis smlouvy" },
+              { id: "hlášení pojistné události", label: "Hlášení pojistné události" },
               { id: "jiné", label: "Jiné" },
             ]}
           />
@@ -1574,6 +1612,21 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
             placeholder="Předmět (nepovinné)"
           />
           <textarea rows={4} value={requestDescription} onChange={(e) => setRequestDescription(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Popis požadavku (nepovinné)" />
+          <label className="flex min-h-[44px] w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 text-sm font-bold text-slate-700">
+            Přiložit soubor
+            <input
+              type="file"
+              multiple
+              className="hidden"
+              accept=".pdf,.jpg,.jpeg,.png,.webp"
+              onChange={(e) => setRequestFiles(Array.from(e.target.files ?? []))}
+            />
+          </label>
+          {requestFiles.length > 0 ? (
+            <p className="text-xs text-slate-500 px-1">
+              {requestFiles.length === 1 ? `1 soubor` : `${requestFiles.length} soubory`}
+            </p>
+          ) : null}
           <button type="button" onClick={createRequest} className="w-full min-h-[44px] rounded-xl bg-emerald-600 text-white text-sm font-bold">
             Vytvořit požadavek
           </button>
