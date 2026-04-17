@@ -1,9 +1,10 @@
 ---
-description: Agent neprovádí automaticky git commit ani push; zápis do repozitáře jen na výslovnou žádost uživatele.
+description: Git commit/push — výchozí bez auto zápisu; výjimka po opravě build/CI chyby = auto commit + push.
 alwaysApply: true
 ---
 
-# Git: žádný automatický commit z agenta
+# Git: žádný automatický commit z agenta (s výjimkou)
 
 1. **Bez výslovné žádosti uživatele** neprováděj `git commit`, `git push` ani „uzavírací“ `git add` / hromadné stageování jen proto, že úkol skončil.
 2. Když uživatel **požádá o commit** (a případně o push), nastav **první řádek** zprávy podle `vercel-commit-thread-title.mdc` a push proveď jen pokud o něj také požádal.
+3. **Oprava chyby buildu / CI / TypeScriptu / linteru**, kterou agent právě provedl a **ověřil** (např. úspěšný `tsc`, `pnpm build`, nebo jasné vyřešení hlášené chyby): ihned **`git add`** jen soubory z té opravy, **`git commit`** se srozumitelným subjectem (první řádek = název vlákna Cursoru, pokud ho znáš z kontextu; jinak krátký technický popis opravy) a **`git push`** na aktuální větev k `origin`. Cíl je, aby Vercel/pipeline dostaly fix bez dalšího „teď pushni“ od uživatele.

@@ -48,8 +48,8 @@ function czechDomesticToIban(account: string): string | null {
   const bban = `${bankCode}${prefix}${number}`;
   // Mod97 check: bban + "CZ" (→ 1235) + "00"
   const checkInput = `${bban}123500`;
-  const mod = BigInt(checkInput) % 97n;
-  const checkDigits = String(98n - mod).padStart(2, "0");
+  const mod = BigInt(checkInput) % BigInt(97);
+  const checkDigits = String(BigInt(98) - mod).padStart(2, "0");
   return `CZ${checkDigits}${bban}`;
 }
 
