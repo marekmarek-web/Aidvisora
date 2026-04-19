@@ -453,6 +453,11 @@ export function PortalSidebar({
           50% { opacity: 0.7; filter: drop-shadow(0 0 10px rgba(217, 70, 239, 0.8)); }
         }
         .animate-pulse-glow { animation: pulse-glow 2.5s ease-in-out infinite; }
+        @keyframes theme-popover-in {
+          from { opacity: 0; transform: translateY(0.5rem); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-theme-popover-in { animation: theme-popover-in 0.22s cubic-bezier(0.16, 1, 0.3, 1) both; }
       `}</style>
 
       {navOpen && isSlidingNav && (
@@ -809,7 +814,9 @@ export function PortalSidebar({
             </Link>
           </div>
 
-          <div className="relative z-[60] w-full px-5 pb-4 flex justify-center">
+          <div
+            className={clsx("relative z-[60] w-full pb-4 flex justify-center", contentCollapsed ? "px-2" : "px-5")}
+          >
             {paletteOpen && (
               <div
                 className="fixed inset-0 z-[30] bg-black/25 backdrop-blur-[2px] md:bg-black/20 pointer-events-auto"
@@ -820,17 +827,121 @@ export function PortalSidebar({
               />
             )}
             <div
-              className={`relative z-[50] flex w-full max-w-[280px] justify-center rounded-[20px] p-1.5 shadow-lg ${
-                isDark ? "bg-[#060918]/80 backdrop-blur-md border border-white/10" : "bg-wp-surface-muted border border-wp-surface-card-border"
-              }`}
+              className={clsx(
+                "relative z-[50] w-full max-w-[280px] rounded-[20px] p-1.5 shadow-lg",
+                isDark ? "bg-[#060918]/80 backdrop-blur-md border border-white/10" : "bg-wp-surface-muted border border-wp-surface-card-border",
+              )}
             >
-              <div className="relative flex min-w-0 w-full max-w-[140px] justify-center">
+              {paletteOpen && (
+                <div
+                  role="menu"
+                  className="absolute bottom-full left-0 right-0 z-[100] mb-2 max-h-[min(70dvh,calc(100dvh-6rem))] overflow-y-auto rounded-[24px] border border-[color:var(--wp-theme-popover-border)] bg-[color:var(--wp-theme-popover-bg)] p-2 shadow-2xl backdrop-blur-2xl pointer-events-auto animate-theme-popover-in"
+                >
+                  <p
+                    className={clsx(
+                      "px-2 pb-1.5 text-[9px] font-black uppercase tracking-widest",
+                      isDark ? "text-white/50" : "text-[color:var(--wp-text-tertiary)]",
+                    )}
+                  >
+                    Motiv
+                  </p>
+                  <div
+                    className={clsx(
+                      "flex w-full flex-col gap-1 rounded-2xl p-1",
+                      isDark ? "bg-black/25" : "bg-[color:var(--wp-surface-card-border)]/80",
+                    )}
+                  >
+                    <button
+                      type="button"
+                      role="menuitem"
+                      aria-label="Světlý motiv"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setTheme("light");
+                        setSunSpinKey((k) => k + 1);
+                        setPaletteOpen(false);
+                      }}
+                      className={clsx(
+                        "flex min-h-[44px] w-full flex-row items-center gap-3 rounded-xl px-3 py-2 text-[9px] font-bold uppercase tracking-widest transition-all duration-300",
+                        contentCollapsed && "justify-center gap-0 px-2",
+                        sunActive
+                          ? isDark
+                            ? "bg-[color:var(--wp-surface-card)]/20 text-white shadow-sm ring-1 ring-white/15"
+                            : "bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text)] shadow-md"
+                          : isDark
+                            ? "text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-card)]/10 hover:text-white"
+                            : "text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-card)]/60 hover:text-[color:var(--wp-text)]",
+                      )}
+                    >
+                      <Sun
+                        key={sunSpinKey}
+                        size={18}
+                        className={clsx("shrink-0", sunSpinKey > 0 ? "animate-theme-sun-spin" : undefined)}
+                        aria-hidden
+                      />
+                      {!contentCollapsed && <span className="min-w-0 truncate">Světlý</span>}
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      aria-label="Tmavý motiv"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setTheme("dark");
+                        setPaletteOpen(false);
+                      }}
+                      className={clsx(
+                        "flex min-h-[44px] w-full flex-row items-center gap-3 rounded-xl px-3 py-2 text-[9px] font-bold uppercase tracking-widest transition-all duration-300",
+                        contentCollapsed && "justify-center gap-0 px-2",
+                        moonActive
+                          ? isDark
+                            ? "bg-[color:var(--wp-surface-card)]/20 text-white shadow-sm ring-1 ring-white/15"
+                            : "bg-[color:var(--wp-text)] text-[color:var(--wp-link-active)] shadow-md"
+                          : isDark
+                            ? "text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-card)]/10 hover:text-white"
+                            : "text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-card)]/60 hover:text-[color:var(--wp-text)]",
+                      )}
+                    >
+                      <Moon size={18} className="shrink-0" aria-hidden />
+                      {!contentCollapsed && <span className="min-w-0 truncate">Tmavý</span>}
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      aria-label="Motiv podle systému"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setTheme("system");
+                        setPaletteOpen(false);
+                      }}
+                      className={clsx(
+                        "flex min-h-[44px] w-full flex-row items-center gap-3 rounded-xl px-3 py-2 text-[9px] font-bold uppercase tracking-widest transition-all duration-300",
+                        contentCollapsed && "justify-center gap-0 px-2",
+                        systemActive
+                          ? isDark
+                            ? "bg-[color:var(--wp-surface-card)]/20 text-white shadow-sm ring-1 ring-white/15"
+                            : "bg-[color:var(--wp-text)] text-[color:var(--wp-link-active)] shadow-md"
+                          : isDark
+                            ? "text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-card)]/10 hover:text-white"
+                            : "text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-card)]/60 hover:text-[color:var(--wp-text)]",
+                      )}
+                    >
+                      <Monitor size={18} className="shrink-0" aria-hidden />
+                      {!contentCollapsed && <span className="min-w-0 truncate">Systém</span>}
+                    </button>
+                  </div>
+                </div>
+              )}
+              <div className="flex w-full justify-center">
                 <button
                   type="button"
                   onClick={() => {
                     setPaletteOpen((o) => !o);
                   }}
-                  className={`p-2.5 rounded-[14px] transition-colors duration-300 min-h-[44px] min-w-[44px] w-full flex flex-1 items-center justify-center ${
+                  className={`p-2.5 rounded-[14px] transition-colors duration-300 min-h-[44px] min-w-[44px] w-full max-w-[140px] flex items-center justify-center ${
                     paletteOpen
                       ? isDark
                         ? "bg-[color:var(--wp-surface-card)]/20 text-white shadow-sm"
@@ -845,103 +956,6 @@ export function PortalSidebar({
                 >
                   <Palette size={20} strokeWidth={2} />
                 </button>
-                {paletteOpen && (
-                  <div
-                    role="menu"
-                    className="absolute bottom-full left-1/2 z-[100] mb-2 min-w-[min(100vw-2rem,280px)] max-w-[calc(100vw-2rem)] -translate-x-1/2 rounded-[24px] border border-[color:var(--wp-theme-popover-border)] bg-[color:var(--wp-theme-popover-bg)] p-2 shadow-2xl backdrop-blur-2xl pointer-events-auto"
-                  >
-                    <p
-                      className={clsx(
-                        "px-2 pb-1.5 text-[9px] font-black uppercase tracking-widest",
-                        isDark ? "text-white/50" : "text-[color:var(--wp-text-tertiary)]",
-                      )}
-                    >
-                      Motiv
-                    </p>
-                    <div
-                      className={clsx(
-                        "flex w-full gap-0.5 rounded-full p-1",
-                        isDark ? "bg-black/25" : "bg-[color:var(--wp-surface-card-border)]/80",
-                      )}
-                    >
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setTheme("light");
-                          setSunSpinKey((k) => k + 1);
-                          setPaletteOpen(false);
-                        }}
-                        className={clsx(
-                          "flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-full px-2 py-2 text-[9px] font-bold uppercase tracking-widest transition-all duration-300",
-                          sunActive
-                            ? isDark
-                              ? "bg-[color:var(--wp-surface-card)]/20 text-white shadow-sm ring-1 ring-white/15"
-                              : "bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text)] shadow-md"
-                            : isDark
-                              ? "text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-card)]/10 hover:text-white"
-                              : "text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-card)]/60 hover:text-[color:var(--wp-text)]",
-                        )}
-                      >
-                        <Sun
-                          key={sunSpinKey}
-                          size={18}
-                          className={sunSpinKey > 0 ? "animate-theme-sun-spin" : undefined}
-                          aria-hidden
-                        />
-                        Světlý
-                      </button>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setTheme("dark");
-                          setPaletteOpen(false);
-                        }}
-                        className={clsx(
-                          "flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-full px-2 py-2 text-[9px] font-bold uppercase tracking-widest transition-all duration-300",
-                          moonActive
-                            ? isDark
-                              ? "bg-[color:var(--wp-surface-card)]/20 text-white shadow-sm ring-1 ring-white/15"
-                              : "bg-[color:var(--wp-text)] text-[color:var(--wp-link-active)] shadow-md"
-                            : isDark
-                              ? "text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-card)]/10 hover:text-white"
-                              : "text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-card)]/60 hover:text-[color:var(--wp-text)]",
-                        )}
-                      >
-                        <Moon size={18} aria-hidden />
-                        Tmavý
-                      </button>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setTheme("system");
-                          setPaletteOpen(false);
-                        }}
-                        className={clsx(
-                          "flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-full px-2 py-2 text-[9px] font-bold uppercase tracking-widest transition-all duration-300",
-                          systemActive
-                            ? isDark
-                              ? "bg-[color:var(--wp-surface-card)]/20 text-white shadow-sm ring-1 ring-white/15"
-                              : "bg-[color:var(--wp-text)] text-[color:var(--wp-link-active)] shadow-md"
-                            : isDark
-                              ? "text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-card)]/10 hover:text-white"
-                              : "text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-card)]/60 hover:text-[color:var(--wp-text)]",
-                        )}
-                      >
-                        <Monitor size={18} aria-hidden />
-                        Systém
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
