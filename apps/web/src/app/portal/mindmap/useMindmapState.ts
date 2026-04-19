@@ -30,18 +30,32 @@ export function useMindmapState(initial: {
     (node: Omit<MindmapNode, "id"> & { id?: string }, parentId: string) => {
       const id = node.id ?? crypto.randomUUID();
       const parent = nodes.find((n) => n.id === parentId);
+
+      let newX = node.x ?? 400;
+      let newY = node.y ?? 350;
+      if (parent) {
+        // Počet existujících dětí – rozložíme kolem rodiče radiálně (dokola),
+        // aby „+“ zvládlo i 6+ větví bez toho, aby se uzly překrývaly.
+        const childCount = edges.filter((e) => e.sourceId === parentId).length;
+        const angleStep = (2 * Math.PI) / Math.max(6, childCount + 1);
+        const angle = childCount * angleStep - Math.PI / 2;
+        const radius = parent.type === "core" ? 320 : 260;
+        newX = Math.round(parent.x + Math.cos(angle) * radius);
+        newY = Math.round(parent.y + Math.sin(angle) * radius);
+      }
+
       const newNode: MindmapNode = {
         ...node,
         id,
-        x: parent ? parent.x + 280 : node.x ?? 400,
-        y: parent ? parent.y + (Math.random() * 80 - 40) : node.y ?? 350,
+        x: newX,
+        y: newY,
       };
       setNodes((prev) => [...prev, newNode]);
       setEdges((prev) => [...prev, { id: crypto.randomUUID(), sourceId: parentId, targetId: id, dashed: false }]);
       setDirty(true);
       return id;
     },
-    [nodes]
+    [nodes, edges]
   );
 
   const updateNode = useCallback((id: string, data: Partial<MindmapNode>) => {

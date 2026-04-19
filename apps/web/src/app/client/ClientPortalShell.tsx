@@ -11,6 +11,7 @@ type ClientPortalShellProps = {
   children: React.ReactNode;
   unreadNotificationsCount: number;
   unreadMessagesCount: number;
+  activeProposalsCount?: number;
   fullName: string;
   advisor: { fullName: string; email?: string | null; initials: string } | null;
   portalFeatures?: PortalFeatures;
@@ -20,6 +21,7 @@ export function ClientPortalShell({
   children,
   unreadNotificationsCount,
   unreadMessagesCount,
+  activeProposalsCount = 0,
   fullName,
   advisor,
   portalFeatures,
@@ -29,6 +31,7 @@ export function ClientPortalShell({
       <ClientSidebar
         unreadNotificationsCount={unreadNotificationsCount}
         unreadMessagesCount={unreadMessagesCount}
+        activeProposalsCount={activeProposalsCount}
         advisor={advisor}
         portalFeatures={portalFeatures}
       />

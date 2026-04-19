@@ -1,9 +1,10 @@
 "use server";
 
 import { requireAuthInAction } from "@/lib/auth/require-auth";
+import { withAuthContext, withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import { hasPermission } from "@/lib/auth/permissions";
 import {
-  db,
   messages,
   messageAttachments,
   tenants,
@@ -97,24 +98,25 @@ export type MessageRow = {
 };
 
 export async function getMessages(contactId: string): Promise<MessageRow[]> {
-  const auth = await requireAuthInAction();
-  if (auth.roleName === "Client") {
-    if (auth.contactId !== contactId) throw new Error("Forbidden");
-  } else if (!hasPermission(auth.roleName, "contacts:read")) {
-    throw new Error("Forbidden");
-  }
-  const rows = await db
-    .select({
-      id: messages.id,
-      senderType: messages.senderType,
-      senderId: messages.senderId,
-      body: messages.body,
-      readAt: messages.readAt,
-      createdAt: messages.createdAt,
-    })
-    .from(messages)
-    .where(and(eq(messages.tenantId, auth.tenantId), eq(messages.contactId, contactId)))
-    .orderBy(asc(messages.createdAt));
+  const rows = await withAuthContext(async (auth, tx) => {
+    if (auth.roleName === "Client") {
+      if (auth.contactId !== contactId) throw new Error("Forbidden");
+    } else if (!hasPermission(auth.roleName, "contacts:read")) {
+      throw new Error("Forbidden");
+    }
+    return tx
+      .select({
+        id: messages.id,
+        senderType: messages.senderType,
+        senderId: messages.senderId,
+        body: messages.body,
+        readAt: messages.readAt,
+        createdAt: messages.createdAt,
+      })
+      .from(messages)
+      .where(and(eq(messages.tenantId, auth.tenantId), eq(messages.contactId, contactId)))
+      .orderBy(asc(messages.createdAt));
+  });
   return rows.map((r) => ({
     id: r.id,
     senderType: r.senderType,
@@ -152,21 +154,22 @@ export async function loadThreadMessages(
 
 /** Returns number of distinct contacts that have at least one unread message from client. For sidebar badge. */
 export async function getUnreadConversationsCount(): Promise<number> {
-  const auth = await requireAuthInAction();
-  if (auth.roleName === "Client") return 0;
-  if (!hasPermission(auth.roleName, "contacts:read")) return 0;
-
   try {
-    const result = await db.execute(sql`
-      SELECT COUNT(DISTINCT m.contact_id)::int AS cnt
-      FROM messages m
-      WHERE m.tenant_id = ${auth.tenantId}
-        AND m.sender_type = 'client'
-        AND m.read_at IS NULL
-    `);
-    const rows = sqlExecuteRows(result);
-    const row = rows[0] as { cnt?: unknown } | undefined;
-    return Number(row?.cnt ?? 0);
+    return await withAuthContext(async (auth, tx) => {
+      if (auth.roleName === "Client") return 0;
+      if (!hasPermission(auth.roleName, "contacts:read")) return 0;
+
+      const result = await tx.execute(sql`
+        SELECT COUNT(DISTINCT m.contact_id)::int AS cnt
+        FROM messages m
+        WHERE m.tenant_id = ${auth.tenantId}
+          AND m.sender_type = 'client'
+          AND m.read_at IS NULL
+      `);
+      const rows = sqlExecuteRows(result);
+      const row = rows[0] as { cnt?: unknown } | undefined;
+      return Number(row?.cnt ?? 0);
+    });
   } catch {
     return 0;
   }
@@ -174,21 +177,21 @@ export async function getUnreadConversationsCount(): Promise<number> {
 
 /** Client-only badge: unread advisor messages in own thread. */
 export async function getUnreadAdvisorMessagesForClientCount(): Promise<number> {
-  const auth = await requireAuthInAction();
-  if (auth.roleName !== "Client" || !auth.contactId) return 0;
-
   try {
-    const result = await db.execute(sql`
-      SELECT COUNT(*)::int AS cnt
-      FROM messages m
-      WHERE m.tenant_id = ${auth.tenantId}
-        AND m.contact_id = ${auth.contactId}
-        AND m.sender_type = 'advisor'
-        AND m.read_at IS NULL
-    `);
-    const rows = sqlExecuteRows(result);
-    const row = rows[0] as { cnt?: unknown } | undefined;
-    return Number(row?.cnt ?? 0);
+    return await withAuthContext(async (auth, tx) => {
+      if (auth.roleName !== "Client" || !auth.contactId) return 0;
+      const result = await tx.execute(sql`
+        SELECT COUNT(*)::int AS cnt
+        FROM messages m
+        WHERE m.tenant_id = ${auth.tenantId}
+          AND m.contact_id = ${auth.contactId}
+          AND m.sender_type = 'advisor'
+          AND m.read_at IS NULL
+      `);
+      const rows = sqlExecuteRows(result);
+      const row = rows[0] as { cnt?: unknown } | undefined;
+      return Number(row?.cnt ?? 0);
+    });
   } catch {
     return 0;
   }
@@ -214,14 +217,14 @@ export type ConversationsListResult =
  */
 export async function getConversationsList(search?: string): Promise<ConversationsListResult> {
   try {
-    const auth = await requireAuthInAction();
-    if (!hasPermission(auth.roleName, "contacts:read")) return { ok: true, list: [] };
+    return await withAuthContext(async (auth, tx): Promise<ConversationsListResult> => {
+      if (!hasPermission(auth.roleName, "contacts:read")) return { ok: true, list: [] };
 
-    const searchCond = search?.trim()
-      ? sql`AND (c.first_name ILIKE ${"%" + search.trim() + "%"} OR c.last_name ILIKE ${"%" + search.trim() + "%"})`
-      : sql``;
+      const searchCond = search?.trim()
+        ? sql`AND (c.first_name ILIKE ${"%" + search.trim() + "%"} OR c.last_name ILIKE ${"%" + search.trim() + "%"})`
+        : sql``;
 
-    const result = await db.execute(sql`
+      const result = await tx.execute(sql`
       WITH last_per_contact AS (
         SELECT DISTINCT ON (m.contact_id)
           m.contact_id,
@@ -255,22 +258,23 @@ export async function getConversationsList(search?: string): Promise<Conversatio
       LIMIT 200
     `);
 
-    const rows = sqlExecuteRows(result);
-    const list: ConversationListItem[] = rows.map((r) => {
-      const unreadCount = Number(r.unread_count ?? 0);
-      const at = r.last_message_at;
-      const d = at instanceof Date ? at : new Date(at as string | number);
-      const safe = Number.isFinite(d.getTime()) ? d : new Date();
-      return {
-        contactId: String(r.contact_id ?? ""),
-        contactName: (String(r.contact_name ?? "").trim() || "Kontakt").trim(),
-        lastMessage: String(r.last_message ?? ""),
-        lastMessageAt: safe.toISOString(),
-        unreadCount,
-        unread: unreadCount > 0,
-      };
+      const rows = sqlExecuteRows(result);
+      const list: ConversationListItem[] = rows.map((r) => {
+        const unreadCount = Number(r.unread_count ?? 0);
+        const at = r.last_message_at;
+        const d = at instanceof Date ? at : new Date(at as string | number);
+        const safe = Number.isFinite(d.getTime()) ? d : new Date();
+        return {
+          contactId: String(r.contact_id ?? ""),
+          contactName: (String(r.contact_name ?? "").trim() || "Kontakt").trim(),
+          lastMessage: String(r.last_message ?? ""),
+          lastMessageAt: safe.toISOString(),
+          unreadCount,
+          unread: unreadCount > 0,
+        };
+      });
+      return { ok: true, list };
     });
-    return { ok: true, list };
   } catch (e) {
     if (isNextRedirectError(e)) throw e;
     console.error("[getConversationsList]", e);
@@ -292,16 +296,18 @@ export async function sendMessage(contactId: string, body: string): Promise<stri
     throw new Error("Forbidden");
   }
 
-  const [row] = await db
-    .insert(messages)
-    .values({
-      tenantId: auth.tenantId,
-      contactId,
-      senderType,
-      senderId: auth.userId,
-      body: trimmed,
-    })
-    .returning({ id: messages.id });
+  const [row] = await withTenantContextFromAuth(auth, (tx) =>
+    tx
+      .insert(messages)
+      .values({
+        tenantId: auth.tenantId,
+        contactId,
+        senderType,
+        senderId: auth.userId,
+        body: trimmed,
+      })
+      .returning({ id: messages.id }),
+  );
   const messageId = row?.id ?? null;
 
   if (messageId && senderType === "client") {
@@ -350,16 +356,18 @@ export async function sendMessageWithAttachments(contactId: string, formData: Fo
     throw new Error("Forbidden");
   }
 
-  const [row] = await db
-    .insert(messages)
-    .values({
-      tenantId: auth.tenantId,
-      contactId,
-      senderType,
-      senderId: auth.userId,
-      body,
-    })
-    .returning({ id: messages.id });
+  const [row] = await withTenantContextFromAuth(auth, (tx) =>
+    tx
+      .insert(messages)
+      .values({
+        tenantId: auth.tenantId,
+        contactId,
+        senderType,
+        senderId: auth.userId,
+        body,
+      })
+      .returning({ id: messages.id }),
+  );
   const messageId = row?.id ?? null;
   if (!messageId) return null;
 
@@ -374,13 +382,15 @@ export async function sendMessageWithAttachments(contactId: string, formData: Fo
     const path = `${auth.tenantId}/messages/${messageId}/${Date.now()}-${safeName}`;
     const { error: uploadError } = await admin.storage.from(bucket).upload(path, file, { upsert: false });
     if (uploadError) continue;
-    await db.insert(messageAttachments).values({
-      messageId,
-      storagePath: path,
-      fileName: file.name,
-      mimeType: file.type || null,
-      sizeBytes: file.size,
-    });
+    await withTenantContextFromAuth(auth, (tx) =>
+      tx.insert(messageAttachments).values({
+        messageId,
+        storagePath: path,
+        fileName: file.name,
+        mimeType: file.type || null,
+        sizeBytes: file.size,
+      }),
+    );
   }
 
   if (senderType === "client") {
@@ -437,16 +447,25 @@ export async function notifyAdvisorNewMessage(
   bodyPreview: string
 ): Promise<void> {
   let displayName = contactName?.trim() || "";
-  if (!displayName) {
-    const [c] = await db
-      .select({ firstName: contacts.firstName, lastName: contacts.lastName })
-      .from(contacts)
-      .where(and(eq(contacts.tenantId, tenantId), eq(contacts.id, contactId)))
+  const tenantLookup = await withTenantContext({ tenantId }, async (tx) => {
+    let name = displayName;
+    if (!name) {
+      const [c] = await tx
+        .select({ firstName: contacts.firstName, lastName: contacts.lastName })
+        .from(contacts)
+        .where(and(eq(contacts.tenantId, tenantId), eq(contacts.id, contactId)))
+        .limit(1);
+      name = c ? [c.firstName, c.lastName].filter(Boolean).join(" ").trim() || "Klient" : "Klient";
+    }
+    const [tenant] = await tx
+      .select({ notificationEmail: tenants.notificationEmail })
+      .from(tenants)
+      .where(eq(tenants.id, tenantId))
       .limit(1);
-    displayName = c ? [c.firstName, c.lastName].filter(Boolean).join(" ").trim() || "Klient" : "Klient";
-  }
-  const [tenant] = await db.select({ notificationEmail: tenants.notificationEmail }).from(tenants).where(eq(tenants.id, tenantId)).limit(1);
-  const email = tenant?.notificationEmail?.trim();
+    return { name, notificationEmail: tenant?.notificationEmail ?? null };
+  });
+  displayName = tenantLookup.name;
+  const email = tenantLookup.notificationEmail?.trim();
   const baseUrl =
     process.env.NEXT_PUBLIC_APP_URL?.trim() ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://www.aidvisora.cz");
@@ -490,26 +509,27 @@ export type MessageAttachmentRow = {
 
 export async function getMessageAttachments(messageId: string): Promise<MessageAttachmentRow[]> {
   const auth = await requireAuthInAction();
-  const [msg] = await db
-    .select({ id: messages.id, tenantId: messages.tenantId, contactId: messages.contactId })
-    .from(messages)
-    .where(and(eq(messages.tenantId, auth.tenantId), eq(messages.id, messageId)))
-    .limit(1);
-  if (!msg) return [];
-  if (auth.roleName === "Client" && auth.contactId !== msg.contactId) return [];
+  return withTenantContextFromAuth(auth, async (tx) => {
+    const [msg] = await tx
+      .select({ id: messages.id, tenantId: messages.tenantId, contactId: messages.contactId })
+      .from(messages)
+      .where(and(eq(messages.tenantId, auth.tenantId), eq(messages.id, messageId)))
+      .limit(1);
+    if (!msg) return [];
+    if (auth.roleName === "Client" && auth.contactId !== msg.contactId) return [];
 
-  const rows = await db
-    .select({
-      id: messageAttachments.id,
-      messageId: messageAttachments.messageId,
-      storagePath: messageAttachments.storagePath,
-      fileName: messageAttachments.fileName,
-      mimeType: messageAttachments.mimeType,
-      sizeBytes: messageAttachments.sizeBytes,
-    })
-    .from(messageAttachments)
-    .where(eq(messageAttachments.messageId, messageId));
-  return rows;
+    return tx
+      .select({
+        id: messageAttachments.id,
+        messageId: messageAttachments.messageId,
+        storagePath: messageAttachments.storagePath,
+        fileName: messageAttachments.fileName,
+        mimeType: messageAttachments.mimeType,
+        sizeBytes: messageAttachments.sizeBytes,
+      })
+      .from(messageAttachments)
+      .where(eq(messageAttachments.messageId, messageId));
+  });
 }
 
 export type ThreadAttachmentsByContactResult =
@@ -528,18 +548,20 @@ export async function loadThreadAttachmentsByContact(contactId: string): Promise
       return { ok: false, error: "K této konverzaci nemáte přístup." };
     }
 
-    const rows = await db
-      .select({
-        id: messageAttachments.id,
-        messageId: messageAttachments.messageId,
-        storagePath: messageAttachments.storagePath,
-        fileName: messageAttachments.fileName,
-        mimeType: messageAttachments.mimeType,
-        sizeBytes: messageAttachments.sizeBytes,
-      })
-      .from(messageAttachments)
-      .innerJoin(messages, eq(messageAttachments.messageId, messages.id))
-      .where(and(eq(messages.tenantId, auth.tenantId), eq(messages.contactId, contactId)));
+    const rows = await withTenantContextFromAuth(auth, (tx) =>
+      tx
+        .select({
+          id: messageAttachments.id,
+          messageId: messageAttachments.messageId,
+          storagePath: messageAttachments.storagePath,
+          fileName: messageAttachments.fileName,
+          mimeType: messageAttachments.mimeType,
+          sizeBytes: messageAttachments.sizeBytes,
+        })
+        .from(messageAttachments)
+        .innerJoin(messages, eq(messageAttachments.messageId, messages.id))
+        .where(and(eq(messages.tenantId, auth.tenantId), eq(messages.contactId, contactId))),
+    );
 
     const byMessageId: Record<string, MessageAttachmentRow[]> = {};
     for (const r of rows) {
@@ -576,20 +598,22 @@ export async function getRecentConversations(limit = 5): Promise<RecentConversat
   if (!hasPermission(auth.roleName, "contacts:read")) return [];
 
   try {
-    const result = await db.execute(sql`
-      SELECT DISTINCT ON (m.contact_id)
-        m.contact_id,
-        c.first_name || ' ' || c.last_name AS contact_name,
-        m.body AS last_message,
-        m.created_at AS last_message_at,
-        m.sender_type,
-        CASE WHEN m.read_at IS NULL AND m.sender_type = 'client' THEN true ELSE false END AS unread
-      FROM messages m
-      JOIN contacts c ON c.id = m.contact_id
-      WHERE m.tenant_id = ${auth.tenantId}
-      ORDER BY m.contact_id, m.created_at DESC
-      LIMIT ${limit}
-    `);
+    const result = await withTenantContextFromAuth(auth, (tx) =>
+      tx.execute(sql`
+        SELECT DISTINCT ON (m.contact_id)
+          m.contact_id,
+          c.first_name || ' ' || c.last_name AS contact_name,
+          m.body AS last_message,
+          m.created_at AS last_message_at,
+          m.sender_type,
+          CASE WHEN m.read_at IS NULL AND m.sender_type = 'client' THEN true ELSE false END AS unread
+        FROM messages m
+        JOIN contacts c ON c.id = m.contact_id
+        WHERE m.tenant_id = ${auth.tenantId}
+        ORDER BY m.contact_id, m.created_at DESC
+        LIMIT ${limit}
+      `),
+    );
 
     const rows = sqlExecuteRows(result);
     return rows.map((r) => {
@@ -616,16 +640,18 @@ export async function deleteMessageForAdvisor(messageId: string): Promise<void> 
   if (auth.roleName === "Client") throw new Error("Forbidden");
   if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
 
-  const [row] = await db
-    .select({ id: messages.id })
-    .from(messages)
-    .where(and(eq(messages.tenantId, auth.tenantId), eq(messages.id, messageId)))
-    .limit(1);
-  if (!row) throw new Error("Zpráva nebyla nalezena.");
+  await withTenantContextFromAuth(auth, async (tx) => {
+    const [row] = await tx
+      .select({ id: messages.id })
+      .from(messages)
+      .where(and(eq(messages.tenantId, auth.tenantId), eq(messages.id, messageId)))
+      .limit(1);
+    if (!row) throw new Error("Zpráva nebyla nalezena.");
 
-  await db
-    .delete(messages)
-    .where(and(eq(messages.tenantId, auth.tenantId), eq(messages.id, messageId)));
+    await tx
+      .delete(messages)
+      .where(and(eq(messages.tenantId, auth.tenantId), eq(messages.id, messageId)));
+  });
 }
 
 /** Smaže všechny zprávy v konverzaci s kontaktem (včetně příloh — cascade). Pouze poradce s contacts:write. */
@@ -634,9 +660,11 @@ export async function deleteConversationForContact(contactId: string): Promise<v
   if (auth.roleName === "Client") throw new Error("Forbidden");
   if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
 
-  await db
-    .delete(messages)
-    .where(and(eq(messages.tenantId, auth.tenantId), eq(messages.contactId, contactId)));
+  await withTenantContextFromAuth(auth, (tx) =>
+    tx
+      .delete(messages)
+      .where(and(eq(messages.tenantId, auth.tenantId), eq(messages.contactId, contactId))),
+  );
 }
 
 export type ChatContextPrimaryOpportunity = {
@@ -670,96 +698,98 @@ export async function getChatContextPanelSnapshot(contactId: string): Promise<Ch
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
 
-  const [c] = await db
-    .select({ id: contacts.id })
-    .from(contacts)
-    .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, contactId)))
-    .limit(1);
-  if (!c) throw new Error("Kontakt nenalezen.");
-
   const today = new Date().toISOString().slice(0, 10);
   const canOpp = hasPermission(auth.roleName, "opportunities:read");
 
   try {
-    const [oppRows, oppCountRow, tasksOpenRow, tasksOverRow, matRow] = await Promise.all([
-      canOpp
-        ? db
-            .select({
-              id: opportunities.id,
-              title: opportunities.title,
-              caseType: opportunities.caseType,
-              stageName: opportunityStages.name,
-              updatedAt: opportunities.updatedAt,
-            })
-            .from(opportunities)
-            .innerJoin(opportunityStages, eq(opportunities.stageId, opportunityStages.id))
-            .where(
-              and(
-                eq(opportunities.tenantId, auth.tenantId),
-                eq(opportunities.contactId, contactId),
-                isNull(opportunities.closedAt),
-              ),
-            )
-            .orderBy(desc(opportunities.updatedAt))
-        : Promise.resolve([] as { id: string; title: string; caseType: string | null; stageName: string; updatedAt: Date }[]),
-      canOpp
-        ? db
-            .select({ cnt: sql<number>`count(*)::int` })
-            .from(opportunities)
-            .where(
-              and(
-                eq(opportunities.tenantId, auth.tenantId),
-                eq(opportunities.contactId, contactId),
-                isNull(opportunities.closedAt),
-              ),
-            )
-        : Promise.resolve([{ cnt: 0 }]),
-      db
-        .select({ cnt: sql<number>`count(*)::int` })
-        .from(tasks)
-        .where(
-          and(eq(tasks.tenantId, auth.tenantId), eq(tasks.contactId, contactId), isNull(tasks.completedAt)),
-        ),
-      db
-        .select({ cnt: sql<number>`count(*)::int` })
-        .from(tasks)
-        .where(
-          and(
-            eq(tasks.tenantId, auth.tenantId),
-            eq(tasks.contactId, contactId),
-            isNull(tasks.completedAt),
-            isNotNull(tasks.dueDate),
-            lt(tasks.dueDate, today),
-          ),
-        ),
-      db
-        .select({ cnt: sql<number>`count(*)::int` })
-        .from(advisorMaterialRequests)
-        .where(
-          and(
-            eq(advisorMaterialRequests.tenantId, auth.tenantId),
-            eq(advisorMaterialRequests.contactId, contactId),
-            sql`${advisorMaterialRequests.status} NOT IN ('done', 'closed')`,
-          ),
-        ),
-    ]);
+    return await withTenantContextFromAuth(auth, async (tx) => {
+      const [c] = await tx
+        .select({ id: contacts.id })
+        .from(contacts)
+        .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, contactId)))
+        .limit(1);
+      if (!c) throw new Error("Kontakt nenalezen.");
 
-    const primary = oppRows[0];
-    return {
-      primaryOpportunity: primary
-        ? {
-            id: primary.id,
-            title: primary.title,
-            caseType: primary.caseType?.trim() || "",
-            stageName: primary.stageName,
-          }
-        : null,
-      openOpportunitiesCount: Number(oppCountRow[0]?.cnt ?? 0),
-      openTasksCount: Number(tasksOpenRow[0]?.cnt ?? 0),
-      overdueTasksCount: Number(tasksOverRow[0]?.cnt ?? 0),
-      pendingMaterialRequestsCount: Number(matRow[0]?.cnt ?? 0),
-      opportunitiesReadable: canOpp,
-    };
+      const [oppRows, oppCountRow, tasksOpenRow, tasksOverRow, matRow] = await Promise.all([
+        canOpp
+          ? tx
+              .select({
+                id: opportunities.id,
+                title: opportunities.title,
+                caseType: opportunities.caseType,
+                stageName: opportunityStages.name,
+                updatedAt: opportunities.updatedAt,
+              })
+              .from(opportunities)
+              .innerJoin(opportunityStages, eq(opportunities.stageId, opportunityStages.id))
+              .where(
+                and(
+                  eq(opportunities.tenantId, auth.tenantId),
+                  eq(opportunities.contactId, contactId),
+                  isNull(opportunities.closedAt),
+                ),
+              )
+              .orderBy(desc(opportunities.updatedAt))
+          : Promise.resolve([] as { id: string; title: string; caseType: string | null; stageName: string; updatedAt: Date }[]),
+        canOpp
+          ? tx
+              .select({ cnt: sql<number>`count(*)::int` })
+              .from(opportunities)
+              .where(
+                and(
+                  eq(opportunities.tenantId, auth.tenantId),
+                  eq(opportunities.contactId, contactId),
+                  isNull(opportunities.closedAt),
+                ),
+              )
+          : Promise.resolve([{ cnt: 0 }]),
+        tx
+          .select({ cnt: sql<number>`count(*)::int` })
+          .from(tasks)
+          .where(
+            and(eq(tasks.tenantId, auth.tenantId), eq(tasks.contactId, contactId), isNull(tasks.completedAt)),
+          ),
+        tx
+          .select({ cnt: sql<number>`count(*)::int` })
+          .from(tasks)
+          .where(
+            and(
+              eq(tasks.tenantId, auth.tenantId),
+              eq(tasks.contactId, contactId),
+              isNull(tasks.completedAt),
+              isNotNull(tasks.dueDate),
+              lt(tasks.dueDate, today),
+            ),
+          ),
+        tx
+          .select({ cnt: sql<number>`count(*)::int` })
+          .from(advisorMaterialRequests)
+          .where(
+            and(
+              eq(advisorMaterialRequests.tenantId, auth.tenantId),
+              eq(advisorMaterialRequests.contactId, contactId),
+              sql`${advisorMaterialRequests.status} NOT IN ('done', 'closed')`,
+            ),
+          ),
+      ]);
+
+      const primary = oppRows[0];
+      return {
+        primaryOpportunity: primary
+          ? {
+              id: primary.id,
+              title: primary.title,
+              caseType: primary.caseType?.trim() || "",
+              stageName: primary.stageName,
+            }
+          : null,
+        openOpportunitiesCount: Number(oppCountRow[0]?.cnt ?? 0),
+        openTasksCount: Number(tasksOpenRow[0]?.cnt ?? 0),
+        overdueTasksCount: Number(tasksOverRow[0]?.cnt ?? 0),
+        pendingMaterialRequestsCount: Number(matRow[0]?.cnt ?? 0),
+        opportunitiesReadable: canOpp,
+      };
+    });
   } catch {
     return EMPTY_CHAT_CONTEXT_SNAPSHOT;
   }
@@ -770,29 +800,33 @@ export async function markMessagesRead(contactId: string): Promise<void> {
 
   if (auth.roleName === "Client") {
     if (auth.contactId !== contactId) throw new Error("Forbidden");
-    await db
-      .update(messages)
-      .set({ readAt: new Date() })
-      .where(
-        and(
-          eq(messages.tenantId, auth.tenantId),
-          eq(messages.contactId, contactId),
-          eq(messages.senderType, "advisor"),
-          isNull(messages.readAt)
-        )
-      );
+    await withTenantContextFromAuth(auth, (tx) =>
+      tx
+        .update(messages)
+        .set({ readAt: new Date() })
+        .where(
+          and(
+            eq(messages.tenantId, auth.tenantId),
+            eq(messages.contactId, contactId),
+            eq(messages.senderType, "advisor"),
+            isNull(messages.readAt)
+          )
+        ),
+    );
   } else {
     if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
-    await db
-      .update(messages)
-      .set({ readAt: new Date() })
-      .where(
-        and(
-          eq(messages.tenantId, auth.tenantId),
-          eq(messages.contactId, contactId),
-          eq(messages.senderType, "client"),
-          isNull(messages.readAt)
-        )
-      );
+    await withTenantContextFromAuth(auth, (tx) =>
+      tx
+        .update(messages)
+        .set({ readAt: new Date() })
+        .where(
+          and(
+            eq(messages.tenantId, auth.tenantId),
+            eq(messages.contactId, contactId),
+            eq(messages.senderType, "client"),
+            isNull(messages.readAt)
+          )
+        ),
+    );
   }
 }

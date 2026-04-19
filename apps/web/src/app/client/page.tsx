@@ -74,6 +74,7 @@ export default async function ClientZonePage() {
       advisorMaterialRequests={advisorMaterialRequests.filter(
         (r) => r.status !== "done" && r.status !== "closed"
       )}
+      advisorProposals={bundle.advisorProposals}
     />
   );
 }

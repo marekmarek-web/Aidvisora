@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { sql } from "drizzle-orm";
 import { db, events, userProfiles, eq } from "db";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { getClientIp, rateLimitByKey } from "@/lib/rate-limit-ip";
 import { addDaysPragueYmd, formatYmdInPrague, pragueWallToUtcMs } from "@/lib/public-booking/prague-time";
 import { computeAvailableSlots, todayYmdPrague } from "@/lib/public-booking/slots";
@@ -90,7 +91,34 @@ type PostBody = {
   email?: string;
   phone?: string;
   note?: string;
+  contactType?: string;
+  topic?: string;
+  subtopic?: string;
 };
+
+const CONTACT_TYPE_LABELS: Record<string, string> = {
+  online: "Online schůzka",
+  personal: "Osobní setkání",
+  phone: "Telefonát",
+};
+
+const TOPIC_LABELS: Record<string, string> = {
+  pojisteni: "Pojištění",
+  uvery: "Úvěry a Hypotéky",
+  investice: "Penze a Investice",
+  plan: "Finanční plán",
+  ostatni: "Ostatní požadavky",
+};
+
+function normalizeContactType(v: unknown): "online" | "personal" | "phone" | null {
+  if (v === "online" || v === "personal" || v === "phone") return v;
+  return null;
+}
+
+function normalizeTopicId(v: unknown): keyof typeof TOPIC_LABELS | null {
+  if (typeof v !== "string") return null;
+  return Object.prototype.hasOwnProperty.call(TOPIC_LABELS, v) ? (v as keyof typeof TOPIC_LABELS) : null;
+}
 
 export async function POST(request: Request, ctx: { params: Promise<{ token: string }> }) {
   const ip = getClientIp(request);
@@ -112,6 +140,12 @@ export async function POST(request: Request, ctx: { params: Promise<{ token: str
   const note = (body.note ?? "").trim();
   const startIso = (body.start ?? "").trim();
   const endIso = (body.end ?? "").trim();
+  const contactType = normalizeContactType(body.contactType);
+  const topicId = normalizeTopicId(body.topic);
+  const subtopicRaw = typeof body.subtopic === "string" ? body.subtopic.trim().slice(0, 200) : "";
+  const subtopic = subtopicRaw.length > 0 ? subtopicRaw : null;
+  const contactTypeLabel = contactType ? CONTACT_TYPE_LABELS[contactType] : null;
+  const topicLabel = topicId ? TOPIC_LABELS[topicId] : null;
 
   if (!clientName || clientName.length > 120) {
     return jsonError(400, "invalid_name", "Zadejte jméno.");
@@ -145,13 +179,29 @@ export async function POST(request: Request, ctx: { params: Promise<{ token: str
     `Klient: ${clientName}`,
     `E-mail: ${email}`,
     phone ? `Telefon: ${phone}` : null,
-    note ? `Poznámka: ${note}` : null,
+    contactTypeLabel ? `Forma schůzky: ${contactTypeLabel}` : null,
+    topicLabel ? `Téma: ${topicLabel}${subtopic ? ` — ${subtopic}` : ""}` : null,
+    note ? `Poznámka klienta: ${note}` : null,
   ].filter(Boolean);
+
+  const titleSuffix = topicLabel
+    ? ` — ${topicLabel}${subtopic ? ` · ${subtopic}` : ""} (web)`
+    : " — Schůzka (web)";
+  const eventTitle = `${clientName}${titleSuffix}`;
+
+  const eventLocation =
+    contactType === "online"
+      ? "Online (odkaz v e-mailu)"
+      : contactType === "personal"
+        ? "Kancelář poradce"
+        : contactType === "phone"
+          ? "Telefonát"
+          : null;
 
   const startIsoKey = startAt.toISOString();
 
   try {
-    await db.transaction(async (tx) => {
+    await withTenantContextFromAuth({ tenantId: resolved.tenantId, userId: resolved.userId }, async (tx) => {
       await tx.execute(
         sql`SELECT pg_advisory_xact_lock(hashtext(${resolved.userId}::text), hashtext(${startIsoKey}::text))`,
       );
@@ -183,11 +233,12 @@ export async function POST(request: Request, ctx: { params: Promise<{ token: str
 
       await tx.insert(events).values({
         tenantId: resolved.tenantId,
-        title: `${clientName} — Schůzka (web)`,
+        title: eventTitle,
         eventType: "schuzka",
         startAt,
         endAt,
         allDay: false,
+        location: eventLocation,
         assignedTo: resolved.userId,
         status: "scheduled",
         notes: notesLines.join("\n"),

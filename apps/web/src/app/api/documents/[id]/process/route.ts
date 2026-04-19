@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getMembership } from "@/lib/auth/get-membership";
 import { hasPermission, type RoleName } from "@/lib/auth/permissions";
-import { db, documents, eq, and } from "db";
+import { documents, eq, and } from "db";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { processDocument } from "@/lib/documents/processing/orchestrator";
 import { syncPortfolioDraftFromProcessedDocument } from "@/lib/portfolio/from-document-extraction";
 import { logAudit } from "@/lib/audit";
@@ -36,11 +37,15 @@ export async function POST(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const [doc] = await db
-    .select()
-    .from(documents)
-    .where(and(eq(documents.tenantId, membership.tenantId), eq(documents.id, id)))
-    .limit(1);
+  const [doc] = await withTenantContextFromAuth(
+    { tenantId: membership.tenantId, userId: user.id },
+    (tx) =>
+      tx
+        .select()
+        .from(documents)
+        .where(and(eq(documents.tenantId, membership.tenantId), eq(documents.id, id)))
+        .limit(1),
+  );
 
   if (!doc) {
     return NextResponse.json({ error: "Document not found." }, { status: 404 });
@@ -85,7 +90,7 @@ export async function POST(
 
   if (result.success && result.extractJsonPath) {
     try {
-      await syncPortfolioDraftFromProcessedDocument(id, { advisorUserId: user.id });
+      await syncPortfolioDraftFromProcessedDocument(id, membership.tenantId, { advisorUserId: user.id });
     } catch (e) {
       console.warn("[documents/process] portfolio sync from extraction failed", id, e);
     }
@@ -119,30 +124,34 @@ export async function GET(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const [doc] = await db
-    .select({
-      id: documents.id,
-      processingProvider: documents.processingProvider,
-      processingStatus: documents.processingStatus,
-      processingStage: documents.processingStage,
-      businessStatus: documents.businessStatus,
-      processingError: documents.processingError,
-      processingStartedAt: documents.processingStartedAt,
-      processingFinishedAt: documents.processingFinishedAt,
-      aiInputSource: documents.aiInputSource,
-      hasTextLayer: documents.hasTextLayer,
-      isScanLike: documents.isScanLike,
-      pageCount: documents.pageCount,
-      detectedInputMode: documents.detectedInputMode,
-      readabilityScore: documents.readabilityScore,
-      preprocessingWarnings: documents.preprocessingWarnings,
-      normalizedPdfPath: documents.normalizedPdfPath,
-      sourceChannel: documents.sourceChannel,
-      documentFingerprint: documents.documentFingerprint,
-    })
-    .from(documents)
-    .where(and(eq(documents.tenantId, membership.tenantId), eq(documents.id, id)))
-    .limit(1);
+  const [doc] = await withTenantContextFromAuth(
+    { tenantId: membership.tenantId, userId: user.id },
+    (tx) =>
+      tx
+        .select({
+          id: documents.id,
+          processingProvider: documents.processingProvider,
+          processingStatus: documents.processingStatus,
+          processingStage: documents.processingStage,
+          businessStatus: documents.businessStatus,
+          processingError: documents.processingError,
+          processingStartedAt: documents.processingStartedAt,
+          processingFinishedAt: documents.processingFinishedAt,
+          aiInputSource: documents.aiInputSource,
+          hasTextLayer: documents.hasTextLayer,
+          isScanLike: documents.isScanLike,
+          pageCount: documents.pageCount,
+          detectedInputMode: documents.detectedInputMode,
+          readabilityScore: documents.readabilityScore,
+          preprocessingWarnings: documents.preprocessingWarnings,
+          normalizedPdfPath: documents.normalizedPdfPath,
+          sourceChannel: documents.sourceChannel,
+          documentFingerprint: documents.documentFingerprint,
+        })
+        .from(documents)
+        .where(and(eq(documents.tenantId, membership.tenantId), eq(documents.id, id)))
+        .limit(1),
+  );
 
   if (!doc) {
     return NextResponse.json({ error: "Document not found." }, { status: 404 });

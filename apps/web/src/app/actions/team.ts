@@ -15,6 +15,7 @@ import { eq, asc, and, isNull, sql } from "db";
 import { hasPermission, isRoleAtLeast, type RoleName } from "@/shared/rolePermissions";
 import { validateCareerFieldsForWrite } from "@/lib/career/career-write-validation";
 import { normalizeCareerProgramFromDb } from "@/lib/career/registry";
+import { logAuditAction } from "@/lib/audit";
 
 const STAFF_INVITE_EXPIRY_DAYS = 7;
 
@@ -215,10 +216,33 @@ export async function updateMemberRole(
     return { ok: false, error: "Nemůžete přidělit roli vyšší než vlastní." };
   }
 
+  // Načteme původní roli pro audit log (interní, informativní — není to rozhodnutí o klientovi).
+  const [previousRole] = await db
+    .select({ name: roles.name })
+    .from(memberships)
+    .innerJoin(roles, eq(memberships.roleId, roles.id))
+    .where(eq(memberships.id, membershipId))
+    .limit(1);
+
   await db
     .update(memberships)
     .set({ roleId: roleRow.id })
     .where(eq(memberships.id, membershipId));
+
+  // WS-2 Batch 2 / minimal audit coverage — role change.
+  logAuditAction({
+    tenantId: auth.tenantId,
+    userId: auth.userId,
+    action: "team.role_change",
+    entityType: "membership",
+    entityId: membershipId,
+    meta: {
+      targetUserId: target.userId,
+      previousRole: previousRole?.name ?? null,
+      newRole: newRoleName,
+      performedByRole: auth.roleName,
+    },
+  });
 
   return { ok: true };
 }

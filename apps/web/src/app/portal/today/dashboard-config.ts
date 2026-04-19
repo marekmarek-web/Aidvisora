@@ -41,6 +41,9 @@ export const DEFAULT_DASHBOARD_ORDER: WidgetId[] = [
   "notes",
 ];
 
+/** Widgety skryté ve výchozím stavu (uživatel je může zapnout v „Upravit nástěnku“). */
+export const DEFAULT_HIDDEN_WIDGETS: WidgetId[] = ["notes"];
+
 export const WIDGET_LABELS: Record<WidgetId, string> = {
   aiAssistant: "AI asistent",
   myTasks: "Moje úkoly",

@@ -1,10 +1,13 @@
 "use server";
 
-import { requireAuthInAction } from "@/lib/auth/require-auth";
+import { withAuthContext, withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { db } from "db";
 import { clientInvitations, contracts, memberships, roles, userProfiles } from "db";
 import { and, desc, eq, inArray, isNotNull, isNull } from "db";
 import { aggregatePortfolioMetrics } from "@/lib/client-portfolio/read-model";
+
+/** Drizzle `db` nebo tx z `withTenantContext` — strukturálně kompatibilní `select` API. */
+type ContractReader = Pick<typeof db, "select">;
 
 type DashboardMetricSummary = {
   /** Roční ekvivalent investic (INV/DIP/DPS) z publikovaného portfolia */
@@ -32,29 +35,29 @@ function toInitials(name: string): string {
 export async function getClientDashboardMetrics(
   contactId: string
 ): Promise<DashboardMetricSummary> {
-  const auth = await requireAuthInAction();
-  if (auth.roleName !== "Client" || auth.contactId !== contactId) {
-    throw new Error("Forbidden");
-  }
-
-  const contractRows = await db
-    .select({
-      segment: contracts.segment,
-      premiumAmount: contracts.premiumAmount,
-      premiumAnnual: contracts.premiumAnnual,
-      portfolioAttributes: contracts.portfolioAttributes,
-      portfolioStatus: contracts.portfolioStatus,
-    })
-    .from(contracts)
-    .where(
-      and(
-        eq(contracts.tenantId, auth.tenantId),
-        eq(contracts.contactId, contactId),
-        eq(contracts.visibleToClient, true),
-        inArray(contracts.portfolioStatus, ["active", "ended"]),
-        isNull(contracts.archivedAt)
-      )
-    );
+  const contractRows = await withAuthContext(async (auth, tx) => {
+    if (auth.roleName !== "Client" || auth.contactId !== contactId) {
+      throw new Error("Forbidden");
+    }
+    return tx
+      .select({
+        segment: contracts.segment,
+        premiumAmount: contracts.premiumAmount,
+        premiumAnnual: contracts.premiumAnnual,
+        portfolioAttributes: contracts.portfolioAttributes,
+        portfolioStatus: contracts.portfolioStatus,
+      })
+      .from(contracts)
+      .where(
+        and(
+          eq(contracts.tenantId, auth.tenantId),
+          eq(contracts.contactId, contactId),
+          eq(contracts.visibleToClient, true),
+          inArray(contracts.portfolioStatus, ["active", "ended"]),
+          isNull(contracts.archivedAt)
+        )
+      );
+  });
 
   const agg = aggregatePortfolioMetrics(
     contractRows.map((r) => ({
@@ -86,13 +89,15 @@ export async function getClientDashboardMetrics(
 }
 
 /**
- * Určí userId poradce pro kontakt (stejná priorita jako getAssignedAdvisorForClient), bez role Client — pro serverové notifikace.
+ * Vnitřní varianta pro volání uvnitř existující tenant transakce (čistý `tx` reader).
+ * Nepoužívá `withTenantContext` sama, protože caller už GUCs nastavil.
  */
-export async function getTargetAdvisorUserIdForContact(
+async function loadTargetAdvisorUserIdForContact(
+  reader: ContractReader,
   tenantId: string,
-  contactId: string
+  contactId: string,
 ): Promise<string | null> {
-  const [latestAcceptedInvite] = await db
+  const [latestAcceptedInvite] = await reader
     .select({ invitedByUserId: clientInvitations.invitedByUserId })
     .from(clientInvitations)
     .where(
@@ -107,7 +112,7 @@ export async function getTargetAdvisorUserIdForContact(
     .limit(1);
 
   if (latestAcceptedInvite?.invitedByUserId) {
-    const [inviterProfile] = await db
+    const [inviterProfile] = await reader
       .select({
         userId: userProfiles.userId,
         fullName: userProfiles.fullName,
@@ -122,7 +127,7 @@ export async function getTargetAdvisorUserIdForContact(
     }
   }
 
-  const [latestContractAdvisor] = await db
+  const [latestContractAdvisor] = await reader
     .select({ advisorId: contracts.advisorId })
     .from(contracts)
     .where(
@@ -135,7 +140,7 @@ export async function getTargetAdvisorUserIdForContact(
     .limit(1);
 
   if (latestContractAdvisor?.advisorId) {
-    const [profile] = await db
+    const [profile] = await reader
       .select({
         userId: userProfiles.userId,
         fullName: userProfiles.fullName,
@@ -149,7 +154,7 @@ export async function getTargetAdvisorUserIdForContact(
     }
   }
 
-  const [fallbackAdvisor] = await db
+  const [fallbackAdvisor] = await reader
     .select({
       userId: memberships.userId,
       fullName: userProfiles.fullName,
@@ -169,26 +174,44 @@ export async function getTargetAdvisorUserIdForContact(
   return fallbackAdvisor?.userId ?? null;
 }
 
+/**
+ * Určí userId poradce pro kontakt (stejná priorita jako getAssignedAdvisorForClient), bez role Client — pro serverové notifikace.
+ *
+ * Tato funkce pracuje s externě předaným `tenantId` a používá se i v kontextech,
+ * kde uživatel ještě nemá vyřešený session (cron / interní notifikace).
+ * Pro swap readiness spouštíme query v tx s GUC `app.tenant_id` nastaveným.
+ */
+export async function getTargetAdvisorUserIdForContact(
+  tenantId: string,
+  contactId: string
+): Promise<string | null> {
+  return withTenantContextFromAuth({ tenantId }, (tx) =>
+    loadTargetAdvisorUserIdForContact(tx, tenantId, contactId)
+  );
+}
+
 export async function getAssignedAdvisorForClient(
   contactId: string
 ): Promise<ClientAdvisorInfo | null> {
-  const auth = await requireAuthInAction();
-  if (auth.roleName !== "Client" || auth.contactId !== contactId) {
-    throw new Error("Forbidden");
-  }
+  const profile = await withAuthContext(async (auth, tx) => {
+    if (auth.roleName !== "Client" || auth.contactId !== contactId) {
+      throw new Error("Forbidden");
+    }
 
-  const userId = await getTargetAdvisorUserIdForContact(auth.tenantId, contactId);
-  if (!userId) return null;
+    const userId = await loadTargetAdvisorUserIdForContact(tx, auth.tenantId, contactId);
+    if (!userId) return null;
 
-  const [profile] = await db
-    .select({
-      userId: userProfiles.userId,
-      fullName: userProfiles.fullName,
-      email: userProfiles.email,
-    })
-    .from(userProfiles)
-    .where(eq(userProfiles.userId, userId))
-    .limit(1);
+    const [row] = await tx
+      .select({
+        userId: userProfiles.userId,
+        fullName: userProfiles.fullName,
+        email: userProfiles.email,
+      })
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, userId))
+      .limit(1);
+    return row ?? null;
+  });
 
   if (!profile?.fullName?.trim()) return null;
   const name = profile.fullName.trim();

@@ -1,12 +1,11 @@
 "use server";
 
 import { cache } from "react";
-import { requireAuthInAction } from "@/lib/auth/require-auth";
+import { withAuthContext } from "@/lib/auth/with-auth-context";
 import { getCzPublicHolidayLabel, getPragueCalendarParts } from "@/lib/calendar/cz-public-holidays";
 import { getCzNameDaysForDate } from "@/lib/calendar/cz-name-days";
 import { czechAgendaDateShort, czechRelativeAgendaDay, ymdToUtcNoonMs } from "@/lib/dashboard/side-panel-agenda-labels";
 import type { DashboardAgendaTimelineRow } from "@/app/portal/today/dashboard-agenda-types";
-import { db } from "db";
 import { events, tasks, opportunities, contacts, contracts, activityLog, opportunityStages, notificationLog } from "db";
 import { BIRTHDAY_TEMPLATE_LOG_KEY } from "@/lib/email/birthday/types";
 import { eq, and, gte, lt, isNull, isNotNull, asc, desc, sql, inArray } from "db";
@@ -56,7 +55,7 @@ export type DashboardKpis = {
 };
 
 async function loadDashboardKpis(): Promise<DashboardKpis> {
-  const auth = await requireAuthInAction();
+  return withAuthContext(async (auth, tx) => {
   const pragueToday = getPragueCalendarParts();
   const czPublicHolidayToday = getCzPublicHolidayLabel(pragueToday.year, pragueToday.month, pragueToday.day);
   const czNameDaysToday = getCzNameDaysForDate(pragueToday.year, pragueToday.month, pragueToday.day);
@@ -95,7 +94,7 @@ async function loadDashboardKpis(): Promise<DashboardKpis> {
     upcomingEventsPanelList,
     upcomingTasksPanelList,
   ] = await Promise.all([
-    db
+    tx
       .select({
         id: events.id,
         title: events.title,
@@ -114,13 +113,13 @@ async function loadDashboardKpis(): Promise<DashboardKpis> {
         )
       )
       .orderBy(asc(events.startAt)),
-    db
+    tx
       .select({ id: tasks.id })
       .from(tasks)
       .where(
         and(eq(tasks.tenantId, auth.tenantId), isNull(tasks.completedAt))
       ),
-    db
+    tx
       .select({ id: opportunities.id })
       .from(opportunities)
       .where(
@@ -129,11 +128,11 @@ async function loadDashboardKpis(): Promise<DashboardKpis> {
           isNull(opportunities.closedAt)
         )
       ),
-    db
+    tx
       .select({ id: contacts.id })
       .from(contacts)
       .where(eq(contacts.tenantId, auth.tenantId)),
-    db
+    tx
       .select({
         id: tasks.id,
         title: tasks.title,
@@ -152,7 +151,7 @@ async function loadDashboardKpis(): Promise<DashboardKpis> {
       )
       .orderBy(asc(tasks.dueDate))
       .limit(5),
-    db
+    tx
       .select({
         id: tasks.id,
         title: tasks.title,
@@ -171,7 +170,7 @@ async function loadDashboardKpis(): Promise<DashboardKpis> {
       )
       .orderBy(asc(tasks.dueDate))
       .limit(10),
-    db
+    tx
       .select({
         id: contracts.id,
         contactId: contacts.id,
@@ -192,7 +191,7 @@ async function loadDashboardKpis(): Promise<DashboardKpis> {
       )
       .orderBy(asc(contracts.anniversaryDate))
       .limit(5),
-    db
+    tx
       .select({
         id: contacts.id,
         firstName: contacts.firstName,
@@ -209,7 +208,7 @@ async function loadDashboardKpis(): Promise<DashboardKpis> {
       )
       .orderBy(asc(contacts.nextServiceDue))
       .limit(5),
-    db
+    tx
       .select({
         id: opportunities.id,
         title: opportunities.title,
@@ -228,7 +227,7 @@ async function loadDashboardKpis(): Promise<DashboardKpis> {
       )
       .orderBy(asc(opportunities.expectedCloseDate))
       .limit(5),
-    db
+    tx
       .select({
         id: opportunities.id,
         title: opportunities.title,
@@ -249,7 +248,7 @@ async function loadDashboardKpis(): Promise<DashboardKpis> {
       )
       .orderBy(opportunityStages.sortOrder)
       .limit(10),
-    db
+    tx
       .select({
         id: activityLog.id,
         action: activityLog.action,
@@ -261,7 +260,7 @@ async function loadDashboardKpis(): Promise<DashboardKpis> {
       .where(eq(activityLog.tenantId, auth.tenantId))
       .orderBy(desc(activityLog.createdAt))
       .limit(10),
-    db
+    tx
       .select({
         id: contacts.id,
         firstName: contacts.firstName,
@@ -282,7 +281,7 @@ async function loadDashboardKpis(): Promise<DashboardKpis> {
       )
       .orderBy(asc(contacts.lastName), asc(contacts.firstName))
       .limit(25),
-    db
+    tx
       .select({ contactId: notificationLog.contactId })
       .from(notificationLog)
       .where(
@@ -294,7 +293,7 @@ async function loadDashboardKpis(): Promise<DashboardKpis> {
           sql`((${notificationLog.sentAt} AT TIME ZONE 'Europe/Prague')::date = (NOW() AT TIME ZONE 'Europe/Prague')::date)`
         )
       ),
-    db
+    tx
       .select({
         id: events.id,
         title: events.title,
@@ -313,7 +312,7 @@ async function loadDashboardKpis(): Promise<DashboardKpis> {
       )
       .orderBy(asc(events.startAt))
       .limit(20),
-    db
+    tx
       .select({
         id: tasks.id,
         title: tasks.title,
@@ -492,6 +491,7 @@ async function loadDashboardKpis(): Promise<DashboardKpis> {
     birthdaysToday,
     sidePanelAgendaTimeline,
   };
+  });
 }
 
 /** Jedna instance dotazu na KPI v rámci RSC requestu (nástěnka, mobilní loader, …). */

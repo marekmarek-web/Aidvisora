@@ -58,3 +58,5 @@ export * from "./termination-catalogs";
 export * from "./termination-workflow";
 export * from "./fund-add-requests";
 export * from "./email-campaigns";
+export * from "./calculator-runs";
+export * from "./advisor-proposals";

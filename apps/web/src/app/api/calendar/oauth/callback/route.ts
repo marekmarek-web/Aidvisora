@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { db, userGoogleCalendarIntegrations } from "db";
+import { userGoogleCalendarIntegrations } from "db";
 import { eq, and } from "db";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { exchangeCodeForTokens, getGoogleUserEmail } from "@/lib/integrations/google-calendar";
 import { encrypt } from "@/lib/integrations/encrypt";
 
@@ -78,49 +79,53 @@ export async function GET(request: Request) {
     const encryptedAccess = encrypt(accessToken);
     const encryptedRefresh = encrypt(refreshToken);
 
-    const existing = await db
-      .select()
-      .from(userGoogleCalendarIntegrations)
-      .where(
-        and(
-          eq(userGoogleCalendarIntegrations.tenantId, state.tenantId),
-          eq(userGoogleCalendarIntegrations.userId, state.userId)
-        )
-      )
-      .limit(1);
-
     const now = new Date();
-    if (existing.length > 0) {
-      await db
-        .update(userGoogleCalendarIntegrations)
-        .set({
-          googleEmail,
-          accessToken: encryptedAccess,
-          refreshToken: encryptedRefresh,
-          tokenExpiry,
-          scope,
-          isActive: true,
-          updatedAt: now,
-        })
-        .where(
-          and(
-            eq(userGoogleCalendarIntegrations.tenantId, state.tenantId),
-            eq(userGoogleCalendarIntegrations.userId, state.userId)
+    await withTenantContextFromAuth(
+      { tenantId: state.tenantId, userId: state.userId },
+      async (tx) => {
+        const existing = await tx
+          .select()
+          .from(userGoogleCalendarIntegrations)
+          .where(
+            and(
+              eq(userGoogleCalendarIntegrations.tenantId, state.tenantId),
+              eq(userGoogleCalendarIntegrations.userId, state.userId),
+            ),
           )
-        );
-    } else {
-      await db.insert(userGoogleCalendarIntegrations).values({
-        userId: state.userId,
-        tenantId: state.tenantId,
-        googleEmail,
-        accessToken: encryptedAccess,
-        refreshToken: encryptedRefresh,
-        tokenExpiry,
-        scope,
-        isActive: true,
-        updatedAt: now,
-      });
-    }
+          .limit(1);
+        if (existing.length > 0) {
+          await tx
+            .update(userGoogleCalendarIntegrations)
+            .set({
+              googleEmail,
+              accessToken: encryptedAccess,
+              refreshToken: encryptedRefresh,
+              tokenExpiry,
+              scope,
+              isActive: true,
+              updatedAt: now,
+            })
+            .where(
+              and(
+                eq(userGoogleCalendarIntegrations.tenantId, state.tenantId),
+                eq(userGoogleCalendarIntegrations.userId, state.userId),
+              ),
+            );
+        } else {
+          await tx.insert(userGoogleCalendarIntegrations).values({
+            userId: state.userId,
+            tenantId: state.tenantId,
+            googleEmail,
+            accessToken: encryptedAccess,
+            refreshToken: encryptedRefresh,
+            tokenExpiry,
+            scope,
+            isActive: true,
+            updatedAt: now,
+          });
+        }
+      },
+    );
   } catch (e) {
     const msg = e instanceof Error ? e.message : "db_error";
     return redirectToSetup(false, msg);

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { db, events } from "db";
+import { events } from "db";
 import { eq, and } from "db";
 import { getCalendarAuth, calendarTokenErrorResponse } from "../auth";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { getValidAccessToken } from "@/lib/integrations/google-calendar-integration-service";
 import { listAllCalendarEventsInRange, type GoogleCalendarEvent } from "@/lib/integrations/google-calendar";
 import {
@@ -153,56 +154,63 @@ async function handleCalendarSyncPost(request: Request): Promise<Response> {
   const now = new Date();
 
   try {
-    for (const ev of items) {
-      const googleEventId = ev.id;
-      if (!googleEventId || ev.status === "cancelled") continue;
+    const result = await withTenantContextFromAuth({ tenantId, userId }, async (tx) => {
+      let c = 0;
+      let u = 0;
+      for (const ev of items) {
+        const googleEventId = ev.id;
+        if (!googleEventId || ev.status === "cancelled") continue;
 
-      const { startAt, endAt, allDay } = parseGoogleEventTime(ev);
-      const title = ev.summary?.trim() || "(Bez názvu)";
+        const { startAt, endAt, allDay } = parseGoogleEventTime(ev);
+        const title = ev.summary?.trim() || "(Bez názvu)";
 
-      const existing = await db
-        .select({ id: events.id })
-        .from(events)
-        .where(
-          and(
-            eq(events.tenantId, tenantId),
-            eq(events.googleEventId, googleEventId)
+        const existing = await tx
+          .select({ id: events.id })
+          .from(events)
+          .where(
+            and(
+              eq(events.tenantId, tenantId),
+              eq(events.googleEventId, googleEventId),
+            ),
           )
-        )
-        .limit(1);
+          .limit(1);
 
-      if (existing.length > 0) {
-        await db
-          .update(events)
-          .set({
+        if (existing.length > 0) {
+          await tx
+            .update(events)
+            .set({
+              title,
+              startAt,
+              endAt,
+              allDay,
+              location: ev.location?.trim() || null,
+              notes: ev.description?.trim() || null,
+              updatedAt: now,
+            })
+            .where(eq(events.id, existing[0].id));
+          u++;
+        } else {
+          await tx.insert(events).values({
+            tenantId,
+            assignedTo: userId,
             title,
+            eventType: "schuzka",
             startAt,
             endAt,
             allDay,
             location: ev.location?.trim() || null,
             notes: ev.description?.trim() || null,
+            googleEventId,
+            googleCalendarId: calendarId,
             updatedAt: now,
-          })
-          .where(eq(events.id, existing[0].id));
-        updated++;
-      } else {
-        await db.insert(events).values({
-          tenantId,
-          assignedTo: userId,
-          title,
-          eventType: "schuzka",
-          startAt,
-          endAt,
-          allDay,
-          location: ev.location?.trim() || null,
-          notes: ev.description?.trim() || null,
-          googleEventId,
-          googleCalendarId: calendarId,
-          updatedAt: now,
-        });
-        created++;
+          });
+          c++;
+        }
       }
-    }
+      return { c, u };
+    });
+    created = result.c;
+    updated = result.u;
   } catch (e) {
     console.error("[calendar/sync] DB write failed", e);
     const msg = e instanceof Error ? e.message : String(e);

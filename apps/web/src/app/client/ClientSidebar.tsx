@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   Menu,
   MessageSquare,
+  Sparkles,
   User,
   X,
   ListTodo,
@@ -31,6 +32,7 @@ type NavItem = {
   match?: string[];
   showBadge?: boolean;
   showMessagesBadge?: boolean;
+  showProposalsBadge?: boolean;
   requireFeature?: keyof PortalFeatures;
 };
 
@@ -57,6 +59,13 @@ const VIEWS: NavItem[] = [
     match: ["/client/pozadavky-poradce"],
   },
   {
+    href: "/client/navrhy",
+    label: "Návrhy od poradce",
+    icon: Sparkles,
+    match: ["/client/navrhy"],
+    showProposalsBadge: true,
+  },
+  {
     href: "/client/messages",
     label: "Zprávy poradci",
     icon: MessageSquare,
@@ -76,11 +85,13 @@ const VIEWS: NavItem[] = [
 export function ClientSidebar({
   unreadNotificationsCount = 0,
   unreadMessagesCount = 0,
+  activeProposalsCount = 0,
   advisor,
   portalFeatures,
 }: {
   unreadNotificationsCount?: number;
   unreadMessagesCount?: number;
+  activeProposalsCount?: number;
   advisor?: { fullName: string; email?: string | null; initials: string } | null;
   portalFeatures?: PortalFeatures;
 }) {
@@ -115,7 +126,9 @@ export function ClientSidebar({
       ? unreadNotificationsCount
       : v.showMessagesBadge
         ? unreadMessagesCount
-        : 0;
+        : v.showProposalsBadge
+          ? activeProposalsCount
+          : 0;
     const showBadge = badgeCount > 0;
     const Icon = v.icon;
 

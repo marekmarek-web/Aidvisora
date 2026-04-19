@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { db, userGoogleGmailIntegrations } from "db";
+import { userGoogleGmailIntegrations } from "db";
 import { eq, and } from "db";
 import { getIntegrationApiAuth } from "../../integrations/auth";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 
 export const dynamic = "force-dynamic";
 
@@ -13,17 +14,19 @@ export async function GET(request: Request) {
   const { userId, tenantId } = authResult.auth;
 
   try {
-    const rows = await db
-      .select({
-        googleEmail: userGoogleGmailIntegrations.googleEmail,
-        isActive: userGoogleGmailIntegrations.isActive,
-      })
-      .from(userGoogleGmailIntegrations)
-      .where(and(
-        eq(userGoogleGmailIntegrations.tenantId, tenantId),
-        eq(userGoogleGmailIntegrations.userId, userId)
-      ))
-      .limit(1);
+    const rows = await withTenantContextFromAuth({ tenantId, userId }, (tx) =>
+      tx
+        .select({
+          googleEmail: userGoogleGmailIntegrations.googleEmail,
+          isActive: userGoogleGmailIntegrations.isActive,
+        })
+        .from(userGoogleGmailIntegrations)
+        .where(and(
+          eq(userGoogleGmailIntegrations.tenantId, tenantId),
+          eq(userGoogleGmailIntegrations.userId, userId),
+        ))
+        .limit(1),
+    );
 
     const row = rows[0];
     const connected = !!row?.isActive;

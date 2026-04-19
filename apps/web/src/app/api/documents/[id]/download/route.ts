@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { getMembership } from "@/lib/auth/get-membership";
-import { db } from "db";
 import { documents } from "db";
 import { eq, and } from "db";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { logAudit } from "@/lib/audit";
 import { createSignedStorageUrl } from "@/lib/storage/signed-url";
 
@@ -22,7 +22,15 @@ export async function GET(
   if (!membership) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-  const [doc] = await db.select().from(documents).where(and(eq(documents.tenantId, membership.tenantId), eq(documents.id, id))).limit(1);
+  const [doc] = await withTenantContextFromAuth(
+    { tenantId: membership.tenantId, userId: user.id },
+    (tx) =>
+      tx
+        .select()
+        .from(documents)
+        .where(and(eq(documents.tenantId, membership.tenantId), eq(documents.id, id)))
+        .limit(1),
+  );
   if (!doc) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }

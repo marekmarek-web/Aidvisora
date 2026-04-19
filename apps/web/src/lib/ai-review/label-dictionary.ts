@@ -85,7 +85,8 @@ const FIELD_KEY_LABELS: Record<string, string> = {
   payment_instructions: "Platební pokyny",
   variableSymbol: "Variabilní symbol",
   paymentFrequency: "Frekvence plateb",
-  bankAccount: "Číslo účtu",
+  bankAccount: "Číslo účtu klienta",
+  recipientAccount: "Účet instituce / příjemce",
   iban: "IBAN",
 
   // Pojištění

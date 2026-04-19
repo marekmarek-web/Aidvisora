@@ -33,6 +33,12 @@ Při **nové** migraci nebo významné úpravě `.sql` přidejte **jeden řádek
 | 2026-04-02 | Portfolio index na `contracts`: sloupec `client_id` místo přejmenovaného `contact_id` | [contracts-portfolio-2026-04-01.sql](../packages/db/migrations/contracts-portfolio-2026-04-01.sql) |
 | 2026-04-16 | Ruční platební instrukce CRUD: přidány sloupce `visible_to_client` a `segment` do `client_payment_setups`; back-fill aktivních AI Review záznamů | [client_payment_setups_visible_segment_2026-04-16.sql](../packages/db/migrations/client_payment_setups_visible_segment_2026-04-16.sql) |
 | 2026-04-16 | Katalog smluv: globální partner „Conseq penzijní společnost“ (segment DPS) + produkt DPS pro wizard | [catalog_partner_conseq_dps_2026-04-16.sql](../packages/db/migrations/catalog_partner_conseq_dps_2026-04-16.sql) |
+| 2026-04-19 | WS-2 Batch 1 / M1 — sjednocení GUC na `app.tenant_id` (drop+recreate policies `fa_plan_items`, `fa_sync_log`, dříve na `app.current_tenant_id`) | [rls-unify-guc-app-tenant-id-2026-04-19.sql](../packages/db/migrations/rls-unify-guc-app-tenant-id-2026-04-19.sql) |
+| 2026-04-19 | WS-2 Batch 1 / M2 — cleanup legacy `clients`-based RLS na `public.contracts`: nové tenant-based policies přes `app.tenant_id` | [rls-cleanup-legacy-clients-contracts-tenant-2026-04-19.sql](../packages/db/migrations/rls-cleanup-legacy-clients-contracts-tenant-2026-04-19.sql) |
+| 2026-04-19 | WS-2 Batch 2 / Enforcement — role `aidvisora_app` (LOGIN, NOBYPASSRLS) + FORCE ROW LEVEL SECURITY na citlivých tabulkách (contacts, contracts, documents, messages, audit, …). Bez infra swapu connection stringu je efekt vs. dnešní `postgres` runtime nulový; po swapu tenant izolace zapne ihned | [rls-app-role-and-force-2026-04-19.sql](../packages/db/migrations/rls-app-role-and-force-2026-04-19.sql) |
+| 2026-04-19 | WS-2 Batch 2 / Schema — `tenant_id` přidán na `client_requests` a `client_request_files` (backfill přes contacts/legacy clients), staré policies odkazující na `public.clients` nahrazeny tenant-scoped; `contracts.tenant_id` SET NOT NULL | [tenant-id-schema-fixes-2026-04-19.sql](../packages/db/migrations/tenant-id-schema-fixes-2026-04-19.sql) |
+| 2026-04-19 | WS-2 Batch 2 / M3+M4 — RLS ON + FORCE + tenant-scoped policies na `messages` (včetně participant scope pro klienta), `message_attachments`, `contact_coverage`, a hlavní PII/document/contract tabulky (contacts, documents, tasks, …) | [rls-m3-m4-messages-and-core-tables-2026-04-19.sql](../packages/db/migrations/rls-m3-m4-messages-and-core-tables-2026-04-19.sql) |
+| 2026-04-19 | Návrhy od poradce v klientské zóně: tabulka `advisor_proposals` (generated `savings_annual`, segment/status enum checks), RLS tenant scope + client scope přes `client_contacts`; klient vidí jen publikované a může zareagovat | [advisor-proposals-2026-04-19.sql](../packages/db/migrations/advisor-proposals-2026-04-19.sql) |
 
 ---
 
@@ -70,6 +76,27 @@ Odkaz: [`packages/db/migrations/client_payment_setups_visible_segment_2026-04-16
 <summary><strong>catalog_partner_conseq_dps_2026-04-16.sql</strong> — Katalog: Conseq penzijní společnost (DPS)</summary>
 
 Odkaz: [`packages/db/migrations/catalog_partner_conseq_dps_2026-04-16.sql`](../packages/db/migrations/catalog_partner_conseq_dps_2026-04-16.sql)
+
+</details>
+
+<details>
+<summary><strong>rls-unify-guc-app-tenant-id-2026-04-19.sql</strong> — WS-2 Batch 1 / M1: sjednocení GUC na <code>app.tenant_id</code></summary>
+
+Odkaz: [`packages/db/migrations/rls-unify-guc-app-tenant-id-2026-04-19.sql`](../packages/db/migrations/rls-unify-guc-app-tenant-id-2026-04-19.sql)
+
+</details>
+
+<details>
+<summary><strong>rls-cleanup-legacy-clients-contracts-tenant-2026-04-19.sql</strong> — WS-2 Batch 1 / M2: cleanup legacy <code>clients</code>-based RLS, contracts přes tenant_id</summary>
+
+Odkaz: [`packages/db/migrations/rls-cleanup-legacy-clients-contracts-tenant-2026-04-19.sql`](../packages/db/migrations/rls-cleanup-legacy-clients-contracts-tenant-2026-04-19.sql)
+
+</details>
+
+<details>
+<summary><strong>advisor-proposals-2026-04-19.sql</strong> — Návrhy od poradce pro klientskou zónu</summary>
+
+Odkaz: [`packages/db/migrations/advisor-proposals-2026-04-19.sql`](../packages/db/migrations/advisor-proposals-2026-04-19.sql)
 
 </details>
 

@@ -511,34 +511,41 @@ export function ClientPortalRequestsInbox({ initialItems }: Props) {
                       </div>
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                    {selected.opportunityId && !selected.opportunityMissing ? (
+                      <Link
+                        href={`/portal/pipeline/${selected.opportunityId}`}
+                        className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 text-sm font-bold text-white shadow-sm transition-colors hover:bg-indigo-700"
+                        title="Otevřít obchodní případ"
+                      >
+                        <Briefcase className="h-4 w-4" aria-hidden />
+                        Otevřít v Obchody
+                      </Link>
+                    ) : null}
+                    {selected.contactId ? (
+                      <Link
+                        href={`/portal/contacts/${selected.contactId}`}
+                        className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-3 text-sm font-semibold text-[color:var(--wp-text)] transition-colors hover:bg-[color:var(--wp-link-hover-bg)]"
+                        title="Otevřít profil klienta v CRM"
+                      >
+                        <ArrowUpRight className="h-4 w-4" aria-hidden />
+                        Profil klienta
+                      </Link>
+                    ) : null}
                     <button
                       type="button"
                       disabled={dismissPending}
                       onClick={() => void dismissFromInbox(selected.notificationId)}
-                      className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 text-sm font-semibold text-rose-800 hover:bg-rose-100 disabled:opacity-60 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-200 dark:hover:bg-rose-950/60"
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-rose-600 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 disabled:opacity-60 dark:hover:bg-rose-950/40 dark:hover:text-rose-200"
+                      title="Odstranit z přehledu"
+                      aria-label="Odstranit z přehledu"
                     >
-                      {dismissPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Trash2 className="h-4 w-4" aria-hidden />}
-                      Odstranit z přehledu
+                      {dismissPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                      ) : (
+                        <Trash2 className="h-4 w-4" aria-hidden />
+                      )}
                     </button>
-                    {selected.contactId ? (
-                      <Link
-                        href={`/portal/contacts/${selected.contactId}`}
-                        className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center gap-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] px-3 text-sm font-semibold text-[color:var(--wp-text)] hover:bg-[color:var(--wp-link-hover-bg)]"
-                      >
-                        Profil klienta
-                        <ArrowUpRight className="h-4 w-4" aria-hidden />
-                      </Link>
-                    ) : null}
-                    {selected.opportunityId && !selected.opportunityMissing ? (
-                      <Link
-                        href={`/portal/pipeline/${selected.opportunityId}`}
-                        className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-[color:var(--wp-text)] px-4 text-sm font-semibold text-white hover:opacity-90"
-                      >
-                        Otevřít v Obchody
-                        <Briefcase className="h-4 w-4" aria-hidden />
-                      </Link>
-                    ) : null}
                   </div>
                 </div>
                 {selected.opportunityId && !selected.opportunityMissing ? (

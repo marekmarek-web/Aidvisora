@@ -66,6 +66,7 @@ import type { BusinessPlanWidgetData, DashboardSecondaryBundle } from "./dashboa
 import {
   WIDGET_IDS,
   DEFAULT_DASHBOARD_ORDER,
+  DEFAULT_HIDDEN_WIDGETS,
   WIDGET_LABELS,
   WIDGET_ICONS,
   WIDGET_HREF,
@@ -94,12 +95,12 @@ interface DashboardConfig {
 
 function loadConfig(): DashboardConfig {
   if (typeof window === "undefined") {
-    return { order: [...DEFAULT_DASHBOARD_ORDER], hidden: [] };
+    return { order: [...DEFAULT_DASHBOARD_ORDER], hidden: [...DEFAULT_HIDDEN_WIDGETS] };
   }
   migrateLocalStorageKey("weplan_dashboard_widgets", STORAGE_KEY);
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { order: [...DEFAULT_DASHBOARD_ORDER], hidden: [] };
+    if (!raw) return { order: [...DEFAULT_DASHBOARD_ORDER], hidden: [...DEFAULT_HIDDEN_WIDGETS] };
     const parsed = JSON.parse(raw) as DashboardConfig;
     const order = Array.isArray(parsed.order) ? parsed.order.filter((id) => WIDGET_IDS.includes(id)) : [...DEFAULT_DASHBOARD_ORDER];
     const hidden = Array.isArray(parsed.hidden) ? parsed.hidden.filter((id) => WIDGET_IDS.includes(id)) : [];
@@ -109,7 +110,7 @@ function loadConfig(): DashboardConfig {
       : undefined;
     return { order: [...order, ...missingOrder], hidden, widgetColors };
   } catch {
-    return { order: [...DEFAULT_DASHBOARD_ORDER], hidden: [] };
+    return { order: [...DEFAULT_DASHBOARD_ORDER], hidden: [...DEFAULT_HIDDEN_WIDGETS] };
   }
 }
 
@@ -223,7 +224,7 @@ export function DashboardEditable(props: DashboardEditableProps) {
         businessPlanWidgetData: props.businessPlanWidgetData ?? null,
       }
     : undefined;
-  const [config, setConfig] = useState<DashboardConfig>({ order: [...DEFAULT_DASHBOARD_ORDER], hidden: [] });
+  const [config, setConfig] = useState<DashboardConfig>({ order: [...DEFAULT_DASHBOARD_ORDER], hidden: [...DEFAULT_HIDDEN_WIDGETS] });
   const [customizeOpen, setCustomizeOpen] = useState(false);
   const { open: drawerOpen, setOpen: setCalendarDrawerOpen } = useDashboardCalendarDrawer();
   const [editOrder, setEditOrder] = useState<WidgetId[]>([]);

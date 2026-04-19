@@ -1,12 +1,10 @@
 "use client";
 
 import { useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useFinancialAnalysisStore } from "@/lib/analyses/financial/store";
-import { exportToFile } from "@/lib/analyses/financial/saveLoad";
 import { saveFinancialAnalysisDraft } from "@/app/actions/financial-analyses";
-import { Download, FolderOpen, PlusCircle, CloudUpload, List, UserPlus } from "lucide-react";
+import { FolderOpen, PlusCircle, CloudUpload, UserPlus } from "lucide-react";
 
 import clsx from "clsx";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
@@ -51,18 +49,6 @@ export function FinancialAnalysisToolbar() {
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleExportJson = () => {
-    saveToStorage();
-    const { json, filename } = exportToFile(data, currentStep);
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(url);
   };
 
   const handleLoadFromFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -127,23 +113,6 @@ export function FinancialAnalysisToolbar() {
           <span className="hidden sm:inline">Přidat klienta</span>
         </button>
       )}
-      <Link
-        href="/portal/analyses"
-        className="min-h-[44px] min-w-[44px] text-sm px-4 py-2 bg-[color:var(--wp-surface-muted)] hover:bg-[color:var(--wp-surface-card-border)] rounded-lg transition-colors flex items-center gap-2 font-semibold text-[color:var(--wp-text-secondary)]"
-        title="Otevřít jinou analýzu"
-      >
-        <List className="w-4 h-4" />
-        <span className="hidden sm:inline">Otevřít analýzu</span>
-      </Link>
-      <button
-        type="button"
-        onClick={handleExportJson}
-        className="min-h-[44px] min-w-[44px] text-sm px-4 py-2 bg-[color:var(--wp-surface-muted)] hover:bg-[color:var(--wp-surface-card-border)] rounded-lg transition-colors flex items-center gap-2 font-semibold text-[color:var(--wp-text-secondary)]"
-        title="Záloha do souboru (JSON)"
-      >
-        <Download className="w-4 h-4" />
-        <span className="hidden sm:inline">Export JSON</span>
-      </button>
       <label className="min-h-[44px] min-w-[44px] text-sm px-4 py-2 bg-[color:var(--wp-surface-muted)] hover:bg-[color:var(--wp-surface-card-border)] rounded-lg transition-colors flex items-center gap-2 font-semibold text-[color:var(--wp-text-secondary)] cursor-pointer">
         <FolderOpen className="w-4 h-4" />
         <span className="hidden sm:inline">Načíst ze souboru</span>

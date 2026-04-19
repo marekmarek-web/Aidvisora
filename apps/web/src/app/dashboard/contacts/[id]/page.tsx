@@ -10,6 +10,7 @@ import { DocumentsSection } from "./DocumentsSection";
 import { SendPaymentPdfButton } from "./SendPaymentPdfButton";
 import { ContactActivityTimeline } from "./ContactActivityTimeline";
 import { ContactEventsSection } from "./ContactEventsSection";
+import { ContactAdvisorProposalsSection } from "./ContactAdvisorProposalsSection";
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { computeAccessVerdict } from "@/lib/auth/access-verdict";
 import { resolveContactIdentityFieldProvenanceForContactRow } from "@/lib/portal/contact-identity-field-provenance";
@@ -231,6 +232,7 @@ export default async function ContactDetailPage({
         </div>
       </div>
 
+      <ContactAdvisorProposalsSection contactId={id} />
       <ContractsSection contactId={id} />
       <div className="rounded-xl border border-[var(--brand-border)] bg-[color:var(--wp-surface)] p-6 shadow-sm">
         <h2 className="font-semibold text-[color:var(--wp-text)] mb-2">Platební instrukce</h2>

@@ -2,8 +2,9 @@
 
 import { cache } from "react";
 import { requireAuthInAction } from "@/lib/auth/require-auth";
+import { withAuthContext, withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
+import type { TenantContextDb } from "@/lib/db/with-tenant-context";
 import { hasPermission } from "@/lib/auth/permissions";
-import { db } from "db";
 import {
   contracts,
   partners,
@@ -56,14 +57,14 @@ export type ContractRow = {
 };
 
 export async function getContractsByContact(contactId: string): Promise<ContractRow[]> {
-  const auth = await requireAuthInAction();
-  if (auth.roleName === "Client") {
-    if (auth.contactId !== contactId) throw new Error("Forbidden");
-  } else if (!hasPermission(auth.roleName, "contacts:read")) {
-    throw new Error("Forbidden");
-  }
-  const rows = await db
-    .select({
+  const rows = await withAuthContext(async (auth, tx) => {
+    if (auth.roleName === "Client") {
+      if (auth.contactId !== contactId) throw new Error("Forbidden");
+    } else if (!hasPermission(auth.roleName, "contacts:read")) {
+      throw new Error("Forbidden");
+    }
+    return tx
+      .select({
       id: contracts.id,
       contactId: contracts.contactId,
       segment: contracts.segment,
@@ -90,9 +91,10 @@ export async function getContractsByContact(contactId: string): Promise<Contract
       createdAt: contracts.createdAt,
       updatedAt: contracts.updatedAt,
     })
-    .from(contracts)
-    .where(and(eq(contracts.tenantId, auth.tenantId), eq(contracts.contactId, contactId)))
-    .orderBy(asc(contracts.startDate));
+      .from(contracts)
+      .where(and(eq(contracts.tenantId, auth.tenantId), eq(contracts.contactId, contactId)))
+      .orderBy(asc(contracts.startDate));
+  });
   const mapped: ContractRow[] = rows.map((r) => ({
     ...r,
     type: r.type ?? r.segment,
@@ -117,16 +119,16 @@ export async function getContractsByContact(contactId: string): Promise<Contract
  * Does not expose extraction confidence to the UI layer — strip if serializing to client components.
  */
 export async function getClientPortfolioForContact(contactId: string): Promise<ContractRow[]> {
-  const auth = await requireAuthInAction();
-  const isClient = auth.roleName === "Client";
-  if (isClient) {
-    if (auth.contactId !== contactId) throw new Error("Forbidden");
-  } else if (!hasPermission(auth.roleName, "contacts:read")) {
-    throw new Error("Forbidden");
-  }
+  return withAuthContext(async (auth, tx) => {
+    const isClient = auth.roleName === "Client";
+    if (isClient) {
+      if (auth.contactId !== contactId) throw new Error("Forbidden");
+    } else if (!hasPermission(auth.roleName, "contacts:read")) {
+      throw new Error("Forbidden");
+    }
 
-  const rows = await db
-    .select({
+    const rows = await tx
+      .select({
       id: contracts.id,
       contactId: contracts.contactId,
       segment: contracts.segment,
@@ -153,103 +155,101 @@ export async function getClientPortfolioForContact(contactId: string): Promise<C
       createdAt: contracts.createdAt,
       updatedAt: contracts.updatedAt,
     })
-    .from(contracts)
-    .where(
-      and(
-        eq(contracts.tenantId, auth.tenantId),
-        eq(contracts.contactId, contactId),
-        eq(contracts.visibleToClient, true),
-        inArray(contracts.portfolioStatus, ["active", "ended"]),
-        isNull(contracts.archivedAt)
-      )
-    )
-    .orderBy(asc(contracts.startDate));
-
-  const mapped: ContractRow[] = rows.map((r) => ({
-    ...r,
-    type: r.type ?? r.segment,
-    portfolioAttributes: (r.portfolioAttributes ?? {}) as Record<string, unknown>,
-    extractionConfidence:
-      isClient || r.extractionConfidence == null
-        ? null
-        : String(r.extractionConfidence),
-    advisorConfirmedAt: isClient ? null : r.advisorConfirmedAt,
-    confirmedByUserId: isClient ? null : r.confirmedByUserId,
-    sourceContractReviewId: isClient ? null : r.sourceContractReviewId,
-  }));
-
-  // Enrich premiumAmount from canonical payment setup where contract has no stored amount.
-  // This ensures AI Review applied contracts show correct amounts even when the contract
-  // row was written without premiumAmount (e.g. when payment was only in payment setup).
-  const missingAmountIds = mapped
-    .filter((c) => !c.premiumAmount && !c.premiumAnnual && c.contractNumber)
-    .map((c) => c.id);
-
-  if (missingAmountIds.length > 0) {
-    const paymentRows = await db
-      .select({
-        contractNumber: clientPaymentSetups.contractNumber,
-        amount: clientPaymentSetups.amount,
-        frequency: clientPaymentSetups.frequency,
-        paymentType: clientPaymentSetups.paymentType,
-      })
-      .from(clientPaymentSetups)
+      .from(contracts)
       .where(
         and(
-          eq(clientPaymentSetups.tenantId, auth.tenantId),
-          eq(clientPaymentSetups.contactId, contactId),
-          eq(clientPaymentSetups.status, "active"),
-          eq(clientPaymentSetups.needsHumanReview, false)
+          eq(contracts.tenantId, auth.tenantId),
+          eq(contracts.contactId, contactId),
+          eq(contracts.visibleToClient, true),
+          inArray(contracts.portfolioStatus, ["active", "ended"]),
+          isNull(contracts.archivedAt)
         )
-      );
+      )
+      .orderBy(asc(contracts.startDate));
 
-    if (paymentRows.length > 0) {
-      const paymentByContractNumber = new Map(
-        paymentRows
-          .filter((p) => p.contractNumber && p.amount)
-          .map((p) => [p.contractNumber!.trim(), p])
-      );
-      for (const contract of mapped) {
-        if (contract.contractNumber && !contract.premiumAmount && !contract.premiumAnnual) {
-          const ps = paymentByContractNumber.get(contract.contractNumber.trim());
-          if (ps?.amount) {
-            const freq = (ps.frequency ?? "").toLowerCase();
-            if (freq === "annually" || freq === "yearly" || freq === "ročně") {
-              contract.premiumAnnual = String(ps.amount);
-            } else {
-              contract.premiumAmount = String(ps.amount);
+    const mapped: ContractRow[] = rows.map((r) => ({
+      ...r,
+      type: r.type ?? r.segment,
+      portfolioAttributes: (r.portfolioAttributes ?? {}) as Record<string, unknown>,
+      extractionConfidence:
+        isClient || r.extractionConfidence == null
+          ? null
+          : String(r.extractionConfidence),
+      advisorConfirmedAt: isClient ? null : r.advisorConfirmedAt,
+      confirmedByUserId: isClient ? null : r.confirmedByUserId,
+      sourceContractReviewId: isClient ? null : r.sourceContractReviewId,
+    }));
+
+    const missingAmountIds = mapped
+      .filter((c) => !c.premiumAmount && !c.premiumAnnual && c.contractNumber)
+      .map((c) => c.id);
+
+    if (missingAmountIds.length > 0) {
+      const paymentRows = await tx
+        .select({
+          contractNumber: clientPaymentSetups.contractNumber,
+          amount: clientPaymentSetups.amount,
+          frequency: clientPaymentSetups.frequency,
+          paymentType: clientPaymentSetups.paymentType,
+        })
+        .from(clientPaymentSetups)
+        .where(
+          and(
+            eq(clientPaymentSetups.tenantId, auth.tenantId),
+            eq(clientPaymentSetups.contactId, contactId),
+            eq(clientPaymentSetups.status, "active"),
+            eq(clientPaymentSetups.needsHumanReview, false)
+          )
+        );
+
+      if (paymentRows.length > 0) {
+        const paymentByContractNumber = new Map(
+          paymentRows
+            .filter((p) => p.contractNumber && p.amount)
+            .map((p) => [p.contractNumber!.trim(), p])
+        );
+        for (const contract of mapped) {
+          if (contract.contractNumber && !contract.premiumAmount && !contract.premiumAnnual) {
+            const ps = paymentByContractNumber.get(contract.contractNumber.trim());
+            if (ps?.amount) {
+              const freq = (ps.frequency ?? "").toLowerCase();
+              if (freq === "annually" || freq === "yearly" || freq === "ročně") {
+                contract.premiumAnnual = String(ps.amount);
+              } else {
+                contract.premiumAmount = String(ps.amount);
+              }
             }
           }
         }
       }
     }
-  }
 
-  return mapped;
+    return mapped;
+  });
 }
 
 export async function getPartnersForTenant(): Promise<{ id: string; name: string; segment: string }[]> {
-  const auth = await requireAuthInAction();
-  if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
-  const rows = await db
-    .select({ id: partners.id, name: partners.name, segment: partners.segment })
-    .from(partners)
-    .where(or(eq(partners.tenantId, auth.tenantId), isNull(partners.tenantId)))
-    .orderBy(partners.name);
-  return rows;
+  return withAuthContext(async (auth, tx) => {
+    if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
+    return tx
+      .select({ id: partners.id, name: partners.name, segment: partners.segment })
+      .from(partners)
+      .where(or(eq(partners.tenantId, auth.tenantId), isNull(partners.tenantId)))
+      .orderBy(partners.name);
+  });
 }
 
 export type ProductOption = { id: string; name: string; category?: string | null; isTbd?: boolean | null };
 
 export async function getProductsForPartner(partnerId: string): Promise<ProductOption[]> {
-  const auth = await requireAuthInAction();
-  if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
-  const rows = await db
-    .select({ id: products.id, name: products.name, category: products.category, isTbd: products.isTbd })
-    .from(products)
-    .where(eq(products.partnerId, partnerId))
-    .orderBy(asc(products.category), asc(products.name));
-  return rows;
+  return withAuthContext(async (auth, tx) => {
+    if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
+    return tx
+      .select({ id: products.id, name: products.name, category: products.category, isTbd: products.isTbd })
+      .from(products)
+      .where(eq(products.partnerId, partnerId))
+      .orderBy(asc(products.category), asc(products.name));
+  });
 }
 
 export async function getContractSegments(): Promise<string[]> {
@@ -324,14 +324,17 @@ function fkViolationUserMessage(detail: string | undefined, constraint?: string)
 type RefCheck = { ok: true } | { ok: false; message: string };
 
 /** Před INSERT/UPDATE smlouvy: klient v tenantovi, partner a produkt z globálního nebo tenant katalogu, produkt patří k partnerovi. */
-async function assertContractPartnerProductRefs(opts: {
-  tenantId: string;
-  contactId?: string;
-  partnerId?: string | null;
-  productId?: string | null;
-}): Promise<RefCheck> {
+async function assertContractPartnerProductRefs(
+  tx: TenantContextDb,
+  opts: {
+    tenantId: string;
+    contactId?: string;
+    partnerId?: string | null;
+    productId?: string | null;
+  },
+): Promise<RefCheck> {
   if (opts.contactId?.trim()) {
-    const [c] = await db
+    const [c] = await tx
       .select({ id: contacts.id })
       .from(contacts)
       .where(and(eq(contacts.id, opts.contactId.trim()), eq(contacts.tenantId, opts.tenantId)))
@@ -349,7 +352,7 @@ async function assertContractPartnerProductRefs(opts: {
   const prid = opts.productId?.trim() || "";
 
   if (pid) {
-    const [p] = await db
+    const [p] = await tx
       .select({ id: partners.id })
       .from(partners)
       .where(
@@ -366,7 +369,7 @@ async function assertContractPartnerProductRefs(opts: {
   }
 
   if (prid) {
-    const rows = await db
+    const rows = await tx
       .select({ partnerId: products.partnerId })
       .from(products)
       .innerJoin(partners, eq(products.partnerId, partners.id))
@@ -442,25 +445,6 @@ export async function createContract(
       return { ok: false, message: "Neplatný segment smlouvy. Vyberte segment z nabídky." };
     }
 
-    let partnerName = normalized.partnerName?.trim() || null;
-    let productName = normalized.productName?.trim() || null;
-    if (normalized.partnerId && !partnerName) {
-      const [p] = await db
-        .select({ name: partners.name })
-        .from(partners)
-        .where(eq(partners.id, normalized.partnerId))
-        .limit(1);
-      if (p) partnerName = p.name;
-    }
-    if (normalized.productId && !productName) {
-      const [pr] = await db
-        .select({ name: products.name })
-        .from(products)
-        .where(eq(products.id, normalized.productId))
-        .limit(1);
-      if (pr) productName = pr.name;
-    }
-
     if (!auth.tenantId?.trim()) {
       return {
         ok: false,
@@ -468,66 +452,90 @@ export async function createContract(
       };
     }
 
-    const [tenantRow] = await db
-      .select({ id: tenants.id })
-      .from(tenants)
-      .where(eq(tenants.id, auth.tenantId))
-      .limit(1);
-    if (!tenantRow) {
-      return {
-        ok: false,
-        message:
-          "Workspace v databázi neexistuje nebo neodpovídá vašemu účtu. Obnovte stránku nebo se znovu přihlaste.",
-      };
-    }
-
-    const refCheck = await assertContractPartnerProductRefs({
-      tenantId: auth.tenantId,
-      contactId,
-      partnerId: normalized.partnerId ?? null,
-      productId: normalized.productId ?? null,
-    });
-    if (!refCheck.ok) {
-      return { ok: false, message: refCheck.message };
-    }
-
     const advisorUid = auth.userId.trim();
     await ensureUserProfileRowForAdvisor(advisorUid);
 
-    const [row] = await db
-      .insert(contracts)
-      .values({
+    const outcome = await withTenantContextFromAuth(auth, async (tx): Promise<CreateContractResult> => {
+      let partnerName = normalized.partnerName?.trim() || null;
+      let productName = normalized.productName?.trim() || null;
+      if (normalized.partnerId && !partnerName) {
+        const [p] = await tx
+          .select({ name: partners.name })
+          .from(partners)
+          .where(eq(partners.id, normalized.partnerId))
+          .limit(1);
+        if (p) partnerName = p.name;
+      }
+      if (normalized.productId && !productName) {
+        const [pr] = await tx
+          .select({ name: products.name })
+          .from(products)
+          .where(eq(products.id, normalized.productId))
+          .limit(1);
+        if (pr) productName = pr.name;
+      }
+
+      const [tenantRow] = await tx
+        .select({ id: tenants.id })
+        .from(tenants)
+        .where(eq(tenants.id, auth.tenantId))
+        .limit(1);
+      if (!tenantRow) {
+        return {
+          ok: false,
+          message:
+            "Workspace v databázi neexistuje nebo neodpovídá vašemu účtu. Obnovte stránku nebo se znovu přihlaste.",
+        };
+      }
+
+      const refCheck = await assertContractPartnerProductRefs(tx, {
         tenantId: auth.tenantId,
         contactId,
-        advisorId: advisorUid,
-        segment,
-        type: segment,
-        partnerId: normalized.partnerId || null,
-        productId: normalized.productId || null,
-        partnerName,
-        productName,
-        premiumAmount: normalized.premiumAmount || null,
-        premiumAnnual: normalized.premiumAnnual || null,
-        contractNumber: normalized.contractNumber?.trim() || null,
-        startDate: normalized.startDate || null,
-        anniversaryDate: normalized.anniversaryDate || null,
-        note: normalized.note?.trim() || null,
-        visibleToClient: true,
-        portfolioStatus: "active",
-        sourceKind: "manual",
-        advisorConfirmedAt: new Date(),
-        confirmedByUserId: advisorUid,
-        portfolioAttributes: {},
-      })
-      .returning({ id: contracts.id });
-    const newId = row?.id ?? null;
-    if (!newId) {
-      return { ok: false, message: "Smlouvu se nepodařilo uložit. Zkuste to znovu." };
+        partnerId: normalized.partnerId ?? null,
+        productId: normalized.productId ?? null,
+      });
+      if (!refCheck.ok) {
+        return { ok: false, message: refCheck.message };
+      }
+
+      const [row] = await tx
+        .insert(contracts)
+        .values({
+          tenantId: auth.tenantId,
+          contactId,
+          advisorId: advisorUid,
+          segment,
+          type: segment,
+          partnerId: normalized.partnerId || null,
+          productId: normalized.productId || null,
+          partnerName,
+          productName,
+          premiumAmount: normalized.premiumAmount || null,
+          premiumAnnual: normalized.premiumAnnual || null,
+          contractNumber: normalized.contractNumber?.trim() || null,
+          startDate: normalized.startDate || null,
+          anniversaryDate: normalized.anniversaryDate || null,
+          note: normalized.note?.trim() || null,
+          visibleToClient: true,
+          portfolioStatus: "active",
+          sourceKind: "manual",
+          advisorConfirmedAt: new Date(),
+          confirmedByUserId: advisorUid,
+          portfolioAttributes: {},
+        })
+        .returning({ id: contracts.id });
+      const newId = row?.id ?? null;
+      if (!newId) {
+        return { ok: false, message: "Smlouvu se nepodařilo uložit. Zkuste to znovu." };
+      }
+      return { ok: true, id: newId };
+    });
+    if (outcome.ok) {
+      try {
+        await logActivity("contract", outcome.id, "create", { segment, contactId });
+      } catch {}
     }
-    try {
-      await logActivity("contract", newId, "create", { segment, contactId });
-    } catch {}
-    return { ok: true, id: newId };
+    return outcome;
   } catch (e) {
     if (isRedirectError(e)) throw e;
     const msg = e instanceof Error ? e.message : String(e);
@@ -645,36 +653,8 @@ export async function updateContract(
     const normalized = normalizeContractFormForSave(full);
     const segment = normalized.segment;
 
-    let partnerName: string | null = normalized.partnerName?.trim() || null;
-    let productName: string | null = normalized.productName?.trim() || null;
-    if (normalized.partnerId && !partnerName) {
-      const [p] = await db
-        .select({ name: partners.name })
-        .from(partners)
-        .where(eq(partners.id, normalized.partnerId))
-        .limit(1);
-      if (p) partnerName = p.name;
-    }
-    if (normalized.productId && !productName) {
-      const [pr] = await db
-        .select({ name: products.name })
-        .from(products)
-        .where(eq(products.id, normalized.productId))
-        .limit(1);
-      if (pr) productName = pr.name;
-    }
-
     if (!auth.tenantId?.trim()) {
       throw new Error("Chybí workspace (tenant). Obnovte stránku nebo dokončete registraci.");
-    }
-
-    const updateRef = await assertContractPartnerProductRefs({
-      tenantId: auth.tenantId,
-      partnerId: normalized.partnerId ?? null,
-      productId: normalized.productId ?? null,
-    });
-    if (!updateRef.ok) {
-      throw new Error(updateRef.message);
     }
 
     const portfolioPatch: Record<string, unknown> = {};
@@ -688,28 +668,58 @@ export async function updateContract(
     const touchPortfolioMeta =
       form.visibleToClient !== undefined || form.portfolioStatus !== undefined;
 
-    await db
-      .update(contracts)
-      .set({
-        segment,
-        type: segment,
-        partnerId: normalized.partnerId || null,
-        productId: normalized.productId || null,
-        partnerName,
-        productName,
-        premiumAmount: normalized.premiumAmount || null,
-        premiumAnnual: normalized.premiumAnnual || null,
-        contractNumber: normalized.contractNumber?.trim() || null,
-        startDate: normalized.startDate || null,
-        anniversaryDate: normalized.anniversaryDate || null,
-        note: normalized.note?.trim() || null,
-        ...portfolioPatch,
-        ...(touchPortfolioMeta
-          ? { advisorConfirmedAt: new Date(), confirmedByUserId: auth.userId }
-          : {}),
-        updatedAt: new Date(),
-      })
-      .where(and(eq(contracts.tenantId, auth.tenantId), eq(contracts.id, id)));
+    await withTenantContextFromAuth(auth, async (tx) => {
+      let partnerName: string | null = normalized.partnerName?.trim() || null;
+      let productName: string | null = normalized.productName?.trim() || null;
+      if (normalized.partnerId && !partnerName) {
+        const [p] = await tx
+          .select({ name: partners.name })
+          .from(partners)
+          .where(eq(partners.id, normalized.partnerId))
+          .limit(1);
+        if (p) partnerName = p.name;
+      }
+      if (normalized.productId && !productName) {
+        const [pr] = await tx
+          .select({ name: products.name })
+          .from(products)
+          .where(eq(products.id, normalized.productId))
+          .limit(1);
+        if (pr) productName = pr.name;
+      }
+
+      const updateRef = await assertContractPartnerProductRefs(tx, {
+        tenantId: auth.tenantId,
+        partnerId: normalized.partnerId ?? null,
+        productId: normalized.productId ?? null,
+      });
+      if (!updateRef.ok) {
+        throw new Error(updateRef.message);
+      }
+
+      await tx
+        .update(contracts)
+        .set({
+          segment,
+          type: segment,
+          partnerId: normalized.partnerId || null,
+          productId: normalized.productId || null,
+          partnerName,
+          productName,
+          premiumAmount: normalized.premiumAmount || null,
+          premiumAnnual: normalized.premiumAnnual || null,
+          contractNumber: normalized.contractNumber?.trim() || null,
+          startDate: normalized.startDate || null,
+          anniversaryDate: normalized.anniversaryDate || null,
+          note: normalized.note?.trim() || null,
+          ...portfolioPatch,
+          ...(touchPortfolioMeta
+            ? { advisorConfirmedAt: new Date(), confirmedByUserId: auth.userId }
+            : {}),
+          updatedAt: new Date(),
+        })
+        .where(and(eq(contracts.tenantId, auth.tenantId), eq(contracts.id, id)));
+    });
     try {
       await logActivity("contract", id, "update", { fields: Object.keys(form) });
     } catch {}
@@ -724,9 +734,9 @@ export async function deleteContract(id: string) {
   try {
     const auth = await requireAuthInAction();
     if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
-    await db
-      .delete(contracts)
-      .where(and(eq(contracts.tenantId, auth.tenantId), eq(contracts.id, id)));
+    await withTenantContextFromAuth(auth, (tx) =>
+      tx.delete(contracts).where(and(eq(contracts.tenantId, auth.tenantId), eq(contracts.id, id))),
+    );
     try { await logActivity("contract", id, "delete"); } catch {}
   } catch (e) {
     console.error("[deleteContract]", e);
@@ -738,35 +748,38 @@ export async function deleteContract(id: string) {
 export async function approveContractForClientPortal(contractId: string) {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
-  const [row] = await db
-    .select({
-      sourceDocumentId: contracts.sourceDocumentId,
-      contactId: contracts.contactId,
-      productName: contracts.productName,
-      partnerName: contracts.partnerName,
-    })
-    .from(contracts)
-    .where(and(eq(contracts.tenantId, auth.tenantId), eq(contracts.id, contractId)))
-    .limit(1);
-  await db
-    .update(contracts)
-    .set({
-      visibleToClient: true,
-      portfolioStatus: "active",
-      advisorConfirmedAt: new Date(),
-      confirmedByUserId: auth.userId,
-      updatedAt: new Date(),
-    })
-    .where(and(eq(contracts.tenantId, auth.tenantId), eq(contracts.id, contractId)));
-  if (row?.sourceDocumentId) {
-    await db
-      .update(documents)
+  const row = await withTenantContextFromAuth(auth, async (tx) => {
+    const [r] = await tx
+      .select({
+        sourceDocumentId: contracts.sourceDocumentId,
+        contactId: contracts.contactId,
+        productName: contracts.productName,
+        partnerName: contracts.partnerName,
+      })
+      .from(contracts)
+      .where(and(eq(contracts.tenantId, auth.tenantId), eq(contracts.id, contractId)))
+      .limit(1);
+    await tx
+      .update(contracts)
       .set({
-        businessStatus: "applied_to_client_portal",
+        visibleToClient: true,
+        portfolioStatus: "active",
+        advisorConfirmedAt: new Date(),
+        confirmedByUserId: auth.userId,
         updatedAt: new Date(),
       })
-      .where(and(eq(documents.tenantId, auth.tenantId), eq(documents.id, row.sourceDocumentId)));
-  }
+      .where(and(eq(contracts.tenantId, auth.tenantId), eq(contracts.id, contractId)));
+    if (r?.sourceDocumentId) {
+      await tx
+        .update(documents)
+        .set({
+          businessStatus: "applied_to_client_portal",
+          updatedAt: new Date(),
+        })
+        .where(and(eq(documents.tenantId, auth.tenantId), eq(documents.id, r.sourceDocumentId)));
+    }
+    return r;
+  });
   if (row?.contactId) {
     try {
       const label = [row.productName, row.partnerName].filter(Boolean).join(" – ") || "Nová smlouva";
@@ -820,22 +833,24 @@ async function loadContractAiProvenance(contractId: string): Promise<ContractAiP
     const auth = await requireAuthInAction();
     if (!hasPermission(auth.roleName, "contacts:read")) return null;
 
-    const rows = await db
-      .select({
-        id: contractUploadReviews.id,
-        appliedAt: contractUploadReviews.appliedAt,
-        applyResultPayload: contractUploadReviews.applyResultPayload,
-      })
-      .from(contractUploadReviews)
-      .where(
-        and(
-          eq(contractUploadReviews.tenantId, auth.tenantId),
-          eq(contractUploadReviews.reviewStatus, "applied"),
-          sql`${contractUploadReviews.applyResultPayload}->>'createdContractId' = ${contractId}`,
+    const rows = await withTenantContextFromAuth(auth, (tx) =>
+      tx
+        .select({
+          id: contractUploadReviews.id,
+          appliedAt: contractUploadReviews.appliedAt,
+          applyResultPayload: contractUploadReviews.applyResultPayload,
+        })
+        .from(contractUploadReviews)
+        .where(
+          and(
+            eq(contractUploadReviews.tenantId, auth.tenantId),
+            eq(contractUploadReviews.reviewStatus, "applied"),
+            sql`${contractUploadReviews.applyResultPayload}->>'createdContractId' = ${contractId}`,
+          )
         )
-      )
-      .orderBy(desc(contractUploadReviews.appliedAt))
-      .limit(1);
+        .orderBy(desc(contractUploadReviews.appliedAt))
+        .limit(1),
+    );
 
     const row = rows[0];
     if (!row) return null;

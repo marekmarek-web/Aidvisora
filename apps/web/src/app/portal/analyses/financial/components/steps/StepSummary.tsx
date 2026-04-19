@@ -9,7 +9,7 @@ import { uploadDocument } from "@/app/actions/documents";
 import { setFinancialAnalysisLastExportedAt } from "@/app/actions/financial-analyses";
 import { getAdvisorReportBranding } from "@/app/actions/preferences";
 import clsx from "clsx";
-import { FileText, Printer, CloudUpload, StickyNote, Monitor, TrendingUp } from "lucide-react";
+import { FileText, Printer, CloudUpload, StickyNote, Monitor, TrendingUp, HelpCircle } from "lucide-react";
 import { getClientPortfolioForContact } from "@/app/actions/contracts";
 import {
   buildFaCanonicalInvestmentOverviewRows,
@@ -62,6 +62,8 @@ export function StepSummary() {
   const [exportError, setExportError] = useState<string | null>(null);
   const [crmInvestments, setCrmInvestments] = useState<FaCanonicalInvestmentOverviewRow[]>([]);
   const [crmInvestmentsError, setCrmInvestmentsError] = useState<string | null>(null);
+  const [howToReadOpen, setHowToReadOpen] = useState(false);
+  const [crmHelpOpen, setCrmHelpOpen] = useState(false);
   const [selectedTheme, setSelectedTheme] = useState<ReportTheme>(() => {
     if (typeof window !== "undefined") {
       return (localStorage.getItem("aidvisora_report_theme") as ReportTheme) || "elegant";
@@ -262,27 +264,50 @@ export function StepSummary() {
         </div>
       </div>
 
-      <div className="mb-6 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] p-4 text-sm text-[color:var(--wp-text-secondary)] max-w-4xl">
-        <p className="font-semibold text-[color:var(--wp-text)] mb-1">Jak číst dva přehledy vedle sebe</p>
-        <ul className="list-disc pl-5 space-y-1">
-          <li>
-            <strong className="text-[color:var(--wp-text)]">Evidence skutečných investic</strong> — produkty zapsané u klienta v Aidvisory po schválení; odhad budoucí hodnoty používá stejný model jako klientské portfolio.
-          </li>
-          <li>
-            <strong className="text-[color:var(--wp-text)]">Modelace v kroku strategie</strong> — vámi zadaný návrhový scénář v průvodci analýzy; slouží k porovnání variant, není závazným stavem smluv.
-          </li>
-          <li>Orientační odhad není záruka budoucího výnosu ani konečné částky.</li>
-        </ul>
+      <div className="mb-6 max-w-4xl">
+        <button
+          type="button"
+          onClick={() => setHowToReadOpen((v) => !v)}
+          className="inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--wp-text-secondary)] hover:text-[color:var(--wp-text)] transition-colors"
+          aria-expanded={howToReadOpen}
+        >
+          <HelpCircle size={14} aria-hidden /> Jak číst dva přehledy vedle sebe
+        </button>
+        {howToReadOpen && (
+          <div className="mt-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] p-4 text-sm text-[color:var(--wp-text-secondary)]">
+            <ul className="list-disc pl-5 space-y-1">
+              <li>
+                <strong className="text-[color:var(--wp-text)]">Evidence skutečných investic</strong> — produkty zapsané u klienta v Aidvisoře po schválení; odhad budoucí hodnoty používá stejný model jako klientské portfolio.
+              </li>
+              <li>
+                <strong className="text-[color:var(--wp-text)]">Modelace v kroku strategie</strong> — vámi zadaný návrhový scénář v průvodci analýzy; slouží k porovnání variant, není závazným stavem smluv.
+              </li>
+              <li>Orientační odhad není záruka budoucího výnosu ani konečné částky.</li>
+            </ul>
+          </div>
+        )}
       </div>
 
       <div className="mb-8">
         <h3 className="text-lg font-bold text-[color:var(--wp-text)] mb-2 flex items-center gap-2">
           <TrendingUp className="w-5 h-5 text-indigo-600 shrink-0" />
           Investice z evidence smluv
+          <button
+            type="button"
+            onClick={() => setCrmHelpOpen((v) => !v)}
+            className="ml-1 inline-flex items-center justify-center text-[color:var(--wp-text-tertiary)] hover:text-[color:var(--wp-text)] transition-colors"
+            title="Co to znamená?"
+            aria-label="Co to znamená?"
+            aria-expanded={crmHelpOpen}
+          >
+            <HelpCircle size={16} aria-hidden />
+          </button>
         </h3>
-        <p className="text-sm text-[color:var(--wp-text-secondary)] mb-4 max-w-3xl">
-          Stejné údaje jako v klientském portfoliu a v záložce Produkty u klienta. Odhad budoucí hodnoty vychází ze stejného výpočtu jako u zveřejněného portfolia — jen tam, kde jsou v evidenci potřebné údaje.
-        </p>
+        {crmHelpOpen && (
+          <p className="text-sm text-[color:var(--wp-text-secondary)] mb-4 max-w-3xl rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] p-3">
+            Stejné údaje jako v klientském portfoliu a v záložce Produkty u klienta. Odhad budoucí hodnoty vychází ze stejného výpočtu jako u zveřejněného portfolia — jen tam, kde jsou v evidenci potřebné údaje.
+          </p>
+        )}
         {data.clientId && crmInvestments.length > 0 && sumEvidenceFvCzk > 0 && (
           <p className="text-sm font-semibold text-[color:var(--wp-text)] mb-3">
             Součet orientační FV z evidence (řádky, kde šel odhad spočítat):{" "}
@@ -368,7 +393,7 @@ export function StepSummary() {
           <ThemeSelector value={selectedTheme} onChange={handleThemeChange} />
         </div>
 
-        <div className="flex flex-wrap gap-3 mb-4">
+        <div className="flex flex-wrap justify-center gap-3 mb-4">
           <button
             type="button"
             onClick={handleDownloadHTML}
@@ -397,7 +422,7 @@ export function StepSummary() {
           </button>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap justify-center items-center gap-3">
           {canSaveToDocuments && (
             <button
               type="button"

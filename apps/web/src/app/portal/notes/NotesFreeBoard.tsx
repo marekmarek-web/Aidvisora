@@ -297,7 +297,7 @@ export function NotesFreeBoard({
     });
   };
 
-  /** Drop: snap na 16 px grid + kolizní resolution (pokud překryv >40 %, posun na volný slot). */
+  /** Drop: snap na 16 px grid. Překryvy jsou povoleny – uživatel chce kartičky „házet přes sebe". */
   const handlePointerUp = (e: React.PointerEvent) => {
     const wasDragging = draggingId != null;
     const movedId = draggingId;
@@ -316,31 +316,9 @@ export function NotesFreeBoard({
           const py = current.y * h;
           const snappedX = Math.min(Math.max(CANVAS_PADDING_PX, snapToGrid(px)), Math.max(CANVAS_PADDING_PX, w - APPROX_CARD_W_PX - CANVAS_PADDING_PX));
           const snappedY = Math.min(Math.max(CANVAS_PADDING_PX, snapToGrid(py)), Math.max(CANVAS_PADDING_PX, h - APPROX_CARD_H_PX - CANVAS_PADDING_PX));
-          const others = collectOccupiedRects(
-            latestPositionsRef.current,
-            w,
-            h,
-            APPROX_CARD_W_PX,
-            APPROX_CARD_H_PX,
-            movedId,
-          );
-          const myRect: BoardRect = { x: snappedX, y: snappedY, w: APPROX_CARD_W_PX, h: APPROX_CARD_H_PX };
-          const threshold = APPROX_CARD_W_PX * APPROX_CARD_H_PX * 0.4;
-          let resolvedX = snappedX;
-          let resolvedY = snappedY;
-          for (const r of others) {
-            const overlapW = Math.max(0, Math.min(myRect.x + myRect.w, r.x + r.w) - Math.max(myRect.x, r.x));
-            const overlapH = Math.max(0, Math.min(myRect.y + myRect.h, r.y + r.h) - Math.max(myRect.y, r.y));
-            if (overlapW * overlapH > threshold) {
-              const slot = findFirstFreeSlot(others, w, h, APPROX_CARD_W_PX, APPROX_CARD_H_PX, CANVAS_PADDING_PX, NOTES_BOARD_SNAP_PX);
-              resolvedX = slot.x;
-              resolvedY = slot.y;
-              break;
-            }
-          }
           setPosition(movedId, dragIndexRef.current, {
-            x: pixelsToBoardUnits(resolvedX, w),
-            y: pixelsToBoardUnits(resolvedY, h),
+            x: pixelsToBoardUnits(snappedX, w),
+            y: pixelsToBoardUnits(snappedY, h),
           });
         }
       }

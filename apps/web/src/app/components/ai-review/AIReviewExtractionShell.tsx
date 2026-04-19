@@ -872,72 +872,83 @@ export function AIReviewExtractionShell({
           }`}
         >
           <div className="shrink-0 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-4 py-3 md:px-6">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+              {/* Navigace + pomocné akce */}
+              <div className="flex items-center gap-1.5">
                 <button
                   type="button"
                   onClick={onBack}
-                  className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-[color:var(--wp-surface-card-border)] px-3 text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] transition-colors hover:bg-[color:var(--wp-surface-muted)]"
+                  className="inline-flex min-h-[40px] items-center gap-2 rounded-xl px-3 text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] transition-colors hover:bg-[color:var(--wp-surface-muted)] hover:text-[color:var(--wp-text)]"
+                  title="Zpět na seznam"
                 >
                   <ArrowLeft size={14} />
-                  <span>Zpět</span>
+                  <span className="hidden sm:inline">Zpět</span>
                 </button>
                 {canExportPdf ? (
-                  <button
-                    type="button"
-                    onClick={() => void handleDownloadPdf()}
-                    disabled={pdfExportBusy}
-                    className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50/80 px-3 text-xs font-black uppercase tracking-widest text-indigo-800 transition-colors hover:bg-indigo-100 disabled:opacity-50"
-                  >
-                    {pdfExportBusy ? (
-                      <RefreshCw size={14} className="animate-spin" />
-                    ) : (
-                      <Download size={14} />
-                    )}
-                    <span>Stáhnout PDF</span>
-                  </button>
+                  <>
+                    <div className="h-6 w-px bg-[color:var(--wp-surface-card-border)] hidden sm:block" aria-hidden />
+                    <button
+                      type="button"
+                      onClick={() => void handleDownloadPdf()}
+                      disabled={pdfExportBusy}
+                      className="inline-flex min-h-[40px] items-center gap-2 rounded-xl px-3 text-xs font-black uppercase tracking-widest text-indigo-700 transition-colors hover:bg-indigo-50 disabled:opacity-50"
+                      title="Stáhnout interní PDF souhrn"
+                    >
+                      {pdfExportBusy ? (
+                        <RefreshCw size={14} className="animate-spin" />
+                      ) : (
+                        <Download size={14} />
+                      )}
+                      <span className="hidden sm:inline">Stáhnout PDF</span>
+                    </button>
+                  </>
                 ) : null}
               </div>
-              <div className="flex flex-wrap items-center justify-end gap-2">
+              {/* Akční pás s jasnou hierarchií: destruktivní → sekundární → primární */}
+              <div className="flex flex-1 flex-wrap items-center justify-end gap-2 sm:flex-none">
                 {canApproveReject ? (
-                  <button
-                    type="button"
-                    onClick={() => setShowRejectModal(true)}
-                    disabled={!!actionLoading}
-                    className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-rose-200 px-3 text-xs font-black uppercase tracking-widest text-rose-700 transition-colors hover:bg-rose-50 disabled:opacity-50"
-                  >
-                    <X size={14} />
-                    <span>Zamítnout</span>
-                  </button>
+                  <div className="flex items-center gap-1 rounded-xl bg-[color:var(--wp-surface-muted)]/60 p-1 ring-1 ring-[color:var(--wp-surface-card-border)]/70">
+                    <button
+                      type="button"
+                      onClick={() => setShowRejectModal(true)}
+                      disabled={!!actionLoading}
+                      className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-black uppercase tracking-widest text-rose-700 transition-colors hover:bg-rose-50 disabled:opacity-50"
+                      title="Zamítnout extrakci"
+                    >
+                      <X size={13} />
+                      <span>Zamítnout</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleApproveClick}
+                      disabled={!!actionLoading}
+                      className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] transition-colors hover:bg-[color:var(--wp-surface-card)] hover:text-[color:var(--wp-text)] disabled:opacity-60"
+                      title="Jen schválit extrahované údaje (bez propsání do Aidvisory)"
+                    >
+                      {isApproving ? (
+                        <RefreshCw size={13} className="animate-spin" />
+                      ) : (
+                        <Check size={13} />
+                      )}
+                      <span className="hidden sm:inline">Jen schválit</span>
+                      <span className="sm:hidden">Schválit</span>
+                    </button>
+                  </div>
                 ) : null}
                 {canApproveAndApply ? (
                   <button
                     type="button"
                     onClick={handleApproveAndApplyClick}
                     disabled={!!actionLoading}
-                    className="inline-flex min-h-[40px] items-center gap-2 rounded-xl bg-indigo-600 px-3 text-xs font-black uppercase tracking-widest text-white transition-colors hover:bg-indigo-700 disabled:opacity-60"
+                    className="inline-flex min-h-[40px] items-center gap-2 rounded-xl bg-indigo-600 px-4 text-xs font-black uppercase tracking-widest text-white shadow-sm transition-all hover:bg-indigo-700 hover:shadow active:scale-[0.98] disabled:opacity-60"
                   >
                     {actionLoading === "approveApply" ? (
                       <RefreshCw size={14} className="animate-spin" />
                     ) : (
                       <Send size={14} />
                     )}
-                    <span>Schválit a propsat do Aidvisory</span>
-                  </button>
-                ) : null}
-                {canApproveReject ? (
-                  <button
-                    type="button"
-                    onClick={handleApproveClick}
-                    disabled={!!actionLoading}
-                    className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-3 text-xs font-black uppercase tracking-widest text-[color:var(--wp-text)] transition-colors hover:bg-[color:var(--wp-surface-muted)] disabled:opacity-60"
-                  >
-                    {isApproving ? (
-                      <RefreshCw size={14} className="animate-spin" />
-                    ) : (
-                      <Check size={14} />
-                    )}
-                    <span>Schválit extrahované údaje</span>
+                    <span className="hidden md:inline">Schválit a propsat do Aidvisory</span>
+                    <span className="md:hidden">Schválit + propsat</span>
                   </button>
                 ) : null}
                 {canApply ? (
@@ -945,7 +956,7 @@ export function AIReviewExtractionShell({
                     type="button"
                     onClick={() => setShowApplyConfirm(true)}
                     disabled={!!actionLoading}
-                    className="inline-flex min-h-[40px] items-center gap-2 rounded-xl bg-indigo-600 px-3 text-xs font-black uppercase tracking-widest text-white transition-colors hover:bg-indigo-700 disabled:opacity-60"
+                    className="inline-flex min-h-[40px] items-center gap-2 rounded-xl bg-indigo-600 px-4 text-xs font-black uppercase tracking-widest text-white shadow-sm transition-all hover:bg-indigo-700 hover:shadow active:scale-[0.98] disabled:opacity-60"
                   >
                     {actionLoading === "apply" ? (
                       <RefreshCw size={14} className="animate-spin" />

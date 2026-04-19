@@ -115,11 +115,11 @@ export function MindmapSidePanel({
     <div
       className={
         fullscreenOnMobile
-          ? "w-full h-full md:w-80 md:h-auto shrink-0 border-l border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] md:bg-[color:var(--wp-surface-card)]/95 backdrop-blur overflow-y-auto flex flex-col"
-          : "w-80 shrink-0 border-l border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/95 backdrop-blur overflow-y-auto"
+          ? "w-full h-full md:w-80 md:h-auto shrink-0 border-l border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] md:bg-[color:var(--wp-surface-card)]/95 backdrop-blur flex flex-col"
+          : "w-80 shrink-0 border-l border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/95 backdrop-blur flex flex-col h-full"
       }
     >
-      <div className="p-6 space-y-6">
+      <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-6 pb-28">
         <div className="flex items-center justify-between shrink-0">
           <h3 className="font-bold text-[color:var(--wp-text)]">Detail uzlu</h3>
           <button
@@ -188,17 +188,6 @@ export function MindmapSidePanel({
             <p className="text-sm text-[color:var(--wp-text-secondary)] mt-1">{node.subtitle ?? "—"}</p>
           )}
         </div>
-
-        {/* Uložit změny – výrazné tlačítko pro aplikaci editací */}
-        {canEdit && !isCore && (
-          <button
-            type="button"
-            onClick={applyEdits}
-            className={clsx(portalPrimaryButtonClassName, "w-full py-2.5 px-4 font-semibold")}
-          >
-            Uložit změny
-          </button>
-        )}
 
         {/* Metadata: hodnota, popis, progres (pro položku/cíl) */}
         {(node.type === "item" || node.type === "goal" || node.type === "category") && (
@@ -343,6 +332,17 @@ export function MindmapSidePanel({
           </div>
         )}
       </div>
+      {canEdit && !isCore && (
+        <div className="shrink-0 border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <button
+            type="button"
+            onClick={applyEdits}
+            className={clsx(portalPrimaryButtonClassName, "w-full min-h-[48px] px-4 font-semibold")}
+          >
+            Uložit změny
+          </button>
+        </div>
+      )}
     </div>
   );
 }

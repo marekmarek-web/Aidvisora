@@ -11,6 +11,7 @@
  */
 
 import type { DocumentReviewEnvelope, ExtractedField, EvidenceTier, SourceKind } from "./document-review-types";
+import { isPlausibleLabelOnlyValue } from "./form-aware-extraction";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -441,6 +442,9 @@ function tagFromParties(env: DocumentReviewEnvelope, ef: Record<string, Extracte
     const partyFullName = typeof party.fullName === "string" ? party.fullName.trim() :
       typeof party.name === "string" ? party.name.trim() : null;
     if (!partyFullName || looksLikeInstitution(partyFullName)) continue;
+    // Reject generic role labels (e.g. "Investor", "Pojistník", "Klient") that the LLM
+    // mistakenly extracted from section headings instead of actual filled names.
+    if (isPlausibleLabelOnlyValue(partyFullName)) continue;
     const prio = rolePriority[role] ?? 4;
     if (prio > bestPriority) {
       bestPriority = prio;

@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useFinancialAnalysisStore as useStore } from "@/lib/analyses/financial/store";
 import { CREDIT_WISH_BANKS, CREDIT_PURPOSE_OPTIONS, LTV_OPTIONS } from "@/lib/analyses/financial/constants";
 import { monthlyPayment, totalRepayment, ownResourcesFromLtv } from "@/lib/analyses/financial/calculations";
 import { formatCzk } from "@/lib/analyses/financial/formatters";
-import { CreditCard, Plus, Trash2 } from "lucide-react";
+import { CreditCard, Plus, Trash2, RefreshCw } from "lucide-react";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
+import type { NormalizedOffer } from "@/lib/calculators/mortgage/rates";
+import { rankOffersByScenario } from "@/lib/calculators/mortgage/rates";
 
 const PRODUCT_OPTIONS = [
   { value: "hypoteka", label: "Hypotéka" },
@@ -29,9 +31,54 @@ export function StepCredits() {
   const [customRate, setCustomRate] = useState<number | "">("");
   const [ltvPercent, setLtvPercent] = useState<number | "">(90);
   const [akoPercent, setAkoPercent] = useState<number | "">("");
+  const [liveRates, setLiveRates] = useState<{ mortgage: NormalizedOffer[] | null; loan: NormalizedOffer[] | null }>({ mortgage: null, loan: null });
+  const [ratesError, setRatesError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+    (async () => {
+      try {
+        const [mRes, lRes] = await Promise.all([
+          fetch(`/api/calculators/rates?type=mortgage`, { method: "GET", signal: ctrl.signal }),
+          fetch(`/api/calculators/rates?type=loan`, { method: "GET", signal: ctrl.signal }),
+        ]);
+        const parseOk = async (r: Response): Promise<NormalizedOffer[] | null> => {
+          if (!r.ok) return null;
+          const payload = (await r.json()) as { ok: boolean; rates?: NormalizedOffer[] };
+          return payload.ok && Array.isArray(payload.rates) ? payload.rates : null;
+        };
+        const [m, l] = await Promise.all([parseOk(mRes), parseOk(lRes)]);
+        setLiveRates({ mortgage: m, loan: l });
+        setRatesError(null);
+      } catch {
+        setRatesError("Nepodařilo se načíst aktuální sazby z kurzy.cz — použijeme orientační.");
+      }
+    })();
+    return () => ctrl.abort();
+  }, []);
 
   const bank = CREDIT_WISH_BANKS.find((b) => b.id === selectedBankId);
-  const ratePercent = customRate !== "" ? Number(customRate) : (product === "hypoteka" ? bank?.rateHypo : bank?.rateLoan) ?? 0;
+
+  const rateFromLive = useMemo<number | null>(() => {
+    const pool = product === "hypoteka" ? liveRates.mortgage : liveRates.loan;
+    if (!pool || pool.length === 0) return null;
+    const ltvVal = product === "hypoteka" && ltvPercent !== "" ? Number(ltvPercent) : 80;
+    const ranked = rankOffersByScenario(pool, {
+      productType: product === "hypoteka" ? "mortgage" : "loan",
+      subtype: product === "hypoteka" ? "new" : "new",
+      amount: amount > 0 ? amount : 1_000_000,
+      termMonths: Math.max(1, termYears) * 12,
+      ltvOrAkontace: ltvVal,
+      fixationYears: product === "hypoteka" ? fixYears : undefined,
+      mode: "new",
+    });
+    const top = ranked[0];
+    if (!top || !Number.isFinite(top.nominalRate)) return null;
+    return top.nominalRate;
+  }, [liveRates, product, amount, termYears, ltvPercent, fixYears]);
+
+  const fallbackStaticRate = product === "hypoteka" ? bank?.rateHypo ?? 0 : bank?.rateLoan ?? 0;
+  const ratePercent = customRate !== "" ? Number(customRate) : (rateFromLive ?? fallbackStaticRate);
   const estimatedMonthly = monthlyPayment(amount, ratePercent, termYears);
   const estimatedTotal = totalRepayment(estimatedMonthly, termYears);
 
@@ -142,9 +189,22 @@ export function StepCredits() {
               </div>
             )}
             <div className="bg-[color:var(--wp-surface-card)] rounded-xl p-4 border border-[color:var(--wp-surface-card-border)]">
-              <div className="flex justify-between text-sm mb-1"><span className="text-[color:var(--wp-text-secondary)]">Odhadovaná sazba</span><span className="font-bold">{ratePercent.toFixed(2)} %</span></div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-[color:var(--wp-text-secondary)] inline-flex items-center gap-1">
+                  Odhadovaná sazba
+                  {rateFromLive != null && customRate === "" && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                      <RefreshCw size={10} aria-hidden /> kurzy.cz
+                    </span>
+                  )}
+                </span>
+                <span className="font-bold">{ratePercent.toFixed(2)} %</span>
+              </div>
               <div className="flex justify-between text-sm mb-1"><span className="text-[color:var(--wp-text-secondary)]">Měsíční splátka</span><span className="font-bold text-indigo-700">{formatCzk(estimatedMonthly)}</span></div>
               <div className="flex justify-between text-sm"><span className="text-[color:var(--wp-text-secondary)]">Celkem splátek</span><span className="font-bold text-[color:var(--wp-text-secondary)]">{formatCzk(estimatedTotal)}</span></div>
+              {ratesError && (
+                <p className="text-xs text-amber-700 mt-2">{ratesError}</p>
+              )}
             </div>
             <button type="button" onClick={handleAdd} className="w-full min-h-[44px] flex items-center justify-center gap-2 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-500">
               <Plus className="w-5 h-5" /> Přidat úvěr / hypotéku

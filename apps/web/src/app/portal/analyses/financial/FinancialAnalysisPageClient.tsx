@@ -9,6 +9,7 @@ import { FinancialAnalysisLayout } from "./components/FinancialAnalysisLayout";
 import { FundLibraryFaProvider } from "./components/FundLibraryFaContext";
 import clsx from "clsx";
 import { getFinancialAnalysis } from "@/app/actions/financial-analyses";
+import { getContact } from "@/app/actions/contacts";
 import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
 import { translateFinancialAnalysisActionError } from "@/lib/analyses/financial/financialAnalysisErrors";
 import type { FundLibrarySetupSnapshot } from "@/lib/fund-library/fund-library-setup-types";
@@ -119,6 +120,47 @@ export default function FinancialAnalysisPageClient({
     const clientId = searchParams.get("clientId") ?? undefined;
     const householdId = searchParams.get("householdId") ?? undefined;
     if (clientId != null || householdId != null) setLinkIds(clientId, householdId);
+
+    // Předvyplnění známých údajů klienta z CRM (jméno, datum narození, RČ, e-mail, telefon)
+    // pokud v FA ještě nejsou žádná klientská data.
+    if (clientId && typeof window !== "undefined") {
+      const state = useFinancialAnalysisStore.getState();
+      const currentClient = state.data.client;
+      const hasAnyClientData = Boolean(
+        currentClient.name?.trim() ||
+          currentClient.birthDate?.trim() ||
+          currentClient.email?.trim() ||
+          currentClient.phone?.trim() ||
+          currentClient.birthNumber?.trim()
+      );
+      if (!hasAnyClientData) {
+        void getContact(clientId)
+          .then((row) => {
+            if (!row) return;
+            const fullName = [row.firstName, row.lastName].filter(Boolean).join(" ").trim();
+            // DB ukládá birth_date jako ISO YYYY-MM-DD – v FA UI používáme DD.MM.YYYY.
+            let birthDateCs = "";
+            if (row.birthDate) {
+              const iso = row.birthDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
+              if (iso) {
+                birthDateCs = `${iso[3]}.${iso[2]}.${iso[1]}`;
+              } else {
+                birthDateCs = row.birthDate;
+              }
+            }
+            state.setClient({
+              name: fullName || currentClient.name,
+              birthDate: birthDateCs || currentClient.birthDate,
+              email: row.email ?? currentClient.email,
+              phone: row.phone ?? currentClient.phone,
+              birthNumber: row.personalId ?? currentClient.birthNumber,
+            });
+          })
+          .catch(() => {
+            // tiché selhání – prefill je best-effort
+          });
+      }
+    }
   }, [searchParams, setLinkIds]);
 
   const idParam = searchParams.get("id");

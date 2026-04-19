@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { db, userGoogleCalendarIntegrations } from "db";
+import { userGoogleCalendarIntegrations } from "db";
 import { eq, and } from "db";
 import { getCalendarAuth } from "../auth";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 
 export const dynamic = "force-dynamic";
 
@@ -14,19 +15,21 @@ export async function GET(request: Request) {
   const { userId, tenantId } = authResult.auth;
 
   try {
-    const rows = await db
-      .select({
-        googleEmail: userGoogleCalendarIntegrations.googleEmail,
-        isActive: userGoogleCalendarIntegrations.isActive,
-      })
-      .from(userGoogleCalendarIntegrations)
-      .where(
-        and(
-          eq(userGoogleCalendarIntegrations.tenantId, tenantId),
-          eq(userGoogleCalendarIntegrations.userId, userId)
+    const rows = await withTenantContextFromAuth({ tenantId, userId }, (tx) =>
+      tx
+        .select({
+          googleEmail: userGoogleCalendarIntegrations.googleEmail,
+          isActive: userGoogleCalendarIntegrations.isActive,
+        })
+        .from(userGoogleCalendarIntegrations)
+        .where(
+          and(
+            eq(userGoogleCalendarIntegrations.tenantId, tenantId),
+            eq(userGoogleCalendarIntegrations.userId, userId),
+          ),
         )
-      )
-      .limit(1);
+        .limit(1),
+    );
 
     const row = rows[0];
     const connected = !!row?.isActive;

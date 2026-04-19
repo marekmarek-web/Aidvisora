@@ -1,11 +1,11 @@
 "use server";
 
 import { requireAuthInAction } from "@/lib/auth/require-auth";
+import { withAuthContext, withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { getMembership } from "@/lib/auth/get-membership";
 import { hasPermission } from "@/lib/auth/permissions";
 import { getValidAccessToken } from "@/lib/integrations/google-calendar-integration-service";
 import { createCalendarEvent, updateCalendarEvent, deleteCalendarEvent } from "@/lib/integrations/google-calendar";
-import { db } from "db";
 import { events, contacts, tasks } from "db";
 import { eq, and, gte, lt, asc, desc, sql } from "db";
 import { logActivity } from "./activity";
@@ -82,50 +82,51 @@ export async function listEvents(filters?: {
   contactId?: string;
   opportunityId?: string;
 }): Promise<EventRow[]> {
-  const auth = await requireAuthInAction();
-  if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
+  const rows = await withAuthContext(async (auth, tx) => {
+    if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
 
-  const conditions = [eq(events.tenantId, auth.tenantId)];
+    const conditions = [eq(events.tenantId, auth.tenantId)];
 
-  if (filters?.start) {
-    conditions.push(gte(events.startAt, new Date(filters.start)));
-  }
-  if (filters?.end) {
-    conditions.push(lt(events.startAt, new Date(filters.end)));
-  }
-  if (filters?.contactId) {
-    conditions.push(eq(events.contactId, filters.contactId));
-  }
-  if (filters?.opportunityId) {
-    conditions.push(eq(events.opportunityId, filters.opportunityId));
-  }
+    if (filters?.start) {
+      conditions.push(gte(events.startAt, new Date(filters.start)));
+    }
+    if (filters?.end) {
+      conditions.push(lt(events.startAt, new Date(filters.end)));
+    }
+    if (filters?.contactId) {
+      conditions.push(eq(events.contactId, filters.contactId));
+    }
+    if (filters?.opportunityId) {
+      conditions.push(eq(events.opportunityId, filters.opportunityId));
+    }
 
-  const rows = await db
-    .select({
-      id: events.id,
-      tenantId: events.tenantId,
-      contactId: events.contactId,
-      opportunityId: events.opportunityId,
-      title: events.title,
-      eventType: events.eventType,
-      startAt: events.startAt,
-      endAt: events.endAt,
-      allDay: events.allDay,
-      location: events.location,
-      reminderAt: events.reminderAt,
-      assignedTo: events.assignedTo,
-      status: events.status,
-      notes: events.notes,
-      meetingLink: events.meetingLink,
-      taskId: events.taskId,
-      createdAt: events.createdAt,
-      contactFirstName: contacts.firstName,
-      contactLastName: contacts.lastName,
-    })
-    .from(events)
-    .leftJoin(contacts, eq(events.contactId, contacts.id))
-    .where(and(...conditions))
-    .orderBy(asc(events.startAt));
+    return tx
+      .select({
+        id: events.id,
+        tenantId: events.tenantId,
+        contactId: events.contactId,
+        opportunityId: events.opportunityId,
+        title: events.title,
+        eventType: events.eventType,
+        startAt: events.startAt,
+        endAt: events.endAt,
+        allDay: events.allDay,
+        location: events.location,
+        reminderAt: events.reminderAt,
+        assignedTo: events.assignedTo,
+        status: events.status,
+        notes: events.notes,
+        meetingLink: events.meetingLink,
+        taskId: events.taskId,
+        createdAt: events.createdAt,
+        contactFirstName: contacts.firstName,
+        contactLastName: contacts.lastName,
+      })
+      .from(events)
+      .leftJoin(contacts, eq(events.contactId, contacts.id))
+      .where(and(...conditions))
+      .orderBy(asc(events.startAt));
+  });
 
   return rows.map((r) => ({
     id: r.id,
@@ -153,34 +154,35 @@ export async function listEvents(filters?: {
 
 /** Get a single event by id; enforces tenant and returns contact name. */
 export async function getEvent(id: string): Promise<EventRow | null> {
-  const auth = await requireAuthInAction();
-  if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
-  const rows = await db
-    .select({
-      id: events.id,
-      tenantId: events.tenantId,
-      contactId: events.contactId,
-      opportunityId: events.opportunityId,
-      title: events.title,
-      eventType: events.eventType,
-      startAt: events.startAt,
-      endAt: events.endAt,
-      allDay: events.allDay,
-      location: events.location,
-      reminderAt: events.reminderAt,
-      assignedTo: events.assignedTo,
-      status: events.status,
-      notes: events.notes,
-      meetingLink: events.meetingLink,
-      taskId: events.taskId,
-      createdAt: events.createdAt,
-      contactFirstName: contacts.firstName,
-      contactLastName: contacts.lastName,
-    })
-    .from(events)
-    .leftJoin(contacts, eq(events.contactId, contacts.id))
-    .where(and(eq(events.tenantId, auth.tenantId), eq(events.id, id)))
-    .limit(1);
+  const rows = await withAuthContext(async (auth, tx) => {
+    if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
+    return tx
+      .select({
+        id: events.id,
+        tenantId: events.tenantId,
+        contactId: events.contactId,
+        opportunityId: events.opportunityId,
+        title: events.title,
+        eventType: events.eventType,
+        startAt: events.startAt,
+        endAt: events.endAt,
+        allDay: events.allDay,
+        location: events.location,
+        reminderAt: events.reminderAt,
+        assignedTo: events.assignedTo,
+        status: events.status,
+        notes: events.notes,
+        meetingLink: events.meetingLink,
+        taskId: events.taskId,
+        createdAt: events.createdAt,
+        contactFirstName: contacts.firstName,
+        contactLastName: contacts.lastName,
+      })
+      .from(events)
+      .leftJoin(contacts, eq(events.contactId, contacts.id))
+      .where(and(eq(events.tenantId, auth.tenantId), eq(events.id, id)))
+      .limit(1);
+  });
   const r = rows[0];
   if (!r) return null;
   return {
@@ -217,27 +219,28 @@ export type CallsReportRow = {
 };
 
 export async function getCallsReport(): Promise<CallsReportRow[]> {
-  const auth = await requireAuthInAction();
-  if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
-  const rows = await db
-    .select({
-      id: events.id,
-      startAt: events.startAt,
-      title: events.title,
-      contactId: events.contactId,
-      contactFirstName: contacts.firstName,
-      contactLastName: contacts.lastName,
-      leadSource: contacts.leadSource,
-    })
-    .from(events)
-    .leftJoin(contacts, eq(events.contactId, contacts.id))
-    .where(
-      and(
-        eq(events.tenantId, auth.tenantId),
-        eq(events.eventType, "telefonat")
+  const rows = await withAuthContext(async (auth, tx) => {
+    if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
+    return tx
+      .select({
+        id: events.id,
+        startAt: events.startAt,
+        title: events.title,
+        contactId: events.contactId,
+        contactFirstName: contacts.firstName,
+        contactLastName: contacts.lastName,
+        leadSource: contacts.leadSource,
+      })
+      .from(events)
+      .leftJoin(contacts, eq(events.contactId, contacts.id))
+      .where(
+        and(
+          eq(events.tenantId, auth.tenantId),
+          eq(events.eventType, "telefonat")
+        )
       )
-    )
-    .orderBy(desc(events.startAt));
+      .orderBy(desc(events.startAt));
+  });
   return rows.map((r) => ({
     id: r.id,
     startAt: r.startAt,
@@ -317,28 +320,30 @@ export async function createEvent(form: {
   } catch {
     // Google not connected or API error – event will be stored only in DB
   }
-  const [row] = await db
-    .insert(events)
-    .values({
-      tenantId: auth.tenantId,
-      title: form.title.trim(),
-      eventType: form.eventType || "schuzka",
-      startAt,
-      endAt,
-      allDay: form.allDay ?? false,
-      location: form.location?.trim() || null,
-      reminderAt: form.reminderAt ? parseInstantRequired("Připomínka", form.reminderAt) : null,
-      contactId: form.contactId || null,
-      opportunityId: form.opportunityId || null,
-      status: form.status?.trim() || null,
-      notes: form.notes?.trim() || null,
-      meetingLink: form.meetingLink?.trim() || null,
-      taskId: form.taskId || null,
-      assignedTo: assignee,
-      googleEventId,
-      googleCalendarId,
-    })
-    .returning({ id: events.id });
+  const [row] = await withTenantContextFromAuth(auth, (tx) =>
+    tx
+      .insert(events)
+      .values({
+        tenantId: auth.tenantId,
+        title: form.title.trim(),
+        eventType: form.eventType || "schuzka",
+        startAt,
+        endAt,
+        allDay: form.allDay ?? false,
+        location: form.location?.trim() || null,
+        reminderAt: form.reminderAt ? parseInstantRequired("Připomínka", form.reminderAt) : null,
+        contactId: form.contactId || null,
+        opportunityId: form.opportunityId || null,
+        status: form.status?.trim() || null,
+        notes: form.notes?.trim() || null,
+        meetingLink: form.meetingLink?.trim() || null,
+        taskId: form.taskId || null,
+        assignedTo: assignee,
+        googleEventId,
+        googleCalendarId,
+      })
+      .returning({ id: events.id }),
+  );
   const newId = row?.id ?? null;
   if (newId) {
     try { await logActivity("event", newId, "create", { title: form.title, contactId: form.contactId }); } catch {}
@@ -369,18 +374,20 @@ export async function updateEvent(
 ): Promise<void> {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
-  const [existing] = await db
-    .select({
-      googleEventId: events.googleEventId,
-      googleCalendarId: events.googleCalendarId,
-      startAt: events.startAt,
-      endAt: events.endAt,
-      reminderAt: events.reminderAt,
-      allDay: events.allDay,
-    })
-    .from(events)
-    .where(and(eq(events.tenantId, auth.tenantId), eq(events.id, id)))
-    .limit(1);
+  const [existing] = await withTenantContextFromAuth(auth, (tx) =>
+    tx
+      .select({
+        googleEventId: events.googleEventId,
+        googleCalendarId: events.googleCalendarId,
+        startAt: events.startAt,
+        endAt: events.endAt,
+        reminderAt: events.reminderAt,
+        allDay: events.allDay,
+      })
+      .from(events)
+      .where(and(eq(events.tenantId, auth.tenantId), eq(events.id, id)))
+      .limit(1),
+  );
   if (existing?.googleEventId) {
     try {
       const valid = await getValidAccessToken(auth.userId, auth.tenantId);
@@ -428,39 +435,43 @@ export async function updateEvent(
   }
   const scheduleChanged = scheduleTimesOrReminderChanged(existing, form);
 
-  await db
-    .update(events)
-    .set({
-      ...(form.title != null && { title: form.title.trim() }),
-      ...(form.eventType != null && { eventType: form.eventType }),
-      ...(form.startAt != null && { startAt: parseInstantRequired("Začátek události", form.startAt) }),
-      ...(form.endAt != null && { endAt: parseInstantRequired("Konec události", form.endAt) }),
-      ...(form.allDay != null && { allDay: form.allDay }),
-      ...(form.location != null && { location: form.location.trim() || null }),
-      ...(form.contactId != null && { contactId: form.contactId || null }),
-      ...(form.opportunityId != null && { opportunityId: form.opportunityId || null }),
-      ...(form.reminderAt !== undefined && {
-        reminderAt: form.reminderAt ? parseInstantRequired("Připomínka", form.reminderAt) : null,
-      }),
-      ...(scheduleChanged && { reminderNotifiedAt: null }),
-      ...(form.status != null && { status: form.status.trim() || null }),
-      ...(form.notes != null && { notes: form.notes.trim() || null }),
-      ...(form.meetingLink != null && { meetingLink: form.meetingLink.trim() || null }),
-      ...(form.taskId != null && { taskId: form.taskId || null }),
-      updatedAt: new Date(),
-    })
-    .where(and(eq(events.tenantId, auth.tenantId), eq(events.id, id)));
+  await withTenantContextFromAuth(auth, (tx) =>
+    tx
+      .update(events)
+      .set({
+        ...(form.title != null && { title: form.title.trim() }),
+        ...(form.eventType != null && { eventType: form.eventType }),
+        ...(form.startAt != null && { startAt: parseInstantRequired("Začátek události", form.startAt) }),
+        ...(form.endAt != null && { endAt: parseInstantRequired("Konec události", form.endAt) }),
+        ...(form.allDay != null && { allDay: form.allDay }),
+        ...(form.location != null && { location: form.location.trim() || null }),
+        ...(form.contactId != null && { contactId: form.contactId || null }),
+        ...(form.opportunityId != null && { opportunityId: form.opportunityId || null }),
+        ...(form.reminderAt !== undefined && {
+          reminderAt: form.reminderAt ? parseInstantRequired("Připomínka", form.reminderAt) : null,
+        }),
+        ...(scheduleChanged && { reminderNotifiedAt: null }),
+        ...(form.status != null && { status: form.status.trim() || null }),
+        ...(form.notes != null && { notes: form.notes.trim() || null }),
+        ...(form.meetingLink != null && { meetingLink: form.meetingLink.trim() || null }),
+        ...(form.taskId != null && { taskId: form.taskId || null }),
+        updatedAt: new Date(),
+      })
+      .where(and(eq(events.tenantId, auth.tenantId), eq(events.id, id))),
+  );
   try { await logActivity("event", id, "update", { fields: Object.keys(form) }); } catch {}
 }
 
 export async function deleteEvent(id: string): Promise<void> {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
-  const [existing] = await db
-    .select({ googleEventId: events.googleEventId, googleCalendarId: events.googleCalendarId })
-    .from(events)
-    .where(and(eq(events.tenantId, auth.tenantId), eq(events.id, id)))
-    .limit(1);
+  const [existing] = await withTenantContextFromAuth(auth, (tx) =>
+    tx
+      .select({ googleEventId: events.googleEventId, googleCalendarId: events.googleCalendarId })
+      .from(events)
+      .where(and(eq(events.tenantId, auth.tenantId), eq(events.id, id)))
+      .limit(1),
+  );
   if (existing?.googleEventId) {
     try {
       const valid = await getValidAccessToken(auth.userId, auth.tenantId);
@@ -470,9 +481,9 @@ export async function deleteEvent(id: string): Promise<void> {
       // Google not connected or API error – still delete from DB
     }
   }
-  await db
-    .delete(events)
-    .where(and(eq(events.tenantId, auth.tenantId), eq(events.id, id)));
+  await withTenantContextFromAuth(auth, (tx) =>
+    tx.delete(events).where(and(eq(events.tenantId, auth.tenantId), eq(events.id, id))),
+  );
   try { await logActivity("event", id, "delete"); } catch {}
 }
 
@@ -488,33 +499,37 @@ export async function createFollowUp(
     if (type === "event") {
       const startAt = form.startAt ? parseInstantRequired("Začátek události", form.startAt) : new Date();
       const endAt = new Date(startAt.getTime() + DEFAULT_EVENT_DURATION_MS);
-      const [row] = await db
-        .insert(events)
-        .values({
-          tenantId: auth.tenantId,
-          title: form.title.trim(),
-          eventType: "followup",
-          startAt,
-          endAt,
-          contactId: form.contactId || null,
-          assignedTo: auth.userId,
-        })
-        .returning({ id: events.id });
+      const [row] = await withTenantContextFromAuth(auth, (tx) =>
+        tx
+          .insert(events)
+          .values({
+            tenantId: auth.tenantId,
+            title: form.title.trim(),
+            eventType: "followup",
+            startAt,
+            endAt,
+            contactId: form.contactId || null,
+            assignedTo: auth.userId,
+          })
+          .returning({ id: events.id }),
+      );
       return row?.id ?? null;
     }
 
     const dueFollowUp = form.dueDate?.trim() || defaultTaskDueDateYmd();
-    const [row] = await db
-      .insert(tasks)
-      .values({
-        tenantId: auth.tenantId,
-        title: form.title.trim(),
-        dueDate: dueFollowUp,
-        contactId: form.contactId || null,
-        assignedTo: auth.userId,
-        createdBy: auth.userId,
-      })
-      .returning({ id: tasks.id });
+    const [row] = await withTenantContextFromAuth(auth, (tx) =>
+      tx
+        .insert(tasks)
+        .values({
+          tenantId: auth.tenantId,
+          title: form.title.trim(),
+          dueDate: dueFollowUp,
+          contactId: form.contactId || null,
+          assignedTo: auth.userId,
+          createdBy: auth.userId,
+        })
+        .returning({ id: tasks.id }),
+    );
     return row?.id ?? null;
   } catch (e) {
     console.error("[createFollowUp]", e);

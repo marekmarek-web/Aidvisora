@@ -1,9 +1,10 @@
 "use server";
 
 import { requireAuthInAction } from "@/lib/auth/require-auth";
+import { withAuthContext, withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { getMembership } from "@/lib/auth/get-membership";
 import { hasPermission } from "@/lib/auth/permissions";
-import { db, tasks, contacts, opportunities, meetingNotes, eq, and, asc, desc, isNull, isNotNull, gte, lt, lte, sql } from "db";
+import { tasks, contacts, opportunities, meetingNotes, eq, and, asc, desc, isNull, isNotNull, gte, lt, lte, sql } from "db";
 import { logActivity } from "./activity";
 import { formatDisplayDateCs } from "@/lib/date/format-display-cs";
 import { defaultTaskDueDateYmd, normalizeIsoDateOnly } from "@/lib/date/date-only";
@@ -65,30 +66,32 @@ export async function getTasksList(
       break;
   }
 
-  const rows = await db
-    .select({
-      id: tasks.id,
-      title: tasks.title,
-      description: tasks.description,
-      contactId: tasks.contactId,
-      opportunityId: tasks.opportunityId,
-      dueDate: tasks.dueDate,
-      completedAt: tasks.completedAt,
-      createdAt: tasks.createdAt,
-      contactFirstName: contacts.firstName,
-      contactLastName: contacts.lastName,
-      contactPhone: contacts.phone,
-      contactEmail: contacts.email,
-      opportunityTitle: opportunities.title,
-    })
-    .from(tasks)
-    .leftJoin(contacts, eq(tasks.contactId, contacts.id))
-    .leftJoin(opportunities, eq(tasks.opportunityId, opportunities.id))
-    .where(and(...conditions))
-    .orderBy(
-      filter === "completed" ? desc(tasks.completedAt) : asc(tasks.dueDate),
-      asc(tasks.createdAt)
-    );
+  const rows = await withTenantContextFromAuth(auth, (tx) =>
+    tx
+      .select({
+        id: tasks.id,
+        title: tasks.title,
+        description: tasks.description,
+        contactId: tasks.contactId,
+        opportunityId: tasks.opportunityId,
+        dueDate: tasks.dueDate,
+        completedAt: tasks.completedAt,
+        createdAt: tasks.createdAt,
+        contactFirstName: contacts.firstName,
+        contactLastName: contacts.lastName,
+        contactPhone: contacts.phone,
+        contactEmail: contacts.email,
+        opportunityTitle: opportunities.title,
+      })
+      .from(tasks)
+      .leftJoin(contacts, eq(tasks.contactId, contacts.id))
+      .leftJoin(opportunities, eq(tasks.opportunityId, opportunities.id))
+      .where(and(...conditions))
+      .orderBy(
+        filter === "completed" ? desc(tasks.completedAt) : asc(tasks.dueDate),
+        asc(tasks.createdAt)
+      ),
+  );
 
   return rows.map((r) => ({
     id: r.id,
@@ -113,10 +116,12 @@ export async function getTasksList(
 export async function getOpenTasksCount(): Promise<number> {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "contacts:read")) return 0;
-  const rows = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(tasks)
-    .where(and(eq(tasks.tenantId, auth.tenantId), isNull(tasks.completedAt)));
+  const rows = await withTenantContextFromAuth(auth, (tx) =>
+    tx
+      .select({ count: sql<number>`count(*)::int` })
+      .from(tasks)
+      .where(and(eq(tasks.tenantId, auth.tenantId), isNull(tasks.completedAt))),
+  );
   return Number(rows[0]?.count ?? 0);
 }
 
@@ -129,16 +134,18 @@ export async function getTasksCounts(): Promise<TaskCounts> {
   weekEnd.setDate(weekEnd.getDate() + 7);
   const weekEndStr = weekEnd.toISOString().slice(0, 10);
 
-  const rows = await db
-    .select({
-      all: sql<number>`count(*) filter (where ${tasks.completedAt} is null)::int`,
-      today: sql<number>`count(*) filter (where ${tasks.completedAt} is null and ${tasks.dueDate} = ${today})::int`,
-      week: sql<number>`count(*) filter (where ${tasks.completedAt} is null and ${tasks.dueDate} >= ${today} and ${tasks.dueDate} <= ${weekEndStr})::int`,
-      overdue: sql<number>`count(*) filter (where ${tasks.completedAt} is null and ${tasks.dueDate} < ${today})::int`,
-      completed: sql<number>`count(*) filter (where ${tasks.completedAt} is not null)::int`,
-    })
-    .from(tasks)
-    .where(eq(tasks.tenantId, auth.tenantId));
+  const rows = await withTenantContextFromAuth(auth, (tx) =>
+    tx
+      .select({
+        all: sql<number>`count(*) filter (where ${tasks.completedAt} is null)::int`,
+        today: sql<number>`count(*) filter (where ${tasks.completedAt} is null and ${tasks.dueDate} = ${today})::int`,
+        week: sql<number>`count(*) filter (where ${tasks.completedAt} is null and ${tasks.dueDate} >= ${today} and ${tasks.dueDate} <= ${weekEndStr})::int`,
+        overdue: sql<number>`count(*) filter (where ${tasks.completedAt} is null and ${tasks.dueDate} < ${today})::int`,
+        completed: sql<number>`count(*) filter (where ${tasks.completedAt} is not null)::int`,
+      })
+      .from(tasks)
+      .where(eq(tasks.tenantId, auth.tenantId)),
+  );
 
   const r = rows[0];
   return {
@@ -157,27 +164,29 @@ export async function getTasksForDate(dateStr: string): Promise<TaskRow[]> {
     eq(tasks.tenantId, auth.tenantId),
     eq(tasks.dueDate, dateStr),
   ];
-  const rows = await db
-    .select({
-      id: tasks.id,
-      title: tasks.title,
-      description: tasks.description,
-      contactId: tasks.contactId,
-      opportunityId: tasks.opportunityId,
-      dueDate: tasks.dueDate,
-      completedAt: tasks.completedAt,
-      createdAt: tasks.createdAt,
-      contactFirstName: contacts.firstName,
-      contactLastName: contacts.lastName,
-      contactPhone: contacts.phone,
-      contactEmail: contacts.email,
-      opportunityTitle: opportunities.title,
-    })
-    .from(tasks)
-    .leftJoin(contacts, eq(tasks.contactId, contacts.id))
-    .leftJoin(opportunities, eq(tasks.opportunityId, opportunities.id))
-    .where(and(...conditions))
-    .orderBy(asc(tasks.createdAt));
+  const rows = await withTenantContextFromAuth(auth, (tx) =>
+    tx
+      .select({
+        id: tasks.id,
+        title: tasks.title,
+        description: tasks.description,
+        contactId: tasks.contactId,
+        opportunityId: tasks.opportunityId,
+        dueDate: tasks.dueDate,
+        completedAt: tasks.completedAt,
+        createdAt: tasks.createdAt,
+        contactFirstName: contacts.firstName,
+        contactLastName: contacts.lastName,
+        contactPhone: contacts.phone,
+        contactEmail: contacts.email,
+        opportunityTitle: opportunities.title,
+      })
+      .from(tasks)
+      .leftJoin(contacts, eq(tasks.contactId, contacts.id))
+      .leftJoin(opportunities, eq(tasks.opportunityId, opportunities.id))
+      .where(and(...conditions))
+      .orderBy(asc(tasks.createdAt)),
+  );
   return rows.map((r) => ({
     id: r.id,
     title: r.title,
@@ -197,27 +206,29 @@ export async function getTasksForDate(dateStr: string): Promise<TaskRow[]> {
 export async function getTasksByContactId(contactId: string): Promise<TaskRow[]> {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
-  const rows = await db
-    .select({
-      id: tasks.id,
-      title: tasks.title,
-      description: tasks.description,
-      contactId: tasks.contactId,
-      opportunityId: tasks.opportunityId,
-      dueDate: tasks.dueDate,
-      completedAt: tasks.completedAt,
-      createdAt: tasks.createdAt,
-      contactFirstName: contacts.firstName,
-      contactLastName: contacts.lastName,
-      contactPhone: contacts.phone,
-      contactEmail: contacts.email,
-      opportunityTitle: opportunities.title,
-    })
-    .from(tasks)
-    .leftJoin(contacts, eq(tasks.contactId, contacts.id))
-    .leftJoin(opportunities, eq(tasks.opportunityId, opportunities.id))
-    .where(and(eq(tasks.tenantId, auth.tenantId), eq(tasks.contactId, contactId)))
-    .orderBy(asc(tasks.dueDate), asc(tasks.createdAt));
+  const rows = await withTenantContextFromAuth(auth, (tx) =>
+    tx
+      .select({
+        id: tasks.id,
+        title: tasks.title,
+        description: tasks.description,
+        contactId: tasks.contactId,
+        opportunityId: tasks.opportunityId,
+        dueDate: tasks.dueDate,
+        completedAt: tasks.completedAt,
+        createdAt: tasks.createdAt,
+        contactFirstName: contacts.firstName,
+        contactLastName: contacts.lastName,
+        contactPhone: contacts.phone,
+        contactEmail: contacts.email,
+        opportunityTitle: opportunities.title,
+      })
+      .from(tasks)
+      .leftJoin(contacts, eq(tasks.contactId, contacts.id))
+      .leftJoin(opportunities, eq(tasks.opportunityId, opportunities.id))
+      .where(and(eq(tasks.tenantId, auth.tenantId), eq(tasks.contactId, contactId)))
+      .orderBy(asc(tasks.dueDate), asc(tasks.createdAt)),
+  );
   return rows.map((r) => ({
     id: r.id,
     title: r.title,
@@ -237,27 +248,29 @@ export async function getTasksByContactId(contactId: string): Promise<TaskRow[]>
 export async function getTasksByOpportunityId(oppId: string): Promise<TaskRow[]> {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
-  const rows = await db
-    .select({
-      id: tasks.id,
-      title: tasks.title,
-      description: tasks.description,
-      contactId: tasks.contactId,
-      opportunityId: tasks.opportunityId,
-      dueDate: tasks.dueDate,
-      completedAt: tasks.completedAt,
-      createdAt: tasks.createdAt,
-      contactFirstName: contacts.firstName,
-      contactLastName: contacts.lastName,
-      contactPhone: contacts.phone,
-      contactEmail: contacts.email,
-      opportunityTitle: opportunities.title,
-    })
-    .from(tasks)
-    .leftJoin(contacts, eq(tasks.contactId, contacts.id))
-    .leftJoin(opportunities, eq(tasks.opportunityId, opportunities.id))
-    .where(and(eq(tasks.tenantId, auth.tenantId), eq(tasks.opportunityId, oppId)))
-    .orderBy(asc(tasks.dueDate), asc(tasks.createdAt));
+  const rows = await withTenantContextFromAuth(auth, (tx) =>
+    tx
+      .select({
+        id: tasks.id,
+        title: tasks.title,
+        description: tasks.description,
+        contactId: tasks.contactId,
+        opportunityId: tasks.opportunityId,
+        dueDate: tasks.dueDate,
+        completedAt: tasks.completedAt,
+        createdAt: tasks.createdAt,
+        contactFirstName: contacts.firstName,
+        contactLastName: contacts.lastName,
+        contactPhone: contacts.phone,
+        contactEmail: contacts.email,
+        opportunityTitle: opportunities.title,
+      })
+      .from(tasks)
+      .leftJoin(contacts, eq(tasks.contactId, contacts.id))
+      .leftJoin(opportunities, eq(tasks.opportunityId, opportunities.id))
+      .where(and(eq(tasks.tenantId, auth.tenantId), eq(tasks.opportunityId, oppId)))
+      .orderBy(asc(tasks.dueDate), asc(tasks.createdAt)),
+  );
   return rows.map((r) => ({
     id: r.id,
     title: r.title,
@@ -301,20 +314,22 @@ export async function createTask(data: {
     const dueTrimmed = data.dueDate?.trim() ?? "";
     const dueDateResolved = dueTrimmed.length > 0 ? dueTrimmed : defaultTaskDueDateYmd();
 
-    const [row] = await db
-      .insert(tasks)
-      .values({
-        tenantId: auth.tenantId,
-        title: data.title.trim(),
-        description: data.description?.trim() || null,
-        contactId: data.contactId || null,
-        dueDate: dueDateResolved,
-        analysisId: data.analysisId || null,
-        opportunityId: data.opportunityId || null,
-        assignedTo: assignee,
-        createdBy: auth.userId,
-      })
-      .returning({ id: tasks.id });
+    const [row] = await withTenantContextFromAuth(auth, (tx) =>
+      tx
+        .insert(tasks)
+        .values({
+          tenantId: auth.tenantId,
+          title: data.title.trim(),
+          description: data.description?.trim() || null,
+          contactId: data.contactId || null,
+          dueDate: dueDateResolved,
+          analysisId: data.analysisId || null,
+          opportunityId: data.opportunityId || null,
+          assignedTo: assignee,
+          createdBy: auth.userId,
+        })
+        .returning({ id: tasks.id }),
+    );
     const newId = row?.id ?? null;
     if (newId) {
       try {
@@ -347,17 +362,19 @@ export async function updateTask(
     const auth = await requireAuthInAction();
     if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
 
-    await db
-      .update(tasks)
-      .set({
-        ...(data.title != null && { title: data.title.trim() }),
-        ...(data.description != null && { description: data.description.trim() || null }),
-        ...(data.contactId != null && { contactId: data.contactId || null }),
-        ...(data.dueDate != null && { dueDate: data.dueDate || null }),
-        ...(data.opportunityId != null && { opportunityId: data.opportunityId || null }),
-        updatedAt: new Date(),
-      })
-      .where(and(eq(tasks.tenantId, auth.tenantId), eq(tasks.id, id)));
+    await withTenantContextFromAuth(auth, (tx) =>
+      tx
+        .update(tasks)
+        .set({
+          ...(data.title != null && { title: data.title.trim() }),
+          ...(data.description != null && { description: data.description.trim() || null }),
+          ...(data.contactId != null && { contactId: data.contactId || null }),
+          ...(data.dueDate != null && { dueDate: data.dueDate || null }),
+          ...(data.opportunityId != null && { opportunityId: data.opportunityId || null }),
+          updatedAt: new Date(),
+        })
+        .where(and(eq(tasks.tenantId, auth.tenantId), eq(tasks.id, id))),
+    );
   } catch (e) {
     console.error("[updateTask]", e);
     throw new Error(e instanceof Error ? e.message : "Úkol se nepodařilo upravit.");
@@ -369,9 +386,9 @@ export async function deleteTask(id: string): Promise<void> {
     const auth = await requireAuthInAction();
     if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
 
-    await db
-      .delete(tasks)
-      .where(and(eq(tasks.tenantId, auth.tenantId), eq(tasks.id, id)));
+    await withTenantContextFromAuth(auth, (tx) =>
+      tx.delete(tasks).where(and(eq(tasks.tenantId, auth.tenantId), eq(tasks.id, id))),
+    );
     try { await logActivity("task", id, "delete"); } catch {}
   } catch (e) {
     console.error("[deleteTask]", e);
@@ -384,10 +401,12 @@ export async function completeTask(id: string): Promise<void> {
     const auth = await requireAuthInAction();
     if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
 
-    await db
-      .update(tasks)
-      .set({ completedAt: new Date(), updatedAt: new Date() })
-      .where(and(eq(tasks.tenantId, auth.tenantId), eq(tasks.id, id)));
+    await withTenantContextFromAuth(auth, (tx) =>
+      tx
+        .update(tasks)
+        .set({ completedAt: new Date(), updatedAt: new Date() })
+        .where(and(eq(tasks.tenantId, auth.tenantId), eq(tasks.id, id))),
+    );
     try { await logActivity("task", id, "complete"); } catch {}
   } catch (e) {
     console.error("[completeTask]", e);
@@ -400,10 +419,12 @@ export async function reopenTask(id: string): Promise<void> {
     const auth = await requireAuthInAction();
     if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
 
-    await db
-      .update(tasks)
-      .set({ completedAt: null, updatedAt: new Date() })
-      .where(and(eq(tasks.tenantId, auth.tenantId), eq(tasks.id, id)));
+    await withTenantContextFromAuth(auth, (tx) =>
+      tx
+        .update(tasks)
+        .set({ completedAt: null, updatedAt: new Date() })
+        .where(and(eq(tasks.tenantId, auth.tenantId), eq(tasks.id, id))),
+    );
   } catch (e) {
     console.error("[reopenTask]", e);
     throw new Error(e instanceof Error ? e.message : "Úkol se nepodařilo znovu otevřít.");
@@ -425,18 +446,20 @@ export async function moveTaskToNotesBoard(taskId: string): Promise<{ noteId: st
     throw new Error("Nemáte oprávnění k vytváření zápisků.");
   }
 
-  const taskRows = await db
-    .select({
-      id: tasks.id,
-      title: tasks.title,
-      description: tasks.description,
-      contactId: tasks.contactId,
-      opportunityId: tasks.opportunityId,
-      dueDate: tasks.dueDate,
-    })
-    .from(tasks)
-    .where(and(eq(tasks.tenantId, auth.tenantId), eq(tasks.id, taskId)))
-    .limit(1);
+  const taskRows = await withTenantContextFromAuth(auth, (tx) =>
+    tx
+      .select({
+        id: tasks.id,
+        title: tasks.title,
+        description: tasks.description,
+        contactId: tasks.contactId,
+        opportunityId: tasks.opportunityId,
+        dueDate: tasks.dueDate,
+      })
+      .from(tasks)
+      .where(and(eq(tasks.tenantId, auth.tenantId), eq(tasks.id, taskId)))
+      .limit(1),
+  );
 
   const task = taskRows[0];
   if (!task) {
@@ -474,7 +497,7 @@ export async function moveTaskToNotesBoard(taskId: string): Promise<{ noteId: st
   let lastError: unknown = null;
   for (const { contactId, opportunityId } of attempts) {
     try {
-      const noteId = await db.transaction(async (tx) => {
+      const noteId = await withTenantContextFromAuth(auth, async (tx) => {
         const [row] = await tx
           .insert(meetingNotes)
           .values({

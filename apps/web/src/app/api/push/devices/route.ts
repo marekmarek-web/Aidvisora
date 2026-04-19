@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { and, db, eq, userDevices } from "db";
+import { and, eq, userDevices } from "db";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { createClient } from "@/lib/supabase/server";
 import { getMembership } from "@/lib/auth/get-membership";
 import { z } from "zod";
@@ -47,23 +48,13 @@ export async function POST(request: Request) {
     }
     const { pushToken, platform, deviceName, appVersion } = parsed.data;
 
-    await db
-      .insert(userDevices)
-      .values({
-        tenantId: auth.tenantId,
-        userId: auth.userId,
-        pushToken,
-        platform,
-        deviceName: deviceName || null,
-        appVersion: appVersion || null,
-        pushEnabled: true,
-        lastSeenAt: new Date(),
-        revokedAt: null,
-        updatedAt: new Date(),
-      })
-      .onConflictDoUpdate({
-        target: [userDevices.tenantId, userDevices.userId, userDevices.pushToken],
-        set: {
+    await withTenantContextFromAuth({ tenantId: auth.tenantId, userId: auth.userId }, (tx) =>
+      tx
+        .insert(userDevices)
+        .values({
+          tenantId: auth.tenantId,
+          userId: auth.userId,
+          pushToken,
           platform,
           deviceName: deviceName || null,
           appVersion: appVersion || null,
@@ -71,8 +62,20 @@ export async function POST(request: Request) {
           lastSeenAt: new Date(),
           revokedAt: null,
           updatedAt: new Date(),
-        },
-      });
+        })
+        .onConflictDoUpdate({
+          target: [userDevices.tenantId, userDevices.userId, userDevices.pushToken],
+          set: {
+            platform,
+            deviceName: deviceName || null,
+            appVersion: appVersion || null,
+            pushEnabled: true,
+            lastSeenAt: new Date(),
+            revokedAt: null,
+            updatedAt: new Date(),
+          },
+        }),
+    );
 
     await logAudit({
       tenantId: auth.tenantId,
@@ -117,14 +120,16 @@ export async function DELETE(request: Request) {
     const { pushToken, allDevices } = parsed.data;
 
     if (allDevices) {
-      await db
-        .update(userDevices)
-        .set({
-          pushEnabled: false,
-          revokedAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(and(eq(userDevices.tenantId, auth.tenantId), eq(userDevices.userId, auth.userId)));
+      await withTenantContextFromAuth({ tenantId: auth.tenantId, userId: auth.userId }, (tx) =>
+        tx
+          .update(userDevices)
+          .set({
+            pushEnabled: false,
+            revokedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(and(eq(userDevices.tenantId, auth.tenantId), eq(userDevices.userId, auth.userId))),
+      );
 
       await logAudit({
         tenantId: auth.tenantId,
@@ -140,14 +145,16 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "Push token is required." }, { status: 400 });
     }
 
-    await db
-      .update(userDevices)
-      .set({
-        pushEnabled: false,
-        revokedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(and(eq(userDevices.tenantId, auth.tenantId), eq(userDevices.userId, auth.userId), eq(userDevices.pushToken, pushToken)));
+    await withTenantContextFromAuth({ tenantId: auth.tenantId, userId: auth.userId }, (tx) =>
+      tx
+        .update(userDevices)
+        .set({
+          pushEnabled: false,
+          revokedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(and(eq(userDevices.tenantId, auth.tenantId), eq(userDevices.userId, auth.userId), eq(userDevices.pushToken, pushToken))),
+    );
 
     await logAudit({
       tenantId: auth.tenantId,

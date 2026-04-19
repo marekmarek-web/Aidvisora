@@ -3,7 +3,8 @@ import { PDFDocument } from "pdf-lib";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { getMembership } from "@/lib/auth/get-membership";
 import { hasPermission, type RoleName } from "@/lib/auth/permissions";
-import { db, documents, activityLog, contacts, eq, and } from "db";
+import { documents, activityLog, contacts, eq, and } from "db";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { detectMagicMimeTypeFromBytes, mimeMatchesAllowedSignature } from "@/lib/security/file-signature";
 import { isUuid, sanitizeStorageSegment, toTrimmedString } from "@/lib/security/validation";
@@ -104,12 +105,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Neplatný klient." }, { status: 400 });
     }
     if (contactId) {
-      const [row] = await db
-        .select({ id: contacts.id })
-        .from(contacts)
-        .where(and(eq(contacts.id, contactId), eq(contacts.tenantId, membership.tenantId)))
-        .limit(1);
-      if (!row) return NextResponse.json({ error: "Klient nenalezen." }, { status: 403 });
+      const found = await withTenantContextFromAuth(
+        { tenantId: membership.tenantId, userId: user.id },
+        async (tx) => {
+          const [row] = await tx
+            .select({ id: contacts.id })
+            .from(contacts)
+            .where(and(eq(contacts.id, contactId), eq(contacts.tenantId, membership.tenantId)))
+            .limit(1);
+          return !!row;
+        },
+      );
+      if (!found) return NextResponse.json({ error: "Klient nenalezen." }, { status: 403 });
     }
 
     const prepared: { bytes: Uint8Array; pageCount: number; displayName: string } = await (async () => {
@@ -189,49 +196,55 @@ export async function POST(request: Request) {
 
     const sourceChannel: DocumentSourceChannel = "portal_quick_upload";
 
-    const [inserted] = await db
-      .insert(documents)
-      .values({
-        tenantId: membership.tenantId,
-        contactId,
-        name: docName,
-        storagePath,
-        mimeType: "application/pdf",
-        sizeBytes: prepared.bytes.byteLength,
-        tags,
-        visibleToClient,
-        uploadSource,
-        uploadedBy: user.id,
-        pageCount: prepared.pageCount,
-        isScanLike: false,
-        sourceChannel,
-        documentFingerprint: fingerprint,
-        captureMode: "quick_upload",
-        processingStatus: "queued",
-      })
-      .returning({
-        id: documents.id,
-        name: documents.name,
-        mimeType: documents.mimeType,
-        sizeBytes: documents.sizeBytes,
-        processingStatus: documents.processingStatus,
-      });
+    const inserted = await withTenantContextFromAuth(
+      { tenantId: membership.tenantId, userId: user.id },
+      async (tx) => {
+        const [row] = await tx
+          .insert(documents)
+          .values({
+            tenantId: membership.tenantId,
+            contactId,
+            name: docName,
+            storagePath,
+            mimeType: "application/pdf",
+            sizeBytes: prepared.bytes.byteLength,
+            tags,
+            visibleToClient,
+            uploadSource,
+            uploadedBy: user.id,
+            pageCount: prepared.pageCount,
+            isScanLike: false,
+            sourceChannel,
+            documentFingerprint: fingerprint,
+            captureMode: "quick_upload",
+            processingStatus: "queued",
+          })
+          .returning({
+            id: documents.id,
+            name: documents.name,
+            mimeType: documents.mimeType,
+            sizeBytes: documents.sizeBytes,
+            processingStatus: documents.processingStatus,
+          });
+        if (!row?.id) return null;
+        await tx
+          .insert(activityLog)
+          .values({
+            tenantId: membership.tenantId,
+            userId: user.id,
+            entityType: "document",
+            entityId: row.id,
+            action: "upload",
+            meta: { contactId: contactId ?? undefined, uploadSource, name: docName, quickUpload: true },
+          })
+          .catch(() => {});
+        return row;
+      },
+    );
 
     if (!inserted?.id) {
       return NextResponse.json({ error: "Nepodařilo se uložit dokument." }, { status: 500 });
     }
-
-    await db
-      .insert(activityLog)
-      .values({
-        tenantId: membership.tenantId,
-        userId: user.id,
-        entityType: "document",
-        entityId: inserted.id,
-        action: "upload",
-        meta: { contactId: contactId ?? undefined, uploadSource, name: docName, quickUpload: true },
-      })
-      .catch(() => {});
 
     await logAudit({
       tenantId: membership.tenantId,

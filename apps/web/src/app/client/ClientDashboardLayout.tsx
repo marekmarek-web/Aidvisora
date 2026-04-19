@@ -18,9 +18,11 @@ import {
 } from "lucide-react";
 import type { ClientRequestItem } from "@/app/lib/client-portal/request-types";
 import type { MaterialRequestListItem } from "@/lib/advisor-material-requests/display";
+import type { ClientAdvisorProposal } from "@/app/actions/advisor-proposals-client";
 import { ClientZoneExportButton } from "./ClientZoneExportButton";
 import { NewRequestModal } from "./NewRequestModal";
 import { AiSupportButton } from "./AiSupportButton";
+import { AdvisorProposalsHighlightCard } from "./AdvisorProposalsHighlightCard";
 import { isClientPortalAiDisabled } from "@/lib/client-portal/feature-flags";
 
 type QuickStats = {
@@ -64,6 +66,7 @@ type ClientDashboardLayoutProps = {
   } | null;
   financialSummary: ClientPortalFinancialSummary | null;
   advisorMaterialRequests: MaterialRequestListItem[];
+  advisorProposals: ClientAdvisorProposal[];
 };
 
 function formatMoney(value: number): string {
@@ -91,6 +94,7 @@ export function ClientDashboardLayout({
   latestNotification,
   financialSummary,
   advisorMaterialRequests,
+  advisorProposals,
 }: ClientDashboardLayoutProps) {
   const [requestModalOpen, setRequestModalOpen] = useState(false);
 
@@ -116,6 +120,8 @@ export function ClientDashboardLayout({
           Nový požadavek
         </button>
       </div>
+
+      <AdvisorProposalsHighlightCard proposals={advisorProposals} />
 
       {contractsCount === 0 && (
         <div className="rounded-[24px] border border-indigo-100 bg-indigo-50/90 p-6 sm:p-8 shadow-sm">

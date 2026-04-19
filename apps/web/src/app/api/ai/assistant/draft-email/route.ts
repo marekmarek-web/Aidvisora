@@ -83,18 +83,23 @@ export async function POST(request: Request) {
     let draftId: string | null = null;
     if (body.persist === true) {
       try {
-        const { db, communicationDrafts } = await import("db");
-        const [row] = await db
-          .insert(communicationDrafts)
-          .values({
-            tenantId: membership.tenantId,
-            createdBy: userId,
-            contactId: clientId,
-            draftType: contextType === "post_meeting" ? "followup_after_review" : contextType === "missing_data" ? "request_missing_data_email" : "client_reminder_email",
-            subject,
-            body: bodyText,
-          })
-          .returning();
+        const { communicationDrafts } = await import("db");
+        const { withTenantContextFromAuth } = await import("@/lib/auth/with-auth-context");
+        const [row] = await withTenantContextFromAuth(
+          { tenantId: membership.tenantId, userId },
+          (tx) =>
+            tx
+              .insert(communicationDrafts)
+              .values({
+                tenantId: membership.tenantId,
+                createdBy: userId,
+                contactId: clientId,
+                draftType: contextType === "post_meeting" ? "followup_after_review" : contextType === "missing_data" ? "request_missing_data_email" : "client_reminder_email",
+                subject,
+                body: bodyText,
+              })
+              .returning(),
+        );
         draftId = row.id;
       } catch { /* persist is best-effort */ }
     }

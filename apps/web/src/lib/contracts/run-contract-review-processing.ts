@@ -222,7 +222,7 @@ export async function runContractReviewProcessing(params: RunContractReviewProce
 
   // Fetch Adobe structured data early so it can power core extraction.
   // Also used later in subdocument orchestration (reused, not re-fetched).
-  const earlyAdobeStructured = await fetchAdobeStructuredDataByStoragePath(storagePath).catch(() => null);
+  const earlyAdobeStructured = await fetchAdobeStructuredDataByStoragePath(storagePath, tenantId).catch(() => null);
   const earlyStructuredResult = earlyAdobeStructured?.structured ?? null;
 
   // Enrich markdown-derived candidates with precise page numbers from structured headings.

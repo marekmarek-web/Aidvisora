@@ -2,12 +2,14 @@
 
 import { cache } from "react";
 import { requireAuthInAction, type AuthContext } from "@/lib/auth/require-auth";
+import { withAuthContext, withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { getHouseholdIdForContactWithAuth, getHouseholdsListWithAuth } from "@/app/actions/households";
 import { hasPermission } from "@/lib/auth/permissions";
 import { db } from "db";
 import { contacts, contractUploadReviews } from "db";
 import { eq, and, asc, inArray, isNull, sql, desc, or } from "db";
 import { createAdminClient } from "@/lib/supabase/server";
+import { logAuditAction } from "@/lib/audit";
 import {
   parseContractWizardPrefillFromReviewData,
   shouldSuppressContractWizardPrefillAfterApply,
@@ -53,38 +55,39 @@ export type ContactRow = {
 };
 
 export async function getContactsList(): Promise<ContactRow[]> {
-  const auth = await requireAuthInAction();
-  if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
-  const rows = await db
-    .select({
-      id: contacts.id,
-      firstName: contacts.firstName,
-      lastName: contacts.lastName,
-      email: contacts.email,
-      phone: contacts.phone,
-      title: contacts.title,
-      referralSource: contacts.referralSource,
-      referralContactId: contacts.referralContactId,
-      tags: contacts.tags,
-      lifecycleStage: contacts.lifecycleStage,
-      leadSource: contacts.leadSource,
-      leadSourceUrl: contacts.leadSourceUrl,
-    })
-    .from(contacts)
-    .where(and(eq(contacts.tenantId, auth.tenantId), isNull(contacts.archivedAt)))
-    .orderBy(asc(contacts.lastName), asc(contacts.firstName));
-  return rows;
+  return withAuthContext(async (auth, tx) => {
+    if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
+    return tx
+      .select({
+        id: contacts.id,
+        firstName: contacts.firstName,
+        lastName: contacts.lastName,
+        email: contacts.email,
+        phone: contacts.phone,
+        title: contacts.title,
+        referralSource: contacts.referralSource,
+        referralContactId: contacts.referralContactId,
+        tags: contacts.tags,
+        lifecycleStage: contacts.lifecycleStage,
+        leadSource: contacts.leadSource,
+        leadSourceUrl: contacts.leadSourceUrl,
+      })
+      .from(contacts)
+      .where(and(eq(contacts.tenantId, auth.tenantId), isNull(contacts.archivedAt)))
+      .orderBy(asc(contacts.lastName), asc(contacts.firstName));
+  });
 }
 
 /** Počet nearchivovaných kontaktů v tenantovi (např. first-run onboarding). Dedup v rámci jednoho RSC requestu (layout + gate). */
 async function loadContactsCount(): Promise<number> {
-  const auth = await requireAuthInAction();
-  if (!hasPermission(auth.roleName, "contacts:read")) return 0;
-  const [row] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(contacts)
-    .where(and(eq(contacts.tenantId, auth.tenantId), isNull(contacts.archivedAt)));
-  return row?.count ?? 0;
+  return withAuthContext(async (auth, tx) => {
+    if (!hasPermission(auth.roleName, "contacts:read")) return 0;
+    const [row] = await tx
+      .select({ count: sql<number>`count(*)::int` })
+      .from(contacts)
+      .where(and(eq(contacts.tenantId, auth.tenantId), isNull(contacts.archivedAt)));
+    return row?.count ?? 0;
+  });
 }
 
 export const getContactsCount = cache(loadContactsCount);
@@ -97,20 +100,21 @@ function escapeCsvCell(s: string | null | undefined): string {
 }
 
 export async function exportContactsCsv(): Promise<string> {
-  const auth = await requireAuthInAction();
-  if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
-  const rows = await db
-    .select({
-      firstName: contacts.firstName,
-      lastName: contacts.lastName,
-      email: contacts.email,
-      phone: contacts.phone,
-      city: contacts.city,
-      lifecycleStage: contacts.lifecycleStage,
-    })
-    .from(contacts)
-    .where(and(eq(contacts.tenantId, auth.tenantId), isNull(contacts.archivedAt)))
-    .orderBy(asc(contacts.lastName), asc(contacts.firstName));
+  const rows = await withAuthContext(async (auth, tx) => {
+    if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
+    return tx
+      .select({
+        firstName: contacts.firstName,
+        lastName: contacts.lastName,
+        email: contacts.email,
+        phone: contacts.phone,
+        city: contacts.city,
+        lifecycleStage: contacts.lifecycleStage,
+      })
+      .from(contacts)
+      .where(and(eq(contacts.tenantId, auth.tenantId), isNull(contacts.archivedAt)))
+      .orderBy(asc(contacts.lastName), asc(contacts.firstName));
+  });
 
   const header = "Jméno,Příjmení,E-mail,Telefon,Město,Fáze";
   const lines = rows.map(
@@ -198,13 +202,20 @@ const contactDetailExtendedSelect = {
   preferredChannel: contacts.preferredChannel,
 } as const;
 
-async function loadContactWithAuth(auth: AuthContext, id: string): Promise<ContactRow | null> {
+/** `db` nebo tx z `withTenantContext` — strukturálně kompatibilní `select` API. */
+type ContactReader = Pick<typeof db, "select">;
+
+async function loadContactWithAuth(
+  auth: AuthContext,
+  id: string,
+  reader: ContactReader = db,
+): Promise<ContactRow | null> {
   try {
     if (!hasPermission(auth.roleName, "contacts:read")) return null;
 
     let row: Record<string, unknown> | undefined;
     try {
-      const rows = await db
+      const rows = await reader
         .select(contactDetailExtendedSelect)
         .from(contacts)
         .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, id)))
@@ -214,7 +225,7 @@ async function loadContactWithAuth(auth: AuthContext, id: string): Promise<Conta
       if (isRedirectError(e)) throw e;
       if (!isPgUndefinedColumn(e)) throw e;
       console.warn("[getContact] extended columns missing, using core select");
-      const rows = await db
+      const rows = await reader
         .select(contactDetailCoreSelect)
         .from(contacts)
         .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, id)))
@@ -228,7 +239,7 @@ async function loadContactWithAuth(auth: AuthContext, id: string): Promise<Conta
     let referralContactName: string | null = null;
     if (referralContactId) {
       try {
-        const [refContact] = await db
+        const [refContact] = await reader
           .select({ firstName: contacts.firstName, lastName: contacts.lastName })
           .from(contacts)
           .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, referralContactId)))
@@ -281,8 +292,7 @@ async function loadContactWithAuth(auth: AuthContext, id: string): Promise<Conta
 }
 
 async function loadContact(id: string): Promise<ContactRow | null> {
-  const auth = await requireAuthInAction();
-  return loadContactWithAuth(auth, id);
+  return withAuthContext((auth, tx) => loadContactWithAuth(auth, id, tx));
 }
 
 /** Dedup v rámci jednoho requestu; vrací výhradně JSON-kompatibilní ContactRow pro RSC. */
@@ -298,19 +308,20 @@ export type ContactNamePickerRow = {
 
 /** Úzký výběr pro dropdown „Doporučen od“ / picker kontaktů (edit stránka, zápisky). */
 export async function getContactNamePickerRows(): Promise<ContactNamePickerRow[]> {
-  const auth = await requireAuthInAction();
-  if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
-  return db
-    .select({
-      id: contacts.id,
-      firstName: contacts.firstName,
-      lastName: contacts.lastName,
-      email: contacts.email,
-      phone: contacts.phone,
-    })
-    .from(contacts)
-    .where(and(eq(contacts.tenantId, auth.tenantId), isNull(contacts.archivedAt)))
-    .orderBy(asc(contacts.lastName), asc(contacts.firstName));
+  return withAuthContext(async (auth, tx) => {
+    if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
+    return tx
+      .select({
+        id: contacts.id,
+        firstName: contacts.firstName,
+        lastName: contacts.lastName,
+        email: contacts.email,
+        phone: contacts.phone,
+      })
+      .from(contacts)
+      .where(and(eq(contacts.tenantId, auth.tenantId), isNull(contacts.archivedAt)))
+      .orderBy(asc(contacts.lastName), asc(contacts.firstName));
+  });
 }
 
 export type ContactEditPageBundle = {
@@ -322,32 +333,33 @@ export type ContactEditPageBundle = {
 
 /** Jeden round-trip pro portal edit kontaktu (kontakt + domácnost + pickery). */
 export async function getContactEditPageData(contactId: string): Promise<ContactEditPageBundle> {
-  const auth = await requireAuthInAction();
-  if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
-  const [contact, householdId, pickerRows, householdRows] = await Promise.all([
-    loadContactWithAuth(auth, contactId),
-    getHouseholdIdForContactWithAuth(auth, contactId),
-    db
-      .select({
-        id: contacts.id,
-        firstName: contacts.firstName,
-        lastName: contacts.lastName,
-        email: contacts.email,
-        phone: contacts.phone,
-      })
-      .from(contacts)
-      .where(and(eq(contacts.tenantId, auth.tenantId), isNull(contacts.archivedAt)))
-      .orderBy(asc(contacts.lastName), asc(contacts.firstName)),
-    getHouseholdsListWithAuth(auth),
-  ]);
-  return {
-    contact,
-    householdId,
-    referralPicker: pickerRows
-      .filter((r) => r.id !== contactId)
-      .map((r) => ({ id: r.id, label: `${r.firstName} ${r.lastName}` })),
-    householdOptions: householdRows.map((h) => ({ id: h.id, name: h.name })),
-  };
+  return withAuthContext(async (auth, tx) => {
+    if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
+    const [contact, householdId, pickerRows, householdRows] = await Promise.all([
+      loadContactWithAuth(auth, contactId, tx),
+      getHouseholdIdForContactWithAuth(auth, contactId, tx),
+      tx
+        .select({
+          id: contacts.id,
+          firstName: contacts.firstName,
+          lastName: contacts.lastName,
+          email: contacts.email,
+          phone: contacts.phone,
+        })
+        .from(contacts)
+        .where(and(eq(contacts.tenantId, auth.tenantId), isNull(contacts.archivedAt)))
+        .orderBy(asc(contacts.lastName), asc(contacts.firstName)),
+      getHouseholdsListWithAuth(auth, tx),
+    ]);
+    return {
+      contact,
+      householdId,
+      referralPicker: pickerRows
+        .filter((r) => r.id !== contactId)
+        .map((r) => ({ id: r.id, label: `${r.firstName} ${r.lastName}` })),
+      householdOptions: householdRows.map((h) => ({ id: h.id, name: h.name })),
+    };
+  });
 }
 
 /** Stejný tvar jako u detailu kontaktu — platné UUID v1–v5 z DB. */
@@ -411,11 +423,11 @@ export async function createContact(form: {
   birthGreetingOptOut?: boolean;
 }): Promise<CreateContactResult> {
   try {
-    const auth = await requireAuthInAction();
+    return await withAuthContext(async (auth, tx) => {
     if (!hasPermission(auth.roleName, "contacts:write")) {
       return { ok: false, message: "Nemáte oprávnění vytvářet kontakty." };
     }
-    const [row] = await db
+    const [row] = await tx
       .insert(contacts)
       .values({
         tenantId: auth.tenantId,
@@ -449,6 +461,7 @@ export async function createContact(form: {
       return { ok: false, message: "Kontakt se nepodařilo vytvořit. Zkuste to znovu." };
     }
     return { ok: true, id };
+    });
   } catch (e) {
     if (isRedirectError(e)) throw e;
     console.error("[createContact]", e);
@@ -495,19 +508,20 @@ export async function clientUpdateProfile(form: {
   city?: string;
   zip?: string;
 }) {
-  const auth = await requireAuthInAction();
-  if (auth.roleName !== "Client" || !auth.contactId) throw new Error("Forbidden");
-  await db
-    .update(contacts)
-    .set({
-      phone: form.phone?.trim() || null,
-      email: form.email?.trim() || null,
-      street: form.street?.trim() || null,
-      city: form.city?.trim() || null,
-      zip: form.zip?.trim() || null,
-      updatedAt: new Date(),
-    })
-    .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, auth.contactId)));
+  return withAuthContext(async (auth, tx) => {
+    if (auth.roleName !== "Client" || !auth.contactId) throw new Error("Forbidden");
+    await tx
+      .update(contacts)
+      .set({
+        phone: form.phone?.trim() || null,
+        email: form.email?.trim() || null,
+        street: form.street?.trim() || null,
+        city: form.city?.trim() || null,
+        zip: form.zip?.trim() || null,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, auth.contactId)));
+  });
 }
 
 export async function updateContact(
@@ -540,7 +554,7 @@ export async function updateContact(
   }
 ) {
   try {
-    const auth = await requireAuthInAction();
+    await withAuthContext(async (auth, tx) => {
     if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
     const hasOwn = (key: string) => Object.prototype.hasOwnProperty.call(form, key);
     const patch: Record<string, unknown> = {
@@ -584,10 +598,23 @@ export async function updateContact(
       throw new Error("Nebylo předáno žádné pole k aktualizaci kontaktu.");
     }
 
-    await db
+    await tx
       .update(contacts)
       .set(patch)
       .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, id)));
+
+    // WS-2 Batch 2 / minimal audit coverage — client profile update.
+    // Meta cíleně neobsahuje hodnoty polí (PII), jen seznam změněných klíčů.
+    const changedKeys = Object.keys(patch).filter((k) => k !== "updatedAt");
+    logAuditAction({
+      tenantId: auth.tenantId,
+      userId: auth.userId,
+      action: "contact.update",
+      entityType: "contact",
+      entityId: id,
+      meta: { changedFields: changedKeys, roleName: auth.roleName },
+    });
+    });
   } catch (e) {
     console.error("[updateContact]", e);
     throw new Error(e instanceof Error ? e.message : "Kontakt se nepodařilo upravit.");
@@ -600,6 +627,7 @@ const AVATAR_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 /** Nahraje profilovou fotku kontaktu do Storage a uloží URL do contacts.avatar_url. */
 export async function uploadContactAvatar(contactId: string, formData: FormData): Promise<string | null> {
   const auth = await requireAuthInAction();
+  // Storage operations sit outside DB transaction on purpose (Supabase admin client). DB writes below run under tenant GUC.
   if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
   const file = formData.get("file") as File | null;
   if (!file?.size) throw new Error("Vyberte obrázek");
@@ -626,10 +654,12 @@ export async function uploadContactAvatar(contactId: string, formData: FormData)
     url = urlData?.publicUrl ?? null;
   }
   if (url) {
-    await db
-      .update(contacts)
-      .set({ avatarUrl: url, updatedAt: new Date() })
-      .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, contactId)));
+    await withTenantContextFromAuth(auth, (tx) =>
+      tx
+        .update(contacts)
+        .set({ avatarUrl: url, updatedAt: new Date() })
+        .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, contactId))),
+    );
   }
   return url;
 }
@@ -642,16 +672,27 @@ export async function deleteContact(id: string): Promise<void> {
 
 export async function archiveContact(id: string, reason?: string): Promise<void> {
   try {
-    const auth = await requireAuthInAction();
-    if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
-    await db
-      .update(contacts)
-      .set({
-        archivedAt: new Date(),
-        archivedReason: reason?.trim() || null,
-        updatedAt: new Date(),
-      })
-      .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, id)));
+    await withAuthContext(async (auth, tx) => {
+      if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
+      await tx
+        .update(contacts)
+        .set({
+          archivedAt: new Date(),
+          archivedReason: reason?.trim() || null,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, id)));
+
+      // WS-2 Batch 2 / minimal audit coverage — contact archive (soft delete).
+      logAuditAction({
+        tenantId: auth.tenantId,
+        userId: auth.userId,
+        action: "contact.archive",
+        entityType: "contact",
+        entityId: id,
+        meta: { reason: reason?.trim() || null, roleName: auth.roleName },
+      });
+    });
   } catch (e) {
     console.error("[archiveContact]", e);
     throw new Error(e instanceof Error ? e.message : "Kontakt se nepodařilo archivovat.");
@@ -660,16 +701,17 @@ export async function archiveContact(id: string, reason?: string): Promise<void>
 
 export async function restoreContact(id: string): Promise<void> {
   try {
-    const auth = await requireAuthInAction();
-    if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
-    await db
-      .update(contacts)
-      .set({
-        archivedAt: null,
-        archivedReason: null,
-        updatedAt: new Date(),
-      })
-      .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, id)));
+    await withAuthContext(async (auth, tx) => {
+      if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
+      await tx
+        .update(contacts)
+        .set({
+          archivedAt: null,
+          archivedReason: null,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, id)));
+    });
   } catch (e) {
     console.error("[restoreContact]", e);
     throw new Error(e instanceof Error ? e.message : "Kontakt se nepodařilo obnovit.");
@@ -683,10 +725,12 @@ export async function permanentlyDeleteContacts(ids: string[]): Promise<void> {
   const unique = [...new Set(ids.map((x) => x.trim()).filter(Boolean))];
   if (unique.length === 0) return;
 
-  const rows = await db
-    .select({ id: contacts.id })
-    .from(contacts)
-    .where(and(eq(contacts.tenantId, auth.tenantId), inArray(contacts.id, unique)));
+  const rows = await withTenantContextFromAuth(auth, (tx) =>
+    tx
+      .select({ id: contacts.id })
+      .from(contacts)
+      .where(and(eq(contacts.tenantId, auth.tenantId), inArray(contacts.id, unique))),
+  );
   if (rows.length !== unique.length) {
     throw new Error("Některé kontakty neexistují nebo k nim nemáte přístup.");
   }
@@ -707,7 +751,21 @@ export async function permanentlyDeleteContacts(ids: string[]): Promise<void> {
   }
 
   try {
-    await db.delete(contacts).where(and(eq(contacts.tenantId, auth.tenantId), inArray(contacts.id, unique)));
+    await withTenantContextFromAuth(auth, (tx) =>
+      tx.delete(contacts).where(and(eq(contacts.tenantId, auth.tenantId), inArray(contacts.id, unique))),
+    );
+    // WS-2 Batch 2 / minimal audit coverage — hard delete kontaktu.
+    // Critical risk — log vždy, nikdy ne fire-and-forget na úrovni tohoto volání.
+    for (const contactId of unique) {
+      logAuditAction({
+        tenantId: auth.tenantId,
+        userId: auth.userId,
+        action: "contact.delete",
+        entityType: "contact",
+        entityId: contactId,
+        meta: { roleName: auth.roleName, batchSize: unique.length },
+      });
+    }
   } catch (e) {
     console.error("[permanentlyDeleteContacts]", e);
     const code = typeof e === "object" && e !== null && "code" in e ? String((e as { code?: string }).code) : "";
@@ -725,87 +783,91 @@ export async function getContactDependencyCounts(id: string): Promise<{
   tasks: number;
   analyses: number;
 }> {
-  const auth = await requireAuthInAction();
-  if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
-  const { contracts: contractsTable, opportunities, documents, tasks, financialAnalyses } = await import("db");
-  const [[c], [o], [d], [t], [a]] = await Promise.all([
-    db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(contractsTable)
-      .where(and(eq(contractsTable.contactId, id), eq(contractsTable.tenantId, auth.tenantId))),
-    db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(opportunities)
-      .where(and(eq(opportunities.contactId, id), eq(opportunities.tenantId, auth.tenantId))),
-    db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(documents)
-      .where(and(eq(documents.contactId, id), eq(documents.tenantId, auth.tenantId))),
-    db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(tasks)
-      .where(and(eq(tasks.contactId, id), eq(tasks.tenantId, auth.tenantId))),
-    db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(financialAnalyses)
-      .where(and(eq(financialAnalyses.contactId, id), eq(financialAnalyses.tenantId, auth.tenantId))),
-  ]);
-  return {
-    contracts: c?.count ?? 0,
-    opportunities: o?.count ?? 0,
-    documents: d?.count ?? 0,
-    tasks: t?.count ?? 0,
-    analyses: a?.count ?? 0,
-  };
+  return withAuthContext(async (auth, tx) => {
+    if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
+    const { contracts: contractsTable, opportunities, documents, tasks, financialAnalyses } = await import("db");
+    const [[c], [o], [d], [t], [a]] = await Promise.all([
+      tx
+        .select({ count: sql<number>`count(*)::int` })
+        .from(contractsTable)
+        .where(and(eq(contractsTable.contactId, id), eq(contractsTable.tenantId, auth.tenantId))),
+      tx
+        .select({ count: sql<number>`count(*)::int` })
+        .from(opportunities)
+        .where(and(eq(opportunities.contactId, id), eq(opportunities.tenantId, auth.tenantId))),
+      tx
+        .select({ count: sql<number>`count(*)::int` })
+        .from(documents)
+        .where(and(eq(documents.contactId, id), eq(documents.tenantId, auth.tenantId))),
+      tx
+        .select({ count: sql<number>`count(*)::int` })
+        .from(tasks)
+        .where(and(eq(tasks.contactId, id), eq(tasks.tenantId, auth.tenantId))),
+      tx
+        .select({ count: sql<number>`count(*)::int` })
+        .from(financialAnalyses)
+        .where(and(eq(financialAnalyses.contactId, id), eq(financialAnalyses.tenantId, auth.tenantId))),
+    ]);
+    return {
+      contracts: c?.count ?? 0,
+      opportunities: o?.count ?? 0,
+      documents: d?.count ?? 0,
+      tasks: t?.count ?? 0,
+      analyses: a?.count ?? 0,
+    };
+  });
 }
 
 export async function updateContactsLifecycle(ids: string[], lifecycleStage: string): Promise<void> {
-  const auth = await requireAuthInAction();
-  if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
-  if (ids.length === 0) return;
-  await db
-    .update(contacts)
-    .set({ lifecycleStage: lifecycleStage || null, updatedAt: new Date() })
-    .where(and(eq(contacts.tenantId, auth.tenantId), inArray(contacts.id, ids)));
+  await withAuthContext(async (auth, tx) => {
+    if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
+    if (ids.length === 0) return;
+    await tx
+      .update(contacts)
+      .set({ lifecycleStage: lifecycleStage || null, updatedAt: new Date() })
+      .where(and(eq(contacts.tenantId, auth.tenantId), inArray(contacts.id, ids)));
+  });
 }
 
 export async function addTagToContacts(ids: string[], tag: string): Promise<void> {
-  const auth = await requireAuthInAction();
-  if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
-  if (ids.length === 0 || !tag.trim()) return;
-  const trimmed = tag.trim();
-  const rows = await db
-    .select({ id: contacts.id, tags: contacts.tags })
-    .from(contacts)
-    .where(and(eq(contacts.tenantId, auth.tenantId), inArray(contacts.id, ids)));
-  await Promise.all(
-    rows.map((r) => {
-      const next = Array.from(new Set([...(r.tags ?? []), trimmed]));
-      return db
-        .update(contacts)
-        .set({ tags: next, updatedAt: new Date() })
-        .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, r.id)));
-    })
-  );
+  await withAuthContext(async (auth, tx) => {
+    if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
+    if (ids.length === 0 || !tag.trim()) return;
+    const trimmed = tag.trim();
+    const rows = await tx
+      .select({ id: contacts.id, tags: contacts.tags })
+      .from(contacts)
+      .where(and(eq(contacts.tenantId, auth.tenantId), inArray(contacts.id, ids)));
+    await Promise.all(
+      rows.map((r) => {
+        const next = Array.from(new Set([...(r.tags ?? []), trimmed]));
+        return tx
+          .update(contacts)
+          .set({ tags: next, updatedAt: new Date() })
+          .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, r.id)));
+      })
+    );
+  });
 }
 
 /** Nastaví štítky kontaktu (pouze sloupec tags). Pro použití na kartě klienta. */
 export async function setContactTags(contactId: string, tags: string[]): Promise<void> {
-  const auth = await requireAuthInAction();
-  if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
-  const existing = await db
-    .select({ id: contacts.id })
-    .from(contacts)
-    .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, contactId)))
-    .limit(1);
-  if (existing.length === 0) throw new Error("Kontakt nenalezen");
-  const normalized = Array.from(
-    new Set(tags.map((t) => t.trim()).filter(Boolean))
-  );
-  await db
-    .update(contacts)
-    .set({ tags: normalized.length ? normalized : null, updatedAt: new Date() })
-    .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, contactId)));
+  await withAuthContext(async (auth, tx) => {
+    if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
+    const existing = await tx
+      .select({ id: contacts.id })
+      .from(contacts)
+      .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, contactId)))
+      .limit(1);
+    if (existing.length === 0) throw new Error("Kontakt nenalezen");
+    const normalized = Array.from(
+      new Set(tags.map((t) => t.trim()).filter(Boolean))
+    );
+    await tx
+      .update(contacts)
+      .set({ tags: normalized.length ? normalized : null, updatedAt: new Date() })
+      .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, contactId)));
+  });
 }
 
 /**
@@ -842,27 +904,29 @@ async function loadContactAiProvenance(contactId: string): Promise<ContactAiProv
     const auth = await requireAuthInAction();
     if (!hasPermission(auth.roleName, "contacts:read")) return null;
 
-    const rows = await db
-      .select({
-        id: contractUploadReviews.id,
-        appliedAt: contractUploadReviews.appliedAt,
-        matchedClientId: contractUploadReviews.matchedClientId,
-        applyResultPayload: contractUploadReviews.applyResultPayload,
-      })
-      .from(contractUploadReviews)
-      .where(
-        and(
-          eq(contractUploadReviews.tenantId, auth.tenantId),
-          eq(contractUploadReviews.reviewStatus, "applied"),
-          or(
-            eq(contractUploadReviews.matchedClientId, contactId),
-            sql`${contractUploadReviews.applyResultPayload}->>'createdClientId' = ${contactId}`,
-            sql`${contractUploadReviews.applyResultPayload}->>'linkedClientId' = ${contactId}`,
-          ),
+    const rows = await withTenantContextFromAuth(auth, (tx) =>
+      tx
+        .select({
+          id: contractUploadReviews.id,
+          appliedAt: contractUploadReviews.appliedAt,
+          matchedClientId: contractUploadReviews.matchedClientId,
+          applyResultPayload: contractUploadReviews.applyResultPayload,
+        })
+        .from(contractUploadReviews)
+        .where(
+          and(
+            eq(contractUploadReviews.tenantId, auth.tenantId),
+            eq(contractUploadReviews.reviewStatus, "applied"),
+            or(
+              eq(contractUploadReviews.matchedClientId, contactId),
+              sql`${contractUploadReviews.applyResultPayload}->>'createdClientId' = ${contactId}`,
+              sql`${contractUploadReviews.applyResultPayload}->>'linkedClientId' = ${contactId}`,
+            ),
+          )
         )
-      )
-      .orderBy(desc(contractUploadReviews.appliedAt))
-      .limit(1);
+        .orderBy(desc(contractUploadReviews.appliedAt))
+        .limit(1),
+    );
 
     const row = rows[0];
     if (!row) return null;
@@ -955,27 +1019,29 @@ async function loadContactContractWizardPrefill(contactId: string): Promise<Cont
     const auth = await requireAuthInAction();
     if (!hasPermission(auth.roleName, "contacts:read")) return null;
 
-    const rows = await db
-      .select({
-        id: contractUploadReviews.id,
-        extractedPayload: contractUploadReviews.extractedPayload,
-        draftActions: contractUploadReviews.draftActions,
-        applyResultPayload: contractUploadReviews.applyResultPayload,
-      })
-      .from(contractUploadReviews)
-      .where(
-        and(
-          eq(contractUploadReviews.tenantId, auth.tenantId),
-          eq(contractUploadReviews.reviewStatus, "applied"),
-          or(
-            eq(contractUploadReviews.matchedClientId, contactId),
-            sql`${contractUploadReviews.applyResultPayload}->>'createdClientId' = ${contactId}`,
-            sql`${contractUploadReviews.applyResultPayload}->>'linkedClientId' = ${contactId}`,
+    const rows = await withTenantContextFromAuth(auth, (tx) =>
+      tx
+        .select({
+          id: contractUploadReviews.id,
+          extractedPayload: contractUploadReviews.extractedPayload,
+          draftActions: contractUploadReviews.draftActions,
+          applyResultPayload: contractUploadReviews.applyResultPayload,
+        })
+        .from(contractUploadReviews)
+        .where(
+          and(
+            eq(contractUploadReviews.tenantId, auth.tenantId),
+            eq(contractUploadReviews.reviewStatus, "applied"),
+            or(
+              eq(contractUploadReviews.matchedClientId, contactId),
+              sql`${contractUploadReviews.applyResultPayload}->>'createdClientId' = ${contactId}`,
+              sql`${contractUploadReviews.applyResultPayload}->>'linkedClientId' = ${contactId}`,
+            ),
           ),
-        ),
-      )
-      .orderBy(desc(contractUploadReviews.appliedAt))
-      .limit(1);
+        )
+        .orderBy(desc(contractUploadReviews.appliedAt))
+        .limit(1),
+    );
 
     const row = rows[0];
     if (!row) return null;

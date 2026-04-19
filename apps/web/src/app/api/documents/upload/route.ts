@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { db, documents, activityLog, contacts, opportunities, contracts, eq, and } from "db";
+import { documents, activityLog, contacts, opportunities, contracts, eq, and } from "db";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { getMembership } from "@/lib/auth/get-membership";
 import { hasPermission, type RoleName } from "@/lib/auth/permissions";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { logAudit } from "@/lib/audit";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { executeIdempotent } from "@/lib/security/idempotency";
@@ -202,17 +203,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid entity identifier." }, { status: 400 });
     }
 
-    if (contactId) {
-      const [row] = await db.select({ id: contacts.id }).from(contacts).where(and(eq(contacts.id, contactId), eq(contacts.tenantId, membership.tenantId))).limit(1);
-      if (!row) return NextResponse.json({ error: "Contact not found." }, { status: 403 });
-    }
-    if (opportunityId) {
-      const [row] = await db.select({ id: opportunities.id }).from(opportunities).where(and(eq(opportunities.id, opportunityId), eq(opportunities.tenantId, membership.tenantId))).limit(1);
-      if (!row) return NextResponse.json({ error: "Opportunity not found." }, { status: 403 });
-    }
-    if (contractId) {
-      const [row] = await db.select({ id: contracts.id }).from(contracts).where(and(eq(contracts.id, contractId), eq(contracts.tenantId, membership.tenantId))).limit(1);
-      if (!row) return NextResponse.json({ error: "Contract not found." }, { status: 403 });
+    const refCheck = await withTenantContextFromAuth(
+      { tenantId: membership.tenantId, userId: user.id },
+      async (tx) => {
+        if (contactId) {
+          const [row] = await tx.select({ id: contacts.id }).from(contacts).where(and(eq(contacts.id, contactId), eq(contacts.tenantId, membership.tenantId))).limit(1);
+          if (!row) return { error: "Contact not found." };
+        }
+        if (opportunityId) {
+          const [row] = await tx.select({ id: opportunities.id }).from(opportunities).where(and(eq(opportunities.id, opportunityId), eq(opportunities.tenantId, membership.tenantId))).limit(1);
+          if (!row) return { error: "Opportunity not found." };
+        }
+        if (contractId) {
+          const [row] = await tx.select({ id: contracts.id }).from(contracts).where(and(eq(contracts.id, contractId), eq(contracts.tenantId, membership.tenantId))).limit(1);
+          if (!row) return { error: "Contract not found." };
+        }
+        return { error: null as string | null };
+      },
+    );
+    if (refCheck.error) {
+      return NextResponse.json({ error: refCheck.error }, { status: 403 });
     }
 
     const idempotencyKeyHeader = request.headers.get("idempotency-key")?.trim() || "";
@@ -236,59 +246,65 @@ export async function POST(request: Request) {
 
       const fingerprint = await computeDocumentFingerprint(fileBytes).catch(() => null);
 
-      const [inserted] = await db
-        .insert(documents)
-        .values({
-          tenantId: membership.tenantId,
-          contactId,
-          opportunityId,
-          contractId,
-          name,
-          storagePath,
-          mimeType: effectiveMime || null,
-          sizeBytes: fileBytes.byteLength,
-          tags,
-          visibleToClient,
-          uploadSource,
-          uploadedBy: user.id,
-          pageCount,
-          capturedPlatform,
-          isScanLike,
-          sourceChannel,
-          documentFingerprint: fingerprint,
-          captureMode,
-          captureQualityWarnings,
-          manualCropApplied,
-          rotationAdjusted,
-        })
-        .returning({
-          id: documents.id,
-          name: documents.name,
-          mimeType: documents.mimeType,
-          sizeBytes: documents.sizeBytes,
-          processingStatus: documents.processingStatus,
-        });
+      const inserted = await withTenantContextFromAuth(
+        { tenantId: membership.tenantId, userId: user.id },
+        async (tx) => {
+          const [row] = await tx
+            .insert(documents)
+            .values({
+              tenantId: membership.tenantId,
+              contactId,
+              opportunityId,
+              contractId,
+              name,
+              storagePath,
+              mimeType: effectiveMime || null,
+              sizeBytes: fileBytes.byteLength,
+              tags,
+              visibleToClient,
+              uploadSource,
+              uploadedBy: user.id,
+              pageCount,
+              capturedPlatform,
+              isScanLike,
+              sourceChannel,
+              documentFingerprint: fingerprint,
+              captureMode,
+              captureQualityWarnings,
+              manualCropApplied,
+              rotationAdjusted,
+            })
+            .returning({
+              id: documents.id,
+              name: documents.name,
+              mimeType: documents.mimeType,
+              sizeBytes: documents.sizeBytes,
+              processingStatus: documents.processingStatus,
+            });
+          if (!row?.id) return null;
+          await tx
+            .insert(activityLog)
+            .values({
+              tenantId: membership.tenantId,
+              userId: user.id,
+              entityType: "document",
+              entityId: row.id,
+              action: "upload",
+              meta: {
+                contactId: contactId ?? undefined,
+                opportunityId: opportunityId ?? undefined,
+                uploadSource,
+                name,
+              },
+            })
+            .catch(() => {});
+          return row;
+        },
+      );
 
       if (!inserted?.id) {
         return { status: 500, body: { error: "Nepodařilo se uložit metadata dokumentu." } };
       }
-
-      await db
-        .insert(activityLog)
-        .values({
-          tenantId: membership.tenantId,
-          userId: user.id,
-          entityType: "document",
-          entityId: inserted.id,
-          action: "upload",
-          meta: {
-            contactId: contactId ?? undefined,
-            opportunityId: opportunityId ?? undefined,
-            uploadSource,
-            name,
-          },
-        })
-        .catch(() => {});
 
       await logAudit({
         tenantId: membership.tenantId,

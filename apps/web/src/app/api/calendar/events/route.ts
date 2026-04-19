@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { db, events, contacts, opportunities } from "db";
+import { events, contacts, opportunities } from "db";
 import { eq, and, inArray } from "db";
 import { getCalendarAuth, calendarTokenErrorResponse } from "../auth";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { getValidAccessToken } from "@/lib/integrations/google-calendar-integration-service";
 import { listCalendarEvents, createCalendarEvent, type GoogleCalendarEvent } from "@/lib/integrations/google-calendar";
 import {
@@ -131,22 +132,24 @@ export async function GET(request: Request) {
 
     if (items.length > 0) {
       const ids = items.map((e) => e.id);
-      const links = await db
-        .select({
-          googleEventId: events.googleEventId,
-          contactId: events.contactId,
-          opportunityId: events.opportunityId,
-          contactFirstName: contacts.firstName,
-          contactLastName: contacts.lastName,
-        })
-        .from(events)
-        .leftJoin(contacts, eq(events.contactId, contacts.id))
-        .where(
-          and(
-            eq(events.tenantId, tenantId),
-            inArray(events.googleEventId, ids)
-          )
-        );
+      const links = await withTenantContextFromAuth({ tenantId, userId }, (tx) =>
+        tx
+          .select({
+            googleEventId: events.googleEventId,
+            contactId: events.contactId,
+            opportunityId: events.opportunityId,
+            contactFirstName: contacts.firstName,
+            contactLastName: contacts.lastName,
+          })
+          .from(events)
+          .leftJoin(contacts, eq(events.contactId, contacts.id))
+          .where(
+            and(
+              eq(events.tenantId, tenantId),
+              inArray(events.googleEventId, ids),
+            ),
+          ),
+      );
       const byGoogleId = new Map(
         links
           .filter((r) => r.googleEventId)
@@ -295,17 +298,19 @@ export async function POST(request: Request) {
   }
   const { title, start, end, description, location, contactId, opportunityId } = validation.data;
 
-  if (contactId) {
-    const [contactRow] = await db.select({ id: contacts.id }).from(contacts).where(and(eq(contacts.id, contactId), eq(contacts.tenantId, tenantId))).limit(1);
-    if (!contactRow) {
-      return NextResponse.json({ error: "Kontakt nenalezen nebo nemáte přístup" }, { status: 400 });
+  const refErr = await withTenantContextFromAuth({ tenantId, userId }, async (tx) => {
+    if (contactId) {
+      const [contactRow] = await tx.select({ id: contacts.id }).from(contacts).where(and(eq(contacts.id, contactId), eq(contacts.tenantId, tenantId))).limit(1);
+      if (!contactRow) return "Kontakt nenalezen nebo nemáte přístup";
     }
-  }
-  if (opportunityId) {
-    const [oppRow] = await db.select({ id: opportunities.id }).from(opportunities).where(and(eq(opportunities.id, opportunityId), eq(opportunities.tenantId, tenantId))).limit(1);
-    if (!oppRow) {
-      return NextResponse.json({ error: "Příležitost nenalezena nebo nemáte přístup" }, { status: 400 });
+    if (opportunityId) {
+      const [oppRow] = await tx.select({ id: opportunities.id }).from(opportunities).where(and(eq(opportunities.id, opportunityId), eq(opportunities.tenantId, tenantId))).limit(1);
+      if (!oppRow) return "Příležitost nenalezena nebo nemáte přístup";
     }
+    return null;
+  });
+  if (refErr) {
+    return NextResponse.json({ error: refErr }, { status: 400 });
   }
 
   let accessToken: string;
@@ -332,21 +337,23 @@ export async function POST(request: Request) {
     const startAt = new Date(start);
     const endAt = new Date(end);
     try {
-      await db.insert(events).values({
-        tenantId,
-        contactId: contactId ?? null,
-        opportunityId: opportunityId ?? null,
-        title,
-        eventType: "schuzka",
-        startAt,
-        endAt,
-        allDay: false,
-        location: location ?? null,
-        notes: description ?? null,
-        assignedTo: userId,
-        googleEventId,
-        googleCalendarId: calendarId,
-      });
+      await withTenantContextFromAuth({ tenantId, userId }, (tx) =>
+        tx.insert(events).values({
+          tenantId,
+          contactId: contactId ?? null,
+          opportunityId: opportunityId ?? null,
+          title,
+          eventType: "schuzka",
+          startAt,
+          endAt,
+          allDay: false,
+          location: location ?? null,
+          notes: description ?? null,
+          assignedTo: userId,
+          googleEventId,
+          googleCalendarId: calendarId,
+        }),
+      );
     } catch (dbErr) {
       return NextResponse.json(
         { error: "Událost byla vytvořena v kalendáři, ale nepodařilo se uložit vazbu v aplikaci. Zkuste to znovu nebo kontaktujte podporu." },

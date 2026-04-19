@@ -2,7 +2,8 @@ import Link from "next/link";
 import { TrendingUp, Calculator, PiggyBank, HeartPulse, FileText, ChevronRight } from "lucide-react";
 import { getCalculators } from "@/lib/calculators/core/registry";
 import type { CalculatorIconId } from "@/lib/calculators/core/types";
-import { RECENT_CALCULATIONS_PLACEHOLDER } from "@/lib/calculators/recent-calculations-placeholder";
+import { getRecentCalculatorRuns } from "@/app/actions/calculator-runs";
+import { formatRelativeCs, calculatorTypeLabelCs, calculatorTypeRoute } from "@/lib/calculators/history-format";
 import { ListPageShell, ListPageEmpty } from "@/app/components/list-page";
 
 type IconProps = { className?: string; size?: number | string; strokeWidth?: number | string };
@@ -50,8 +51,9 @@ function getTheme(category: string): ThemeId {
   return "investment";
 }
 
-export default function CalculatorsPage() {
+export default async function CalculatorsPage() {
   const calculators = getCalculators();
+  const recentRuns = await getRecentCalculatorRuns(6).catch(() => []);
 
   if (calculators.length === 0) {
     return (
@@ -161,28 +163,37 @@ export default function CalculatorsPage() {
             Zobrazit všechny <ChevronRight size={16} aria-hidden />
           </Link>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {RECENT_CALCULATIONS_PLACEHOLDER.slice(0, 3).map((item) => (
-            <Link
-              key={item.id}
-              href={item.href}
-              className="group flex items-start gap-4 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] p-4 transition-all hover:border-indigo-200 hover:bg-[color:var(--wp-surface-card)] hover:shadow-md"
-            >
-              <div className="shrink-0 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-2 text-indigo-500 shadow-sm transition-colors group-hover:bg-indigo-50 group-hover:text-indigo-600 dark:group-hover:bg-indigo-950/40">
-                <FileText size={20} />
-              </div>
-              <div className="min-w-0">
-                <h3 className="font-bold text-sm text-[color:var(--wp-text)] group-hover:text-indigo-600 transition-colors mb-0.5 truncate">
-                  {item.client}
-                </h3>
-                <p className="text-xs font-bold text-[color:var(--wp-text-secondary)] mb-2">{item.type}</p>
-                <span className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
-                  {item.date}
-                </span>
-              </div>
-            </Link>
-          ))}
-        </div>
+        {recentRuns.length === 0 ? (
+          <p className="text-sm text-[color:var(--wp-text-secondary)]">
+            Zatím zde není žádný propočet. Spusťte kalkulačku výše a výsledek se uloží do vaší historie.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {recentRuns.slice(0, 3).map((item) => (
+              <Link
+                key={item.id}
+                href={calculatorTypeRoute(item.calculatorType)}
+                className="group flex items-start gap-4 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] p-4 transition-all hover:border-indigo-200 hover:bg-[color:var(--wp-surface-card)] hover:shadow-md"
+              >
+                <div className="shrink-0 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-2 text-indigo-500 shadow-sm transition-colors group-hover:bg-indigo-50 group-hover:text-indigo-600 dark:group-hover:bg-indigo-950/40">
+                  <FileText size={20} />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-bold text-sm text-[color:var(--wp-text)] group-hover:text-indigo-600 transition-colors mb-0.5 truncate">
+                    {item.contactName ?? item.label ?? calculatorTypeLabelCs(item.calculatorType)}
+                  </h3>
+                  <p className="text-xs font-bold text-[color:var(--wp-text-secondary)] mb-2">
+                    {calculatorTypeLabelCs(item.calculatorType)}
+                    {item.label ? ` · ${item.label}` : ""}
+                  </p>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
+                    {formatRelativeCs(item.createdAt)}
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
 
       <p className="text-center text-sm text-[color:var(--wp-text-secondary)] mt-8">

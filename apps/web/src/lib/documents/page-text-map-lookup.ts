@@ -8,7 +8,7 @@
  *   4. heuristic_fallback     — single-page, entire text
  */
 
-import { db, documents, eq } from "db";
+import { db, documents, eq, and } from "db";
 import { createAdminClient } from "@/lib/supabase/server";
 import {
   parseAdobeStructuredData,
@@ -78,15 +78,24 @@ export async function fetchAndParseStructuredData(
  *
  * This is the primary entry point for the AI Review pipeline.
  * Returns null result (not an error) when extractJsonPath isn't available for the document.
+ *
+ * Security (W3 IDOR fix, WS-2 Batch 2): `tenantId` je povinný a filtruje `documents` řádek,
+ * aby volající nemohl z jiného tenantu získat Adobe structured data (storagePath je odvozen
+ * od tenant prefixu ve storage, ale pokud by někdy nebyl unikátní napříč tenanty, bez tohoto
+ * filtru hrozí cross-tenant leak).
  */
 export async function fetchAdobeStructuredDataByStoragePath(
   storagePath: string,
+  tenantId: string,
 ): Promise<AdobeStructuredLookupResult> {
+  if (!tenantId) {
+    throw new Error("fetchAdobeStructuredDataByStoragePath: tenantId is required.");
+  }
   try {
     const rows = await db
       .select({ extractJsonPath: documents.extractJsonPath })
       .from(documents)
-      .where(eq(documents.storagePath, storagePath))
+      .where(and(eq(documents.tenantId, tenantId), eq(documents.storagePath, storagePath)))
       .limit(1);
 
     const extractJsonPath = rows[0]?.extractJsonPath;
@@ -115,11 +124,14 @@ export async function fetchPageTextMapByStoragePath(
   storagePath: string,
   tenantId: string,
 ): Promise<PageTextMapLookupResult> {
+  if (!tenantId) {
+    throw new Error("fetchPageTextMapByStoragePath: tenantId is required.");
+  }
   try {
     const rows = await db
       .select({ pageTextMap: documents.pageTextMap })
       .from(documents)
-      .where(eq(documents.storagePath, storagePath))
+      .where(and(eq(documents.tenantId, tenantId), eq(documents.storagePath, storagePath)))
       .limit(1);
 
     const row = rows[0];

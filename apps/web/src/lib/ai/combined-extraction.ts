@@ -368,6 +368,7 @@ MAPOVÁNÍ ROLÍ (combined label → role):
 - "Pojištěný je shodný s pojistníkem" → insuredPersonName = fullName / policyholder (neprázdná hodnota)
 - "Účastník" / "Účastník smlouvy" (DPS, penzijní) → role "participant" → extractedFields.participantFullName + extractedFields.fullName
 - "Investor" / "Klient / Investor" / "Klient/Investor" → role "investor" → extractedFields.investorFullName + extractedFields.fullName
+  Pro investiční smlouvy (investment_subscription_document, investment_service_agreement, investment_payment_instruction, investment_modelation) je hlavní role KLIENTA VŽDY "investor" — NIKDY nepoužívej pro klienta investiční smlouvy role "policyholder" ani "insured". I když dokument používá slovo „sjednatel“, v investiční smlouvě je to stále investor, ne pojistník.
 - "2. pojištěný" / "Druhý pojištěný" / "Vedlejší pojištěná" → role "second_insured", přidej do parties
 - "Dítě" / "Pojištěné dítě" → role "child_insured"
 - "Spoludlužník" → role "co_applicant"
@@ -506,6 +507,45 @@ PRAVIDLA:
 - Pokud je uvedeno "Vydal" nebo "Vydáno" → idCardIssuedBy.
 
 ══════════════════════════════════════════════════════════
+RULE 11 — VLASTNICTVÍ BANKOVNÍHO ÚČTU (KLIENT vs INSTITUCE)
+══════════════════════════════════════════════════════════
+V dokumentu se typicky vyskytují DVA odlišné bankovní účty:
+  (A) účet KLIENTA/investora/pojistníka
+  (B) účet INSTITUCE/příjemce (investiční společnost, fond, pojišťovna, banka)
+
+MUSÍŠ je rozlišit a NIKDY je nezaměňovat:
+
+INSTITUCE → extractedFields.recipientAccount
+  Typické labely/sekce:
+  - „Bankovní spojení [jméno instituce]“, „Bankovní údaje investiční společnosti“,
+    „Číslo účtu pro úhradu“, „Číslo účtu pro zaslání investice“, „Kam zaslat platbu“,
+    „Účet instituce“, „Účet správce“, „Účet fondu“, „Platební instrukce (náš účet)“,
+    „Bankovní účet emitenta“, „Účet pojišťovny“, „Účet banky“.
+  - Účet uvedený v hlavičce / v bloku instituce / v platebních pokynech ve smyslu
+    „sem klient posílá peníze“.
+  - V investičních dokumentech (investment_subscription_document,
+    investment_service_agreement, investment_payment_instruction) JE účet pro úhradu
+    investice VŽDY účtem INSTITUCE — patří do recipientAccount, NIKDY do bankAccount.
+
+KLIENT → extractedFields.bankAccount
+  Typické labely/sekce:
+  - „Bankovní účet klienta/investora/pojistníka/účastníka“, „Účet pro výplatu“,
+    „Účet pro odkup“, „Výplatní účet klienta“, „Účet pro zaslání peněz klientovi“.
+  - Účet v osobním bloku klienta ve smyslu „odkud klient posílá / kam dostane peníze“.
+
+ZAKÁZÁNO:
+- NIKDY nedávej účet instituce do bankAccount — ani u investičních smluv, kde je často
+  jediný uvedený účet právě účet správce / investiční společnosti. Pokud je v dokumentu
+  jen účet instituce, vyplň recipientAccount a bankAccount nech prázdné.
+- NIKDY nedávej účet klienta do recipientAccount.
+- Pokud nelze z kontextu dokumentu jednoznačně určit vlastníka účtu, NECH obě pole
+  prázdná a přidej reviewWarning: code="bank_account_owner_ambiguous", severity="warning".
+
+Pokud jsou v dokumentu OBA účty, vyplň OBĚ pole (bankAccount i recipientAccount).
+bankCode / iban se váže k tomu účtu, ze kterého hodnota pochází — neváž kód banky klienta
+k účtu instituce.
+
+══════════════════════════════════════════════════════════
 RULE 10 — PRAKTICKÝ LÉKAŘ (životní pojištění)
 ══════════════════════════════════════════════════════════
 U životního pojištění (life_insurance_contract, life_insurance_proposal):
@@ -562,7 +602,8 @@ PRAVIDLA EXTRAKCE — POLE
     intendedInvestment (zamýšlená výše investice),
     entryFeePercent (vstupní poplatek v %),
     amountToPay (částka k úhradě),
-    bankAccount (číslo účtu pro úhradu — NEMASKOVAT),
+    recipientAccount (číslo účtu INSTITUCE / investiční společnosti, kam klient posílá investici — viz RULE 11, NEMASKOVAT),
+    bankAccount (číslo účtu KLIENTA/investora — např. pro výplatu/odkup, pouze pokud je v dokumentu výslovně uveden jako účet klienta; jinak NECH prázdné, NIKDY sem nedávej účet instituce — viz RULE 11, NEMASKOVAT),
     variableSymbol (variabilní symbol — NEMASKOVAT).
   - Dodatek / změna smlouvy (povinné pokud jde o servisní nebo změnový dokument):
     existingPolicyNumber (číslo EXISTUJÍCÍ smlouvy — hledej "ke smlouvě č.", "na smlouvu č."),
@@ -580,6 +621,7 @@ PRAVIDLA EXTRAKCE — POLE
 - VĚŘITEL / BANKA: Pro úvěrové dokumenty lender je institucionální strana (Raiffeisenbank, ČSOB, Moneta atd.). NIKDY ji nevkládej do pole insurer. Použij pole lender.
 - ZPROSTŘEDKOVATEL vs INSTITUCE: intermediaryName je poradce/makléř klienta. Osoba podepsaná za pojišťovnu/banku NENÍ zprostředkovatel. Zprostředkovatel pochází z bloku "Zprostředkovatel" nebo "Zprostředkovatel úvěru".
 - PLATBY — FREKVENCE: paymentFrequency extrahuj přesně. Rozlišuj: "měsíčně" / "ročně" / "čtvrtletně" / "pololetně" / "jednorázově". Nesmíš zaměnit roční pojistné za měsíční.
+- PLATBY — FREKVENCE vs REPORTING: paymentFrequency patří POUZE frekvenci skutečné platby / pojistného / investice. NIKDY nedávej do paymentFrequency frekvenci zasílání výpisu, stavu majetkového účtu, reportu, ročenky nebo informační zprávy. Fráze typu „Stav majetkového účtu (čtvrtletně/ročně)“, „Výpis zasílán čtvrtletně“, „Reporting čtvrtletně“ NEJSOU paymentFrequency — pokud není v dokumentu explicitně uvedena frekvence platby, nech paymentFrequency prázdné.
 - PLATBY — ROČNÍ vs MĚSÍČNÍ: Pokud je paymentFrequency = "ročně" nebo "annually", pak platba patří do annualPremium, NIKOLI do totalMonthlyPremium. Nepoužívej pole totalMonthlyPremium pro roční platbu.
 - PLATBY — PRIORITA: výše splatné platby má prioritu. pořadí: konečná dlužná částka > roční po slevě > roční před slevami. Tato pravidla platí pro pojistné i příspěvky.
 - PLATBY — riskPremium: Pole riskPremium používej POUZE pro rizikovou složku pojistného v životním pojištění (čistě riziková část bez investiční složky). Pro neživotní pojištění (majetek, auto, odpovědnost): pojistné za konkrétní sjednané krytí patří do coverages[].premium, NIKOLI do riskPremium. riskPremium u neživotního pojištění VYNECHEJ.
@@ -592,6 +634,8 @@ PRAVIDLA EXTRAKCE — POLE
 - INSTITUCE vs PRODUKT — SEPARACE: institutionName je správce / investiční společnost / pojišťovna (např. "AMUNDI", "AMUNDI Asset Management"). productName je název konkrétního produktu nebo pokynu (např. "Pokyn k jednorázové investici", "FUNDOO", "investiční smlouva"). NIKDY nedávej celý nadpis dokumentu do productName — odděluj instituci od produktu. Pro FUNDOO dokumenty: institutionName = "AMUNDI" (nebo "Amundi Asset Management"), productName = typ pokynu (např. "Pokyn k jednorázové investici").
 - INVESTICE: Extrahuj investmentStrategy (string), investmentFunds jako JSON string [{ name, isin?, allocation }], investmentPremium. Fond / ISIN / cílový fond jsou POVINNÉ pokud jsou v dokumentu. U modelace napiš lifecycleStatus = "modelation" nebo "non_binding_projection".
 - INVESTICE — INVESTOVANÁ ČÁSTKA: intendedInvestment = celková investovaná částka klientem (součet všech fondů ze sekce "Výše investované částky a měna" nebo "výše jednorázové investice"). Tuto hodnotu NESMÍŠ zaměnit s variabilním symbolem, číslem smlouvy, ISIN kódem, ani s bankovní částkou k úhradě. Pro FUNDOO pokyny a podobné investiční pokyné: celková investovaná částka je součet částek pro všechny vybrané fondy.
+- INVESTICE — „PŘEDPOKLÁDANÁ VÝŠE“: Fráze „Předpokládaná výše investice“, „Předpokládaná výše jednorázové investice“, „Předpokládaná investice do Fondu“ (ATRIS, Conseq, Amundi, ...) VŽDY extrahuj do intendedInvestment. Hodnotu typu „2 000 000,00 Kč“ / „2000000,00 Kč“ / „2 000 000 Kč“ převeď na normalizovaný string (bez maskování). Pokud je částka v PDF formuláři pouze jako vyplněné pole (AcroForm), použij její textovou hodnotu — NESMÍŠ ji vynechat jen proto, že není v průběžném textu.
+- INVESTICE — ČÍSLO SMLOUVY / VARIABILNÍ SYMBOL: U ATRIS podílových fondů je číslo smlouvy pětimístné identifikační číslo investora a variabilní symbol je 6místné (první číslice = typ fondu, viz RULE 4). Pokud dokument obsahuje vyplněné AcroForm pole „Číslo smlouvy“ nebo „Variabilní symbol“, POUŽIJ jeho vyplněnou hodnotu — NIKDY ji neignoruj jen proto, že by nebyla v plain-textu. Pokud je jen číslo smlouvy (např. „40369“) a typ fondu (např. „3 — SPORO“), slož VS podle pravidla (→ „340369“). Prázdné / placeholder / šablonové řetězce typu „Smlouva_sluzby_eS_v01_072024“, „Navrh_smlouvy_v0X…“ NIKDY nedávej do contractNumber — takový řetězec je název šablony, NE číslo smlouvy.
 - INVESTICE — ŽÁDNÁ KRYTÍ: Pro čistě investiční dokumenty (primaryType = investment_subscription_document, investment_service_agreement, investment_payment_instruction) NENAPLŇUJ pole coverages, insuredRisks, riders — tato pole musí být prázdná (null nebo nevyplněná). Investiční dokumenty neobsahují pojistná krytí.
 - PLATBY: bankAccount, variableSymbol, iban, bankCode, paymentFrequency extrahuj vždy, pokud jsou v dokumentu. Neodhaduj — pouze hodnoty z textu. NEMASKOVAT (viz RULE 2).
 - BUNDLE — DOMINANT SEGMENT: Pokud dokument obsahuje více sekcí, DOMINANTNÍ HLAVNÍ SEKCE určuje primaryType a segment. Vedlejší sekce (zprostředkovatel, platební instrukce, zdravotní dotazník, AML) jen obohacují výstup. NESMÍŠ přepsat segment jen kvůli vedlejší sekci.

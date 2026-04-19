@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedApiUserId } from "@/lib/auth/api-auth-user";
 import { getMembership } from "@/lib/auth/get-membership";
-import { db, advisorNotifications, eq, and, desc, inArray } from "db";
+import { advisorNotifications, eq, and, desc, inArray } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 
 export async function GET(request: Request) {
   const userId = await getAuthenticatedApiUserId();
@@ -33,11 +34,16 @@ export async function GET(request: Request) {
     conditions.push(eq(advisorNotifications.type, type.trim()));
   }
 
-  const items = await db.select()
-    .from(advisorNotifications)
-    .where(and(...conditions))
-    .orderBy(desc(advisorNotifications.createdAt))
-    .limit(limit);
+  const items = await withTenantContext(
+    { tenantId: membership.tenantId, userId },
+    (tx) =>
+      tx
+        .select()
+        .from(advisorNotifications)
+        .where(and(...conditions))
+        .orderBy(desc(advisorNotifications.createdAt))
+        .limit(limit),
+  );
 
   return NextResponse.json({ items });
 }

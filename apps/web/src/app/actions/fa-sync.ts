@@ -46,6 +46,8 @@ type SyncFaToContactsParams = {
   selectedPersonIndices: number[];
   createHousehold: boolean;
   householdName?: string;
+  /** Pokud je zadáno, místo vytvoření nové domácnosti přidáme členy do této existující. */
+  existingHouseholdId?: string;
 };
 
 type SyncFaToContactsResult = {
@@ -140,7 +142,26 @@ export async function syncFaToContacts(params: SyncFaToContactsParams): Promise<
 
   let householdId: string | null = fa.householdId;
 
-  if (params.createHousehold && results.length > 1) {
+  if (params.existingHouseholdId) {
+    const [h] = await db
+      .select({ id: households.id })
+      .from(households)
+      .where(and(eq(households.tenantId, auth.tenantId), eq(households.id, params.existingHouseholdId)))
+      .limit(1);
+    if (!h) throw new Error("Vybraná domácnost nebyla nalezena.");
+    householdId = h.id;
+    for (const r of results) {
+      const existing = await db
+        .select({ id: householdMembers.id })
+        .from(householdMembers)
+        .where(and(eq(householdMembers.householdId, householdId), eq(householdMembers.contactId, r.contactId)))
+        .limit(1);
+      if (!existing.length) {
+        const role = r.faRole === "primary" ? "primary" : r.faRole;
+        await db.insert(householdMembers).values({ householdId, contactId: r.contactId, role });
+      }
+    }
+  } else if (params.createHousehold && results.length > 1) {
     const [row] = await db
       .insert(households)
       .values({ tenantId: auth.tenantId, name: params.householdName?.trim() || "Domácnost" })

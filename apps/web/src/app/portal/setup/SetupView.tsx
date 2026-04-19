@@ -20,7 +20,6 @@ import {
   CreditCard,
   Download,
   Bell,
-  Server,
   CheckCircle,
   AlertCircle,
   Settings2,
@@ -30,8 +29,6 @@ import { updatePortalProfile, updatePortalPassword } from "@/app/actions/auth";
 import { getQuickActionsConfig, setQuickActionsConfig, getAdvisorAvatarUrl, uploadAdvisorAvatar, getAdvisorReportFields, updateAdvisorReportBranding, getNotificationPrefs, setNotificationPrefs, getAdvisorBirthdayEmailPrefs, updateAdvisorBirthdayEmailPrefs } from "@/app/actions/preferences";
 import { setWorkspaceBirthdayEmailTheme } from "@/app/actions/birthday-greetings";
 import { BirthdayPremiumThemePreview } from "@/app/components/email/BirthdayPremiumThemePreview";
-import { GoogleCalendarUpcomingEvents } from "@/app/portal/setup/GoogleCalendarUpcomingEvents";
-import { GoogleCalendarAvailability } from "@/app/portal/setup/GoogleCalendarAvailability";
 import { QUICK_ACTIONS_CATALOG, getDefaultQuickActionsConfig } from "@/lib/quick-actions";
 import type { QuickActionId } from "@/lib/quick-actions";
 import { WorkspaceStripeBilling } from "@/app/components/billing/WorkspaceStripeBilling";
@@ -39,6 +36,7 @@ import { PUBLIC_PRICING_SUMMARY_CS } from "@/lib/billing/plan-public-marketing";
 import { useToast } from "@/app/components/Toast";
 import { useConfirm } from "@/app/components/ConfirmDialog";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
+import { BaseModal } from "@/app/components/BaseModal";
 import { PortalAdvisorMfaCard } from "@/app/components/auth/PortalAdvisorMfaCard";
 import { formatStoredSubscriptionPlanLabel } from "@/lib/billing/plan-catalog";
 import type { WorkspaceBillingSnapshot } from "@/lib/stripe/billing-types";
@@ -135,7 +133,7 @@ const ResendIcon = () => (
 );
 
 const INTEGRATIONS: IntegrationCard[] = [
-  { id: "google-calendar", name: "Google Calendar", description: "Synchronizujte schůzky a události z Aidvisora s Google Kalendářem. Obousměrná synchronizace událostí.", category: "calendar", icon: GoogleCalendarLogo },
+  { id: "google-calendar", name: "Kalendář", description: "Synchronizujte schůzky a události z Aidvisory s Google Kalendářem. Obousměrná synchronizace událostí.", category: "calendar", icon: GoogleCalendarLogo },
   { id: "google-drive", name: "Google Disk", description: "Ukládejte a spravujte dokumenty klientů přímo na Google Disku.", category: "calendar", icon: GoogleDriveLogo },
   { id: "gmail", name: "Gmail", description: "Odesílejte a čtěte e-maily přímo z CRM přes váš Gmail účet.", category: "calendar", icon: GmailLogo },
   { id: "resend", name: "Resend (E-mail)", description: "Bleskové odesílání transakčních a notifikačních e-mailů klientům.", category: "communication", icon: ResendIcon },
@@ -430,6 +428,40 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
   // --- Integrations
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [integrationsCategory, setIntegrationsCategory] = useState<string>("all");
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [suggestName, setSuggestName] = useState("");
+  const [suggestReason, setSuggestReason] = useState("");
+  const [suggestLink, setSuggestLink] = useState("");
+  const [suggestSubmitting, setSuggestSubmitting] = useState(false);
+  const submitIntegrationSuggestion = useCallback(async () => {
+    const name = suggestName.trim();
+    if (!name) {
+      toast.showToast("Zadejte alespoň název integrace.");
+      return;
+    }
+    setSuggestSubmitting(true);
+    try {
+      const res = await fetch("/api/integrations/suggestions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, reason: suggestReason.trim(), link: suggestLink.trim() }),
+      });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => null);
+        toast.showToast(payload?.error || "Odeslání se nezdařilo.");
+        return;
+      }
+      toast.showToast("Děkujeme, návrh integrace jsme přijali.");
+      setSuggestOpen(false);
+      setSuggestName("");
+      setSuggestReason("");
+      setSuggestLink("");
+    } catch (err) {
+      toast.showToast(err instanceof Error ? err.message : "Odeslání selhalo.");
+    } finally {
+      setSuggestSubmitting(false);
+    }
+  }, [suggestName, suggestReason, suggestLink, toast]);
   const [aiHealth, setAiHealth] = useState<AIIntegrationHealth | null>(null);
   const [aiHealthLoading, setAiHealthLoading] = useState(false);
   const [aiHealthTesting, setAiHealthTesting] = useState(false);
@@ -1481,7 +1513,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
 
         {/* Tab: Notifikace */}
         {activeTab === "notifikace" && (
-          <div className="max-w-3xl space-y-6 animate-in fade-in duration-300">
+          <div className="space-y-6 animate-in fade-in duration-300">
             <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
               <div className="px-6 sm:px-8 py-6 border-b border-[color:var(--wp-surface-card-border)]/50 flex items-center gap-3">
                 <Mail size={20} className="text-indigo-500" />
@@ -1518,9 +1550,9 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                   <h4 className="font-bold text-[color:var(--wp-text)] text-sm mb-1">Povolit upozornění v prohlížeči</h4>
                   <p className="text-xs font-medium text-[color:var(--wp-text-secondary)]">Pro okamžitá upozornění na obrazovce, i když nemáte Aidvisoru otevřenou.</p>
                 </div>
-                <button type="button" onClick={() => toast.showToast("Tato funkce bude dostupná v příští verzi.")} className="px-4 py-2.5 border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] font-bold text-xs rounded-xl hover:bg-[color:var(--wp-surface-muted)] transition-colors shadow-sm min-h-[44px]">
-                  Požádat o oprávnění
-                </button>
+                <span className="px-4 py-2.5 border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-tertiary)] font-bold text-xs rounded-xl bg-[color:var(--wp-surface-muted)] shadow-sm min-h-[44px] inline-flex items-center justify-center select-none">
+                  Připravujeme
+                </span>
               </div>
             </div>
           </div>
@@ -1538,12 +1570,9 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                 <p className="text-sm font-medium text-[color:var(--wp-text-secondary)]">Zrychlete svou práci a propojte Aidvisoru s nástroji, které používáte každý den.</p>
               </div>
               <div className="flex items-center gap-3">
-                <button type="button" className="flex items-center gap-2 px-4 py-2.5 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] rounded-xl text-xs font-black uppercase tracking-widest shadow-sm hover:shadow-md hover:bg-[color:var(--wp-surface-muted)] transition-all min-h-[44px]">
-                  <Server size={16} /> Filtry
-                </button>
                 <CreateActionButton
                   type="button"
-                  onClick={() => toast.showToast("Díky, návrhy integrací sbíráme průběžně.")}
+                  onClick={() => setSuggestOpen(true)}
                   icon={Check}
                   className="px-5 py-2.5"
                 >
@@ -1663,6 +1692,9 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                               </div>
                             ) : calendarStatus?.connected ? (
                               <>
+                                <p className="text-sm font-medium text-emerald-700 flex items-center gap-2">
+                                  <CheckCircle size={16} className="shrink-0" aria-hidden /> Kalendář je propojený.
+                                </p>
                                 {calendarStatus.email && (
                                   <p className="text-sm text-[color:var(--wp-text-secondary)] font-medium flex items-center gap-2">
                                     <Mail size={14} className="shrink-0 text-[color:var(--wp-text-secondary)]" aria-hidden /> {calendarStatus.email}
@@ -1674,10 +1706,8 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                                 </button>
                                 <button type="button" onClick={handleCalendarDisconnect} disabled={calendarDisconnecting} className="min-h-[44px] px-4 py-2.5 rounded-xl bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text)] text-sm font-bold hover:bg-[color:var(--wp-surface-card-border)] disabled:opacity-60 flex items-center gap-2" aria-busy={calendarDisconnecting}>
                                   {calendarDisconnecting ? <Loader2 size={16} className="animate-spin shrink-0" aria-hidden /> : null}
-                                  {calendarDisconnecting ? "Odpojuji…" : "Odpojit Google Kalendář"}
+                                  {calendarDisconnecting ? "Odpojuji…" : "Odpojit Kalendář"}
                                 </button>
-                                <GoogleCalendarUpcomingEvents />
-                                <GoogleCalendarAvailability />
                               </>
                             ) : (
                               <button type="button" onClick={handleCalendarConnect} className="min-h-[44px] px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700">
@@ -1785,39 +1815,9 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                                 </button>
                               </>
                             ) : (
-                              <>
-                                <p className={`text-sm font-medium ${resendStatus?.connected ? "text-emerald-700" : "text-amber-700"}`}>
-                                  {resendStatus?.connected ? "Resend je nakonfigurovaný." : "Resend zatím není nakonfigurovaný (chybí RESEND_API_KEY)."}
-                                </p>
-                                <p className="text-xs text-[color:var(--wp-text-secondary)]">
-                                  Odesílatel (From): <span className="font-bold text-[color:var(--wp-text-secondary)]">{resendStatus?.fromEmail ?? "—"}</span>
-                                </p>
-                                <p className="text-xs text-[color:var(--wp-text-secondary)]">
-                                  Doména pro generovaný From:{" "}
-                                  <span className="font-bold text-[color:var(--wp-text-secondary)]">{resendStatus?.fromDomain ?? "—"}</span>
-                                  <span className="block text-[color:var(--wp-text-tertiary)] mt-0.5">
-                                    Env <code className="text-[11px]">RESEND_FROM_DOMAIN</code> nebo z <code className="text-[11px]">RESEND_FROM_EMAIL</code>.
-                                  </span>
-                                </p>
-                                <p className="text-xs text-[color:var(--wp-text-secondary)]">
-                                  Odpovědi (Reply-To):{" "}
-                                  <span className="font-bold text-[color:var(--wp-text-secondary)]">{resendStatus?.replyToEmail ?? "—"}</span>
-                                  <span className="block text-[color:var(--wp-text-tertiary)] mt-0.5">
-                                    Firemní e-mail bez ověření domény v Resend nastav jako <code className="text-[11px]">RESEND_REPLY_TO</code>; u přihlášeného poradce
-                                    jde o e-mail z profilu / účtu.
-                                  </span>
-                                </p>
-                                <button
-                                  type="button"
-                                  onClick={async () => {
-                                    await fetchResendStatus();
-                                    toast.showToast("Konfigurace Resendu ověřena.");
-                                  }}
-                                  className="min-h-[44px] px-4 py-2.5 rounded-xl bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text)] text-sm font-bold hover:bg-[color:var(--wp-surface-card-border)]"
-                                >
-                                  Ověřit konfiguraci
-                                </button>
-                              </>
+                              <p className={`text-sm font-medium ${resendStatus?.connected ? "text-emerald-700" : "text-amber-700"}`}>
+                                {resendStatus?.connected ? "Resend je nakonfigurovaný." : "Resend zatím není nakonfigurovaný."}
+                              </p>
                             )}
                           </div>
                         )}
@@ -1830,6 +1830,68 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
             </div>
           </div>
         )}
+
+        <BaseModal
+          open={suggestOpen}
+          onClose={() => !suggestSubmitting && setSuggestOpen(false)}
+          title="Navrhnout integraci"
+          maxWidth="md"
+          mobileVariant="sheet"
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-[color:var(--wp-text-secondary)]">
+              Napište, jakou službu byste rádi v Aidvisoře propojili. Vaše návrhy sbíráme a pomáhají nám v prioritizaci.
+            </p>
+            <div>
+              <label className={labelClass}>Název služby *</label>
+              <input
+                type="text"
+                value={suggestName}
+                onChange={(e) => setSuggestName(e.target.value)}
+                className={inputClass}
+                placeholder="Např. Slack, Make.com, …"
+                autoFocus
+              />
+            </div>
+            <div>
+              <label className={labelClass}>K čemu byste ji využili</label>
+              <textarea
+                value={suggestReason}
+                onChange={(e) => setSuggestReason(e.target.value)}
+                className={`${inputClass} min-h-[96px]`}
+                placeholder="Stručný popis — co chcete integrací vyřešit."
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Odkaz na službu (volitelné)</label>
+              <input
+                type="url"
+                value={suggestLink}
+                onChange={(e) => setSuggestLink(e.target.value)}
+                className={inputClass}
+                placeholder="https://…"
+              />
+            </div>
+            <div className="flex flex-col sm:flex-row sm:justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => !suggestSubmitting && setSuggestOpen(false)}
+                className="min-h-[44px] px-4 py-2.5 rounded-xl border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] text-sm font-bold hover:bg-[color:var(--wp-surface-muted)]"
+              >
+                Zrušit
+              </button>
+              <CreateActionButton
+                type="button"
+                icon={Check}
+                isLoading={suggestSubmitting}
+                disabled={suggestSubmitting || !suggestName.trim()}
+                onClick={submitIntegrationSuggestion}
+              >
+                {suggestSubmitting ? "Odesílám…" : "Odeslat návrh"}
+              </CreateActionButton>
+            </div>
+          </div>
+        </BaseModal>
 
       </main>
     </div>

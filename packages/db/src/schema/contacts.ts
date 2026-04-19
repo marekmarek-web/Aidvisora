@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, date, unique, boolean } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, date, unique, boolean, jsonb } from "drizzle-orm/pg-core";
 
 /**
  * How a contact row was created (provenance tracking).
@@ -73,6 +73,11 @@ export const households = pgTable("households", {
   tenantId: uuid("tenant_id").notNull(),
   name: text("name").notNull(),
   icon: text("icon"), // e.g. "home", "users", "heart" – from predefined set
+  /**
+   * Společné cíle domácnosti – interní poznámka poradce.
+   * Struktura: `{ id, title, amount?, targetDate? (DD.MM.YYYY), note? }[]`.
+   */
+  sharedGoals: jsonb("shared_goals"),
   archivedAt: timestamp("archived_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import { Home, Plus, ChevronDown, ChevronUp, User, Baby, Filter, Building2 } from "lucide-react";
+import { Home, Plus, ChevronDown, ChevronUp, User, Baby, Building2 } from "lucide-react";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
 import { deleteHousehold, getHouseholdsWithMembers } from "@/app/actions/households";
 import type { HouseholdRowWithMembers, HouseholdMemberSummary } from "@/app/actions/households";
@@ -115,9 +115,14 @@ export function HouseholdListClient({ list: initialList }: { list: HouseholdRowW
     setDeleteModalId(null);
     if (expandedId === id) setExpandedId(null);
     startTransition(async () => {
-      await deleteHousehold(id);
-      toast.showToast("Domácnost smazána");
-      refreshListAndCaches();
+      try {
+        await deleteHousehold(id);
+        toast.showToast("Domácnost smazána");
+        refreshListAndCaches();
+        router.refresh();
+      } catch (err) {
+        toast.showToast(err instanceof Error ? err.message : "Domácnost se nepodařilo smazat.");
+      }
     });
   }
 
@@ -166,13 +171,6 @@ export function HouseholdListClient({ list: initialList }: { list: HouseholdRowW
             onChange={setSearchQuery}
             aria-label="Hledat domácnost"
           />
-          <button
-            type="button"
-            className="flex items-center gap-2 px-4 py-2 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] rounded-[var(--wp-radius-sm)] text-sm font-bold hover:bg-[color:var(--wp-surface-muted)] transition-colors shrink-0"
-            title="Filtry (připraveno pro budoucí rozšíření)"
-          >
-            <Filter size={18} /> Filtry
-          </button>
           {list.length > 0 && (
             <div className="flex items-center gap-2 text-sm font-bold text-[color:var(--wp-text-secondary)] shrink-0">
               Řadit:{" "}

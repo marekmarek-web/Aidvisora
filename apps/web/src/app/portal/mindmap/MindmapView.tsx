@@ -319,14 +319,18 @@ export function MindmapView({ initial }: MindmapViewProps) {
             <>
               <button
                 type="button"
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-100 to-orange-100 text-amber-800 border border-amber-200 hover:shadow-md rounded-xl text-xs font-bold uppercase tracking-wider transition-all"
+                onClick={handleAiStrategyStub}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-100 to-orange-100 text-amber-800 border border-amber-200 hover:shadow-md rounded-xl text-xs font-bold uppercase tracking-wider transition-all min-h-[44px]"
+                title="AI návrh strategie"
               >
                 <Sparkles size={14} className="text-amber-600" /> AI Návrh strategie
               </button>
               <button
                 type="button"
-                className="w-9 h-9 rounded-xl border border-[color:var(--wp-surface-card-border)] flex items-center justify-center text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] transition-colors"
-                title="Export"
+                onClick={() => void handleExportPng()}
+                disabled={exportBusy}
+                className="w-9 h-9 rounded-xl border border-[color:var(--wp-surface-card-border)] flex items-center justify-center text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] transition-colors disabled:opacity-50"
+                title={exportBusy ? "Exportuji…" : "Export do PNG"}
               >
                 <Download size={16} />
               </button>
@@ -460,7 +464,7 @@ export function MindmapView({ initial }: MindmapViewProps) {
                 aria-label="Zavřít nastavení"
                 onClick={() => setSettingsOpen(false)}
               />
-              <div className="fixed left-4 bottom-24 md:left-24 md:bottom-auto md:top-28 z-[61] w-[min(calc(100vw-2rem),280px)] rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4 shadow-xl">
+              <div className="fixed left-4 bottom-24 md:left-auto md:right-6 md:bottom-auto md:top-28 z-[61] w-[min(calc(100vw-2rem),280px)] rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4 shadow-xl">
                 <p className="text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Mapa</p>
                 <p className="text-sm font-bold text-[color:var(--wp-text)] mb-3 truncate" title={initial.entityName}>
                   {initial.entityName}

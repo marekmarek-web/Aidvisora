@@ -14,6 +14,46 @@ import { EmbeddedInvestmentProjection } from "@/app/portal/calculators/_componen
 const RETIREMENT_AGE = 65;
 /** Kanonický „World ETF“ v knihovně — musí odpovídat `legacy-fund-key-map` / Batch A. */
 const MSCI_WORLD_KEY = "ishares_core_msci_world";
+const CONSEQ_PENSION_KEY = "conseq_globalni_akciovy_ucastnicky";
+
+/**
+ * Získá rok narození z různých formátů (DD.MM.YYYY, YYYY-MM-DD, YYYY).
+ * Vrací `null` pokud není platný rok 1900–(aktuální rok).
+ */
+function extractBirthYear(raw: string | undefined | null): number | null {
+  if (!raw) return null;
+  const trimmed = String(raw).trim();
+  if (!trimmed) return null;
+  const cz = /^(\d{1,2})[./](\d{1,2})[./](\d{4})$/.exec(trimmed);
+  if (cz) {
+    const y = parseInt(cz[3], 10);
+    if (y >= 1900 && y <= new Date().getFullYear()) return y;
+  }
+  const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(trimmed);
+  if (iso) {
+    const y = parseInt(iso[1], 10);
+    if (y >= 1900 && y <= new Date().getFullYear()) return y;
+  }
+  const justYear = /^(\d{4})$/.exec(trimmed);
+  if (justYear) {
+    const y = parseInt(justYear[1], 10);
+    if (y >= 1900 && y <= new Date().getFullYear()) return y;
+  }
+  return null;
+}
+
+const CONSEQ_STRATEGY_OPTIONS = [
+  { id: "conservative", label: "Konzervativní (5 %)", rate: 0.05 },
+  { id: "balanced", label: "Vyvážený (7 %)", rate: 0.07 },
+  { id: "dynamic", label: "Dynamický (9 %)", rate: 0.09 },
+] as const;
+
+function getConseqStrategyByRate(rate: number | undefined): (typeof CONSEQ_STRATEGY_OPTIONS)[number]["id"] {
+  if (typeof rate !== "number") return "dynamic";
+  if (rate <= 0.055) return "conservative";
+  if (rate <= 0.08) return "balanced";
+  return "dynamic";
+}
 
 const EMPTY_INVESTMENTS: InvestmentEntry[] = [];
 
@@ -109,19 +149,35 @@ function InvestmentCards({
               </div>
             </div>
             <div className="text-xs text-[color:var(--wp-text-secondary)] mb-2">{getTypeLabel(inv.type)}</div>
-            <div className="flex flex-wrap items-center gap-2 mb-3">
-              <label className="text-xs font-semibold text-[color:var(--wp-text-secondary)]">Zhodnocení:</label>
-              <div className="min-w-[140px] flex-1">
-                <CustomDropdown
-                  value={String(getSelectYield(inv.productKey, inv.annualRate))}
-                  onChange={(id) => setYield(inv, parseFloat(id))}
-                  options={getYieldOptions(inv.productKey).map((opt) => ({
-                    id: String(opt.value),
-                    label: opt.label,
-                  }))}
-                />
+            {inv.productKey === CONSEQ_PENSION_KEY && inv.type === "pension" ? (
+              <div className="flex flex-wrap items-center gap-2 mb-3">
+                <label className="text-xs font-semibold text-[color:var(--wp-text-secondary)]">Strategie:</label>
+                <div className="min-w-[160px] flex-1">
+                  <CustomDropdown
+                    value={getConseqStrategyByRate(inv.annualRate)}
+                    onChange={(id) => {
+                      const opt = CONSEQ_STRATEGY_OPTIONS.find((s) => s.id === id);
+                      if (opt) setYield(inv, opt.rate);
+                    }}
+                    options={CONSEQ_STRATEGY_OPTIONS.map((s) => ({ id: s.id, label: s.label }))}
+                  />
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex flex-wrap items-center gap-2 mb-3">
+                <label className="text-xs font-semibold text-[color:var(--wp-text-secondary)]">Zhodnocení:</label>
+                <div className="min-w-[140px] flex-1">
+                  <CustomDropdown
+                    value={String(getSelectYield(inv.productKey, inv.annualRate))}
+                    onChange={(id) => setYield(inv, parseFloat(id))}
+                    options={getYieldOptions(inv.productKey).map((opt) => ({
+                      id: String(opt.value),
+                      label: opt.label,
+                    }))}
+                  />
+                </div>
+              </div>
+            )}
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-semibold text-[color:var(--wp-text-secondary)] mb-1">
@@ -131,8 +187,13 @@ function InvestmentCards({
                   type="number"
                   min={0}
                   step={100}
-                  value={inv.amount != null && Number.isFinite(inv.amount) ? Math.round(inv.amount) : ""}
-                  onChange={(e) => updateInvestment(inv.productKey, inv.type, "amount", parseFloat(e.target.value) || 0)}
+                  value={inv.amount != null && Number.isFinite(inv.amount) && inv.amount !== 0 ? Math.round(inv.amount) : ""}
+                  onFocus={(e) => e.currentTarget.select()}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    const parsed = raw === "" ? 0 : parseFloat(raw);
+                    updateInvestment(inv.productKey, inv.type, "amount", Number.isFinite(parsed) ? parsed : 0);
+                  }}
                   className="w-full min-h-[44px] px-3 py-2 border border-[color:var(--wp-surface-card-border)] rounded-lg text-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
                   placeholder="0"
                 />
@@ -176,8 +237,8 @@ export function StepStrategy() {
   const investments = data.investments ?? EMPTY_INVESTMENTS;
   const totals = selectStrategyTotals(data);
 
-  const birthYear = parseInt(data.client?.birthDate ?? "", 10);
-  const clientAge = !isNaN(birthYear) ? new Date().getFullYear() - birthYear : null;
+  const birthYear = extractBirthYear(data.client?.birthDate);
+  const clientAge = birthYear != null ? Math.max(0, new Date().getFullYear() - birthYear) : null;
   const yearsToRetirement = clientAge != null ? Math.max(1, RETIREMENT_AGE - clientAge) : null;
   const profileRate = getProfileRate(profile);
 
@@ -335,7 +396,7 @@ export function StepStrategy() {
         </div>
 
         <div className="lg:col-span-1">
-          <div className="sticky top-4 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-2xl p-6 shadow-sm">
+          <div className="sticky top-4 bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] rounded-2xl p-6 shadow-sm max-h-[calc(100vh-2rem)] overflow-y-auto">
             <h3 className="text-[color:var(--wp-text)] font-bold mb-4 flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-indigo-600" />
               Shrnutí portfolia

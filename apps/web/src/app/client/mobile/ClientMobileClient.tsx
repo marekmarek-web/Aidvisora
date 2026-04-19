@@ -25,6 +25,7 @@ import {
   Send,
   Settings,
   Shield,
+  Sparkles,
   TrendingUp,
   User,
 } from "lucide-react";
@@ -111,6 +112,10 @@ import {
 import { isClientPortalAiDisabled } from "@/lib/client-portal/feature-flags";
 import { useDeviceClass } from "@/lib/ui/useDeviceClass";
 import type { ClientMobileInitialData } from "./client-mobile-initial-data";
+import {
+  ADVISOR_PROPOSAL_SEGMENT_LABELS,
+  formatMoneyCs as formatProposalMoneyCs,
+} from "@/lib/advisor-proposals/segment-labels";
 import { ClientPaymentsView } from "../payments/payments-client";
 
 function fmtMoney(v: number): string {
@@ -197,6 +202,14 @@ function DashboardHome({
   const openMaterialRequests = initialData.advisorMaterialRequests.filter(
     (r) => r.status !== "done" && r.status !== "closed"
   );
+  const activeProposals = initialData.advisorProposals.filter(
+    (p) => p.status === "published" || p.status === "viewed"
+  );
+  const heroProposal = activeProposals.length
+    ? [...activeProposals].sort(
+        (a, b) => (b.savingsAnnual ?? 0) - (a.savingsAnnual ?? 0)
+      )[0]
+    : null;
   const openRequests = requests.filter(
     (r) => r.statusKey !== "done" && r.statusKey !== "cancelled"
   );
@@ -348,6 +361,72 @@ function DashboardHome({
           </MobileCard>
         </div>
       </MobileSection>
+
+      {/* B2. Návrh od poradce — nenásilná karta (jen pokud existuje aktivní) */}
+      {heroProposal && (
+        <MobileSection
+          title="Návrh od vašeho poradce"
+          action={
+            activeProposals.length > 1 ? (
+              <button
+                type="button"
+                onClick={() => router.push("/client/navrhy")}
+                className="text-xs font-bold text-emerald-700"
+              >
+                Vše ({activeProposals.length})
+              </button>
+            ) : undefined
+          }
+        >
+          <MobileCard className="p-4 bg-gradient-to-br from-emerald-50 to-white border-emerald-200">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white border border-emerald-200 grid place-items-center text-emerald-600 shrink-0">
+                <Sparkles size={18} aria-hidden />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700">
+                  {ADVISOR_PROPOSAL_SEGMENT_LABELS[heroProposal.segment] ?? heroProposal.segment}
+                </p>
+                {heroProposal.savingsAnnual !== null && heroProposal.savingsAnnual > 0 ? (
+                  <p className="text-base font-black text-slate-900 leading-snug mt-0.5">
+                    Úspora{" "}
+                    <span className="text-emerald-600">
+                      {formatProposalMoneyCs(heroProposal.savingsAnnual, heroProposal.currency)} / rok
+                    </span>
+                  </p>
+                ) : (
+                  <p className="text-base font-black text-slate-900 leading-snug mt-0.5">
+                    Nezávazné porovnání
+                  </p>
+                )}
+                <p className="text-sm font-semibold text-slate-800 line-clamp-2 mt-1">
+                  „{heroProposal.title}"
+                </p>
+                <p className="text-[11px] text-slate-500 mt-1 leading-snug">
+                  Porovnání od poradce. Není to automatické doporučení.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-3">
+              <button
+                type="button"
+                onClick={() => router.push(`/client/navrhy/${heroProposal.id}`)}
+                className="flex-1 min-h-[40px] rounded-xl bg-emerald-600 text-white text-sm font-bold inline-flex items-center justify-center gap-1.5"
+              >
+                Prohlédnout
+                <ChevronRight size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push("/client/navrhy")}
+                className="min-h-[40px] px-4 rounded-xl border border-emerald-200 bg-white text-emerald-700 text-sm font-bold"
+              >
+                Vše
+              </button>
+            </div>
+          </MobileCard>
+        </MobileSection>
+      )}
 
       {/* C. Prioritní blok — „Co je potřeba řešit" */}
       {actionItems.length > 0 && (

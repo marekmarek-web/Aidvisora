@@ -274,7 +274,7 @@ const FIELD_LABELS: Record<string, string> = {
   collateral: "Zajištění",
   accountForRepayment: "Účet pro splácení",
   relatedBankAccount: "Navázaný účet",
-  bankAccount: "Číslo účtu",
+  bankAccount: "Číslo účtu klienta",
   recipientAccount: "Účet instituce / příjemce",
   bankName: "Banka (platební údaje)",
   iban: "IBAN",
@@ -1013,6 +1013,19 @@ function flattenEnvelopeToGroups(
   // Pre-compute institution dedup: suppress redundant provider/institutionName/insurer fields
   const institutionDupKeys = efRaw ? getInstitutionDuplicateKeysToSuppress(efRaw, primaryType) : new Set<string>();
 
+  // Suppress the standalone bankCode row when bankAccount already embeds the same
+  // trailing code — e.g. "626111626/0300" + bankCode "0300" would render as duplicate.
+  const suppressBankCodeRow = (() => {
+    if (!efRaw) return false;
+    const acc = efRaw.bankAccount?.value;
+    const bc = efRaw.bankCode?.value;
+    if (!acc || !bc) return false;
+    const accStr = String(acc).trim().replace(/\s/g, "");
+    const bcStr = String(bc).trim().replace(/\s/g, "");
+    if (!accStr || !bcStr) return false;
+    return accStr.endsWith(`/${bcStr}`);
+  })();
+
   const ef = envelope.extractedFields as
     | Record<string, { value?: unknown; status?: string; confidence?: number }>
     | undefined;
@@ -1025,6 +1038,9 @@ function flattenEnvelopeToGroups(
 
       // Institution dedup: suppress redundant institution labels with identical values
       if (institutionDupKeys.has(fKey)) continue;
+
+      // Bank code dedup: skip bankCode row if bankAccount already embeds "/NNNN"
+      if (fKey === "bankCode" && suppressBankCodeRow) continue;
 
       // Name redundancy: skip inferred firstName/lastName if fullName already covers them
       if (isNameFieldRedundant(fKey, ef as Record<string, { value?: unknown; status?: string; evidenceTier?: EvidenceTier } | undefined>)) continue;

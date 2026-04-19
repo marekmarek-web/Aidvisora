@@ -53,7 +53,7 @@ const CONTRACT_FIELD_LABELS: Record<string, string> = {
 };
 
 const PAYMENT_FIELD_LABELS: Record<string, string> = {
-  bankAccount: "Číslo účtu",
+  bankAccount: "Číslo účtu klienta",
   variableSymbol: "Variabilní symbol",
   bankCode: "Kód banky",
   iban: "IBAN",

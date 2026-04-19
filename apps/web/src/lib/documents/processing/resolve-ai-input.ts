@@ -1,4 +1,4 @@
-import { db, documents, eq } from "db";
+import { db, documents, eq, and } from "db";
 import { createAdminClient } from "@/lib/supabase/server";
 import { createSignedStorageUrl } from "@/lib/storage/signed-url";
 import type { DocumentAiInputSource } from "db";
@@ -173,8 +173,18 @@ export async function resolveAiInput(doc: DocumentForAi): Promise<AiInputResolut
 
 /**
  * Load a document row and resolve AI input in one call.
+ *
+ * Security (W3 IDOR fix, WS-2 Batch 2): `tenantId` je povinný parametr — dokument se dohledá
+ * pouze v rámci tenantu volajícího. Bez něj by bylo možné přes cizí `documentId` stáhnout
+ * signed URL / markdown obsah dokumentu jiného tenantu.
  */
-export async function resolveAiInputForDocument(documentId: string): Promise<AiInputResolution | null> {
+export async function resolveAiInputForDocument(
+  documentId: string,
+  tenantId: string,
+): Promise<AiInputResolution | null> {
+  if (!tenantId) {
+    throw new Error("resolveAiInputForDocument: tenantId is required.");
+  }
   const [doc] = await db
     .select({
       id: documents.id,
@@ -195,7 +205,7 @@ export async function resolveAiInputForDocument(documentId: string): Promise<AiI
       processingProvider: documents.processingProvider,
     })
     .from(documents)
-    .where(eq(documents.id, documentId))
+    .where(and(eq(documents.tenantId, tenantId), eq(documents.id, documentId)))
     .limit(1);
 
   if (!doc) return null;

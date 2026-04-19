@@ -3,6 +3,7 @@
  * Kept separate from `client-portal-session-bundle.ts` so tests and client code can import
  * without pulling `server-only` / DB loaders.
  */
+import type { ClientAdvisorProposal } from "@/app/actions/advisor-proposals-client";
 import type { ClientAdvisorInfo } from "@/app/actions/client-dashboard";
 import type { ClientFinancialSummaryView } from "@/app/actions/client-financial-summary";
 import type { ContractRow } from "@/app/actions/contracts";
@@ -54,4 +55,6 @@ export type ClientPortalSessionBundle = {
   financialSummaryRaw: ClientFinancialSummaryView;
   /** Jen dokumenty zveřejněné klientovi — pro odkaz „související dokument“ v portfoliu (web + mobil). */
   visiblePortfolioSourceDocs: Record<string, { name: string }>;
+  /** Návrhy od poradce publikované do Klientské zóny (aktivní + historické, bez withdrawn/draft). */
+  advisorProposals: ClientAdvisorProposal[];
 };

@@ -4,8 +4,9 @@ import { getMembership } from "@/lib/auth/get-membership";
 import { deriveAdminScope, canEditSettings, canAccessAdmin } from "@/lib/admin/admin-permissions";
 import { validateSettingValue, getSettingDefinition } from "@/lib/admin/settings-registry";
 import type { SettingDomain } from "@/lib/admin/settings-registry";
-import { db, tenantSettings, eq, and } from "db";
+import { tenantSettings, eq, and } from "db";
 import { logConfigChange } from "@/lib/admin/config-audit";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 
 export async function POST(request: Request) {
   const userId = await getAuthenticatedApiUserId();
@@ -36,35 +37,41 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: validation.error }, { status: 400 });
   }
 
-  const existing = await db
-    .select({ value: tenantSettings.value, version: tenantSettings.version })
-    .from(tenantSettings)
-    .where(and(eq(tenantSettings.tenantId, membership.tenantId), eq(tenantSettings.key, key)));
+  const oldValue = await withTenantContextFromAuth(
+    { tenantId: membership.tenantId, userId },
+    async (tx) => {
+      const existing = await tx
+        .select({ value: tenantSettings.value, version: tenantSettings.version })
+        .from(tenantSettings)
+        .where(and(eq(tenantSettings.tenantId, membership.tenantId), eq(tenantSettings.key, key)));
 
-  const oldValue = existing[0]?.value ?? def.defaultValue;
+      const prev = existing[0]?.value ?? def.defaultValue;
 
-  if (existing.length > 0) {
-    await db
-      .update(tenantSettings)
-      .set({
-        value: value as any,
-        updatedBy: userId,
-        updatedAt: new Date(),
-        version: (existing[0]!.version ?? 0) + 1,
-        settingOrigin: "manual",
-      })
-      .where(and(eq(tenantSettings.tenantId, membership.tenantId), eq(tenantSettings.key, key)));
-  } else {
-    await db.insert(tenantSettings).values({
-      tenantId: membership.tenantId,
-      key,
-      value: value as any,
-      domain: def.domain,
-      updatedBy: userId,
-      version: 1,
-      settingOrigin: "manual",
-    });
-  }
+      if (existing.length > 0) {
+        await tx
+          .update(tenantSettings)
+          .set({
+            value: value as any,
+            updatedBy: userId,
+            updatedAt: new Date(),
+            version: (existing[0]!.version ?? 0) + 1,
+            settingOrigin: "manual",
+          })
+          .where(and(eq(tenantSettings.tenantId, membership.tenantId), eq(tenantSettings.key, key)));
+      } else {
+        await tx.insert(tenantSettings).values({
+          tenantId: membership.tenantId,
+          key,
+          value: value as any,
+          domain: def.domain,
+          updatedBy: userId,
+          version: 1,
+          settingOrigin: "manual",
+        });
+      }
+      return prev;
+    },
+  );
 
   await logConfigChange({
     tenantId: membership.tenantId,

@@ -72,7 +72,6 @@ export function NewHouseholdWizard({
 
   function openHousehold() {
     if (createdId) {
-      onSuccess?.(createdId);
       router.push(`/portal/households/${createdId}`);
     }
     handleClose();

@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { getMembership } from "@/lib/auth/get-membership";
-import { db } from "db";
 import { messageAttachments, messages } from "db";
 import { eq } from "db";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { createSignedStorageUrl } from "@/lib/storage/signed-url";
 import { logAudit } from "@/lib/audit";
 
@@ -25,24 +25,30 @@ export async function GET(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const [att] = await db
-    .select({
-      id: messageAttachments.id,
-      messageId: messageAttachments.messageId,
-      storagePath: messageAttachments.storagePath,
-    })
-    .from(messageAttachments)
-    .where(eq(messageAttachments.id, id))
-    .limit(1);
+  const { att, msg } = await withTenantContextFromAuth(
+    { tenantId: membership.tenantId, userId: user.id },
+    async (tx) => {
+      const [attRow] = await tx
+        .select({
+          id: messageAttachments.id,
+          messageId: messageAttachments.messageId,
+          storagePath: messageAttachments.storagePath,
+        })
+        .from(messageAttachments)
+        .where(eq(messageAttachments.id, id))
+        .limit(1);
+      if (!attRow) return { att: null as null | typeof attRow, msg: null as null | { tenantId: string; contactId: string | null } };
+      const [msgRow] = await tx
+        .select({ tenantId: messages.tenantId, contactId: messages.contactId })
+        .from(messages)
+        .where(eq(messages.id, attRow.messageId))
+        .limit(1);
+      return { att: attRow, msg: msgRow ?? null };
+    },
+  );
   if (!att) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-
-  const [msg] = await db
-    .select({ tenantId: messages.tenantId, contactId: messages.contactId })
-    .from(messages)
-    .where(eq(messages.id, att.messageId))
-    .limit(1);
   if (!msg || msg.tenantId !== membership.tenantId) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

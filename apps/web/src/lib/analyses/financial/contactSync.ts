@@ -21,6 +21,10 @@ export interface FaSyncPersonPreview {
   matchedContactId?: string;
   matchReason?: string;
   selected: boolean;
+  /** Věk v letech odvozený z birthDate (pokud lze spočítat). */
+  age?: number;
+  /** Rok narození (YYYY) – pro zobrazení u dětí <18. */
+  birthYear?: number;
 }
 
 export interface FaSyncPreview {
@@ -39,19 +43,38 @@ function normalizePhone(raw?: string): string {
   return raw.replace(/[\s\-\(\)]/g, "").replace(/^\+420/, "");
 }
 
+function computeAgeFromIsoBirthDate(iso?: string): { age?: number; birthYear?: number } {
+  if (!iso) return {};
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!match) return {};
+  const year = parseInt(match[1], 10);
+  const month = parseInt(match[2], 10);
+  const day = parseInt(match[3], 10);
+  if (!Number.isFinite(year)) return {};
+  const today = new Date();
+  let age = today.getFullYear() - year;
+  const beforeBirthday = today.getMonth() + 1 < month || (today.getMonth() + 1 === month && today.getDate() < day);
+  if (beforeBirthday) age -= 1;
+  return { age: age >= 0 ? age : 0, birthYear: year };
+}
+
 function mapPersonInfo(
   info: { name?: string; birthDate?: string; birthNumber?: string; email?: string; phone?: string; occupation?: string; sports?: string },
 ): Omit<FaSyncPersonPreview, "faRole" | "faIndex" | "matchedContactId" | "matchReason" | "selected"> {
   const { firstName, lastName } = splitFullName(info.name ?? "");
+  const birthDate = parseFaBirthDateToIso(info.birthDate ?? "") ?? undefined;
+  const { age, birthYear } = computeAgeFromIsoBirthDate(birthDate);
   return {
     firstName,
     lastName,
     email: info.email?.trim() || undefined,
     phone: info.phone?.trim() || undefined,
-    birthDate: parseFaBirthDateToIso(info.birthDate ?? "") ?? undefined,
+    birthDate,
     personalId: (info.birthNumber ?? "").trim() || undefined,
     occupation: (info.occupation ?? "").trim() || undefined,
     sports: (info.sports ?? "").trim() || undefined,
+    age,
+    birthYear,
   };
 }
 
@@ -135,11 +158,12 @@ export function buildSyncPreview(
   (data.children ?? []).forEach((child, idx) => {
     if (!child.name?.trim()) return;
     const childInfo = mapPersonInfo(child);
+    const isAdult = typeof childInfo.age === "number" ? childInfo.age >= 18 : false;
     const childPreview: FaSyncPersonPreview = {
       ...childInfo,
       faRole: "child",
       faIndex: idx,
-      selected: true,
+      selected: isAdult,
     };
     const childDup = findDuplicate(childPreview, existingContacts);
     if (childDup) {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { db, portalFeedback } from "db";
+import { portalFeedback } from "db";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { createClient } from "@/lib/supabase/server";
 import { getMembership } from "@/lib/auth/get-membership";
 import { checkRateLimit } from "@/lib/security/rate-limit";
@@ -46,15 +47,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Neplatná data." }, { status: 400 });
     }
 
-    await db.insert(portalFeedback).values({
-      tenantId: membership.tenantId,
-      userId: user.id,
-      category: parsed.data.category,
-      title: parsed.data.title,
-      body: parsed.data.body,
-      pageUrl: parsed.data.pageUrl?.trim() || null,
-      userAgent: request.headers.get("user-agent")?.slice(0, 512) ?? null,
-    });
+    await withTenantContextFromAuth({ tenantId: membership.tenantId, userId: user.id }, (tx) =>
+      tx.insert(portalFeedback).values({
+        tenantId: membership.tenantId,
+        userId: user.id,
+        category: parsed.data.category,
+        title: parsed.data.title,
+        body: parsed.data.body,
+        pageUrl: parsed.data.pageUrl?.trim() || null,
+        userAgent: request.headers.get("user-agent")?.slice(0, 512) ?? null,
+      }),
+    );
 
     const notifyEmail = process.env.FEEDBACK_NOTIFY_EMAIL;
     if (notifyEmail) {

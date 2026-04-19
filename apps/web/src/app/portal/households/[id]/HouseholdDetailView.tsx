@@ -10,8 +10,10 @@ import {
   deleteHousehold,
   addHouseholdMember,
   removeHouseholdMember,
+  addHouseholdSharedGoal,
+  removeHouseholdSharedGoal,
 } from "@/app/actions/households";
-import type { HouseholdDetail } from "@/app/actions/households";
+import type { HouseholdDetail, HouseholdSharedGoal } from "@/app/actions/households";
 import type { OpportunityByHouseholdRow } from "@/app/actions/pipeline";
 import { getFinancialAnalysesForHousehold } from "@/app/actions/financial-analyses";
 import { createContact } from "@/app/actions/contacts";
@@ -90,6 +92,15 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const [analysesList, setAnalysesList] = useState<FinancialAnalysisListItem[]>([]);
   const [analysesLoading, setAnalysesLoading] = useState(true);
+  const [sharedGoals, setSharedGoals] = useState<HouseholdSharedGoal[]>(household.sharedGoals ?? []);
+  const [goalFormOpen, setGoalFormOpen] = useState(false);
+  const [goalTitle, setGoalTitle] = useState("");
+  const [goalAmount, setGoalAmount] = useState("");
+  const [goalDate, setGoalDate] = useState("");
+  const [goalNote, setGoalNote] = useState("");
+  const [goalSaving, setGoalSaving] = useState(false);
+  const [contactSearch, setContactSearch] = useState("");
+  const [contactSuggestOpen, setContactSuggestOpen] = useState(false);
   useEffect(() => {
     let cancelled = false;
     getFinancialAnalysesForHousehold(household.id)
@@ -152,6 +163,7 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
       }
       await addHouseholdMember(household.id, contactId, memberRole);
       setMemberContactId("");
+      setContactSearch("");
       setMemberRole("member");
       setNewFirstName("");
       setNewLastName("");
@@ -159,6 +171,52 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
       setAddingMember(false);
       refreshHouseholdAndCaches();
     });
+  }
+
+  function parseAmount(value: string): number | null {
+    const cleaned = value.replace(/\s/g, "").replace(",", ".");
+    if (!cleaned) return null;
+    const num = Number(cleaned);
+    return Number.isFinite(num) ? num : null;
+  }
+
+  async function handleAddGoal(e: React.FormEvent) {
+    e.preventDefault();
+    const title = goalTitle.trim();
+    if (!title) return;
+    setGoalSaving(true);
+    try {
+      const amount = parseAmount(goalAmount);
+      const targetDate = goalDate.trim() || null;
+      const note = goalNote.trim() || null;
+      const created = await addHouseholdSharedGoal(household.id, { title, amount, targetDate, note });
+      setSharedGoals((prev) => [...prev, created]);
+      setGoalTitle("");
+      setGoalAmount("");
+      setGoalDate("");
+      setGoalNote("");
+      setGoalFormOpen(false);
+    } catch (err) {
+      console.error("addHouseholdSharedGoal failed", err);
+    } finally {
+      setGoalSaving(false);
+    }
+  }
+
+  async function handleRemoveGoal(goalId: string) {
+    const ok = await confirm({
+      title: "Smazat cíl?",
+      message: "Opravdu smazat tento společný cíl domácnosti?",
+      confirmLabel: "Smazat",
+      variant: "destructive",
+    });
+    if (!ok) return;
+    try {
+      await removeHouseholdSharedGoal(household.id, goalId);
+      setSharedGoals((prev) => prev.filter((g) => g.id !== goalId));
+    } catch (err) {
+      console.error("removeHouseholdSharedGoal failed", err);
+    }
   }
 
   function handleRemoveMember(memberId: string) {
@@ -371,13 +429,61 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       {addMode === "select" ? (
-                        <CustomDropdown
-                          value={memberContactId}
-                          onChange={setMemberContactId}
-                          options={[{ id: "", label: "Vyberte kontakt…" }, ...availableContacts.map((c) => ({ id: c.id, label: `${c.firstName} ${c.lastName}`.trim() }))]}
-                          placeholder="Vyberte kontakt…"
-                          icon={User}
-                        />
+                        <div className="relative flex-1 min-w-[220px]">
+                          <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--wp-text-tertiary)] pointer-events-none" aria-hidden />
+                          <input
+                            type="text"
+                            value={contactSearch}
+                            onChange={(e) => {
+                              setContactSearch(e.target.value);
+                              setMemberContactId("");
+                              setContactSuggestOpen(true);
+                            }}
+                            onFocus={() => setContactSuggestOpen(true)}
+                            onBlur={() => setTimeout(() => setContactSuggestOpen(false), 120)}
+                            placeholder="Hledat kontakt (jméno)…"
+                            className="w-full pl-10 pr-3 py-2.5 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-sm font-semibold min-h-[44px]"
+                          />
+                          {contactSuggestOpen && (() => {
+                            const q = contactSearch.trim().toLowerCase();
+                            const filtered = availableContacts
+                              .filter((c) => {
+                                if (!q) return true;
+                                const full = `${c.firstName} ${c.lastName}`.toLowerCase();
+                                return full.includes(q) || c.firstName.toLowerCase().includes(q) || c.lastName.toLowerCase().includes(q);
+                              })
+                              .slice(0, 20);
+                            if (filtered.length === 0) {
+                              return (
+                                <div className="absolute left-0 right-0 top-full mt-1 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-xl shadow-lg z-30 p-3 text-sm text-[color:var(--wp-text-secondary)]">
+                                  Nic nenalezeno.
+                                </div>
+                              );
+                            }
+                            return (
+                              <ul className="absolute left-0 right-0 top-full mt-1 max-h-64 overflow-auto bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-xl shadow-lg z-30 py-1">
+                                {filtered.map((c) => (
+                                  <li key={c.id}>
+                                    <button
+                                      type="button"
+                                      onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        setMemberContactId(c.id);
+                                        setContactSearch(`${c.firstName} ${c.lastName}`.trim());
+                                        setContactSuggestOpen(false);
+                                      }}
+                                      className={`block w-full text-left px-3 py-2 text-sm font-semibold min-h-[40px] hover:bg-indigo-50 ${
+                                        memberContactId === c.id ? "bg-indigo-50 text-indigo-700" : "text-[color:var(--wp-text)]"
+                                      }`}
+                                    >
+                                      {c.firstName} {c.lastName}
+                                    </button>
+                                  </li>
+                                ))}
+                              </ul>
+                            );
+                          })()}
+                        </div>
                       ) : (
                         <>
                           <input
@@ -410,7 +516,7 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
                       </button>
                       <button
                         type="button"
-                        onClick={() => { setAddingMember(false); setMemberContactId(""); setNewFirstName(""); setNewLastName(""); setAddMode("select"); }}
+                        onClick={() => { setAddingMember(false); setMemberContactId(""); setContactSearch(""); setNewFirstName(""); setNewLastName(""); setAddMode("select"); }}
                         className="rounded-xl border border-[color:var(--wp-surface-card-border)] px-4 py-2.5 text-sm font-medium text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] min-h-[44px]"
                       >
                         Zrušit
@@ -532,20 +638,120 @@ export function HouseholdDetailView({ household, contacts, opportunities }: Hous
 
             {/* Right column: Goals, Opportunities, Financial, Delete */}
             <div className="xl:col-span-1 space-y-6">
-              {/* Společné cíle – empty state */}
+              {/* Společné cíle */}
               <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-sm overflow-hidden">
                 <div className="px-6 py-4 border-b border-[color:var(--wp-surface-card-border)]/50 flex items-center justify-between bg-[color:var(--wp-surface-muted)]/50">
                   <h3 className="font-bold text-[color:var(--wp-text)] flex items-center gap-2">
                     <Target size={18} className="text-amber-500" />
                     Společné cíle
                   </h3>
-                  <button type="button" className="w-8 h-8 rounded-lg bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] flex items-center justify-center text-[color:var(--wp-text-tertiary)] hover:text-indigo-600 transition-colors shadow-sm min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => setGoalFormOpen((v) => !v)}
+                    aria-label="Přidat společný cíl"
+                    aria-expanded={goalFormOpen}
+                    className="w-8 h-8 rounded-lg bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] flex items-center justify-center text-[color:var(--wp-text-tertiary)] hover:text-indigo-600 transition-colors shadow-sm min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0"
+                  >
                     <Plus size={16} />
                   </button>
                 </div>
+                {goalFormOpen && (
+                  <form onSubmit={handleAddGoal} className="p-6 bg-[color:var(--wp-surface-muted)]/40 border-b border-[color:var(--wp-surface-card-border)] space-y-3">
+                    <div>
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1">Název cíle *</label>
+                      <input
+                        type="text"
+                        value={goalTitle}
+                        onChange={(e) => setGoalTitle(e.target.value)}
+                        required
+                        placeholder="Např. Vlastní bydlení"
+                        className="w-full px-3 py-2.5 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-sm font-semibold min-h-[44px]"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1">Cílová částka (Kč)</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={goalAmount}
+                          onChange={(e) => setGoalAmount(e.target.value)}
+                          placeholder="3 000 000"
+                          className="w-full px-3 py-2.5 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-sm font-semibold min-h-[44px]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1">Cíl do (DD.MM.YYYY)</label>
+                        <input
+                          type="text"
+                          value={goalDate}
+                          onChange={(e) => setGoalDate(e.target.value)}
+                          placeholder="31.12.2030"
+                          pattern="\d{2}\.\d{2}\.\d{4}"
+                          className="w-full px-3 py-2.5 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-sm font-semibold min-h-[44px]"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1">Poznámka (interní)</label>
+                      <textarea
+                        value={goalNote}
+                        onChange={(e) => setGoalNote(e.target.value)}
+                        rows={2}
+                        className="w-full px-3 py-2.5 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-sm font-medium min-h-[72px]"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 justify-end">
+                      <button
+                        type="button"
+                        onClick={() => { setGoalFormOpen(false); setGoalTitle(""); setGoalAmount(""); setGoalDate(""); setGoalNote(""); }}
+                        className="rounded-xl border border-[color:var(--wp-surface-card-border)] px-4 py-2.5 text-sm font-medium text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)] min-h-[44px]"
+                      >
+                        Zrušit
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={goalSaving || !goalTitle.trim()}
+                        className={clsx(portalPrimaryButtonClassName, "px-4 py-2.5 font-semibold disabled:opacity-50")}
+                      >
+                        {goalSaving ? "Ukládám…" : "Přidat cíl"}
+                      </button>
+                    </div>
+                  </form>
+                )}
                 <div className="p-6">
-                  <p className="text-sm text-[color:var(--wp-text-secondary)] mb-2">Žádné cíle.</p>
-                  <p className="text-xs text-[color:var(--wp-text-tertiary)]">Cíle domácnosti budou dostupné v budoucí verzi.</p>
+                  {sharedGoals.length === 0 ? (
+                    <p className="text-sm text-[color:var(--wp-text-secondary)]">Žádné cíle. Přidejte první společný cíl domácnosti.</p>
+                  ) : (
+                    <ul className="space-y-3">
+                      {sharedGoals.map((g) => (
+                        <li key={g.id} className="p-4 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/40">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <p className="font-bold text-sm text-[color:var(--wp-text)] truncate">{g.title}</p>
+                              <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs font-medium text-[color:var(--wp-text-secondary)]">
+                                {g.amount != null && (
+                                  <span>Cíl: {g.amount.toLocaleString("cs-CZ")} Kč</span>
+                                )}
+                                {g.targetDate && <span>Do: {g.targetDate}</span>}
+                              </div>
+                              {g.note && (
+                                <p className="text-xs font-medium text-[color:var(--wp-text-secondary)] mt-2 whitespace-pre-wrap">{g.note}</p>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveGoal(g.id)}
+                              className="p-2 rounded-lg text-[color:var(--wp-text-tertiary)] hover:text-rose-500 hover:bg-rose-50 min-h-[36px] min-w-[36px] flex items-center justify-center"
+                              aria-label="Smazat cíl"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               </div>
 

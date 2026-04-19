@@ -167,9 +167,13 @@ export function computeRiskPremiumsMonthly(plan: IncomeProtectionPlan): number {
   );
 }
 
-/** Celkem měsíčně za plán: základ + příplatky za rizika (shodné v UI i reportu). */
+/**
+ * Celkem měsíčně za plán = měsíční příspěvek (nebo roční/12).
+ * Příplatky za jednotlivá rizika se už do celkové částky nezahrnují – finální suma
+ * za pojištění odpovídá tomu, co poradce zadá jako měsíční/roční příspěvek.
+ */
 export function computePlanTotalMonthly(plan: IncomeProtectionPlan): number {
-  return computePlanBaseMonthly(plan) + computeRiskPremiumsMonthly(plan);
+  return computePlanBaseMonthly(plan);
 }
 
 /** Check if optimization section should be shown for this person. */

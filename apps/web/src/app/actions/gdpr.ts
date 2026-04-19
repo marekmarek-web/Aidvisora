@@ -5,6 +5,7 @@ import { hasPermission } from "@/lib/auth/permissions";
 import { db } from "db";
 import { contacts, contracts, documents } from "db";
 import { eq, and } from "db";
+import { logAuditAction } from "@/lib/audit";
 
 /** Uložení souhlasu s GDPR (registrace / kontakt). */
 export async function recordGdprConsent(contactId: string): Promise<void> {
@@ -24,14 +25,33 @@ export async function exportContactData(contactId: string): Promise<Record<strin
   } else if (!hasPermission(auth.roleName, "contacts:read")) {
     throw new Error("Forbidden");
   }
-  return doExportContactData(auth.tenantId, contactId);
+  const data = await doExportContactData(auth.tenantId, contactId);
+  // WS-2 Batch 2 / minimal audit coverage — GDPR export.
+  logAuditAction({
+    tenantId: auth.tenantId,
+    userId: auth.userId,
+    action: "gdpr.export",
+    entityType: "contact",
+    entityId: contactId,
+    meta: { roleName: auth.roleName, source: "advisor" },
+  });
+  return data;
 }
 
 /** Pro Client Zone – export dat přihlášeného klienta (auth.contactId). */
 export async function exportContactDataForClient(): Promise<Record<string, unknown>> {
   const auth = await requireAuthInAction();
   if (auth.roleName !== "Client" || !auth.contactId) throw new Error("Forbidden");
-  return doExportContactData(auth.tenantId, auth.contactId);
+  const data = await doExportContactData(auth.tenantId, auth.contactId);
+  logAuditAction({
+    tenantId: auth.tenantId,
+    userId: auth.userId,
+    action: "gdpr.export",
+    entityType: "contact",
+    entityId: auth.contactId,
+    meta: { roleName: auth.roleName, source: "client_portal" },
+  });
+  return data;
 }
 
 async function doExportContactData(tenantId: string, contactId: string): Promise<Record<string, unknown>> {

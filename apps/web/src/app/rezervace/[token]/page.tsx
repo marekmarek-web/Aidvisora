@@ -11,9 +11,5 @@ export default async function PublicBookingPage({ params }: { params: Promise<{ 
       </div>
     );
   }
-  return (
-    <main className="min-h-screen bg-slate-50">
-      <PublicBookingClient token={token.trim()} />
-    </main>
-  );
+  return <PublicBookingClient token={token.trim()} />;
 }

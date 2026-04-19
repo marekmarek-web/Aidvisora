@@ -4,6 +4,10 @@ import { cache } from "react";
 import { and, contacts, db, eq } from "db";
 import { listClientMaterialRequests } from "@/app/actions/advisor-material-requests";
 import {
+  listClientAdvisorProposals,
+  type ClientAdvisorProposal,
+} from "@/app/actions/advisor-proposals-client";
+import {
   getAssignedAdvisorForClient,
   getClientDashboardMetrics,
   type ClientAdvisorInfo,
@@ -87,6 +91,7 @@ export const loadClientPortalSessionBundle = cache(async function loadClientPort
     advisorMaterialRequests,
     financialSummaryRaw,
     advisor,
+    advisorProposals,
   ] = await Promise.all([
     db
       .select({
@@ -117,6 +122,7 @@ export const loadClientPortalSessionBundle = cache(async function loadClientPort
     listClientMaterialRequests().catch(() => [] as MaterialRequestListItem[]),
     getClientFinancialSummaryForContact(contactId).catch(() => MISSING_FINANCIAL_SUMMARY),
     getAssignedAdvisorForClient(contactId).catch(() => null),
+    listClientAdvisorProposals().catch(() => [] as ClientAdvisorProposal[]),
   ]);
 
   const fullName = contactRows
@@ -152,5 +158,6 @@ export const loadClientPortalSessionBundle = cache(async function loadClientPort
     advisorMaterialRequests,
     financialSummaryRaw,
     visiblePortfolioSourceDocs,
+    advisorProposals,
   };
 });

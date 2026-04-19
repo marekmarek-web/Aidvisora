@@ -81,6 +81,23 @@ function normalizeLoose(s: string): string {
     .trim();
 }
 
+/**
+ * Looks like a template / PDF filename stem (e.g. "Smlouva_sluzby_eS_v01_072024",
+ * "Navrh_smlouvy_v02_2026-03"). Snake_case, contains version/date tokens,
+ * and has no plausible "contract number" structure.
+ */
+function looksLikeTemplateFilenameStem(s: string): boolean {
+  const trimmed = s.trim();
+  if (!trimmed) return false;
+  // Underscored token with explicit version suffix (e.g. "Smlouva_sluzby_eS_v01_072024")
+  if (/_v\d{1,3}(?:_|$)/i.test(trimmed)) return true;
+  // Snake-case token starting with a Czech document word and containing digits
+  // ("Smlouva_sluzby...", "Navrh_smlouvy...", "Dodatek_..."). Real contract numbers
+  // and names do not use this pattern.
+  if (/^(smlouva|navrh|návrh|dodatek|priloha|příloha|pokyn|zadost|žádost)_/i.test(trimmed)) return true;
+  return false;
+}
+
 /** True if the string is only a generic label / role name, not a filled value. */
 export function isPlausibleLabelOnlyValue(raw: unknown): boolean {
   if (raw == null) return true;
@@ -93,6 +110,7 @@ export function isPlausibleLabelOnlyValue(raw: unknown): boolean {
   if (/^investor\s*:?\s*$/i.test(s)) return true;
   if (/^pojistník\s*:?\s*$/i.test(s)) return true;
   if (/^pojištěný\s*:?\s*$/i.test(s)) return true;
+  if (looksLikeTemplateFilenameStem(s)) return true;
   // Document / section titles mistaken for contract numbers or names (no policy id digits)
   if (!/\d/.test(s) && /^smlouva\s+o\s+/i.test(s)) return true;
   if (!/\d/.test(s) && /^(návrh|dodatek|příloha)\s+smlouvy/i.test(s)) return true;
@@ -437,6 +455,26 @@ export function stripLabelOnlyExtractionValues(envelope: DocumentReviewEnvelope)
         evidenceSnippet: cell.evidenceSnippet,
         sourcePage: cell.sourcePage,
       };
+    }
+  }
+
+  // Also scrub parties: the LLM sometimes extracts role labels ("Investor", "Pojistník")
+  // as party.fullName / party.name. Clear those so UI doesn't show "Klient: Investor"
+  // and tagFromParties doesn't re-insert the label as the canonical fullName.
+  const parties = (envelope as unknown as { parties?: unknown }).parties;
+  if (parties && typeof parties === "object") {
+    const partyList: Array<Record<string, unknown>> = Array.isArray(parties)
+      ? (parties as Array<Record<string, unknown>>)
+      : Object.values(parties as Record<string, unknown>).filter(
+          (v): v is Record<string, unknown> => typeof v === "object" && v !== null,
+        );
+    for (const party of partyList) {
+      for (const nameKey of ["fullName", "name"] as const) {
+        const v = party[nameKey];
+        if (typeof v === "string" && isPlausibleLabelOnlyValue(v)) {
+          party[nameKey] = null;
+        }
+      }
     }
   }
 }

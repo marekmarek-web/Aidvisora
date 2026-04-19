@@ -4,6 +4,7 @@ import { requireClientZoneAuth, getCachedSupabaseUser } from "@/lib/auth/require
 import { getPortalNotificationsUnreadCount } from "@/app/actions/portal-notifications";
 import { getAssignedAdvisorForClient } from "@/app/actions/client-dashboard";
 import { getUnreadAdvisorMessagesForClientCount } from "@/app/actions/messages";
+import { getActiveAdvisorProposalCountForClient } from "@/app/actions/advisor-proposals-client";
 import { isMobileUiV1EnabledForRequest } from "@/app/shared/mobile-ui/feature-flag";
 import { getEffectiveTenantSettingsForWorkspaceResolved } from "@/lib/billing/effective-workspace";
 import { db, contacts, and, eq } from "db";
@@ -55,13 +56,15 @@ export default async function ClientZoneLayout({
 
   let unreadNotificationsCount = 0;
   let unreadMessagesCount = 0;
+  let activeProposalsCount = 0;
   let contact: { firstName: string | null; lastName: string | null } | null = null;
   let advisor: Awaited<ReturnType<typeof getAssignedAdvisorForClient>> = null;
   try {
-    [unreadNotificationsCount, unreadMessagesCount, contact, advisor] = await Promise.all([
+    [unreadNotificationsCount, unreadMessagesCount, activeProposalsCount, contact, advisor] = await Promise.all([
       getPortalNotificationsUnreadCount(),
       // 5F: include unread messages in bell total
       auth.contactId ? getUnreadAdvisorMessagesForClientCount().catch(() => 0) : Promise.resolve(0),
+      auth.contactId ? getActiveAdvisorProposalCountForClient().catch(() => 0) : Promise.resolve(0),
       auth.contactId
         ? db
             .select({
@@ -78,6 +81,7 @@ export default async function ClientZoneLayout({
   } catch {
     unreadNotificationsCount = 0;
     unreadMessagesCount = 0;
+    activeProposalsCount = 0;
     contact = null;
     advisor = null;
   }
@@ -90,6 +94,7 @@ export default async function ClientZoneLayout({
     <ClientPortalShell
       unreadNotificationsCount={unreadNotificationsCount + unreadMessagesCount}
       unreadMessagesCount={unreadMessagesCount}
+      activeProposalsCount={activeProposalsCount}
       fullName={fullName}
       advisor={advisor}
       portalFeatures={portalFeatures}

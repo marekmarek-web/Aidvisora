@@ -34,6 +34,7 @@ type CanonicalFields = NonNullable<ExtractionDocument["canonicalFields"]>;
 const PARTICIPANT_ROLE_LABELS: Record<string, string> = {
   policyholder: "Pojistník",
   insured: "Pojištěný",
+  second_insured: "2. pojištěný",
   legal_representative: "Zákonný zástupce",
   beneficiary: "Obmyšlený / oprávněná osoba",
   child: "Dítě / pojištěné dítě",
@@ -41,6 +42,12 @@ const PARTICIPANT_ROLE_LABELS: Record<string, string> = {
   co_applicant: "Spoludlužník",
   borrower: "Dlužník",
   guarantor: "Ručitel",
+  investor: "Investor",
+  participant: "Účastník",
+  client: "Klient",
+  employer: "Zaměstnavatel",
+  intermediary: "Zprostředkovatel",
+  spouse: "Manžel / manželka",
   other: "Ostatní",
 };
 

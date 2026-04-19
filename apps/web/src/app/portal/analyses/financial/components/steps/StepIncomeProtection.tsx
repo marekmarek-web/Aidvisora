@@ -477,10 +477,6 @@ function PlanCard({
     onRisksChange(next);
   };
 
-  const riskPriceSum = riskTypes.reduce((sum, rt) => {
-    const entry = risks.find((r) => r.riskType === rt);
-    return sum + (entry?.enabled && entry?.finalPrice != null ? entry.finalPrice : 0);
-  }, 0);
   const planTotal = computePlanTotalMonthly(plan);
 
   return (
@@ -587,12 +583,6 @@ function PlanCard({
                       placeholder="Krytí"
                       unitLabel="Kč"
                     />
-                    <CurrencyCzkInput
-                      value={entry.finalPrice}
-                      onChange={(v) => updateRisk(rt, { finalPrice: v })}
-                      placeholder="Příplatek"
-                      unitLabel="Kč/měs."
-                    />
                   </div>
                 )}
               </div>
@@ -603,11 +593,6 @@ function PlanCard({
           <div className="text-sm font-bold text-[color:var(--wp-text)]">
             Celkem za tento plán: {formatCurrencyMonthly(planTotal)}
           </div>
-          {riskPriceSum > 0 && (
-            <div className="text-xs font-medium text-[color:var(--wp-text-secondary)]">
-              Z toho příplatky za rizika: {formatCurrencyMonthly(riskPriceSum)}
-            </div>
-          )}
         </div>
       </div>
     </div>

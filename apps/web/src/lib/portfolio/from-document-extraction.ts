@@ -67,11 +67,19 @@ function flattenForFields(obj: Record<string, unknown>, prefix = ""): Array<{ ke
 
 /**
  * Volat po úspěšném `processDocument`, když má dokument `contact_id` a `extract_json_path`.
+ *
+ * Security (W3 IDOR fix, WS-2 Batch 2): `tenantId` je povinný. Dokument se dohledá a
+ * contracts/documents-extrakce zapisují pouze v rámci daného tenantu; nelze přes cizí
+ * `documentId` vytvořit či update-ovat řádek v jiném tenantu.
  */
 export async function syncPortfolioDraftFromProcessedDocument(
   documentId: string,
+  tenantId: string,
   options?: { advisorUserId?: string | null }
 ): Promise<SyncPortfolioFromDocumentResult> {
+  if (!tenantId) {
+    throw new Error("syncPortfolioDraftFromProcessedDocument: tenantId is required.");
+  }
   const [doc] = await db
     .select({
       id: documents.id,
@@ -81,7 +89,7 @@ export async function syncPortfolioDraftFromProcessedDocument(
       name: documents.name,
     })
     .from(documents)
-    .where(eq(documents.id, documentId))
+    .where(and(eq(documents.tenantId, tenantId), eq(documents.id, documentId)))
     .limit(1);
 
   if (!doc) return { ok: false, reason: "not_found" };

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAuthInAction } from "@/lib/auth/require-auth";
+import { withAuthContext } from "@/lib/auth/with-auth-context";
 import { hasPermission } from "@/lib/auth/permissions";
 import { sendEmail, logNotification } from "@/lib/email/send-email";
 import { newPortalRequestAdvisorTemplate } from "@/lib/email/templates";
@@ -164,74 +165,87 @@ export type AdvisorClientPortalInboxItem = {
  * Inbox klientských požadavků pro přihlášeného poradce (in-app notifikace + opportunity).
  */
 export async function getAdvisorClientPortalRequestsInbox(): Promise<AdvisorClientPortalInboxItem[]> {
-  const auth = await requireAuthInAction();
-  if (!hasPermission(auth.roleName, "opportunities:read")) return [];
-
-  const notifRows = await db
-    .select({
-      id: advisorNotifications.id,
-      title: advisorNotifications.title,
-      status: advisorNotifications.status,
-      createdAt: advisorNotifications.createdAt,
-      body: advisorNotifications.body,
-      relatedEntityType: advisorNotifications.relatedEntityType,
-      relatedEntityId: advisorNotifications.relatedEntityId,
-    })
-    .from(advisorNotifications)
-    .where(
-      and(
-        eq(advisorNotifications.tenantId, auth.tenantId),
-        eq(advisorNotifications.targetUserId, auth.userId),
-        eq(advisorNotifications.type, CLIENT_PORTAL_NOTIFICATION_TYPE),
-        ne(advisorNotifications.status, "dismissed")
-      )
-    )
-    .orderBy(desc(advisorNotifications.createdAt))
-    .limit(100);
-
-  const oppIds = notifRows
-    .map((n) => (n.relatedEntityType === "opportunity" ? n.relatedEntityId : null))
-    .filter((id): id is string => Boolean(id));
-
-  const oppMap = new Map<
-    string,
-    {
-      id: string;
-      title: string;
-      caseType: string | null;
-      contactId: string | null;
-      customFields: unknown;
-      closedAt: Date | null;
-      updatedAt: Date | null;
-      sortOrder: number | null;
-      firstName: string | null;
-      lastName: string | null;
+  const { notifRows, oppMap } = await withAuthContext(async (auth, tx) => {
+    if (!hasPermission(auth.roleName, "opportunities:read")) {
+      return { notifRows: [] as Array<{
+        id: string;
+        title: string;
+        status: string;
+        createdAt: Date;
+        body: string | null;
+        relatedEntityType: string | null;
+        relatedEntityId: string | null;
+      }>, oppMap: new Map<string, never>() };
     }
-  >();
 
-  if (oppIds.length > 0) {
-    const oppRows = await db
+    const notifRows = await tx
       .select({
-        id: opportunities.id,
-        title: opportunities.title,
-        caseType: opportunities.caseType,
-        contactId: opportunities.contactId,
-        customFields: opportunities.customFields,
-        closedAt: opportunities.closedAt,
-        updatedAt: opportunities.updatedAt,
-        sortOrder: opportunityStages.sortOrder,
-        firstName: contacts.firstName,
-        lastName: contacts.lastName,
+        id: advisorNotifications.id,
+        title: advisorNotifications.title,
+        status: advisorNotifications.status,
+        createdAt: advisorNotifications.createdAt,
+        body: advisorNotifications.body,
+        relatedEntityType: advisorNotifications.relatedEntityType,
+        relatedEntityId: advisorNotifications.relatedEntityId,
       })
-      .from(opportunities)
-      .innerJoin(opportunityStages, eq(opportunities.stageId, opportunityStages.id))
-      .leftJoin(contacts, eq(opportunities.contactId, contacts.id))
-      .where(and(eq(opportunities.tenantId, auth.tenantId), inArray(opportunities.id, oppIds)));
+      .from(advisorNotifications)
+      .where(
+        and(
+          eq(advisorNotifications.tenantId, auth.tenantId),
+          eq(advisorNotifications.targetUserId, auth.userId),
+          eq(advisorNotifications.type, CLIENT_PORTAL_NOTIFICATION_TYPE),
+          ne(advisorNotifications.status, "dismissed")
+        )
+      )
+      .orderBy(desc(advisorNotifications.createdAt))
+      .limit(100);
 
-    for (const r of oppRows) {
-      oppMap.set(r.id, r);
+    const oppIds = notifRows
+      .map((n) => (n.relatedEntityType === "opportunity" ? n.relatedEntityId : null))
+      .filter((id): id is string => Boolean(id));
+
+    const oppMap = new Map<
+      string,
+      {
+        id: string;
+        title: string;
+        caseType: string | null;
+        contactId: string | null;
+        customFields: unknown;
+        closedAt: Date | null;
+        updatedAt: Date | null;
+        sortOrder: number | null;
+        firstName: string | null;
+        lastName: string | null;
+      }
+    >();
+
+    if (oppIds.length > 0) {
+      const oppRows = await tx
+        .select({
+          id: opportunities.id,
+          title: opportunities.title,
+          caseType: opportunities.caseType,
+          contactId: opportunities.contactId,
+          customFields: opportunities.customFields,
+          closedAt: opportunities.closedAt,
+          updatedAt: opportunities.updatedAt,
+          sortOrder: opportunityStages.sortOrder,
+          firstName: contacts.firstName,
+          lastName: contacts.lastName,
+        })
+        .from(opportunities)
+        .innerJoin(opportunityStages, eq(opportunities.stageId, opportunityStages.id))
+        .leftJoin(contacts, eq(opportunities.contactId, contacts.id))
+        .where(and(eq(opportunities.tenantId, auth.tenantId), inArray(opportunities.id, oppIds)));
+
+      for (const r of oppRows) {
+        oppMap.set(r.id, r);
+      }
     }
-  }
+
+    return { notifRows, oppMap };
+  });
 
   return notifRows.map((n) => {
     const oppId = n.relatedEntityType === "opportunity" ? n.relatedEntityId : null;
@@ -292,28 +306,28 @@ export async function getAdvisorClientPortalRequestsInbox(): Promise<AdvisorClie
  * Vrací klientské stavy, ne interní stage.
  */
 export async function getClientRequests(): Promise<ClientRequestItem[]> {
-  const auth = await requireAuthInAction();
-  if (auth.roleName !== "Client" || !auth.contactId) throw new Error("Forbidden");
-
-  const rows = await db
-    .select({
-      id: opportunities.id,
-      title: opportunities.title,
-      caseType: opportunities.caseType,
-      closedAt: opportunities.closedAt,
-      updatedAt: opportunities.updatedAt,
-      customFields: opportunities.customFields,
-      sortOrder: opportunityStages.sortOrder,
-    })
-    .from(opportunities)
-    .innerJoin(opportunityStages, eq(opportunities.stageId, opportunityStages.id))
-    .where(
-      and(
-        eq(opportunities.tenantId, auth.tenantId),
-        eq(opportunities.contactId, auth.contactId)
+  const rows = await withAuthContext(async (auth, tx) => {
+    if (auth.roleName !== "Client" || !auth.contactId) throw new Error("Forbidden");
+    return tx
+      .select({
+        id: opportunities.id,
+        title: opportunities.title,
+        caseType: opportunities.caseType,
+        closedAt: opportunities.closedAt,
+        updatedAt: opportunities.updatedAt,
+        customFields: opportunities.customFields,
+        sortOrder: opportunityStages.sortOrder,
+      })
+      .from(opportunities)
+      .innerJoin(opportunityStages, eq(opportunities.stageId, opportunityStages.id))
+      .where(
+        and(
+          eq(opportunities.tenantId, auth.tenantId),
+          eq(opportunities.contactId, auth.contactId)
+        )
       )
-    )
-    .orderBy(desc(opportunities.updatedAt));
+      .orderBy(desc(opportunities.updatedAt));
+  });
 
   return rows
     .filter((r) => {

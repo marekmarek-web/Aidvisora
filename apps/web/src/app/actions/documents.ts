@@ -1,8 +1,8 @@
 "use server";
 
 import { requireAuthInAction } from "@/lib/auth/require-auth";
+import { withAuthContext, withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { hasPermission } from "@/lib/auth/permissions";
-import { db } from "db";
 import { documents, contacts, contracts } from "db";
 import { eq, and, desc, inArray } from "db";
 import { createAdminClient } from "@/lib/supabase/server";
@@ -49,88 +49,89 @@ const documentSelectFields = {
 } as const;
 
 export async function listDocuments(): Promise<(DocumentRow & { contactName?: string | null })[]> {
-  const auth = await requireAuthInAction();
-  if (!hasPermission(auth.roleName, "documents:read")) throw new Error("Forbidden");
-  try {
-    const rows = await db
-      .select({
-        ...documentSelectFields,
-        contactFirstName: contacts.firstName,
-        contactLastName: contacts.lastName,
-      })
-      .from(documents)
-      .leftJoin(contacts, eq(documents.contactId, contacts.id))
-      .where(eq(documents.tenantId, auth.tenantId))
-      .orderBy(desc(documents.createdAt))
-      .limit(200);
-    return rows.map((r) => ({
-      id: r.id,
-      name: r.name,
-      mimeType: r.mimeType,
-      tags: r.tags,
-      contactId: r.contactId,
-      contractId: r.contractId,
-      visibleToClient: r.visibleToClient,
-      createdAt: r.createdAt,
-      uploadSource: r.uploadSource,
-      processingStatus: r.processingStatus,
-      processingStage: r.processingStage,
-      aiInputSource: r.aiInputSource,
-      pageCount: r.pageCount,
-      isScanLike: r.isScanLike,
-      sizeBytes: r.sizeBytes ?? null,
-      contactName: r.contactFirstName && r.contactLastName
-        ? `${r.contactFirstName} ${r.contactLastName}`
-        : r.contactFirstName || r.contactLastName || null,
-    }));
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    const likelySchemaDrift =
-      msg.includes("does not exist") || msg.includes("column") || msg.includes("42703");
-    console.error("[listDocuments] query failed:", err);
-    if (likelySchemaDrift) {
-      console.error("[listDocuments] Pravděpodobně chybí migrace tabulky documents — viz pnpm db:verify-documents-schema a OPS_RUNBOOK.");
-      return [];
+  return withAuthContext(async (auth, tx) => {
+    if (!hasPermission(auth.roleName, "documents:read")) throw new Error("Forbidden");
+    try {
+      const rows = await tx
+        .select({
+          ...documentSelectFields,
+          contactFirstName: contacts.firstName,
+          contactLastName: contacts.lastName,
+        })
+        .from(documents)
+        .leftJoin(contacts, eq(documents.contactId, contacts.id))
+        .where(eq(documents.tenantId, auth.tenantId))
+        .orderBy(desc(documents.createdAt))
+        .limit(200);
+      return rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        mimeType: r.mimeType,
+        tags: r.tags,
+        contactId: r.contactId,
+        contractId: r.contractId,
+        visibleToClient: r.visibleToClient,
+        createdAt: r.createdAt,
+        uploadSource: r.uploadSource,
+        processingStatus: r.processingStatus,
+        processingStage: r.processingStage,
+        aiInputSource: r.aiInputSource,
+        pageCount: r.pageCount,
+        isScanLike: r.isScanLike,
+        sizeBytes: r.sizeBytes ?? null,
+        contactName: r.contactFirstName && r.contactLastName
+          ? `${r.contactFirstName} ${r.contactLastName}`
+          : r.contactFirstName || r.contactLastName || null,
+      }));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const likelySchemaDrift =
+        msg.includes("does not exist") || msg.includes("column") || msg.includes("42703");
+      console.error("[listDocuments] query failed:", err);
+      if (likelySchemaDrift) {
+        console.error("[listDocuments] Pravděpodobně chybí migrace tabulky documents — viz pnpm db:verify-documents-schema a OPS_RUNBOOK.");
+        return [];
+      }
+      throw err;
     }
-    throw err;
-  }
+  });
 }
 
 export async function getDocumentsForContact(contactId: string): Promise<DocumentRow[]> {
-  const auth = await requireAuthInAction();
-  if (!hasPermission(auth.roleName, "documents:read")) throw new Error("Forbidden");
-  const rows = await db
-    .select(documentSelectFields)
-    .from(documents)
-    .where(and(eq(documents.tenantId, auth.tenantId), eq(documents.contactId, contactId)));
-  return rows;
+  return withAuthContext(async (auth, tx) => {
+    if (!hasPermission(auth.roleName, "documents:read")) throw new Error("Forbidden");
+    return tx
+      .select(documentSelectFields)
+      .from(documents)
+      .where(and(eq(documents.tenantId, auth.tenantId), eq(documents.contactId, contactId)));
+  });
 }
 
 export async function getDocumentsForOpportunity(opportunityId: string): Promise<DocumentRow[]> {
-  const auth = await requireAuthInAction();
-  if (!hasPermission(auth.roleName, "documents:read")) throw new Error("Forbidden");
-  const rows = await db
-    .select(documentSelectFields)
-    .from(documents)
-    .where(and(eq(documents.tenantId, auth.tenantId), eq(documents.opportunityId, opportunityId)));
-  return rows;
+  return withAuthContext(async (auth, tx) => {
+    if (!hasPermission(auth.roleName, "documents:read")) throw new Error("Forbidden");
+    return tx
+      .select(documentSelectFields)
+      .from(documents)
+      .where(and(eq(documents.tenantId, auth.tenantId), eq(documents.opportunityId, opportunityId)));
+  });
 }
 
 /** Pro Client Zone – jen dokumenty s visibleToClient true. */
 export async function getDocumentsForClient(contactId: string): Promise<DocumentRow[]> {
-  const auth = await requireAuthInAction();
-  if (auth.roleName !== "Client" || !auth.contactId || auth.contactId !== contactId) throw new Error("Forbidden");
-  const rows = await db
-    .select(documentSelectFields)
-    .from(documents)
-    .where(
-      and(
-        eq(documents.tenantId, auth.tenantId),
-        eq(documents.contactId, contactId),
-        eq(documents.visibleToClient, true)
-      )
-    );
-  return rows;
+  return withAuthContext(async (auth, tx) => {
+    if (auth.roleName !== "Client" || !auth.contactId || auth.contactId !== contactId) throw new Error("Forbidden");
+    return tx
+      .select(documentSelectFields)
+      .from(documents)
+      .where(
+        and(
+          eq(documents.tenantId, auth.tenantId),
+          eq(documents.contactId, contactId),
+          eq(documents.visibleToClient, true)
+        )
+      );
+  });
 }
 
 /** Pro Moje portfolio (klient): jen názvy dokumentů, které jsou u kontaktu a sdílené do portálu. */
@@ -138,21 +139,22 @@ export async function getClientVisiblePortfolioDocumentNames(
   contactId: string,
   documentIds: string[]
 ): Promise<Record<string, { name: string }>> {
-  const auth = await requireAuthInAction();
-  if (auth.roleName !== "Client" || !auth.contactId || auth.contactId !== contactId) throw new Error("Forbidden");
   const uniq = [...new Set(documentIds.filter(Boolean))];
   if (uniq.length === 0) return {};
-  const rows = await db
-    .select({ id: documents.id, name: documents.name })
-    .from(documents)
-    .where(
-      and(
-        eq(documents.tenantId, auth.tenantId),
-        eq(documents.contactId, contactId),
-        eq(documents.visibleToClient, true),
-        inArray(documents.id, uniq)
-      )
-    );
+  const rows = await withAuthContext(async (auth, tx) => {
+    if (auth.roleName !== "Client" || !auth.contactId || auth.contactId !== contactId) throw new Error("Forbidden");
+    return tx
+      .select({ id: documents.id, name: documents.name })
+      .from(documents)
+      .where(
+        and(
+          eq(documents.tenantId, auth.tenantId),
+          eq(documents.contactId, contactId),
+          eq(documents.visibleToClient, true),
+          inArray(documents.id, uniq)
+        )
+      );
+  });
   const out: Record<string, { name: string }> = {};
   for (const r of rows) out[r.id] = { name: r.name };
   return out;
@@ -184,23 +186,25 @@ export async function uploadDocument(
       : uploadError.message;
     throw new Error(msg);
   }
-  const [row] = await db
-    .insert(documents)
-    .values({
-      tenantId: auth.tenantId,
-      contactId: contactId || null,
-      contractId: options.contractId || null,
-      opportunityId: options.opportunityId || null,
-      name,
-      storagePath: path,
-      tags: options.tags?.length ? options.tags : null,
-      mimeType: file.type || null,
-      sizeBytes: file.size,
-      visibleToClient: options.visibleToClient ?? false,
-      uploadSource: options.uploadSource ?? "web",
-      uploadedBy: auth.userId,
-    })
-    .returning({ id: documents.id });
+  const [row] = await withTenantContextFromAuth(auth, (tx) =>
+    tx
+      .insert(documents)
+      .values({
+        tenantId: auth.tenantId,
+        contactId: contactId || null,
+        contractId: options.contractId || null,
+        opportunityId: options.opportunityId || null,
+        name,
+        storagePath: path,
+        tags: options.tags?.length ? options.tags : null,
+        mimeType: file.type || null,
+        sizeBytes: file.size,
+        visibleToClient: options.visibleToClient ?? false,
+        uploadSource: options.uploadSource ?? "web",
+        uploadedBy: auth.userId,
+      })
+      .returning({ id: documents.id }),
+  );
   const newId = row?.id ?? null;
   if (newId) {
     try { await logActivity("document", newId, "upload", { contactId, opportunityId: options.opportunityId, name }); } catch {}
@@ -234,21 +238,25 @@ export async function uploadDocument(
 export async function updateDocumentVisibleToClient(documentId: string, visibleToClient: boolean) {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "documents:write")) throw new Error("Forbidden");
-  const [existing] = await db
-    .select({
-      visibleToClient: documents.visibleToClient,
-      contactId: documents.contactId,
-      name: documents.name,
-    })
-    .from(documents)
-    .where(and(eq(documents.tenantId, auth.tenantId), eq(documents.id, documentId)))
-    .limit(1);
+  const existing = await withTenantContextFromAuth(auth, async (tx) => {
+    const [row] = await tx
+      .select({
+        visibleToClient: documents.visibleToClient,
+        contactId: documents.contactId,
+        name: documents.name,
+      })
+      .from(documents)
+      .where(and(eq(documents.tenantId, auth.tenantId), eq(documents.id, documentId)))
+      .limit(1);
+    if (!row) return null;
+    await tx
+      .update(documents)
+      .set({ visibleToClient, updatedAt: new Date() })
+      .where(and(eq(documents.tenantId, auth.tenantId), eq(documents.id, documentId)));
+    return row;
+  });
   if (!existing) throw new Error("Dokument nenalezen.");
   const wasVisible = !!existing.visibleToClient;
-  await db
-    .update(documents)
-    .set({ visibleToClient, updatedAt: new Date() })
-    .where(and(eq(documents.tenantId, auth.tenantId), eq(documents.id, documentId)));
   if (visibleToClient && !wasVisible && existing.contactId) {
     try {
       await notifyClientAdvisorSharedDocument({
@@ -267,9 +275,9 @@ export async function updateDocumentVisibleToClient(documentId: string, visibleT
 export async function deleteDocument(id: string) {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "documents:write")) throw new Error("Forbidden");
-  await db
-    .delete(documents)
-    .where(and(eq(documents.tenantId, auth.tenantId), eq(documents.id, id)));
+  await withTenantContextFromAuth(auth, (tx) =>
+    tx.delete(documents).where(and(eq(documents.tenantId, auth.tenantId), eq(documents.id, id))),
+  );
   try { await logActivity("document", id, "delete"); } catch {}
   try {
     await logAudit({
@@ -291,50 +299,52 @@ export async function updateDocument(
   let prevVisible: boolean | null = null;
   let contactIdForNotify: string | null = null;
   let docName = "";
-  if (data.visibleToClient === true) {
-    const [row] = await db
-      .select({
-        visibleToClient: documents.visibleToClient,
-        contactId: documents.contactId,
-        name: documents.name,
-      })
-      .from(documents)
-      .where(and(eq(documents.tenantId, auth.tenantId), eq(documents.id, id)))
-      .limit(1);
-    if (row) {
-      prevVisible = row.visibleToClient;
-      contactIdForNotify = row.contactId;
-      docName = row.name;
-    }
-  }
-  await db
-    .update(documents)
-    .set({
-      ...(data.name != null && { name: data.name }),
-      ...(data.tags !== undefined && { tags: data.tags.length ? data.tags : null }),
-      ...(data.contractId !== undefined && { contractId: data.contractId || null }),
-      ...(data.visibleToClient != null && { visibleToClient: data.visibleToClient }),
-      updatedAt: new Date(),
-    })
-    .where(and(eq(documents.tenantId, auth.tenantId), eq(documents.id, id)));
-
-  /** Single source of truth: linking a document to a contract sets lineage on `contracts`. */
-  if (data.contractId !== undefined) {
-    await db
-      .update(contracts)
-      .set({ sourceDocumentId: null, updatedAt: new Date() })
-      .where(and(eq(contracts.tenantId, auth.tenantId), eq(contracts.sourceDocumentId, id)));
-    if (data.contractId) {
-      await db
-        .update(contracts)
-        .set({
-          sourceDocumentId: id,
-          sourceKind: "document",
-          updatedAt: new Date(),
+  await withTenantContextFromAuth(auth, async (tx) => {
+    if (data.visibleToClient === true) {
+      const [row] = await tx
+        .select({
+          visibleToClient: documents.visibleToClient,
+          contactId: documents.contactId,
+          name: documents.name,
         })
-        .where(and(eq(contracts.tenantId, auth.tenantId), eq(contracts.id, data.contractId)));
+        .from(documents)
+        .where(and(eq(documents.tenantId, auth.tenantId), eq(documents.id, id)))
+        .limit(1);
+      if (row) {
+        prevVisible = row.visibleToClient;
+        contactIdForNotify = row.contactId;
+        docName = row.name;
+      }
     }
-  }
+    await tx
+      .update(documents)
+      .set({
+        ...(data.name != null && { name: data.name }),
+        ...(data.tags !== undefined && { tags: data.tags.length ? data.tags : null }),
+        ...(data.contractId !== undefined && { contractId: data.contractId || null }),
+        ...(data.visibleToClient != null && { visibleToClient: data.visibleToClient }),
+        updatedAt: new Date(),
+      })
+      .where(and(eq(documents.tenantId, auth.tenantId), eq(documents.id, id)));
+
+    /** Single source of truth: linking a document to a contract sets lineage on `contracts`. */
+    if (data.contractId !== undefined) {
+      await tx
+        .update(contracts)
+        .set({ sourceDocumentId: null, updatedAt: new Date() })
+        .where(and(eq(contracts.tenantId, auth.tenantId), eq(contracts.sourceDocumentId, id)));
+      if (data.contractId) {
+        await tx
+          .update(contracts)
+          .set({
+            sourceDocumentId: id,
+            sourceKind: "document",
+            updatedAt: new Date(),
+          })
+          .where(and(eq(contracts.tenantId, auth.tenantId), eq(contracts.id, data.contractId)));
+      }
+    }
+  });
 
   try { await logActivity("document", id, "update", { fields: Object.keys(data) }); } catch {}
   if (
@@ -413,23 +423,25 @@ export async function clientUploadDocument(formData: FormData) {
     throw new Error(uploadError.message || "Nahrání souboru se nezdařilo.");
   }
 
-  const [row] = await db
-    .insert(documents)
-    .values({
-      tenantId: auth.tenantId,
-      contactId: auth.contactId,
-      contractId: null,
-      opportunityId: null,
-      name: name || file.name,
-      storagePath,
-      tags: tags.length ? tags : null,
-      mimeType: file.type || null,
-      sizeBytes: file.size,
-      visibleToClient: true,
-      uploadSource,
-      uploadedBy: auth.userId,
-    })
-    .returning({ id: documents.id });
+  const [row] = await withTenantContextFromAuth(auth, (tx) =>
+    tx
+      .insert(documents)
+      .values({
+        tenantId: auth.tenantId,
+        contactId: auth.contactId,
+        contractId: null,
+        opportunityId: null,
+        name: name || file.name,
+        storagePath,
+        tags: tags.length ? tags : null,
+        mimeType: file.type || null,
+        sizeBytes: file.size,
+        visibleToClient: true,
+        uploadSource,
+        uploadedBy: auth.userId,
+      })
+      .returning({ id: documents.id }),
+  );
 
   const documentId = row?.id ?? null;
 

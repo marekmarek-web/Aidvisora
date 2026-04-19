@@ -244,8 +244,17 @@ export function MindmapCanvas({
       const source = nodes.find((n) => n.id === edge.sourceId);
       const target = nodes.find((n) => n.id === edge.targetId);
       if (!source || !target) return null;
-      const offset = Math.abs(target.x - source.x) / 2;
-      const path = `M ${source.x} ${source.y} C ${source.x + offset} ${source.y}, ${target.x - offset} ${target.y}, ${target.x} ${target.y}`;
+      const midX = (source.x + target.x) / 2;
+      const midY = (source.y + target.y) / 2;
+      const dx = target.x - source.x;
+      const dy = target.y - source.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const perpX = -dy / len;
+      const perpY = dx / len;
+      const bulge = Math.min(80, Math.max(20, len * 0.15));
+      const cx = midX + perpX * bulge;
+      const cy = midY + perpY * bulge;
+      const path = `M ${source.x} ${source.y} Q ${cx} ${cy} ${target.x} ${target.y}`;
       return (
         <path
           key={edge.id}
