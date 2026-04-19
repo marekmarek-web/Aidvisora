@@ -130,7 +130,7 @@ export default async function ClientAdvisorProposalDetailPage({
                   <CheckCircle2 size={16} className="text-emerald-600 mt-0.5 shrink-0" />
                   <span>
                     <span className="font-bold">{b.label}</span>
-                    {b.detail ? <span className="text-slate-500"> — {b.detail}</span> : null}
+                    {b.delta ? <span className="text-slate-500"> — {b.delta}</span> : null}
                   </span>
                 </li>
               ))}
