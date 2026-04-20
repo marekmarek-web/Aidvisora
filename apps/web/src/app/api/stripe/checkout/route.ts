@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { getMembership } from "@/lib/auth/get-membership";
 import { getBillingReturnUrls, parseBillingContext } from "@/lib/stripe/billing-return-paths";
@@ -13,6 +14,7 @@ import {
 } from "@/lib/stripe/price-catalog";
 import { getStripe, isStripeCheckoutAvailable } from "@/lib/stripe/server";
 import { resolvePromotionCode, isKnownPromoCode } from "@/lib/stripe/promo-codes";
+import { PROMO_CODE_COOKIE } from "@/lib/stripe/promo-codes-shared";
 import {
   BILLING_AUDIT_ACTIONS,
   writeBillingAudit,
@@ -71,7 +73,22 @@ export async function POST(request: Request) {
   const interval = parsePlanInterval(body.interval);
   const rawPromoCode =
     typeof body.promoCode === "string" ? body.promoCode.trim() : "";
-  const normalizedPromoCode = rawPromoCode ? rawPromoCode.toUpperCase() : "";
+  const bodyPromoCode = rawPromoCode ? rawPromoCode.toUpperCase() : "";
+
+  // Fallback na cookie nastavenou z `/invite/[code]` — nechá PB partnery
+  // dojít od pozvánky přes registraci až do checkoutu bez manuálního zadávání.
+  const cookieStore = await cookies();
+  const cookiePromoCodeRaw = cookieStore.get(PROMO_CODE_COOKIE)?.value ?? "";
+  const cookiePromoCode = cookiePromoCodeRaw
+    ? cookiePromoCodeRaw.trim().toUpperCase()
+    : "";
+
+  const normalizedPromoCode = bodyPromoCode || cookiePromoCode;
+  const promoCodeSource: "body" | "cookie" | null = bodyPromoCode
+    ? "body"
+    : cookiePromoCode
+      ? "cookie"
+      : null;
 
   const legacy = getLegacyStripePriceId();
   const multi = hasAnyMultiTierPrice();
@@ -125,45 +142,64 @@ export async function POST(request: Request) {
 
     const trialDays = getTrialPeriodDays();
 
-    // Promo kód: jen whitelisted (PREMIUM-BROKERS-2026), jinak rovnou odmítneme
-    // a zalogujeme — nedovolíme brute-force na Stripe API přes public endpoint.
+    // Promo kód: jen whitelisted (PREMIUM-BROKERS-2026). Neznámé kódy z body
+    // odmítáme hard (brute-force ochrana na Stripe API). Neznámé/expirované
+    // hodnoty z cookie fallbackujeme silent — cookie mohla zůstat z kampaně
+    // která už skončila a nechceme kvůli ní lámat checkout.
     let resolvedPromo: Awaited<ReturnType<typeof resolvePromotionCode>> = null;
     if (normalizedPromoCode) {
-      if (!isKnownPromoCode(normalizedPromoCode)) {
+      const isWhitelisted = isKnownPromoCode(normalizedPromoCode);
+      if (!isWhitelisted) {
         await writeBillingAudit({
           tenantId: m.tenantId,
           action: BILLING_AUDIT_ACTIONS.PROMO_CODE_REJECTED,
           actorKind: "user",
           actorUserId: user.id,
-          metadata: { code: normalizedPromoCode, reason: "not_whitelisted" },
-        });
-        return NextResponse.json(
-          { error: "Zadaný promo kód není platný." },
-          { status: 400 },
-        );
-      }
-      resolvedPromo = await resolvePromotionCode(normalizedPromoCode);
-      if (!resolvedPromo) {
-        await writeBillingAudit({
-          tenantId: m.tenantId,
-          action: BILLING_AUDIT_ACTIONS.PROMO_CODE_REJECTED,
-          actorKind: "user",
-          actorUserId: user.id,
-          metadata: { code: normalizedPromoCode, reason: "stripe_lookup_failed" },
-        });
-        return NextResponse.json(
-          {
-            error:
-              "Promo kód teď nelze ověřit u platební brány. Zkuste to znovu za chvíli nebo pokračujte bez slevy.",
+          metadata: {
+            code: normalizedPromoCode,
+            reason: "not_whitelisted",
+            source: promoCodeSource,
           },
-          { status: 400 },
-        );
+        });
+        if (promoCodeSource !== "cookie") {
+          return NextResponse.json(
+            { error: "Zadaný promo kód není platný." },
+            { status: 400 },
+          );
+        }
+        // cookie fallthrough → pokračujeme bez slevy
+      } else {
+        resolvedPromo = await resolvePromotionCode(normalizedPromoCode);
+        if (!resolvedPromo) {
+          await writeBillingAudit({
+            tenantId: m.tenantId,
+            action: BILLING_AUDIT_ACTIONS.PROMO_CODE_REJECTED,
+            actorKind: "user",
+            actorUserId: user.id,
+            metadata: {
+              code: normalizedPromoCode,
+              reason: "stripe_lookup_failed",
+              source: promoCodeSource,
+            },
+          });
+          if (promoCodeSource !== "cookie") {
+            return NextResponse.json(
+              {
+                error:
+                  "Promo kód teď nelze ověřit u platební brány. Zkuste to znovu za chvíli nebo pokračujte bez slevy.",
+              },
+              { status: 400 },
+            );
+          }
+          // cookie fallthrough → pokračujeme bez slevy
+        } else {
+          subscriptionMetadata = {
+            ...subscriptionMetadata,
+            promo_code: resolvedPromo.code,
+            coupon_id: resolvedPromo.couponId,
+          };
+        }
       }
-      subscriptionMetadata = {
-        ...subscriptionMetadata,
-        promo_code: resolvedPromo.code,
-        coupon_id: resolvedPromo.couponId,
-      };
     }
 
     const subscriptionData: Stripe.Checkout.SessionCreateParams.SubscriptionData = {
@@ -216,6 +252,7 @@ export async function POST(request: Request) {
         promoCode: resolvedPromo?.code ?? null,
         couponId: resolvedPromo?.couponId ?? null,
         couponSummary: resolvedPromo?.summary ?? null,
+        promoCodeSource: resolvedPromo ? promoCodeSource : null,
         billingContext,
       },
     });

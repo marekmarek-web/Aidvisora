@@ -2,8 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { CreditCard } from "lucide-react";
+import { CreditCard, Tag } from "lucide-react";
 import { AdvisorLegalConsentLabel } from "@/app/components/auth/AdvisorLegalConsentLabel";
+import {
+  isKnownPromoCode,
+  PROMO_CODE_COOKIE,
+  promoCodeDisplayLabel,
+} from "@/lib/stripe/promo-codes-shared";
 import {
   ACCESS_MODE_UI_LABEL,
   formatStoredSubscriptionPlanLabel,
@@ -117,6 +122,25 @@ export function WorkspaceStripeBilling({
   const [billingAction, setBillingAction] = useState<null | "checkout" | "portal">(null);
   const [billingError, setBillingError] = useState<string | null>(null);
   const [subscriptionLegalConsent, setSubscriptionLegalConsent] = useState(false);
+  const [activePromoCode, setActivePromoCode] = useState<string | null>(null);
+
+  // Kód pozvánky držíme v běžné cookie, aby UI vědělo, že se sleva uplatní
+  // v checkoutu. Server si ji při checkoutu ještě jednou ověří proti
+  // whitelistu + Stripe API, takže tenhle read je čistě informativní.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const raw = document.cookie
+      .split(";")
+      .map((part) => part.trim())
+      .find((part) => part.startsWith(`${PROMO_CODE_COOKIE}=`));
+    if (!raw) return;
+    const value = decodeURIComponent(raw.slice(PROMO_CODE_COOKIE.length + 1));
+    if (isKnownPromoCode(value)) {
+      setActivePromoCode(value.trim().toUpperCase());
+    }
+  }, []);
+
+  const activePromoLabel = activePromoCode ? promoCodeDisplayLabel(activePromoCode) : null;
 
   const cat = billing?.checkoutCatalog;
   const usePicker = Boolean(cat?.useTierPicker);
@@ -253,6 +277,18 @@ export function WorkspaceStripeBilling({
           </span>
           , poté pravidelné účtování podle zvoleného tarifu ve Stripe.
         </p>
+      ) : null}
+      {activePromoLabel && billing.checkoutAvailable ? (
+        <div className="flex max-w-xl items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-950/40 dark:text-emerald-100">
+          <Tag size={18} className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-300" />
+          <div>
+            <p className="font-bold">Promo kód aktivní</p>
+            <p className="mt-0.5 text-emerald-800/90 dark:text-emerald-100/90">{activePromoLabel}</p>
+            <p className="mt-1 font-mono text-xs text-emerald-700 dark:text-emerald-200/80">
+              {activePromoCode}
+            </p>
+          </div>
+        </div>
       ) : null}
       <dl className="grid max-w-xl gap-2 text-sm text-[color:var(--wp-text-secondary)]">
         <div className="flex flex-wrap gap-x-2">

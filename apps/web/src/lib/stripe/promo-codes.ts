@@ -3,20 +3,13 @@ import "server-only";
 import type Stripe from "stripe";
 import { getStripe } from "./server";
 
-/**
- * Kód Premium Brokers programu. Fyzický coupon/promo code se zakládá ve Stripe
- * dashboardu (Coupons → 100 % off × 1 měsíc, recurring; Promotion code =
- * `PREMIUM-BROKERS-2026`). Tady držíme pouze stabilní identifikátor, na který
- * se UI / CLI odkazuje.
- */
-export const PREMIUM_BROKERS_PROMO_CODE = "PREMIUM-BROKERS-2026";
-
-/** Whitelisted promo kódy, které aplikace sama vystavuje a loguje. */
-const KNOWN_PROMO_CODES: ReadonlySet<string> = new Set([PREMIUM_BROKERS_PROMO_CODE]);
-
-export function isKnownPromoCode(raw: string): boolean {
-  return KNOWN_PROMO_CODES.has(raw.trim().toUpperCase());
-}
+export {
+  PREMIUM_BROKERS_PROMO_CODE,
+  isKnownPromoCode,
+  PROMO_CODE_COOKIE,
+  PROMO_CODE_COOKIE_MAX_AGE_SECONDS,
+  promoCodeDisplayLabel,
+} from "./promo-codes-shared";
 
 export type ResolvedPromotionCode = {
   /** Stripe PromotionCode id (`promo_…`) — posílá se do checkoutu. */
