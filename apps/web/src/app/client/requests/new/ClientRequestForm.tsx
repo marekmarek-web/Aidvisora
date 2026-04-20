@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClientPortalRequestFromForm } from "@/app/actions/client-portal-requests";
+import { summarizeAttachmentOutcomes } from "@/app/lib/client-portal/attachment-outcome";
 import { CLIENT_REQUEST_TYPES } from "@/app/lib/client-portal/request-types";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import { HelpCircle } from "lucide-react";
@@ -28,6 +29,13 @@ export function ClientRequestForm() {
       for (const f of files) fd.append("files", f);
       const result = await createClientPortalRequestFromForm(fd);
       if (result.success) {
+        const { warning } = summarizeAttachmentOutcomes(result.attachments);
+        if (warning) {
+          // Zůstaneme na stránce, aby klient zahlédl upozornění — jinak by se banner ztratil při navigaci.
+          setAttachmentWarning(warning);
+          router.refresh();
+          return;
+        }
         await router.push("/client/requests");
         router.refresh();
       } else {
