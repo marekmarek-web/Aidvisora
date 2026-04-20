@@ -36,6 +36,7 @@ import {
   createClientPortalRequestFromForm,
   getClientRequests,
 } from "@/app/actions/client-portal-requests";
+import { summarizeAttachmentOutcomes } from "@/app/lib/client-portal/attachment-outcome";
 import type { ContractRow } from "@/app/actions/contracts";
 import {
   clientUploadDocument,
@@ -1067,6 +1068,10 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
         if (!result.success) {
           setError("error" in result ? result.error : "Požadavek se nepodařilo vytvořit.");
           return;
+        }
+        const { warning } = summarizeAttachmentOutcomes(result.attachments);
+        if (warning) {
+          setError(warning);
         }
         setRequestModalOpen(false);
         setRequestSubject("");
