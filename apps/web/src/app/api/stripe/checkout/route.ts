@@ -12,6 +12,11 @@ import {
   planLabelCs,
 } from "@/lib/stripe/price-catalog";
 import { getStripe, isStripeCheckoutAvailable } from "@/lib/stripe/server";
+import { resolvePromotionCode, isKnownPromoCode } from "@/lib/stripe/promo-codes";
+import {
+  BILLING_AUDIT_ACTIONS,
+  writeBillingAudit,
+} from "@/lib/stripe/billing-audit";
 import { db, tenants, eq } from "db";
 import Stripe from "stripe";
 
@@ -53,6 +58,7 @@ export async function POST(request: Request) {
     tier?: unknown;
     interval?: unknown;
     legalAcknowledged?: unknown;
+    promoCode?: unknown;
   };
   if (body.legalAcknowledged !== true) {
     return NextResponse.json(
@@ -63,6 +69,9 @@ export async function POST(request: Request) {
   const billingContext = parseBillingContext(body.billingContext);
   const tier = parsePlanTier(body.tier);
   const interval = parsePlanInterval(body.interval);
+  const rawPromoCode =
+    typeof body.promoCode === "string" ? body.promoCode.trim() : "";
+  const normalizedPromoCode = rawPromoCode ? rawPromoCode.toUpperCase() : "";
 
   const legacy = getLegacyStripePriceId();
   const multi = hasAnyMultiTierPrice();
@@ -116,6 +125,47 @@ export async function POST(request: Request) {
 
     const trialDays = getTrialPeriodDays();
 
+    // Promo kód: jen whitelisted (PREMIUM-BROKERS-2026), jinak rovnou odmítneme
+    // a zalogujeme — nedovolíme brute-force na Stripe API přes public endpoint.
+    let resolvedPromo: Awaited<ReturnType<typeof resolvePromotionCode>> = null;
+    if (normalizedPromoCode) {
+      if (!isKnownPromoCode(normalizedPromoCode)) {
+        await writeBillingAudit({
+          tenantId: m.tenantId,
+          action: BILLING_AUDIT_ACTIONS.PROMO_CODE_REJECTED,
+          actorKind: "user",
+          actorUserId: user.id,
+          metadata: { code: normalizedPromoCode, reason: "not_whitelisted" },
+        });
+        return NextResponse.json(
+          { error: "Zadaný promo kód není platný." },
+          { status: 400 },
+        );
+      }
+      resolvedPromo = await resolvePromotionCode(normalizedPromoCode);
+      if (!resolvedPromo) {
+        await writeBillingAudit({
+          tenantId: m.tenantId,
+          action: BILLING_AUDIT_ACTIONS.PROMO_CODE_REJECTED,
+          actorKind: "user",
+          actorUserId: user.id,
+          metadata: { code: normalizedPromoCode, reason: "stripe_lookup_failed" },
+        });
+        return NextResponse.json(
+          {
+            error:
+              "Promo kód teď nelze ověřit u platební brány. Zkuste to znovu za chvíli nebo pokračujte bez slevy.",
+          },
+          { status: 400 },
+        );
+      }
+      subscriptionMetadata = {
+        ...subscriptionMetadata,
+        promo_code: resolvedPromo.code,
+        coupon_id: resolvedPromo.couponId,
+      };
+    }
+
     const subscriptionData: Stripe.Checkout.SessionCreateParams.SubscriptionData = {
       metadata: subscriptionMetadata,
     };
@@ -133,6 +183,14 @@ export async function POST(request: Request) {
       subscription_data: subscriptionData,
     };
 
+    if (resolvedPromo) {
+      params.discounts = [{ promotion_code: resolvedPromo.id }];
+      // Stripe neumí naráz `discounts` + `allow_promotion_codes` — discounts mají přednost.
+    } else {
+      // Umožníme uživateli zadat kód přímo v hosted checkout (pro budoucí veřejné kódy).
+      params.allow_promotion_codes = true;
+    }
+
     if (stripeCustomerId) {
       params.customer = stripeCustomerId;
     } else {
@@ -144,6 +202,23 @@ export async function POST(request: Request) {
     if (!session.url) {
       return NextResponse.json({ error: "Chybí URL checkout relace." }, { status: 500 });
     }
+
+    await writeBillingAudit({
+      tenantId: m.tenantId,
+      action: BILLING_AUDIT_ACTIONS.CHECKOUT_STARTED,
+      actorKind: "user",
+      actorUserId: user.id,
+      stripeObjectId: session.id,
+      metadata: {
+        tier,
+        interval,
+        priceId,
+        promoCode: resolvedPromo?.code ?? null,
+        couponId: resolvedPromo?.couponId ?? null,
+        couponSummary: resolvedPromo?.summary ?? null,
+        billingContext,
+      },
+    });
 
     return NextResponse.json({ url: session.url });
   } catch (err: unknown) {

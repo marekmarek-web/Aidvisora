@@ -17,4 +17,16 @@ export const LEGAL_EFFECTIVE_CS = "27. 3. 2026";
 /** Odkaz na kotvu ceníku na landing page. */
 export const LEGAL_PRICING_HREF = "/#cenik";
 
-export type LegalDocumentSlug = "terms" | "privacy" | "dpa" | "ai-disclaimer";
+export type LegalDocumentSlug =
+  | "terms"
+  | "privacy"
+  | "dpa"
+  | "ai-disclaimer"
+  | "cookies"
+  | "subprocessors";
+
+/** E-mail pro bezpečnostní incidenty (oddělený od běžné podpory). */
+export const LEGAL_SECURITY_EMAIL = "bezpecnost@aidvisora.cz";
+
+/** Externí status page — placeholder, doplníme po spuštění Instatus/Statuspage. */
+export const LEGAL_STATUS_PAGE_URL = "https://status.aidvisora.cz";

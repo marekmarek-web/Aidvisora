@@ -9,9 +9,21 @@ import {
   upsertSubscriptionFromStripe,
   upsertInvoiceFromStripe,
   markTenantTrialConverted,
+  applyFailedInvoiceToSubscription,
+  applySucceededInvoiceToSubscription,
 } from "@/lib/stripe/subscription-sync";
+import {
+  BILLING_AUDIT_ACTIONS,
+  writeBillingAudit,
+  type BillingAuditAction,
+} from "@/lib/stripe/billing-audit";
 
 export const dynamic = "force-dynamic";
+
+function stripeObjectIdFromEvent(event: Stripe.Event): string | null {
+  const obj = event.data?.object as { id?: unknown } | null;
+  return obj && typeof obj.id === "string" ? obj.id : null;
+}
 
 async function handleStripeEvent(event: Stripe.Event): Promise<void> {
   switch (event.type) {
@@ -37,8 +49,22 @@ async function handleStripeEvent(event: Stripe.Event): Promise<void> {
       const sub = await stripe.subscriptions.retrieve(subId);
       await upsertSubscriptionFromStripe(tenantId, sub);
       await markTenantTrialConverted(tenantId);
+
+      await writeBillingAudit({
+        tenantId,
+        action: BILLING_AUDIT_ACTIONS.CHECKOUT_COMPLETED,
+        actorKind: "webhook",
+        stripeEventId: event.id,
+        stripeObjectId: session.id,
+        metadata: {
+          subscriptionId: sub.id,
+          status: sub.status,
+          promoCode: session.metadata?.promo_code ?? null,
+        },
+      });
       return;
     }
+    case "customer.subscription.created":
     case "customer.subscription.updated":
     case "customer.subscription.deleted": {
       const sub = event.data.object as Stripe.Subscription;
@@ -50,11 +76,40 @@ async function handleStripeEvent(event: Stripe.Event): Promise<void> {
         await setTenantStripeCustomer(tenantId, cust);
       }
       await upsertSubscriptionFromStripe(tenantId, sub);
-      await markTenantTrialConverted(tenantId);
+      if (event.type !== "customer.subscription.deleted") {
+        await markTenantTrialConverted(tenantId);
+      }
+
+      const action: BillingAuditAction =
+        event.type === "customer.subscription.created"
+          ? BILLING_AUDIT_ACTIONS.SUBSCRIPTION_CREATED
+          : event.type === "customer.subscription.deleted"
+            ? BILLING_AUDIT_ACTIONS.SUBSCRIPTION_DELETED
+            : BILLING_AUDIT_ACTIONS.SUBSCRIPTION_UPDATED;
+
+      await writeBillingAudit({
+        tenantId,
+        action,
+        actorKind: "webhook",
+        stripeEventId: event.id,
+        stripeObjectId: sub.id,
+        toState: {
+          status: sub.status,
+          cancel_at_period_end: sub.cancel_at_period_end,
+          current_period_end:
+            sub.items.data[0]?.current_period_end ?? null,
+        },
+        metadata: {
+          hasDiscount:
+            Array.isArray(
+              (sub as unknown as { discounts?: unknown[] }).discounts,
+            ) &&
+            ((sub as unknown as { discounts?: unknown[] }).discounts?.length ?? 0) > 0,
+          promoCode: sub.metadata?.promo_code ?? null,
+        },
+      });
       return;
     }
-    case "invoice.payment_succeeded":
-    case "invoice.payment_failed":
     case "invoice.finalized": {
       const inv = event.data.object as Stripe.Invoice;
       const customerId =
@@ -63,6 +118,97 @@ async function handleStripeEvent(event: Stripe.Event): Promise<void> {
       const tenantId = await resolveTenantIdByCustomer(customerId);
       if (!tenantId) return;
       await upsertInvoiceFromStripe(tenantId, inv);
+      await writeBillingAudit({
+        tenantId,
+        action: BILLING_AUDIT_ACTIONS.INVOICE_FINALIZED,
+        actorKind: "webhook",
+        stripeEventId: event.id,
+        stripeObjectId: inv.id ?? null,
+        metadata: {
+          amountDue: inv.amount_due,
+          currency: inv.currency,
+          hostedInvoiceUrl: inv.hosted_invoice_url,
+        },
+      });
+      return;
+    }
+    case "invoice.payment_succeeded": {
+      const inv = event.data.object as Stripe.Invoice;
+      const customerId =
+        typeof inv.customer === "string" ? inv.customer : inv.customer?.id ?? null;
+      if (!customerId) return;
+      const tenantId = await resolveTenantIdByCustomer(customerId);
+      if (!tenantId) return;
+      await upsertInvoiceFromStripe(tenantId, inv);
+
+      const recovery = await applySucceededInvoiceToSubscription(tenantId);
+      if (recovery.recoveredFromDunning) {
+        await writeBillingAudit({
+          tenantId,
+          action: BILLING_AUDIT_ACTIONS.DUNNING_RECOVERED,
+          actorKind: "webhook",
+          stripeEventId: event.id,
+          stripeObjectId: inv.id ?? null,
+          fromState: recovery.previous,
+        });
+      }
+
+      await writeBillingAudit({
+        tenantId,
+        action: BILLING_AUDIT_ACTIONS.INVOICE_PAID,
+        actorKind: "webhook",
+        stripeEventId: event.id,
+        stripeObjectId: inv.id ?? null,
+        metadata: {
+          amountPaid: inv.amount_paid,
+          currency: inv.currency,
+          hostedInvoiceUrl: inv.hosted_invoice_url,
+        },
+      });
+      return;
+    }
+    case "invoice.payment_failed": {
+      const inv = event.data.object as Stripe.Invoice;
+      const customerId =
+        typeof inv.customer === "string" ? inv.customer : inv.customer?.id ?? null;
+      if (!customerId) return;
+      const tenantId = await resolveTenantIdByCustomer(customerId);
+      if (!tenantId) return;
+      await upsertInvoiceFromStripe(tenantId, inv);
+
+      const dunning = await applyFailedInvoiceToSubscription(tenantId);
+
+      await writeBillingAudit({
+        tenantId,
+        action: BILLING_AUDIT_ACTIONS.INVOICE_PAYMENT_FAILED,
+        actorKind: "webhook",
+        stripeEventId: event.id,
+        stripeObjectId: inv.id ?? null,
+        toState: {
+          failedPaymentAttempts: dunning.failedPaymentAttempts,
+          gracePeriodEndsAt: dunning.gracePeriodEndsAt?.toISOString() ?? null,
+        },
+        metadata: {
+          amountDue: inv.amount_due,
+          currency: inv.currency,
+          hostedInvoiceUrl: inv.hosted_invoice_url,
+          nextPaymentAttempt: inv.next_payment_attempt,
+        },
+      });
+
+      if (dunning.graceStarted) {
+        await writeBillingAudit({
+          tenantId,
+          action: BILLING_AUDIT_ACTIONS.DUNNING_GRACE_PERIOD_STARTED,
+          actorKind: "webhook",
+          stripeEventId: event.id,
+          stripeObjectId: inv.id ?? null,
+          toState: {
+            gracePeriodEndsAt: dunning.gracePeriodEndsAt?.toISOString() ?? null,
+            failedPaymentAttempts: dunning.failedPaymentAttempts,
+          },
+        });
+      }
       return;
     }
     default:
@@ -107,7 +253,12 @@ export async function POST(request: Request) {
     await handleStripeEvent(event);
   } catch (err) {
     await db.delete(stripeWebhookEvents).where(eq(stripeWebhookEvents.id, event.id));
-    console.error("[stripe webhook]", err);
+    console.error("[stripe webhook]", {
+      eventId: event.id,
+      type: event.type,
+      objectId: stripeObjectIdFromEvent(event),
+      err: err instanceof Error ? err.message : String(err),
+    });
     return NextResponse.json({ error: "Webhook handler failed" }, { status: 500 });
   }
 

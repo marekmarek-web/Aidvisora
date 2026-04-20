@@ -10,8 +10,8 @@ import {
   CalendarDays, Check, CheckCircle2, CheckSquare, ChevronRight, Clock, Combine, 
   Command, Coffee, Download, DownloadCloud, FileDigit, FileSignature, 
   FileText, FileUp, KanbanSquare, Lock, MessageSquare, Moon, Network, 
-  PieChart, Play, Quote, Search, Server, Share2, Shield, ShieldCheck, 
-  Smartphone, Sparkles, Star, Sun, Sunrise, Sunset, Tags, UploadCloud, 
+  PieChart, Play, Search, Server, Share2, Shield, ShieldCheck, 
+  Smartphone, Sparkles, Sun, Sunrise, Sunset, Tags, UploadCloud, 
   User, Users, Zap, Link as LinkIcon, ChevronDown, HelpCircle, Mail,
   Globe, XCircle, CheckCircle, Headset, Timer, LineChart, BookOpen, Database, Plus, Home
 } from 'lucide-react';
@@ -431,15 +431,6 @@ const InteractiveMindmap = () => {
   );
 };
 
-// --- MOCK DATA REVIEWS (Pro nekonečný pás) ---
-const REVIEWS = [
-  { id: 1, text: "Od chvíle, co používám Aidvisoru, mi každé ráno vidím priority a na koho se zaměřit. Konečně přehled.", author: "Martin Dvořák", role: "Finanční poradce", initials: "MD" },
-  { id: 2, text: "Klientská zóna výrazně zjednodušila sběr podkladů i komunikaci s klienty.", author: "Lucie Černá", role: "Týmová manažerka", initials: "LČ" },
-  { id: 3, text: "Komplexní finanční plán dělám teď za zlomek času. Generování PDF reportu mám na jedno kliknutí.", author: "Petr Nový", role: "Wealth Manager", initials: "PN" },
-  { id: 4, text: "Už žádný nepořádek v Excelu. Automatické napojení na kalendář a pipeline vizualizace mi zachránila desítky hodin měsíčně.", author: "Jana Malá", role: "Nezávislá poradkyně", initials: "JM" },
-  { id: 5, text: "Skvělá podpora a okamžitý přehled nad produkcí týmu. Pro manažery je to silný nástroj.", author: "Karel Svoboda", role: "Ředitel pobočky", initials: "KS" },
-];
-
 const FAQS = LANDING_FAQS.map((item) => ({ ...item }));
 
 export default function PremiumLandingPage() {
@@ -523,20 +514,6 @@ export default function PremiumLandingPage() {
           text-shadow: 0 0 30px rgba(168, 85, 247, 0.4);
         }
         @keyframes shimmer { to { background-position: 200% center; } }
-
-        /* Nekonečný pás recenzí (Marquee) */
-        @keyframes scroll-x {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(calc(-350px * 5 - 24px * 5)); } 
-        }
-        .animate-marquee {
-          display: flex;
-          width: max-content;
-          animation: scroll-x 40s linear infinite;
-        }
-        .animate-marquee:hover {
-          animation-play-state: paused;
-        }
 
         /* OPRAVA: Shimmer okraj pro balíček Pro (Korektní použití Wrapperu) */
         .pro-pricing-wrapper {
@@ -648,6 +625,7 @@ export default function PremiumLandingPage() {
             <a href="#jak-to-funguje" className="hover:text-white transition-colors">Jak to funguje</a>
             <a href="#pro-koho" className="hover:text-white transition-colors">Pro koho</a>
             <a href="#cenik" className="hover:text-white transition-colors">Ceník</a>
+            <Link href="/bezpecnost" className="hover:text-white transition-colors">Bezpečnost</Link>
             <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
           </div>
 
@@ -784,34 +762,80 @@ export default function PremiumLandingPage() {
         </div>
       </section>
 
-      {/* --- NEKONEČNÝ PÁS RECENZÍ (Marquee) --- */}
-      <section className="py-12 border-y border-white/10 bg-white/5 relative z-10 backdrop-blur-sm overflow-hidden">
-        <div className="max-w-[1400px] mx-auto px-6 mb-8 text-center">
-             <h3 className="font-jakarta text-sm uppercase tracking-[0.2em] text-slate-400 font-bold">Poradci, kteří už neztrácejí čas</h3>
-        </div>
-
-        <div className="relative w-full overflow-hidden flex">
-          {/* Levý a pravý fade effect pro plynulý okraj */}
-          <div className="absolute top-0 left-0 w-32 h-full bg-gradient-to-r from-[#0a0f29] to-transparent z-10"></div>
-          <div className="absolute top-0 right-0 w-32 h-full bg-gradient-to-l from-[#0a0f29] to-transparent z-10"></div>
-          
-          <div className="animate-marquee gap-6 px-3">
-            {/* Duplikujeme pole, aby marquee běželo nekonečně a plynule */}
-            {[...REVIEWS, ...REVIEWS].map((review, idx) => (
-              <div key={idx} className="w-[350px] bg-white/5 border border-white/10 p-6 rounded-[24px] flex-shrink-0 flex flex-col">
-                <div className="flex text-amber-400 mb-4"><Star size={14} className="fill-current"/><Star size={14} className="fill-current"/><Star size={14} className="fill-current"/><Star size={14} className="fill-current"/><Star size={14} className="fill-current"/></div>
-                <p className="text-slate-300 text-sm leading-relaxed mb-6 flex-1">"{review.text}"</p>
-                <div className="flex items-center gap-3 mt-auto pt-4 border-t border-white/10">
-                  <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center font-bold text-indigo-300 text-xs border border-indigo-500/30">
-                    {review.initials}
-                  </div>
-                  <div>
-                    <p className="text-white font-bold text-xs">{review.author}</p>
-                    <p className="text-slate-500 text-[10px] uppercase tracking-wider">{review.role}</p>
-                  </div>
-                </div>
+      {/* --- EARLY ACCESS / PILOT STRIP (bez referenčních citací do doby jejich ověření) --- */}
+      <section
+        aria-labelledby="early-access-heading"
+        className="py-14 md:py-16 border-y border-white/10 bg-white/[0.03] relative z-10 backdrop-blur-sm overflow-hidden"
+      >
+        <div className="max-w-[1100px] mx-auto px-6">
+          <div className="flex flex-col md:flex-row md:items-center md:gap-10 gap-8">
+            <div className="flex-1">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-[11px] font-bold uppercase tracking-widest mb-4">
+                <Sparkles size={12} /> Early access · pilot
               </div>
-            ))}
+              <h3
+                id="early-access-heading"
+                className="font-jakarta text-2xl md:text-3xl font-bold text-white leading-tight mb-3"
+              >
+                Spouštíme s vybranou skupinou poradců.
+              </h3>
+              <p className="text-sm md:text-base text-slate-400 leading-relaxed max-w-xl">
+                Zákaznické reference zveřejníme až po pilotním provozu — a jen s&nbsp;doloženým písemným souhlasem
+                konkrétních poradců. Do té doby raději nic neslibujeme za jiné.
+              </p>
+            </div>
+
+            <div className="md:w-[360px] shrink-0">
+              <ul className="grid grid-cols-1 gap-3">
+                <li className="flex items-start gap-3 p-4 rounded-2xl border border-white/10 bg-white/[0.04]">
+                  <ShieldCheck size={18} className="text-emerald-400 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-white font-bold text-sm">Data v EU</p>
+                    <p className="text-slate-400 text-xs leading-relaxed">
+                      Hostování u poskytovatelů v EU, šifrování při přenosu i uložení.
+                    </p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3 p-4 rounded-2xl border border-white/10 bg-white/[0.04]">
+                  <Lock size={18} className="text-indigo-300 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-white font-bold text-sm">Audit stopa a role</p>
+                    <p className="text-slate-400 text-xs leading-relaxed">
+                      Záznam citlivých akcí, oddělení workspaců, role a oprávnění.
+                    </p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3 p-4 rounded-2xl border border-white/10 bg-white/[0.04]">
+                  <CheckCircle2 size={18} className="text-emerald-400 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-white font-bold text-sm">Česká s.r.o., CZ právo</p>
+                    <p className="text-slate-400 text-xs leading-relaxed">
+                      Fakturace v CZK, VOP a Zásady zpracování osobních údajů v češtině.
+                    </p>
+                  </div>
+                </li>
+              </ul>
+              <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-[11px] text-slate-500">
+                <Link href="/bezpecnost" className="underline-offset-4 hover:text-slate-300 hover:underline">
+                  Bezpečnost a ochrana dat
+                </Link>
+                <span className="text-slate-600">·</span>
+                <Link href="/privacy" className="underline-offset-4 hover:text-slate-300 hover:underline">
+                  Zásady zpracování
+                </Link>
+                <span className="text-slate-600">·</span>
+                <Link href="/terms" className="underline-offset-4 hover:text-slate-300 hover:underline">
+                  Obchodní podmínky
+                </Link>
+                <span className="text-slate-600">·</span>
+                <Link
+                  href="/legal/zpracovatelska-smlouva"
+                  className="underline-offset-4 hover:text-slate-300 hover:underline"
+                >
+                  Zpracovatelská smlouva
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -1489,7 +1513,7 @@ export default function PremiumLandingPage() {
                     <Lock size={24} className="text-emerald-400 group-hover:scale-110 transition-transform" />
                     <h3 className="font-bold text-xl text-white">Ochrana dat a GDPR</h3>
                   </div>
-                  <p className="text-slate-400 leading-relaxed text-lg pl-10">Kompletní evidence souhlasů, automatický audit log všech akcí v systému a jednoduchý export dat na žádost klienta. Data jsou v EU.</p>
+                  <p className="text-slate-400 leading-relaxed text-lg pl-10">Evidence souhlasů, auditní stopa citlivých akcí a export dat na žádost klienta. Data jsou uložena v EU.</p>
                 </div>
               </ScrollReveal>
 
@@ -1567,25 +1591,30 @@ export default function PremiumLandingPage() {
               
               <div className="space-y-6 relative z-10">
                 <div>
-                  <span className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-1">Ušetřený čas s AI (Měsíčně)</span>
+                  <span className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-1">Modelová úspora času (Měsíčně)*</span>
                   <div className="text-3xl font-black text-white">{roiSavedHours} <span className="text-lg text-slate-400">hodin</span></div>
-                  <p className="text-xs text-emerald-400 mt-1">Snížení administrativy o 40 %</p>
+                  <p className="text-xs text-slate-500 mt-1">Model počítá s 40 % snížením administrativy.</p>
                 </div>
                 <div className="w-full h-px bg-white/10"></div>
                 <div>
-                  <span className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-1">Nové příležitosti z follow-upů (Ročně)</span>
+                  <span className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-1">Modelové příležitosti z follow-upů (Ročně)*</span>
                   <div className="text-3xl font-black text-white">+{roiExtraDeals} <span className="text-lg text-slate-400">obchodů</span></div>
-                  <p className="text-xs text-emerald-400 mt-1">Zvýšení konverze o 5 % díky hlídání termínů</p>
+                  <p className="text-xs text-slate-500 mt-1">Model počítá s 5 % zvýšením konverze díky hlídání termínů.</p>
                 </div>
                 <div className="w-full h-px bg-white/10"></div>
                 <div>
-                  <span className="block text-xs font-black uppercase tracking-widest text-indigo-300 mb-1">Hodnota vrácená do byznysu (Měsíčně)*</span>
+                  <span className="block text-xs font-black uppercase tracking-widest text-indigo-300 mb-1">Modelová hodnota pro praxi (Měsíčně)*</span>
                   <div className="text-4xl md:text-5xl font-black text-emerald-400">{formatNumber(roiValue)} <span className="text-2xl text-slate-400">Kč</span></div>
                 </div>
               </div>
             </ScrollReveal>
           </div>
-          <p className="text-center text-[10px] text-slate-500 mt-6">*Odhad kalkuluje hodnotu ušetřené hodiny (1 000 Kč) a průměrnou provizi z jednoho zachráněného obchodu (15 000 Kč).</p>
+          <p className="text-center text-[11px] text-slate-500 mt-6 max-w-3xl mx-auto">
+            *Orientační model sloužící k odhadu. Předpoklady: 40 % snížení administrativy, 5 % zvýšení konverze z lépe
+            hlídaných follow-upů, hodnota ušetřené hodiny 1 000 Kč, průměrná provize z jednoho zachráněného obchodu
+            15 000 Kč. Nejde o zaručený výsledek ani historický údaj z provozu — skutečné úspory závisí na vaší praxi a
+            nastavení.
+          </p>
         </div>
       </section>
 
@@ -1945,6 +1974,7 @@ export default function PremiumLandingPage() {
             <div>
                <h4 className="text-white font-bold mb-6 font-jakarta text-lg">Právní a podpora</h4>
                <ul className="space-y-4 text-sm">
+                <li><Link href="/bezpecnost" className="hover:text-white transition-colors">Bezpečnost a ochrana dat</Link></li>
                 <li><Link href="/terms" className="hover:text-white transition-colors">Obchodní podmínky</Link></li>
                 <li><Link href="/privacy" className="hover:text-white transition-colors">Zásady ochrany (GDPR)</Link></li>
                 <li>
@@ -1957,7 +1987,10 @@ export default function PremiumLandingPage() {
                     AI režim a disclaimer
                   </Link>
                 </li>
-                <li><Link href="/privacy" className="hover:text-white transition-colors">Nastavení Cookies</Link></li>
+                <li><Link href="/subprocessors" className="hover:text-white transition-colors">Subdodavatelé</Link></li>
+                <li><Link href="/cookies" className="hover:text-white transition-colors">Cookies</Link></li>
+                <li><Link href="/kontakt" className="hover:text-white transition-colors">Kontakt</Link></li>
+                <li><Link href="/status" className="hover:text-white transition-colors">Provozní stav</Link></li>
                 <li>
                   <a href="mailto:podpora@aidvisora.cz?subject=Onboarding%20a%20podpora" className="hover:text-white transition-colors">
                     Onboarding a technická podpora

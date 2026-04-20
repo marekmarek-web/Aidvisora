@@ -1,0 +1,110 @@
+[
+  {
+    "type": "p",
+    "text": "Tato stránka popisuje, jaké soubory cookie a podobné technologie používá webová prezentace Aidvisora (aidvisora.cz) a portál Aidvisory. Cílem je transparentní informování uživatelů v souladu s § 89 zákona č. 127/2005 Sb., o elektronických komunikacích, nařízením GDPR a doporučeními ÚOOÚ."
+  },
+  {
+    "type": "p",
+    "text": "Shrnutí: Aidvisora v současné architektuře používá pouze technicky nezbytné (essential) cookies a srovnatelné mechanismy pro přihlášení, bezpečnost a uložení uživatelských preferencí. Marketingové, reklamní nebo cross-site sledovací cookies nenasazujeme. Případné budoucí zapojení statistického nástroje (např. produktová telemetrie) provedeme pouze s předchozím prokazatelným souhlasem uživatele formou cookie lišty a záznamu o souhlasu."
+  },
+  {
+    "type": "h1",
+    "text": "1. Kategorie cookies a jejich účel"
+  },
+  {
+    "type": "p",
+    "text": "Cookies členíme podle funkčního významu. Aktuální výčet odpovídá produkční konfiguraci Aidvisory ke dni účinnosti této stránky. Konkrétní technické názvy položek se mohou lehce lišit verzí platformy; níže uvádíme jejich typ a účel."
+  },
+  {
+    "type": "li",
+    "text": "• Nezbytné (essential) — udržují přihlášení, zabezpečují session před únosem (CSRF / SameSite), uchovávají nastavení rozhraní (např. režim zobrazení, jazyk, poslední vybraný pipeline view). Bez nich portál nelze provozovat. Právním základem je oprávněný zájem provozovatele a plnění smlouvy (čl. 6 odst. 1 písm. b a f GDPR); souhlas není vyžadován."
+  },
+  {
+    "type": "li",
+    "text": "• Statistické (analytics) — momentálně NENASAZUJEME. V případě, že bychom v budoucnu zapojili produktovou telemetrii pro interní statistiky (např. PostHog, Sentry sampling), uvedeme je v této tabulce a budou závislé na vašem souhlasu přes cookie lištu."
+  },
+  {
+    "type": "li",
+    "text": "• Marketingové / reklamní — NEPOUŽÍVÁME a v roadmapě s nimi nepočítáme. Aidvisora není retargetingová ani ad-tech platforma."
+  },
+  {
+    "type": "li",
+    "text": "• Cookies třetích stran — Aidvisora nezpřístupňuje své stránky reklamním sítím, pixelům sociálních sítí ani cross-site trackerům. Platební rozhraní Stripe (pokud je pro účet aktivní) nasazuje vlastní technické cookies nezbytné pro zpracování platby přímo na své doméně."
+  },
+  {
+    "type": "h1",
+    "text": "2. Konkrétní přehled položek (aktuální stav)"
+  },
+  {
+    "type": "p",
+    "text": "Níže jsou hlavní technicky nezbytné položky, které Aidvisora aktuálně nastavuje. Přesné názvy se mohou během aktualizací systému měnit; rozhodující je jejich funkce:"
+  },
+  {
+    "type": "li",
+    "text": "• Auth session cookie (Supabase Auth) — uchovává podepsaný token přihlášené osoby. Životnost v řádu hodin až dnů podle nastavení projektu; chráněno HttpOnly, Secure, SameSite."
+  },
+  {
+    "type": "li",
+    "text": "• Refresh token cookie (Supabase Auth) — slouží k obnovení session bez opakovaného přihlášení. Chráněno HttpOnly, Secure, SameSite."
+  },
+  {
+    "type": "li",
+    "text": "• CSRF / anti-forgery token — chrání formuláře a server actions proti podvrženým požadavkům."
+  },
+  {
+    "type": "li",
+    "text": "• Preferenční položky UI (ukládané v localStorage, ne cookies) — např. naposled zvolený view v CRM, preferovaný motiv. Čistě klientské, neodesíláme je na server."
+  },
+  {
+    "type": "h1",
+    "text": "3. Jak cookies spravovat a odmítnout"
+  },
+  {
+    "type": "p",
+    "text": "Technicky nezbytné cookies není možné odmítnout, aniž by to znemožnilo přihlášení a provoz portálu. Všechny moderní prohlížeče vám umožňují zobrazit seznam cookies na dané doméně, selektivně je mazat a blokovat ukládání cookies pro konkrétní web. Postupy pro hlavní prohlížeče najdete v jejich nápovědách:"
+  },
+  {
+    "type": "li",
+    "text": "• Chrome — sekce Soukromí a zabezpečení / Cookies."
+  },
+  {
+    "type": "li",
+    "text": "• Firefox — sekce Soukromí a zabezpečení / Cookies a data stránek."
+  },
+  {
+    "type": "li",
+    "text": "• Safari — Předvolby / Soukromí / Spravovat data webů."
+  },
+  {
+    "type": "li",
+    "text": "• Edge — Nastavení / Cookies a povolení webů."
+  },
+  {
+    "type": "p",
+    "text": "Jakmile do Aidvisory doplníme jakoukoli statistickou nebo marketingovou kategorii, uvidíte na webu cookie lištu s možností volby „Přijmout vše / Odmítnout vše / Nastavit“. Volba bude ukládána a vy ji budete moci kdykoli změnit přes odkaz „Nastavení cookies“ v patičce webu."
+  },
+  {
+    "type": "h1",
+    "text": "4. Doba uchovávání"
+  },
+  {
+    "type": "p",
+    "text": "Technicky nezbytné cookies jsou uchovávány po dobu platnosti session nebo po dobu nezbytnou pro fungování konkrétní funkce (typicky hodiny až dny). Přesná doba platnosti je nastavena u každé položky a závisí na bezpečnostních politikách Supabase a frameworku Next.js. Po vypršení jsou automaticky neplatné a klientský prohlížeč je smaže."
+  },
+  {
+    "type": "h1",
+    "text": "5. Změny této stránky"
+  },
+  {
+    "type": "p",
+    "text": "Pokud v budoucnu zařadíme další kategorie cookies (např. anonymizovanou produktovou telemetrii pro zlepšení UX) nebo změníme seznam subdodavatelů, aktualizujeme tuto stránku a uvedeme datum poslední revize. Podstatné změny komunikujeme také uvnitř portálu."
+  },
+  {
+    "type": "h1",
+    "text": "6. Kontakt"
+  },
+  {
+    "type": "p",
+    "text": "Dotazy ke cookies a ochraně osobních údajů směřujte na kontakty uvedené v záhlaví této stránky a v dokumentu Zásady zpracování osobních údajů. Pro bezpečnostní incidenty slouží samostatná adresa bezpecnost@aidvisora.cz."
+  }
+]

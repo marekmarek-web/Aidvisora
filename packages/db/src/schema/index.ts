@@ -15,6 +15,7 @@ export * from "./audit-compliance";
 export * from "./subscriptions";
 export * from "./subscription-usage-monthly";
 export * from "./stripe-webhook-events";
+export * from "./billing-audit-log";
 export * from "./portfolio-attributes";
 export * from "./contracts";
 export * from "./contract-upload-reviews";

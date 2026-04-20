@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, decimal, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, decimal, integer, index } from "drizzle-orm/pg-core";
 
 export const subscriptions = pgTable("subscriptions", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -9,6 +9,16 @@ export const subscriptions = pgTable("subscriptions", {
   status: text("status").notNull().default("active"),
   currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
   cancelAtPeriodEnd: text("cancel_at_period_end").default("false"),
+  /** Aplikační grace period po vyčerpání Stripe smart-retries — po tomto datu workspace přejde do restricted. */
+  gracePeriodEndsAt: timestamp("grace_period_ends_at", { withTimezone: true }),
+  /** Datum poslední neúspěšné platby (pro UI banner a dunning e-maily). */
+  lastPaymentFailedAt: timestamp("last_payment_failed_at", { withTimezone: true }),
+  /** Lokální čítač neúspěšných pokusů; reset při úspěšné platbě. */
+  failedPaymentAttempts: integer("failed_payment_attempts").notNull().default(0),
+  /** Interní stopa aplikovaného promokódu (např. PREMIUM-BROKERS-2026). */
+  promoCode: text("promo_code"),
+  /** Kdy se workspace přepnul do restricted kvůli neuhrazené faktuře. */
+  restrictedAt: timestamp("restricted_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

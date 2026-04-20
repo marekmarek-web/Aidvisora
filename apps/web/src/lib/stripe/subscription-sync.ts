@@ -1,6 +1,14 @@
 import "server-only";
 import type Stripe from "stripe";
-import { db, subscriptions, invoices, tenants, eq } from "db";
+import { db, subscriptions, invoices, tenants, eq, desc } from "db";
+
+/**
+ * Jak dlouho po překročení Stripe smart-retries dát uživateli ještě přístup
+ * (application-side grace period), než workspace přepneme do restricted stavu.
+ */
+const DUNNING_GRACE_PERIOD_DAYS = 7;
+/** Počet neúspěšných pokusů, po kterém začne aplikační grace period. */
+const DUNNING_GRACE_TRIGGER_ATTEMPTS = 3;
 
 export async function resolveTenantIdForSubscription(
   sub: Stripe.Subscription
@@ -57,6 +65,8 @@ export async function upsertSubscriptionFromStripe(
   const currentPeriodEnd =
     typeof endSec === "number" ? new Date(endSec * 1000) : null;
 
+  const promoCode = sub.metadata?.promo_code?.trim() || null;
+
   await db
     .insert(subscriptions)
     .values({
@@ -66,6 +76,7 @@ export async function upsertSubscriptionFromStripe(
       status: sub.status,
       currentPeriodEnd,
       cancelAtPeriodEnd: sub.cancel_at_period_end ? "true" : "false",
+      promoCode,
     })
     .onConflictDoUpdate({
       target: subscriptions.stripeSubscriptionId,
@@ -74,10 +85,137 @@ export async function upsertSubscriptionFromStripe(
         status: sub.status,
         currentPeriodEnd,
         cancelAtPeriodEnd: sub.cancel_at_period_end ? "true" : "false",
+        // promoCode sem vědomě nedáváme — nechceme přepsat hodnotu, která přišla z checkout/audit flow.
         updatedAt: new Date(),
       },
     });
 }
+
+export type FailedInvoiceDunningOutcome = {
+  failedPaymentAttempts: number;
+  gracePeriodEndsAt: Date | null;
+  /** True jen při events, které grace period právě spustily (= překročili jsme trigger). */
+  graceStarted: boolean;
+};
+
+/**
+ * Reakce na `invoice.payment_failed`: zvýší čítač selhaných pokusů, uloží
+ * datum posledního selhání a po `DUNNING_GRACE_TRIGGER_ATTEMPTS` nastaví
+ * aplikační grace period. Když grace period už běží, neposune ji.
+ */
+export async function applyFailedInvoiceToSubscription(
+  tenantId: string,
+): Promise<FailedInvoiceDunningOutcome> {
+  const [row] = await db
+    .select({
+      id: subscriptions.id,
+      failedPaymentAttempts: subscriptions.failedPaymentAttempts,
+      gracePeriodEndsAt: subscriptions.gracePeriodEndsAt,
+    })
+    .from(subscriptions)
+    .where(eq(subscriptions.tenantId, tenantId))
+    .orderBy(desc(subscriptions.updatedAt))
+    .limit(1);
+
+  if (!row) {
+    return { failedPaymentAttempts: 0, gracePeriodEndsAt: null, graceStarted: false };
+  }
+
+  const nextAttempts = (row.failedPaymentAttempts ?? 0) + 1;
+  const now = new Date();
+  let gracePeriodEndsAt = row.gracePeriodEndsAt;
+  let graceStarted = false;
+
+  if (
+    nextAttempts >= DUNNING_GRACE_TRIGGER_ATTEMPTS &&
+    !gracePeriodEndsAt
+  ) {
+    gracePeriodEndsAt = new Date(
+      now.getTime() + DUNNING_GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000,
+    );
+    graceStarted = true;
+  }
+
+  await db
+    .update(subscriptions)
+    .set({
+      failedPaymentAttempts: nextAttempts,
+      lastPaymentFailedAt: now,
+      gracePeriodEndsAt,
+      updatedAt: now,
+    })
+    .where(eq(subscriptions.id, row.id));
+
+  return {
+    failedPaymentAttempts: nextAttempts,
+    gracePeriodEndsAt,
+    graceStarted,
+  };
+}
+
+export type SucceededInvoiceRecoveryOutcome = {
+  recoveredFromDunning: boolean;
+  previous: {
+    failedPaymentAttempts: number;
+    gracePeriodEndsAt: string | null;
+    restrictedAt: string | null;
+  } | null;
+};
+
+/**
+ * Reakce na `invoice.payment_succeeded`: resetuje dunning čítače. Pokud
+ * workspace byl v grace period nebo restricted, vrátí `recoveredFromDunning=true`
+ * aby webhook zalogoval `dunning.recovered`.
+ */
+export async function applySucceededInvoiceToSubscription(
+  tenantId: string,
+): Promise<SucceededInvoiceRecoveryOutcome> {
+  const [row] = await db
+    .select({
+      id: subscriptions.id,
+      failedPaymentAttempts: subscriptions.failedPaymentAttempts,
+      gracePeriodEndsAt: subscriptions.gracePeriodEndsAt,
+      restrictedAt: subscriptions.restrictedAt,
+    })
+    .from(subscriptions)
+    .where(eq(subscriptions.tenantId, tenantId))
+    .orderBy(desc(subscriptions.updatedAt))
+    .limit(1);
+
+  if (!row) {
+    return { recoveredFromDunning: false, previous: null };
+  }
+
+  const wasInDunning =
+    (row.failedPaymentAttempts ?? 0) > 0 ||
+    row.gracePeriodEndsAt !== null ||
+    row.restrictedAt !== null;
+
+  if (!wasInDunning) {
+    return { recoveredFromDunning: false, previous: null };
+  }
+
+  const now = new Date();
+  await db
+    .update(subscriptions)
+    .set({
+      failedPaymentAttempts: 0,
+      gracePeriodEndsAt: null,
+      restrictedAt: null,
+      updatedAt: now,
+    })
+    .where(eq(subscriptions.id, row.id));
+
+  return {
+    recoveredFromDunning: true,
+    previous: {
+      failedPaymentAttempts: row.failedPaymentAttempts ?? 0,
+      gracePeriodEndsAt: row.gracePeriodEndsAt?.toISOString() ?? null,
+      restrictedAt: row.restrictedAt?.toISOString() ?? null,
+    },
+  };
+}
+
 
 export async function upsertInvoiceFromStripe(
   tenantId: string,

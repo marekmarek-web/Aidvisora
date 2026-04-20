@@ -17,6 +17,8 @@ const NAV: { slug: LegalDocumentSlug; href: string; label: string }[] = [
   { slug: "privacy", href: "/privacy", label: "Zásady zpracování OU" },
   { slug: "dpa", href: "/legal/zpracovatelska-smlouva", label: "Zpracovatelská smlouva (DPA)" },
   { slug: "ai-disclaimer", href: "/legal/ai-disclaimer", label: "AI režim a disclaimer" },
+  { slug: "cookies", href: "/cookies", label: "Cookies" },
+  { slug: "subprocessors", href: "/subprocessors", label: "Subdodavatelé" },
 ];
 
 export function LegalDocumentLayout(props: {

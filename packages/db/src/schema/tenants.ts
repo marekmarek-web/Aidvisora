@@ -14,6 +14,12 @@ export const tenants = pgTable("tenants", {
   /** Set when the tenant completes Stripe subscription; trial slot consumed. */
   trialConvertedAt: timestamp("trial_converted_at", { withTimezone: true }),
   notificationEmail: text("notification_email"),
+  /** Fakturační identita workspace (WS-1 / VAT capture). Stripe Tax je zdroj pravdy pro výpočet daně. */
+  billingCompanyName: text("billing_company_name"),
+  billingIco: text("billing_ico"),
+  billingDic: text("billing_dic"),
+  billingAddressLine: text("billing_address_line"),
+  billingNotes: text("billing_notes"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

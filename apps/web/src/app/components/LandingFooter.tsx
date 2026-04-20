@@ -32,6 +32,9 @@ export function LandingFooter({ activeTheme: _activeTheme }: LandingFooterProps)
           />
         </Link>
         <nav className="flex flex-wrap items-center justify-center gap-2 sm:gap-4" aria-label="Patička">
+          <Link href="/bezpecnost" className={linkClass}>
+            Bezpečnost
+          </Link>
           <Link href="/terms" className={linkClass}>
             Obchodní podmínky
           </Link>
