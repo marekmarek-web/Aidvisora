@@ -535,77 +535,68 @@ export async function applyContractReviewDrafts(
     result.payload.linkedClientId ??
     null;
 
-  // Slice 4: Document linking — SOFT fail (log + Sentry capture, apply nezastaví)
-  if (effectiveClientId) {
+  // FL-1 — canonical transaction: coverage + document link jsou v apply tx.
+  // Post-commit zbývá jen:
+  //   1. notifikace klienta (při nově zveřejněném dokumentu),
+  //   2. activity log pro nově vložený document,
+  //   3. fallback link pro supporting-doc case (bez createdContractId).
+  const inTxPayload = result.payload as Record<string, unknown>;
+  const inTxDocumentId = typeof inTxPayload.linkedDocumentId === "string" ? inTxPayload.linkedDocumentId : null;
+  const inTxDocLinkWasInsert = inTxPayload.__docLinkWasInsert === true;
+  const inTxVisibilityOn = inTxPayload.__docLinkVisibilityOn === true;
+  delete inTxPayload.__docLinkWasInsert;
+  delete inTxPayload.__docLinkVisibilityOn;
+
+  if (inTxDocumentId) {
+    bridgedPayload.linkedDocumentId = inTxDocumentId;
+
+    if (inTxDocLinkWasInsert) {
+      try {
+        await logActivity("document", inTxDocumentId, "upload", {
+          contactId: effectiveClientId,
+          source: "contract_ai_review",
+          reviewId: id,
+        });
+      } catch {
+        /* best-effort */
+      }
+    }
+
+    if (inTxVisibilityOn || inTxDocLinkWasInsert) {
+      try {
+        await notifyClientAdvisorSharedDocument({
+          tenantId: auth.tenantId,
+          contactId: effectiveClientId!,
+          documentId: inTxDocumentId,
+          documentName: row.fileName,
+          reason: inTxVisibilityOn ? "visibility_on" : "upload",
+        });
+      } catch {
+        /* best-effort */
+      }
+    }
+  } else if (effectiveClientId && !result.payload.createdContractId) {
+    // Supporting-doc path (žádný contract se nevytvořil) — link ven z tx přes
+    // plnohodnotný server action, protože se nedotýká coverage. SOFT fail, aby
+    // neodpustil apply toho, co v tx už sedne.
     try {
       const linkResult = await linkContractReviewFileToContactDocuments(id, {
         visibleToClient: true,
-        contractId: result.payload.createdContractId ?? undefined,
+        contractId: undefined,
         overrideContactId: row.matchedClientId ? undefined : effectiveClientId,
       });
       if (linkResult.ok && linkResult.documentId) {
-        // Propagate linked document ID into payload so callers and read models can see it
         bridgedPayload.linkedDocumentId = linkResult.documentId;
-
-        if (result.payload.createdContractId) {
-          try {
-            const [existingContract] = await db
-              .select({ sourceDocumentId: contracts.sourceDocumentId })
-              .from(contracts)
-              .where(
-                and(
-                  eq(contracts.tenantId, auth.tenantId),
-                  eq(contracts.id, result.payload.createdContractId)
-                )
-              )
-              .limit(1);
-            if (existingContract && !existingContract.sourceDocumentId) {
-              await db
-                .update(contracts)
-                .set({ sourceDocumentId: linkResult.documentId, updatedAt: new Date() })
-                .where(
-                  and(
-                    eq(contracts.tenantId, auth.tenantId),
-                    eq(contracts.id, result.payload.createdContractId)
-                  )
-                );
-            }
-          } catch (sourceDocErr) {
-            // Slice 4: sourceDocumentId update selhal — SOFT, logujeme ale nezastavujeme
-            console.warn("[apply] post-commit sourceDocumentId update failed (soft)", {
-              reviewId: id,
-              documentId: linkResult.documentId,
-              error: sourceDocErr instanceof Error ? sourceDocErr.message : String(sourceDocErr),
-            });
-            try {
-              Sentry.addBreadcrumb({
-                category: "contract_review.apply",
-                level: "warning",
-                message: "post_commit_source_document_id_update_failed",
-                data: { reviewId: id, documentId: linkResult.documentId },
-              });
-            } catch { /* noop */ }
-          }
-        }
       } else if (!linkResult.ok) {
-        // Document linking returned ok:false — log as warning, propagate to payload
-        console.warn("[apply] post-commit document linking returned ok:false (soft)", {
-          reviewId: id,
-          error: linkResult.error,
-        });
-        (bridgedPayload as Record<string, unknown>).documentLinkWarning = linkResult.error ?? "document_link_failed";
+        (bridgedPayload as Record<string, unknown>).documentLinkWarning =
+          linkResult.error ?? "document_link_failed";
       }
     } catch (linkErr) {
-      // Slice 4: Document linking selhal — SOFT, celý apply je OK
-      console.warn("[apply] post-commit document linking failed (soft)", {
-        reviewId: id,
-        error: linkErr instanceof Error ? linkErr.message : String(linkErr),
-      });
       (bridgedPayload as Record<string, unknown>).documentLinkWarning = "document_link_exception";
       try {
         Sentry.withScope((scope) => {
           scope.setTag("feature", "contract_review_apply");
-          scope.setTag("post_commit_step", "document_linking");
+          scope.setTag("post_commit_step", "document_linking_supporting");
           scope.setTag("severity", "soft_fail");
           scope.setContext("apply_post_commit", {
             reviewId: id,
@@ -614,48 +605,12 @@ export async function applyContractReviewDrafts(
           });
           Sentry.captureMessage(
             `[SOFT] apply_document_linking_failed: ${linkErr instanceof Error ? linkErr.message.slice(0, 150) : "unknown"}`,
-            "warning"
+            "warning",
           );
         });
-      } catch { /* noop */ }
-    }
-  }
-
-  // Slice 4: Coverage upsert — SOFT fail (explicitní log + Sentry, apply nezastaví)
-  if (effectiveClientId && result.payload.createdContractId) {
-    const { upsertCoverageFromAppliedReview } = await import("@/lib/ai/apply-coverage-from-review");
-    try {
-      await upsertCoverageFromAppliedReview({
-        tenantId: auth.tenantId,
-        userId: auth.userId,
-        contactId: effectiveClientId,
-        contractId: result.payload.createdContractId,
-        row,
-      });
-    } catch (coverageErr) {
-      // Slice 4: Coverage upsert selhal — SOFT, ale explicitně logujeme
-      console.warn("[apply] post-commit coverage upsert failed (soft)", {
-        reviewId: id,
-        contractId: result.payload.createdContractId,
-        error: coverageErr instanceof Error ? coverageErr.message : String(coverageErr),
-      });
-      try {
-        Sentry.withScope((scope) => {
-          scope.setTag("feature", "contract_review_apply");
-          scope.setTag("post_commit_step", "coverage_upsert");
-          scope.setTag("severity", "soft_fail");
-          scope.setContext("apply_post_commit", {
-            reviewId: id,
-            tenantId: auth.tenantId,
-            contractId: result.payload.createdContractId,
-            error: coverageErr instanceof Error ? coverageErr.message.slice(0, 1000) : String(coverageErr),
-          });
-          Sentry.captureMessage(
-            `[SOFT] apply_coverage_upsert_failed: ${coverageErr instanceof Error ? coverageErr.message.slice(0, 150) : "unknown"}`,
-            "warning"
-          );
-        });
-      } catch { /* noop */ }
+      } catch {
+        /* noop */
+      }
     }
   }
 

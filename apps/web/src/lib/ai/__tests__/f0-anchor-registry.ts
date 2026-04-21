@@ -31,6 +31,14 @@ export type GoldenExpectationEntry = {
   forbiddenPrimaryTypes?: string[];
   /** Each inner array is OR; outer arrays are AND (at least one field per group). */
   mustHaveAnyOf: string[][];
+  /**
+   * FL-3.4 — optional coverage signal (non-gating). Každý field, který by měl
+   * pipeline v ideálním případě ze zdroje vytáhnout, ale jeho chybějící hodnota
+   * neshazuje test. Slouží pro observability (release gate report) a k
+   * zachycení regresí AI extrakce na OP, lékařských a fund resolution polích,
+   * aniž bychom blokovali launch pipeline.
+   */
+  optionalFields?: string[];
 };
 
 export type AnchorGoldenExpectationsFile = {

@@ -5,7 +5,12 @@
     <key>CAPACITOR_DEBUG</key>
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>
-	<string>en</string>
+	<string>cs</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>cs</string>
+		<string>en</string>
+	</array>
 	<key>CFBundleDisplayName</key>
         <string>Aidvisora</string>
 	<key>CFBundleExecutable</key>
@@ -77,11 +82,13 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>Aidvisora potrebuje pristup ke kamere pro porizeni fotografie dokumentu.</string>
+	<string>Aidvisora potřebuje přístup ke kameře, abyste mohli vyfotit smlouvu nebo jiný dokument klienta přímo z aplikace a odeslat ho ke zpracování AI Review.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Aidvisora potrebuje pristup k fotkam pro vyber dokumentu z galerie.</string>
+	<string>Aidvisora potřebuje přístup k fotkám, abyste mohli vybrat existující sken nebo fotografii dokumentu a připojit ho ke klientovi.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Aidvisora muze ulozit vygenerovany nebo vyfoteny dokument do knihovny fotek.</string>
+	<string>Aidvisora ukládá vygenerované PDF (např. výpověď smlouvy nebo export portfolia) do vaší knihovny fotek, pokud si vyberete sdílení obrázkem.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Aidvisora používá Face ID nebo Touch ID k rychlému odemknutí aplikace bez opakovaného zadávání hesla. Biometrická data neopouští vaše zařízení.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

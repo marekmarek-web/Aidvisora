@@ -76,7 +76,7 @@ export function ContactTabNav({
   const pathname = usePathname();
 
   return (
-    <div className="wp-contact-v2-tabs">
+    <div className="wp-contact-v2-tabs sticky top-0 z-20 -mx-4 sm:-mx-6 md:-mx-8 px-4 sm:px-6 md:px-8 bg-[color:var(--wp-bg)]/90 backdrop-blur supports-[backdrop-filter]:bg-[color:var(--wp-bg)]/70">
       <Suspense fallback={null}>
         <HashToQuerySync baseQueryNoTab={baseQueryNoTab} />
       </Suspense>

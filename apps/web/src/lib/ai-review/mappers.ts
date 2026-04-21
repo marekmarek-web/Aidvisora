@@ -15,7 +15,7 @@ import type {
 import { buildHumanSummary, buildHumanErrorMessage, getDocumentTypeLabel } from "../ai/document-messages";
 import type { PrimaryDocumentType } from "../ai/document-review-types";
 import { isDateFieldKey, normalizeDateForAdvisorDisplay } from "../ai/canonical-date-normalize";
-import { formatDomesticAccountDisplayLine, sanitizeVariableSymbolForCanonical } from "../ai/payment-field-contract";
+import { dedupeCzechAccountTrailingBankCode, formatDomesticAccountDisplayLine, sanitizeVariableSymbolForCanonical } from "../ai/payment-field-contract";
 import type { DocumentReviewEnvelope } from "../ai/document-review-types";
 import type { InputMode } from "../ai/input-mode-detection";
 import {
@@ -1081,6 +1081,16 @@ function flattenEnvelopeToGroups(
       if (fKey === "bankAccount") {
         const bc = ef.bankCode?.value != null ? String(ef.bankCode.value).trim() : "";
         strVal = formatDomesticAccountDisplayLine(strVal, bc) || strVal;
+      } else if (
+        fKey === "accountNumber" ||
+        fKey === "paymentAccountNumber" ||
+        fKey === "recipientAccount" ||
+        fKey === "accountForRepayment" ||
+        fKey === "institutionBankAccount" ||
+        fKey === "institutionCollectionAccount" ||
+        fKey === "collectionAccount"
+      ) {
+        strVal = dedupeCzechAccountTrailingBankCode(strVal) || strVal;
       }
       if (fKey === "variableSymbol") {
         const sanitized = sanitizeVariableSymbolForCanonical(strVal);

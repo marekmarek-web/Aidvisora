@@ -21,6 +21,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
 import { useToast } from "@/app/components/Toast";
+import { useConfirm } from "@/app/components/ConfirmDialog";
 import {
   postAssistantChatStreaming,
   buildAssistantChatRequestBody,
@@ -497,6 +498,7 @@ function loadSession(): ChatMessage[] {
 
 export function AiAssistantChatScreen() {
   const toast = useToast();
+  const confirm = useConfirm();
   const pathname = usePathname();
   const router = useRouter();
   const routeContactId = parsePortalContactIdFromPathname(pathname) ?? null;
@@ -1231,9 +1233,13 @@ export function AiAssistantChatScreen() {
 
   const handleDeleteAssistantConversation = useCallback(async () => {
     if (!assistantSessionId) return;
-    if (!window.confirm("Smazat tuto konverzaci včetně historie? Tuto akci nelze vrátit zpět.")) {
-      return;
-    }
+    const ok = await confirm({
+      title: "Smazat konverzaci?",
+      message: "Smazat tuto konverzaci včetně historie? Tuto akci nelze vrátit zpět.",
+      confirmLabel: "Smazat",
+      variant: "destructive",
+    });
+    if (!ok) return;
     setError(null);
     const res = await deleteAdvisorAssistantConversation(assistantSessionId);
     if (!res.ok) {
@@ -1247,7 +1253,7 @@ export function AiAssistantChatScreen() {
     } catch {
       /* ignore */
     }
-  }, [assistantSessionId, startNewAssistantConversation]);
+  }, [assistantSessionId, confirm, startNewAssistantConversation]);
 
   function clearChat() {
     startNewAssistantConversation();

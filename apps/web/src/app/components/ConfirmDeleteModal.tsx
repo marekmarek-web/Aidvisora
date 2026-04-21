@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { BaseModal } from "./BaseModal";
+import { Button } from "./ui/primitives";
 
 interface ConfirmDeleteModalProps {
   open: boolean;
@@ -43,22 +44,22 @@ export function ConfirmDeleteModal({
       <div className="p-4">
         {message && <p className="text-slate-600 text-sm mt-1">{message}</p>}
         <div className="flex justify-end gap-2 mt-4">
-          <button
+          <Button
             ref={cancelRef}
-            type="button"
+            variant="ghost"
+            size="lg"
             onClick={onCancel}
-            className="rounded-lg px-4 min-h-[44px] text-sm font-medium text-slate-600 hover:bg-slate-100"
           >
             Zrušit
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="destructive"
+            size="lg"
             onClick={onConfirm}
-            disabled={loading}
-            className="rounded-lg px-4 min-h-[44px] text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50"
+            loading={loading}
           >
-            {loading ? "Mažu..." : "Smazat"}
-          </button>
+            {loading ? "Mažu…" : "Smazat"}
+          </Button>
         </div>
       </div>
     </BaseModal>

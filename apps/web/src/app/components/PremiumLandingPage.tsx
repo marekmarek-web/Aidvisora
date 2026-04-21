@@ -557,7 +557,7 @@ export default function PremiumLandingPage() {
                 <span className="text-xs font-bold text-slate-300">Pro finanční poradce a týmy</span>
               </div>
 
-              <h1 className="hero-anim delay-100 font-jakarta text-4xl sm:text-5xl md:text-6xl lg:text-[3.25rem] xl:text-7xl font-extrabold tracking-tight text-glow-shimmer leading-[1.1] mb-6 hyphens-none">
+              <h1 className="hero-anim delay-100 font-jakarta text-4xl sm:text-5xl md:text-6xl lg:text-6xl xl:text-7xl font-extrabold tracking-tight text-glow-shimmer leading-[1.1] mb-6 hyphens-none">
                 Jeden nástroj pro finanční poradenství — od prvního kontaktu po uzavření.
               </h1>
 
@@ -745,8 +745,148 @@ export default function PremiumLandingPage() {
         </div>
       </section>
 
+      {/* --- LIVE UKÁZKY (4 Vimeo demos) --- */}
+      <section id="live-ukazky" className="py-20 md:py-28 relative overflow-hidden bg-[#0a0f29] border-t border-white/10 scroll-mt-24">
+        <div className="max-w-[1400px] mx-auto px-6 relative z-10">
+          <ScrollReveal>
+            <div className="text-center mb-14">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-xs font-bold uppercase tracking-widest mb-6">
+                <Play size={14} /> Ukázky z produkce
+              </div>
+              <h2 className="font-jakarta text-4xl md:text-5xl font-bold text-white mb-4 leading-tight">
+                Co <span className="text-glow-shimmer">Aidvisora opravdu umí.</span>
+              </h2>
+              <p className="text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed">
+                Čtyři krátké ukázky přímo z aplikace. Žádné mockupy, žádné rendery — reálné UI, reálná práce s klientem.
+              </p>
+            </div>
+          </ScrollReveal>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+            {[
+              {
+                title: "Obchody",
+                subtitle: "Pipeline + kartička obchodu",
+                desc: "Kanban od prvního kontaktu po podpis. Tahat, filtrovat, přiřazovat — bez Excelu.",
+                vimeoId: "1184117287",
+                hash: "6595dae869",
+              },
+              {
+                title: "Zápisky",
+                subtitle: "Zápisy ze schůzek",
+                desc: "Strukturované zápisky přímo u klienta. AI pomůže s formulací dalších kroků.",
+                vimeoId: "1184116979",
+                hash: "d93e14037a",
+              },
+              {
+                title: "Požadavky klienta",
+                subtitle: "Samoobsluha pro klienta",
+                desc: "Klient pošle požadavek přes portál. Vy ho vidíte okamžitě, bez e-mailové přeháňky.",
+                vimeoId: "1184116078",
+                hash: "ffbbde98b1",
+              },
+              {
+                title: "Výpověď",
+                subtitle: "Registr výpovědí",
+                desc: "Výpovědi smluv s lhůtami, přílohami a stavem doručení. Nic nezapadne.",
+                vimeoId: "1184117652",
+                hash: "45bbe61eb4",
+              },
+            ].map((v, idx) => (
+              <ScrollReveal key={v.vimeoId} delay={idx * 80}>
+                <div className="rounded-[24px] border border-white/10 bg-white/5 overflow-hidden backdrop-blur-md hover:border-indigo-500/40 transition-colors">
+                  <div className="relative aspect-video bg-black">
+                    <iframe
+                      title={`Aidvisora — ${v.title}`}
+                      src={`https://player.vimeo.com/video/${v.vimeoId}?h=${v.hash}&dnt=1`}
+                      className="absolute inset-0 w-full h-full"
+                      frameBorder={0}
+                      referrerPolicy="strict-origin-when-cross-origin"
+                      allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
+                      allowFullScreen
+                      loading="lazy"
+                    />
+                  </div>
+                  <div className="p-5 md:p-6">
+                    <p className="text-xs font-bold uppercase tracking-widest text-indigo-300 mb-1">{v.subtitle}</p>
+                    <h3 className="font-jakarta text-xl font-bold text-white mb-2">{v.title}</h3>
+                    <p className="text-sm text-slate-300 leading-relaxed">{v.desc}</p>
+                  </div>
+                </div>
+              </ScrollReveal>
+            ))}
+          </div>
+
+          <ScrollReveal delay={400}>
+            <div className="mt-10 text-center">
+              <p className="text-sm text-slate-400">
+                Chcete vidět i zbytek aplikace (AI review smluv, klientská zóna, analytika)?{" "}
+                <a href={DEMO_BOOKING_MAILTO} className="text-indigo-400 font-bold hover:text-indigo-300 underline underline-offset-2">
+                  Domluvte si 20minutové demo.
+                </a>
+              </p>
+            </div>
+          </ScrollReveal>
+        </div>
+      </section>
+
+      {/* --- CO DĚLÁ AIDVISORU JINOU --- */}
+      <section id="diferenciatory" className="py-20 md:py-28 relative overflow-hidden bg-[#060918] border-t border-white/10 scroll-mt-24">
+        <div className="max-w-[1400px] mx-auto px-6 relative z-10">
+          <ScrollReveal>
+            <div className="text-center mb-14">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold uppercase tracking-widest mb-6">
+                <Sparkles size={14} /> Proč ne jen další CRM
+              </div>
+              <h2 className="font-jakarta text-4xl md:text-5xl font-bold text-white mb-4 leading-tight">
+                Co dělá <span className="text-glow-shimmer">Aidvisoru jinou.</span>
+              </h2>
+              <p className="text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed">
+                Tři věci, které jinde nenajdete — nebo je musíte lepit z pěti různých nástrojů.
+              </p>
+            </div>
+          </ScrollReveal>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+            {[
+              {
+                icon: Bot,
+                title: "AI review smluv, ne jen šablony",
+                desc: "Nahrajete PDF smlouvy, Aidvisora přečte pole, typ produktu, pojistné, rizika — a sama navrhne, co zkopírovat do karty klienta. Žádný copy-paste, žádné ruční přepisování.",
+                highlight: "Průměrně 12 minut / smlouva → 40 sekund",
+              },
+              {
+                icon: Users,
+                title: "Klientská zóna bez dalšího poplatku",
+                desc: "Vaši klienti mají vlastní přihlášení, kde vidí své smlouvy, dokumenty, návrhy a mohou vám rovnou poslat dotaz. Neplatí se za klienta, neúčtuje se podle seatů.",
+                highlight: "Zahrnuto v tarifu, bez limitu klientů",
+              },
+              {
+                icon: ShieldCheck,
+                title: "Postavené podle českého práva",
+                desc: "GDPR, AML, zákon o distribuci pojištění — všechno v základu. Šifrování rodných čísel AES-256-GCM, audit log, DPA smlouva, hosting v EU. Nic „potom dořešíme“.",
+                highlight: "AES-256-GCM, DPA, hosting EU, audit log",
+              },
+            ].map((d, idx) => (
+              <ScrollReveal key={d.title} delay={idx * 100}>
+                <div className="h-full rounded-[24px] border border-white/10 bg-white/5 p-6 md:p-8 backdrop-blur-md hover:border-emerald-500/40 transition-colors">
+                  <div className="w-14 h-14 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center mb-5">
+                    <d.icon size={26} className="text-emerald-300" />
+                  </div>
+                  <h3 className="font-jakarta text-2xl font-bold text-white mb-3 leading-tight">{d.title}</h3>
+                  <p className="text-sm text-slate-300 leading-relaxed mb-4">{d.desc}</p>
+                  <p className="text-xs font-bold uppercase tracking-wider text-emerald-300 border-t border-emerald-500/20 pt-3">
+                    {d.highlight}
+                  </p>
+                </div>
+              </ScrollReveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* --- AI ASISTENT & DŮVĚRYHODNOST --- */}
-      <section id="ai-asistent" className="py-32 relative overflow-hidden bg-[#060918] scroll-mt-24">
+      <section id="ai-asistent" className="py-20 md:py-28 relative overflow-hidden bg-[#060918] scroll-mt-24">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[1000px] bg-purple-600/10 rounded-full blur-[150px] pointer-events-none z-0"></div>
         
         <div className="max-w-[1400px] mx-auto px-6 relative z-10 border-t border-white/10 pt-20">
@@ -851,7 +991,7 @@ export default function PremiumLandingPage() {
       </section>
 
       {/* --- EVOLUCE PRAXE (Srovnání Dnes vs S Aidvisorou) --- */}
-      <section id="jak-to-funguje" className="py-24 relative overflow-hidden bg-[#060918] scroll-mt-24">
+      <section id="jak-to-funguje" className="py-20 md:py-28 relative overflow-hidden bg-[#060918] scroll-mt-24">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-indigo-500/10 rounded-[100%] blur-[120px] pointer-events-none"></div>
         
         <div className="max-w-[1200px] mx-auto px-6 relative z-10">
@@ -954,7 +1094,7 @@ export default function PremiumLandingPage() {
       </section>
 
       {/* --- SCROLL STORYTELLING: NÁSTROJE APLIKACE --- */}
-      <section id="aplikace" className="py-32 relative bg-[#060918]">
+      <section id="aplikace" className="py-20 md:py-28 relative bg-[#060918]">
         <div className="max-w-[1400px] mx-auto px-6 space-y-40 border-t border-white/10 pt-20">
           
           <ScrollReveal>
@@ -1216,7 +1356,7 @@ export default function PremiumLandingPage() {
       </section>
 
       {/* --- TYPICKÝ DEN (Workflow Storytelling) --- */}
-      <section id="workflow" className="py-32 relative bg-[#0a0f29] border-t border-white/5 scroll-mt-24">
+      <section id="workflow" className="py-20 md:py-28 relative bg-[#0a0f29] border-t border-white/5 scroll-mt-24">
         <div className="max-w-[1000px] mx-auto px-6">
           <ScrollReveal>
             <div className="text-center mb-24">
@@ -1319,7 +1459,7 @@ export default function PremiumLandingPage() {
       </section>
 
       {/* --- PRO KOHO JE AIDVISORA (Cílové skupiny) --- */}
-      <section id="pro-koho" className="py-32 relative bg-[#060918]">
+      <section id="pro-koho" className="py-20 md:py-28 relative bg-[#060918]">
         <div className="max-w-[1400px] mx-auto px-6 border-t border-white/10 pt-20">
           <ScrollReveal>
             <div className="text-center mb-16">
@@ -1387,7 +1527,7 @@ export default function PremiumLandingPage() {
       </section>
 
       {/* --- KLIENTSKÁ ZÓNA (DVA SVĚTY) --- */}
-      <section id="klientska-zona" className="py-32 relative bg-[#060918]">
+      <section id="klientska-zona" className="py-20 md:py-28 relative bg-[#060918]">
         <div className="max-w-[1400px] mx-auto px-6 border-t border-white/10 pt-20">
           <ScrollReveal>
             <div className="text-center mb-16">
@@ -1488,7 +1628,7 @@ export default function PremiumLandingPage() {
       </section>
 
       {/* --- INFRASTRUKTURA A BEZPEČNOST (Interaktivní Jádro) --- */}
-      <section id="infrastruktura" className="py-32 relative overflow-hidden bg-[#060918]">
+      <section id="infrastruktura" className="py-20 md:py-28 relative overflow-hidden bg-[#060918]">
         <div className="max-w-[1400px] mx-auto px-6 border-t border-white/10 pt-24">
           <ScrollReveal>
             <div className="text-center mb-24">
@@ -1600,7 +1740,7 @@ export default function PremiumLandingPage() {
       </section>
 
       {/* --- NOVÉ: ROI KALKULAČKA --- */}
-      <section id="roi-kalkulacka" className="py-24 relative overflow-hidden bg-[#060918]">
+      <section id="roi-kalkulacka" className="py-20 md:py-28 relative overflow-hidden bg-[#060918]">
         <div className="max-w-[1200px] mx-auto px-6 border-t border-white/10 pt-24">
           <ScrollReveal>
             <div className="text-center mb-16">
@@ -1669,7 +1809,7 @@ export default function PremiumLandingPage() {
       </section>
 
       {/* --- INTEGRACE --- */}
-      <section id="integrace" className="py-24 relative overflow-hidden bg-[#060918]">
+      <section id="integrace" className="py-20 md:py-28 relative overflow-hidden bg-[#060918]">
         <div className="max-w-[1200px] mx-auto px-6 border-t border-white/10 pt-24 text-center">
           <ScrollReveal>
             <h2 className="font-jakarta text-4xl md:text-5xl font-bold text-white mb-6">Napojení na nástroje, které dává smysl používat každý den</h2>
@@ -1716,7 +1856,7 @@ export default function PremiumLandingPage() {
       </section>
 
       {/* --- CENÍK --- */}
-      <section id="cenik" className="py-32 relative bg-[#060918] border-t border-white/10">
+      <section id="cenik" className="py-20 md:py-28 relative bg-[#060918] border-t border-white/10">
         <div className="max-w-[1200px] mx-auto px-6">
           <ScrollReveal>
              <div className="text-center mb-16">
@@ -1889,7 +2029,7 @@ export default function PremiumLandingPage() {
       </section>
 
       {/* --- NOVÉ: ONBOARDING / JAK ZAČÍT --- */}
-      <section id="jak-zacit" className="py-24 relative overflow-hidden bg-[#060918]">
+      <section id="jak-zacit" className="py-20 md:py-28 relative overflow-hidden bg-[#060918]">
         <div className="max-w-[1200px] mx-auto px-6 border-t border-white/10 pt-24 text-center">
           <ScrollReveal>
             <h2 className="font-jakarta text-4xl md:text-5xl font-bold text-white mb-6">Začněte s přehledným onboardingem.</h2>
@@ -1931,7 +2071,7 @@ export default function PremiumLandingPage() {
       </section>
 
       {/* --- FAQ SEKCE --- */}
-      <section id="faq" className="py-24 bg-[#060918] border-t border-white/10">
+      <section id="faq" className="py-20 md:py-28 bg-[#060918] border-t border-white/10">
         <div className="max-w-[800px] mx-auto px-6">
           <ScrollReveal>
             <div className="text-center mb-16">
@@ -1978,7 +2118,7 @@ export default function PremiumLandingPage() {
       </section>
 
       {/* --- FOOTER CTA --- */}
-      <section className="py-24 md:py-40 relative overflow-hidden border-t border-white/10">
+      <section className="py-20 md:py-28 relative overflow-hidden border-t border-white/10">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-indigo-900/20 pointer-events-none"></div>
         <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
           <ScrollReveal>

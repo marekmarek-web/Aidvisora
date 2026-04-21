@@ -1,5 +1,33 @@
 # Aidvisor – Provozní příručka
 
+## Uptime monitoring / statuspage
+
+**Veřejný health endpoint:** `GET /api/health` (viz `apps/web/src/app/api/health/route.ts`).
+
+- Vrací `200 { status: "ok", checks: { db: "up" }, … }` když aplikace i DB odpovídají.
+- Vrací `503 { status: "degraded", checks: { db: "down", dbError } }` když selže `select 1` na primární DB.
+- Podporuje `HEAD` pro levné polling přes uptime monitor.
+- Je rate-limited na 60 req/min/IP, takže se hodí **nalepit statuspage monitor s frekvencí 1–2 min**.
+- Neobsahuje žádné tajné hodnoty – jen env name, commit SHA (12 znaků) a response time.
+- Cache headers `Cache-Control: no-store` → uptime monitor vidí real-time stav.
+
+**Doporučená nastavení monitoru (Better Uptime / BetterStack / UptimeRobot):**
+
+| Pole | Hodnota |
+|---|---|
+| URL | `https://<prod-domain>/api/health` |
+| Metoda | `GET` (pro zachytávání body v alertu) nebo `HEAD` (levnější) |
+| Frekvence | 1–2 min |
+| Expect status | `200` |
+| Expect body obsahuje | `"status":"ok"` (pro GET) |
+| Alert P0 | downtime > 3 min nebo 503 ≥ 2x po sobě |
+| Recipient | `bezpecnost@aidvisora.cz` + Sentry mobile push |
+| Runbook | [`incident-runbook.md`](./incident-runbook.md) |
+
+**MANUAL STEP** — Monitor je potřeba vytvořit ručně v uptime službě (repo pouze poskytuje endpoint). Po vytvoření zapiš odkaz do `docs/observability/sentry-alerts.md §7 Uptime`.
+
+---
+
 ## Rollback
 
 ### Vercel deploy rollback

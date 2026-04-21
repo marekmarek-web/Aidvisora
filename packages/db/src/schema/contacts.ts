@@ -20,8 +20,23 @@ export const contacts = pgTable("contacts", {
   referralContactId: uuid("referral_contact_id"),
   birthDate: date("birth_date", { mode: "string" }),
   personalId: text("personal_id"),
+  /**
+   * WS-2 Batch 5 dual-column encryption: AES-256-GCM envelope pro `personal_id`.
+   * Během dual-read fáze se plní spolu s plaintextem, po úplném backfillu se plaintext dropne.
+   * @see `apps/web/src/lib/pii/encrypt.ts` (`encryptPii` / `decryptPii`).
+   */
+  personalIdEnc: text("personal_id_enc"),
+  /**
+   * HMAC-SHA256 fingerprint pro deterministický equality lookup.
+   * @see `apps/web/src/lib/pii/encrypt.ts` (`fingerprintPii`).
+   */
+  personalIdFingerprint: text("personal_id_fingerprint"),
   /** Číslo občanského průkazu (volitelné). */
   idCardNumber: text("id_card_number"),
+  /** WS-2 Batch 5 dual-column encryption: AES-256-GCM envelope pro `id_card_number`. */
+  idCardNumberEnc: text("id_card_number_enc"),
+  /** HMAC-SHA256 fingerprint pro deterministický equality lookup nad `id_card_number`. */
+  idCardNumberFingerprint: text("id_card_number_fingerprint"),
   /** Kdo doklad vydal (úřad). */
   idCardIssuedBy: text("id_card_issued_by"),
   /** Platnost dokladu do (ISO date string). */

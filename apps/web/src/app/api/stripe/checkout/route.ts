@@ -14,11 +14,15 @@ import {
 } from "@/lib/stripe/price-catalog";
 import { getStripe, isStripeCheckoutAvailable } from "@/lib/stripe/server";
 import { resolvePromotionCode, isKnownPromoCode } from "@/lib/stripe/promo-codes";
-import { PROMO_CODE_COOKIE } from "@/lib/stripe/promo-codes-shared";
+import {
+  PREMIUM_BROKERS_PROMO_CODE,
+  PROMO_CODE_COOKIE,
+} from "@/lib/stripe/promo-codes-shared";
 import {
   BILLING_AUDIT_ACTIONS,
   writeBillingAudit,
 } from "@/lib/stripe/billing-audit";
+import { checkRateLimit } from "@/lib/security/rate-limit";
 import { db, tenants, eq } from "db";
 import Stripe from "stripe";
 
@@ -55,12 +59,26 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  // FL-1 rate limit — Stripe checkout je drahá operace i pro Stripe (vytváří
+  // sessions, promo lookups). Limitujeme na tenant+user, aby se nedaly spamovat.
+  const limiter = checkRateLimit(request, "stripe-checkout", `${m.tenantId}:${user.id}`, {
+    windowMs: 60_000,
+    maxRequests: 10,
+  });
+  if (!limiter.ok) {
+    return NextResponse.json(
+      { error: "Příliš mnoho pokusů. Zkuste to za chvíli znovu." },
+      { status: 429, headers: { "Retry-After": String(limiter.retryAfterSec) } },
+    );
+  }
+
   const body = (await request.json().catch(() => ({}))) as {
     billingContext?: unknown;
     tier?: unknown;
     interval?: unknown;
     legalAcknowledged?: unknown;
     promoCode?: unknown;
+    betaTermsAck?: unknown;
   };
   if (body.legalAcknowledged !== true) {
     return NextResponse.json(
@@ -68,6 +86,7 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
+  const betaTermsAck = body.betaTermsAck === true;
   const billingContext = parseBillingContext(body.billingContext);
   const tier = parsePlanTier(body.tier);
   const interval = parsePlanInterval(body.interval);
@@ -90,6 +109,31 @@ export async function POST(request: Request) {
       ? "cookie"
       : null;
 
+  // FL-1.6 — Pilot (Premium Brokers) vyžaduje potvrzení Beta Terms. Checkujeme
+  // tvrdě: pokud je PB kód v cestě (ať už z body nebo z cookie), klient musí
+  // mít zaškrtnutý checkbox. Pro audit zapíšeme odmítnutí i úspěšné potvrzení.
+  const isPilotPromo = normalizedPromoCode === PREMIUM_BROKERS_PROMO_CODE;
+  if (isPilotPromo && !betaTermsAck) {
+    await writeBillingAudit({
+      tenantId: m.tenantId,
+      action: BILLING_AUDIT_ACTIONS.PROMO_CODE_REJECTED,
+      actorKind: "user",
+      actorUserId: user.id,
+      metadata: {
+        code: normalizedPromoCode,
+        reason: "beta_terms_not_acked",
+        source: promoCodeSource,
+      },
+    });
+    return NextResponse.json(
+      {
+        error:
+          "Před zahájením pilotního předplatného potvrďte podmínky beta programu (checkbox Beta Terms).",
+      },
+      { status: 400 },
+    );
+  }
+
   const legacy = getLegacyStripePriceId();
   const multi = hasAnyMultiTierPrice();
 
@@ -97,6 +141,7 @@ export async function POST(request: Request) {
   let subscriptionMetadata: Record<string, string> = {
     tenant_id: m.tenantId,
     checkout_legal_ack: "1",
+    ...(isPilotPromo && betaTermsAck ? { beta_terms_acked: "1" } : {}),
   };
 
   if (multi) {
@@ -209,6 +254,11 @@ export async function POST(request: Request) {
       subscriptionData.trial_period_days = trialDays;
     }
 
+    // FL-2 — Stripe Tax CZ. Povolujeme automatický výpočet DPH, sběr IČO/DIČ
+    // a update billing údajů na Customer objektu, aby Stripe mohl dodat ČR
+    // formálně správnou fakturu (reverse charge pro EU B2B, 21 % pro domácí).
+    // Pozn.: musí být ve Stripe dashboardu aktivováno Stripe Tax + nastavená
+    // registrace v CZ (MANUAL STEP v docs).
     const params: Stripe.Checkout.SessionCreateParams = {
       mode: "subscription",
       line_items: [{ price: priceId, quantity: 1 }],
@@ -217,6 +267,12 @@ export async function POST(request: Request) {
       client_reference_id: m.tenantId,
       metadata: { tenant_id: m.tenantId },
       subscription_data: subscriptionData,
+      automatic_tax: { enabled: true },
+      tax_id_collection: { enabled: true },
+      billing_address_collection: "required",
+      customer_update: stripeCustomerId
+        ? { address: "auto", name: "auto", shipping: "auto" }
+        : undefined,
     };
 
     if (resolvedPromo) {

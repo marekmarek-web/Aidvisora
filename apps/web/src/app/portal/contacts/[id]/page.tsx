@@ -37,6 +37,7 @@ import { InviteToClientZoneButton } from "@/app/dashboard/contacts/[id]/InviteTo
 import { computeAccessVerdict, type AccessVerdict } from "@/lib/auth/access-verdict";
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { formatDisplayDateCs } from "@/lib/date/format-display-cs";
+import { toAvatarDisplayUrl } from "@/lib/storage/avatar-proxy";
 import { resolveContactIdentityFieldProvenanceForHeader } from "@/lib/portal/contact-identity-field-provenance";
 import { isMobileUiV1EnabledForRequest } from "@/app/shared/mobile-ui/feature-flag";
 import { hasPermission, type RoleName } from "@/lib/auth/permissions";
@@ -70,7 +71,7 @@ const DynamicDocumentsSection = dynamic(
   () => import("@/app/dashboard/contacts/[id]/DocumentsSection").then((m) => m.DocumentsSection),
   {
     loading: () => (
-      <div className="min-h-[200px] animate-pulse rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50" />
+      <div className="min-h-[200px] animate-pulse rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50" />
     ),
   },
 );
@@ -90,7 +91,7 @@ const DynamicMaterialRequestsTab = dynamic(
   () => import("./MaterialRequestsTab").then((m) => m.MaterialRequestsTab),
   {
     loading: () => (
-      <div className="min-h-[200px] animate-pulse rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50" />
+      <div className="min-h-[200px] animate-pulse rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50" />
     ),
   },
 );
@@ -445,23 +446,27 @@ export default async function ContactDetailPage({ params, searchParams }: PagePr
       </header>
 
       <main className="max-w-[1400px] mx-auto p-4 sm:p-6 md:p-8 space-y-6">
-        <div className="relative overflow-hidden rounded-[32px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-6 shadow-sm md:p-8">
+        <div className="relative overflow-hidden rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-6 shadow-sm md:p-8">
           <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-indigo-50 to-blue-50/30 rounded-bl-full -z-10 opacity-50" aria-hidden />
           <div className="flex flex-col xl:flex-row justify-between gap-6 xl:gap-8 z-10">
             <div className="flex flex-col sm:flex-row items-start gap-4 md:gap-6 min-w-0">
               <div className="relative shrink-0">
                 <div className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-[28px] border-4 border-[color:var(--wp-surface-card)] bg-gradient-to-br from-[#1e293b] to-aidv-create font-black text-3xl text-white shadow-xl shadow-black/25">
-                  {contact.avatarUrl ? (
-                    <Image
-                      src={contact.avatarUrl}
-                      alt=""
-                      fill
-                      sizes="96px"
-                      className="object-cover"
-                    />
-                  ) : (
-                    initials
-                  )}
+                  {(() => {
+                    const avatarDisplay = toAvatarDisplayUrl(contact.avatarUrl);
+                    return avatarDisplay ? (
+                      <Image
+                        src={avatarDisplay}
+                        alt=""
+                        fill
+                        sizes="96px"
+                        className="object-cover"
+                        unoptimized
+                      />
+                    ) : (
+                      initials
+                    );
+                  })()}
                 </div>
               </div>
               <div className="pt-1 min-w-0">

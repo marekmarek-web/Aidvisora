@@ -311,7 +311,7 @@ export function ClientDashboardLayout({
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <div className="bg-gradient-to-br from-aidv-create to-[#0f172a] rounded-[32px] p-8 text-white shadow-xl relative overflow-hidden border border-slate-800">
+        <div className="bg-gradient-to-br from-aidv-create to-[#0f172a] rounded-[24px] p-8 text-white shadow-xl relative overflow-hidden border border-slate-800">
           <div className="absolute -top-12 -right-12 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
           <div className="relative z-10">
             <div className="flex items-center gap-3 mb-6">
@@ -360,7 +360,7 @@ export function ClientDashboardLayout({
           </div>
         </div>
 
-        <div className="bg-white rounded-[32px] border border-slate-100 p-8 shadow-sm grid grid-cols-2 gap-4">
+        <div className="bg-white rounded-[24px] border border-slate-100 p-8 shadow-sm grid grid-cols-2 gap-4">
           {[
             {
               href: "/client/portfolio",

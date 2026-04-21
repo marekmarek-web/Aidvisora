@@ -23,6 +23,7 @@ import {
   Hash,
 } from "lucide-react";
 import { formatDisplayDateCs } from "@/lib/date/format-display-cs";
+import { toAvatarDisplayUrl } from "@/lib/storage/avatar-proxy";
 import {
   getContact,
   getContactAiProvenance,
@@ -817,10 +818,12 @@ export function ClientProfileScreen({
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0a0f29] via-[#141b3d] to-indigo-900 p-5 shadow-lg">
           <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-indigo-400/20 blur-3xl" aria-hidden />
           <div className="relative flex items-center gap-3">
-            {contact.avatarUrl ? (
+            {(() => {
+              const avatarDisplay = toAvatarDisplayUrl(contact.avatarUrl);
+              return avatarDisplay ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={contact.avatarUrl}
+                src={avatarDisplay}
                 alt={fullName}
                 className="h-12 w-12 flex-shrink-0 rounded-full object-cover ring-2 ring-white/30"
               />
@@ -828,7 +831,8 @@ export function ClientProfileScreen({
               <div className={cx("flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full text-sm font-black text-white ring-2 ring-white/20", avatarColor)}>
                 {initials}
               </div>
-            )}
+            );
+            })()}
             <div className="min-w-0 flex-1">
               <h2 className="truncate text-lg font-black leading-tight text-white">{fullName}</h2>
               {contact.title ? (

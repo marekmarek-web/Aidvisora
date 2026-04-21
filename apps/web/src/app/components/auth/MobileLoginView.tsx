@@ -7,6 +7,7 @@ import { useKeyboardAware } from "@/lib/ui/useKeyboardAware";
 import { AdvisorLegalConsentLabel } from "./AdvisorLegalConsentLabel";
 import { LoginMfaChallenge } from "./LoginMfaChallenge";
 import { AppleIcon, GoogleIcon } from "./loginIcons";
+import { getLoginRoleTheme } from "./login-theme";
 import type { AidvisoraLoginState } from "./useAidvisoraLogin";
 
 const IS_BIOMETRIC_UI = true;
@@ -46,9 +47,8 @@ export function MobileLoginView({ login }: { login: AidvisoraLoginState }) {
     cancelMfaAndSignOut,
   } = login;
 
-  const inputClass = `w-full pl-12 pr-12 py-4 bg-white/10 border border-white/10 rounded-[20px] text-base font-bold text-white outline-none focus:bg-white/15 focus:ring-4 transition-all placeholder:text-slate-400 placeholder:font-medium backdrop-blur-md ${
-    isClient ? "focus:border-emerald-400 focus:ring-emerald-500/20" : "focus:border-indigo-400 focus:ring-indigo-500/20"
-  }`;
+  const roleTheme = getLoginRoleTheme(isClient);
+  const inputClass = `w-full pl-12 pr-12 py-4 bg-white/10 border border-white/10 rounded-[20px] text-base font-bold text-white outline-none focus:bg-white/15 transition-all placeholder:text-slate-400 placeholder:font-medium backdrop-blur-md ${roleTheme.inputFocusRing}`;
 
   return (
     <div className="min-h-dvh w-full bg-[#060918] relative overflow-hidden flex flex-col font-sans selection:bg-indigo-500 selection:text-white">

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createCipheriv, createDecipheriv, randomBytes, timingSafeEqual } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 /**
  * PII šifrování (skeleton pro WS-2 Batch 1).
@@ -158,6 +158,42 @@ export function envelopeEquals(a: string, b: string): boolean {
   const bb = Buffer.from(b, "utf8");
   if (ab.length !== bb.length) return false;
   return timingSafeEqual(ab, bb);
+}
+
+/**
+ * Deterministický HMAC-SHA256 fingerprint pro equality lookup nad šifrovaným sloupcem.
+ *
+ * Proč samostatný klíč: `PII_FINGERPRINT_KEY_BASE64`. Nikdy nepoužívej šifrovací klíč
+ * jako HMAC klíč — rotace by znehodnotila všechny indexy.
+ *
+ * Použití (dual-column pattern pro `contacts.personal_id` / `id_card_number`):
+ *   - write: `UPDATE contacts SET personal_id_enc = encryptPii(rc, 'contact:personal_id'),
+ *                                   personal_id_fp = fingerprintPii(rc)`
+ *   - lookup: `SELECT id FROM contacts WHERE personal_id_fp = fingerprintPii(inputRc)`
+ *   - read:  `decryptPii(row.personal_id_enc, 'contact:personal_id')`
+ *
+ * Normalizace vstupu: odstraní bílé znaky a uvede na lowercase; identická PII s
+ * různým formátováním ("123456/7890" vs "1234567890") tak dá stejný fingerprint.
+ * Vrací base64url bez paddingu (43 znaků) — bezpečné pro `text` sloupec a URL.
+ */
+export function fingerprintPii(plaintext: string): string {
+  if (typeof plaintext !== "string") {
+    throw new Error("fingerprintPii: plaintext musí být string.");
+  }
+  const normalized = plaintext.normalize("NFKC").replace(/\s+/g, "").toLowerCase();
+  if (normalized.length === 0) {
+    throw new Error("fingerprintPii: prázdný vstup po normalizaci.");
+  }
+  const keyB64 = process.env.PII_FINGERPRINT_KEY_BASE64 ?? "";
+  if (!keyB64) {
+    throw new Error("fingerprintPii: chybí PII_FINGERPRINT_KEY_BASE64.");
+  }
+  const key = Buffer.from(keyB64, "base64");
+  if (key.length < 32) {
+    throw new Error("fingerprintPii: klíč musí být min. 32 bajtů po base64 dekódování.");
+  }
+  const mac = createHmac("sha256", key).update(normalized, "utf8").digest();
+  return toB64Url(mac);
 }
 
 /** Deterministický smoke test (spustitelný přes jednorázový script), ne production hot-path. */

@@ -554,7 +554,7 @@ function ApplyLabelBadge({ label, requires }: ApplyLabelBadgeProps) {
       : "text-slate-400 bg-slate-100 dark:bg-slate-800 dark:text-slate-500";
   return (
     <span
-      className={`inline-flex items-center gap-0.5 text-[8px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded leading-none mt-0.5 w-fit ${cls}`}
+      className={`inline-flex items-center gap-0.5 text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded leading-none mt-0.5 w-fit ${cls}`}
     >
       {requires && label !== "Propíše se automaticky" && (
         <AlertCircle size={8} className="shrink-0" />
@@ -653,7 +653,7 @@ function CrmMappingProposalCard({ doc }: { doc: ExtractionDocument }) {
       >
         <span className="text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] flex items-center gap-2">
           <ListChecks size={14} className="text-indigo-500" /> Návrh propsání do Aidvisory
-          <span className={`ml-2 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md ${readinessBadge.cls}`}>
+          <span className={`ml-2 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md ${readinessBadge.cls}`}>
             {readinessBadge.label}
           </span>
         </span>

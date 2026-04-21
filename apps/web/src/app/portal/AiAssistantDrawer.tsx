@@ -16,6 +16,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useToast } from "@/app/components/Toast";
+import { useConfirm } from "@/app/components/ConfirmDialog";
 import { useAiAssistantDrawer } from "./AiAssistantDrawerContext";
 import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
 import type { SuggestedAction } from "@/lib/ai/dashboard-types";
@@ -246,6 +247,7 @@ export function AiAssistantDrawer() {
   const pathname = usePathname();
   const queryClient = useQueryClient();
   const toast = useToast();
+  const confirm = useConfirm();
   const routeContactId = parsePortalContactIdFromPathname(pathname) ?? null;
   const routeOpportunityId = parsePortalOpportunityIdFromPathname(pathname) ?? null;
   const [assistantSessionId, setAssistantSessionId] = useState<string | undefined>(undefined);
@@ -410,9 +412,13 @@ export function AiAssistantDrawer() {
 
   const handleDeleteAssistantConversation = useCallback(async () => {
     if (!assistantSessionId) return;
-    if (!window.confirm("Smazat tuto konverzaci včetně historie? Tuto akci nelze vrátit zpět.")) {
-      return;
-    }
+    const ok = await confirm({
+      title: "Smazat konverzaci?",
+      message: "Smazat tuto konverzaci včetně historie? Tuto akci nelze vrátit zpět.",
+      confirmLabel: "Smazat",
+      variant: "destructive",
+    });
+    if (!ok) return;
     const res = await deleteAdvisorAssistantConversation(assistantSessionId);
     if (!res.ok) {
       toast.showToast(res.error, "error");
@@ -426,7 +432,7 @@ export function AiAssistantDrawer() {
       /* ignore */
     }
     toast.showToast("Konverzace byla smazána.", "success");
-  }, [assistantSessionId, startNewAssistantConversation, toast]);
+  }, [assistantSessionId, confirm, startNewAssistantConversation, toast]);
 
   useEffect(() => {
     if (!open) return;

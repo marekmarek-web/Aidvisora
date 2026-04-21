@@ -51,6 +51,17 @@ dnů později.
    a `allow_promotion_codes` se **nepředává** (Stripe neumí mít oboje;
    discounts mají přednost).
 
+7. **Beta Terms gate (FL-1.6).** Pokud normalizovaný promo kód = `PREMIUM-BROKERS-2026`,
+   checkout vyžaduje `body.betaTermsAck === true`. Bez toho server vrací
+   HTTP 400 a do `billing_audit_log` píše `PROMO_CODE_REJECTED` s reason
+   `beta_terms_not_acked`. Při úspěchu se do `subscription.metadata`
+   zapisuje `beta_terms_acked: "1"` — tím máme v Stripe auditně zafixované,
+   že pilotní účastník podmínky potvrdil.
+
+   UI: `WorkspaceStripeBilling.tsx` čte cookie `aidvisora_promo_code` a pokud
+   je to PB kód, zobrazí **druhý checkbox** s odkazem na `/beta-terms`.
+   Text stránky: `apps/web/src/app/beta-terms/page.tsx`.
+
 ## Provozní zásady
 
 - **Nepublikujte invite odkaz** nikde veřejně — jakmile Stripe Promotion Code

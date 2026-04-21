@@ -10,6 +10,10 @@ import { contacts, contractUploadReviews } from "db";
 import { eq, and, asc, inArray, isNull, sql, desc, or } from "db";
 import { createAdminClient } from "@/lib/supabase/server";
 import { logAuditAction } from "@/lib/audit";
+import { requireRecentAuth } from "@/lib/auth/require-recent-auth";
+import { buildContactsPiiPatch } from "@/lib/pii/contacts-write-through";
+import { decryptContactPiiPair } from "@/lib/pii/contacts-read-through";
+import { buildAvatarProxyUrl } from "@/lib/storage/avatar-proxy";
 import {
   parseContractWizardPrefillFromReviewData,
   shouldSuppressContractWizardPrefillAfterApply,
@@ -186,7 +190,9 @@ const contactDetailCoreSelect = {
 const contactDetailExtendedSelect = {
   ...contactDetailCoreSelect,
   personalId: contacts.personalId,
+  personalIdEnc: contacts.personalIdEnc,
   idCardNumber: contacts.idCardNumber,
+  idCardNumberEnc: contacts.idCardNumberEnc,
   leadSource: contacts.leadSource,
   leadSourceUrl: contacts.leadSourceUrl,
   priority: contacts.priority,
@@ -262,8 +268,14 @@ async function loadContactWithAuth(
       referralContactId,
       referralContactName,
       birthDate: dateLikeToOptionalYmd(row.birthDate),
-      personalId: (row.personalId as string | null | undefined) ?? null,
-      idCardNumber: (row.idCardNumber as string | null | undefined) ?? null,
+      // WS-2 Batch 5 — read-through: pokud existuje envelope, vrať plaintext z něj.
+      // Fallback na legacy plaintext pouze během dual-column fáze (do drop migrace).
+      ...decryptContactPiiPair({
+        personalId: (row.personalId as string | null | undefined) ?? null,
+        personalIdEnc: (row.personalIdEnc as string | null | undefined) ?? null,
+        idCardNumber: (row.idCardNumber as string | null | undefined) ?? null,
+        idCardNumberEnc: (row.idCardNumberEnc as string | null | undefined) ?? null,
+      }),
       street: row.street as string | null,
       city: row.city as string | null,
       zip: row.zip as string | null,
@@ -430,6 +442,12 @@ export async function createContact(form: {
     if (!hasPermission(auth.roleName, "contacts:write")) {
       return { ok: false, message: "Nemáte oprávnění vytvářet kontakty." };
     }
+    // WS-2 Batch 5 — PII write-through: plaintext + AES-GCM envelope + fingerprint
+    // v jediném patchi. Helper respektuje dual-column fázi (plaintext zůstává).
+    const piiPatch = buildContactsPiiPatch({
+      personalId: form.personalId?.trim() || null,
+      idCardNumber: form.idCardNumber?.trim() || null,
+    });
     const [row] = await tx
       .insert(contacts)
       .values({
@@ -442,8 +460,7 @@ export async function createContact(form: {
         referralSource: form.referralSource?.trim() || null,
         referralContactId: sanitizeOptionalUuid(form.referralContactId),
         birthDate: form.birthDate?.trim() || null,
-        personalId: form.personalId?.trim() || null,
-        idCardNumber: form.idCardNumber?.trim() || null,
+        ...piiPatch,
         street: form.street?.trim() || null,
         city: form.city?.trim() || null,
         zip: form.zip?.trim() || null,
@@ -580,8 +597,17 @@ export async function updateContact(
     if (hasOwn("referralSource")) patch.referralSource = form.referralSource?.trim() || null;
     if (hasOwn("referralContactId")) patch.referralContactId = form.referralContactId || null;
     if (hasOwn("birthDate")) patch.birthDate = form.birthDate || null;
-    if (hasOwn("personalId")) patch.personalId = form.personalId?.trim() || null;
-    if (hasOwn("idCardNumber")) patch.idCardNumber = form.idCardNumber?.trim() || null;
+    // WS-2 Batch 5 — PII update se provádí přes write-through helper, aby se
+    // plaintext + envelope + fingerprint vždy držely v sync. `hasOwn` kontrola
+    // zajistí, že se nepřepisují hodnoty, které uživatel neposlal.
+    {
+      const piiInput: { personalId?: string | null; idCardNumber?: string | null } = {};
+      if (hasOwn("personalId")) piiInput.personalId = form.personalId?.trim() || null;
+      if (hasOwn("idCardNumber")) piiInput.idCardNumber = form.idCardNumber?.trim() || null;
+      if (Object.keys(piiInput).length > 0) {
+        Object.assign(patch, buildContactsPiiPatch(piiInput));
+      }
+    }
     if (hasOwn("street")) patch.street = form.street?.trim() || null;
     if (hasOwn("city")) patch.city = form.city?.trim() || null;
     if (hasOwn("zip")) patch.zip = form.zip?.trim() || null;
@@ -651,25 +677,15 @@ export async function uploadContactAvatar(contactId: string, formData: FormData)
       : uploadError.message;
     throw new Error(msg);
   }
-  const { data: signedData } = await admin.storage
-    .from("documents")
-    .createSignedUrl(path, 60 * 60 * 24 * 365);
-  let url: string | null = null;
-  if (signedData?.signedUrl) {
-    url = signedData.signedUrl;
-  } else {
-    const { data: urlData } = admin.storage.from("documents").getPublicUrl(path);
-    url = urlData?.publicUrl ?? null;
-  }
-  if (url) {
-    await withTenantContextFromAuth(auth, (tx) =>
-      tx
-        .update(contacts)
-        .set({ avatarUrl: url, updatedAt: new Date() })
-        .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, contactId))),
-    );
-  }
-  return url;
+  // WS-2 Batch 5 / W4: ukládáme storage path (ne 365-denní signed URL). UI renderuje
+  // přes `/api/storage/avatar?path=...` s krátkodobou signed URL (1 h).
+  await withTenantContextFromAuth(auth, (tx) =>
+    tx
+      .update(contacts)
+      .set({ avatarUrl: path, updatedAt: new Date() })
+      .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, contactId))),
+  );
+  return buildAvatarProxyUrl(path);
 }
 
 /** Smaže kontakt. Závislosti (household_members, dokumenty, atd.) řeší DB CASCADE / SET NULL. */
@@ -730,6 +746,11 @@ export async function restoreContact(id: string): Promise<void> {
 export async function permanentlyDeleteContacts(ids: string[]): Promise<void> {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "contacts:delete")) throw new Error("Forbidden");
+  // P1 — re-auth guard pro high-risk delete. Vyhodí `ReauthRequiredError`
+  // (code `REAUTH_REQUIRED`), když je session starší než 15 minut. Klient v
+  // `ContactsPageClient` tuto chybu chytne a otevře re-auth modal; zbytek
+  // handling padá do generické error toast vrstvy.
+  await requireRecentAuth({ action: "contact.permanent_delete", maxAgeSeconds: 900 });
   const unique = [...new Set(ids.map((x) => x.trim()).filter(Boolean))];
   if (unique.length === 0) return;
 

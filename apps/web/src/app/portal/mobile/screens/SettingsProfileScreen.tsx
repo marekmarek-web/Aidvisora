@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { toAvatarDisplayUrl } from "@/lib/storage/avatar-proxy";
 import {
   User,
   Bell,
@@ -446,11 +447,14 @@ export function SettingsProfileScreen({
             {/* Avatar */}
             <div className="relative flex-shrink-0">
               <div className="relative w-16 h-16 rounded-2xl bg-indigo-100 border-2 border-indigo-200 overflow-hidden flex items-center justify-center">
-                {avatarUrl ? (
-                  <Image src={avatarUrl} alt="Avatar" fill sizes="64px" className="object-cover" />
-                ) : (
-                  <span className="text-xl font-black text-indigo-600">{initials}</span>
-                )}
+                {(() => {
+                  const avatarDisplay = toAvatarDisplayUrl(avatarUrl);
+                  return avatarDisplay ? (
+                    <Image src={avatarDisplay} alt="Avatar" fill sizes="64px" className="object-cover" unoptimized />
+                  ) : (
+                    <span className="text-xl font-black text-indigo-600">{initials}</span>
+                  );
+                })()}
               </div>
               <label className="absolute -bottom-1 -right-1 w-7 h-7 bg-[color:var(--wp-surface-card)] border-2 border-[color:var(--wp-surface-card-border)] rounded-full flex items-center justify-center cursor-pointer shadow-sm">
                 <Camera size={13} className="text-[color:var(--wp-text-secondary)]" />

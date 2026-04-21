@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { requireClientZoneAuth } from "@/lib/auth/require-auth";
 import { getDocumentsForClient } from "@/app/actions/documents";
 import { DocumentPreviewToggle } from "./DocumentPreviewToggle";
 import { ClientDocumentUpload } from "../ClientDocumentUpload";
-import { Download, File } from "lucide-react";
+import { EmptyState } from "@/app/components/ui/primitives";
+import { Download, File, MessageSquarePlus } from "lucide-react";
 
 export default async function ClientDocumentsPage() {
   const auth = await requireClientZoneAuth();
@@ -22,8 +22,8 @@ export default async function ClientDocumentsPage() {
         </p>
       </div>
 
-      <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden">
-        <div className="px-6 sm:px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/30 rounded-t-[32px]">
+      <div className="bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden">
+        <div className="px-6 sm:px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/30 rounded-t-[24px]">
           <h3 className="text-xl font-black text-slate-900">Správce souborů</h3>
           <span className="text-xs font-black uppercase tracking-widest text-slate-400">
             {documentsList.length} dokumentů
@@ -34,18 +34,19 @@ export default async function ClientDocumentsPage() {
           <ClientDocumentUpload />
 
           {documentsList.length === 0 ? (
-            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-6 text-center">
-              <p className="text-slate-500 text-sm font-medium">
-                Zatím nemáte žádné dokumenty.
-              </p>
-              <p className="mt-2 text-sm text-slate-500">
-                Máte dotaz?{" "}
-                <Link href="/client/messages" className="text-indigo-600 font-bold hover:underline">
-                  Napište poradci
-                </Link>
-                .
-              </p>
-            </div>
+            <EmptyState
+              tone="card"
+              size="md"
+              icon={File}
+              title="Zatím nemáte žádné dokumenty"
+              description="Po nahrání dokumentu se zde zobrazí jeho přehled."
+              primaryAction={{
+                label: "Napište poradci",
+                href: "/client/messages",
+                icon: MessageSquarePlus,
+                variant: "link",
+              }}
+            />
           ) : (
             <div className="space-y-3">
               {documentsList.map((document) => {

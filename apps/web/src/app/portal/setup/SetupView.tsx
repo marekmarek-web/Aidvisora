@@ -1197,7 +1197,19 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                   </button>
                 </form>
               </div>
-              <PortalAdvisorMfaCard />
+              <div id="mfa" className="scroll-mt-24">
+                {searchParams.get("mfa_required") === "1" ? (
+                  <div className="mb-3 rounded-[18px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-500/40 dark:bg-rose-950/35 dark:text-rose-100">
+                    <p className="font-black">Aktivace 2FA je vyžadována.</p>
+                    <p className="mt-1 text-rose-900/90 dark:text-rose-100/90">
+                      Váš účet má přístup k citlivým klientským datům a grace period pro zapnutí
+                      dvoufaktorového ověření vypršela. Dokončete prosím aktivaci níže — bez ní
+                      budete při každém vstupu do portálu přesměrováni sem.
+                    </p>
+                  </div>
+                ) : null}
+                <PortalAdvisorMfaCard />
+              </div>
             </div>
           </div>
         )}

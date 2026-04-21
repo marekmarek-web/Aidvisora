@@ -5,7 +5,12 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { hasPermission } from "@/lib/auth/permissions";
 import { listTerminationRequestsAction } from "@/app/actions/terminations";
 import { isTerminationsModuleEnabledOnServer } from "@/lib/terminations/terminations-feature-flag";
+import {
+  getTerminationStatusBadgeClassName,
+  getTerminationStatusLabel,
+} from "@/lib/terminations/status-meta";
 import { segmentLabel } from "@/app/lib/segment-labels";
+import { EmptyState } from "@/app/components/ui/primitives";
 import { FileText, Plus } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -13,24 +18,6 @@ export const metadata: Metadata = {
 };
 
 export const dynamic = "force-dynamic";
-
-const STATUS_LABELS: Record<string, string> = {
-  intake: "Rozepsaná",
-  pending_review: "Čeká na kontrolu",
-  ready: "Připraveno",
-  dispatched: "Odesláno",
-  completed: "Dokončeno",
-  cancelled: "Zrušeno",
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  intake: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
-  pending_review: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-  ready: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-  dispatched: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
-  completed: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
-  cancelled: "bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300",
-};
 
 function formatCzDate(isoOrDate: string | null): string {
   if (!isoOrDate) return "—";
@@ -73,17 +60,18 @@ export default async function TerminationsListPage() {
           {result.error}
         </div>
       ) : result.items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 py-16 dark:border-slate-700 dark:bg-slate-900/30">
-          <FileText className="mb-3 h-10 w-10 text-slate-300 dark:text-slate-600" />
-          <p className="text-sm font-medium text-[color:var(--wp-text-secondary)]">Zatím žádné výpovědi</p>
-          <Link
-            href="/portal/terminations/new"
-            className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl bg-indigo-600 px-5 text-sm font-bold text-white hover:bg-indigo-700 transition"
-          >
-            <Plus className="h-4 w-4" />
-            Vytvořit první výpověď
-          </Link>
-        </div>
+        <EmptyState
+          tone="dashed"
+          size="lg"
+          icon={FileText}
+          title="Zatím žádné výpovědi"
+          description="Po vytvoření se zde zobrazí přehled všech žádostí o ukončení smlouvy."
+          primaryAction={{
+            label: "Vytvořit první výpověď",
+            href: "/portal/terminations/new",
+            icon: Plus,
+          }}
+        />
       ) : (
         <>
           {/* Desktop table */}
@@ -117,8 +105,8 @@ export default async function TerminationsListPage() {
                     <td className="px-5 py-3 text-[color:var(--wp-text-secondary)]">{item.productSegment ? segmentLabel(item.productSegment) : "—"}</td>
                     <td className="px-5 py-3 text-[color:var(--wp-text-secondary)]">{formatCzDate(item.requestedEffectiveDate)}</td>
                     <td className="px-5 py-3">
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_COLORS[item.status] ?? STATUS_COLORS.intake}`}>
-                        {STATUS_LABELS[item.status] ?? item.status}
+                      <span className={getTerminationStatusBadgeClassName(item.status)}>
+                        {getTerminationStatusLabel(item.status)}
                       </span>
                     </td>
                     <td className="px-5 py-3 text-[color:var(--wp-text-secondary)]">{formatCzDate(item.createdAt)}</td>
@@ -138,8 +126,8 @@ export default async function TerminationsListPage() {
               >
                 <div className="flex items-start justify-between gap-2">
                   <span className="font-semibold text-[color:var(--wp-text)]">{item.insurerName}</span>
-                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold shrink-0 ${STATUS_COLORS[item.status] ?? STATUS_COLORS.intake}`}>
-                    {STATUS_LABELS[item.status] ?? item.status}
+                  <span className={`${getTerminationStatusBadgeClassName(item.status)} shrink-0`}>
+                    {getTerminationStatusLabel(item.status)}
                   </span>
                 </div>
                 <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[color:var(--wp-text-secondary)]">

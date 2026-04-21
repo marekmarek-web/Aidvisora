@@ -111,7 +111,7 @@ export function CalendarWidget({
 
       {/* Karta dne – navy + jemný fialový accent (Aidvisora tokeny) */}
       <div
-        className={`relative rounded-[28px] p-6 text-white shadow-xl overflow-hidden group border ${
+        className={`relative rounded-[24px] p-6 text-white shadow-xl overflow-hidden group border ${
           isDark
             ? "bg-gradient-to-br from-aidv-surface-dark via-aidv-surface-elevated to-[#1a1f3d] border-[color:var(--aidv-border-on-dark)] shadow-black/30"
             : "bg-gradient-to-br from-indigo-600 via-purple-600 to-violet-800 border-transparent shadow-indigo-900/20"

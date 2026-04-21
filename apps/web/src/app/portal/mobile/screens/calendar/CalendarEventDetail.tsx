@@ -64,7 +64,6 @@ function getDuration(ev: EventRow): string | null {
 
 function EventDetailBody({
   ev,
-  onClose,
   onEdit,
   onDelete,
   onFollowUpEvent,
@@ -79,7 +78,6 @@ function EventDetailBody({
   onChangeType,
 }: {
   ev: EventRow;
-  onClose: () => void;
   onEdit: () => void;
   onDelete: () => void;
   onFollowUpEvent: () => void;
@@ -381,7 +379,6 @@ export function CalendarEventDetail({
           <div className="min-h-0 flex-1 overflow-y-auto p-4">
             <EventDetailBody
               ev={ev}
-              onClose={onClose}
               onEdit={openEdit}
               onDelete={onDelete}
               onFollowUpEvent={onFollowUpEvent}
@@ -405,7 +402,6 @@ export function CalendarEventDetail({
     <FullscreenSheet open onClose={onClose} title={ev.title} noPadding>
       <EventDetailBody
         ev={ev}
-        onClose={onClose}
         onEdit={openEdit}
         onDelete={onDelete}
         onFollowUpEvent={onFollowUpEvent}

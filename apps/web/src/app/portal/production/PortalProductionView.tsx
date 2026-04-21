@@ -208,7 +208,7 @@ export function PortalProductionView() {
                   key={opt.value}
                   type="button"
                   onClick={() => setPeriod(opt.value)}
-                  className={`px-3 md:px-4 py-2 rounded-[var(--wp-radius-xs)] text-xs font-semibold uppercase tracking-wide transition-all min-h-[44px] md:min-h-0 ${
+                  className={`px-3 md:px-4 py-2 rounded-[var(--wp-radius-xs)] text-xs font-semibold uppercase tracking-wide transition-all min-h-[44px] ${
                     period === opt.value
                       ? "shadow-sm border"
                       : "opacity-80 hover:opacity-100"
@@ -273,7 +273,7 @@ export function PortalProductionView() {
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 md:gap-6 mb-4 md:mb-8">
               {/* Card 1: Vybrané období – gradient */}
               <div
-                className="p-4 md:p-6 rounded-[var(--wp-radius-sm)] text-white shadow-md relative overflow-hidden min-h-[100px] md:min-h-0"
+                className="p-4 md:p-6 rounded-[var(--wp-radius-sm)] text-white transition-shadow hover:shadow-md relative overflow-hidden min-h-[100px] md:min-h-0"
                 style={{ background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)" }}
               >
                 <Calendar className="absolute -right-4 -bottom-4 w-24 h-24 md:w-32 md:h-32 text-white/10" aria-hidden />
@@ -465,7 +465,7 @@ export function PortalProductionView() {
                   {data.rows.length > 0 && (
                     <Link
                       href={`/portal/contracts?period=${period}`}
-                      className="flex items-center gap-2 text-sm font-semibold text-indigo-600 hover:text-indigo-800 hover:underline min-h-[44px] items-center"
+                      className="flex items-center gap-2 text-sm font-semibold text-indigo-600 hover:text-indigo-800 hover:underline min-h-[44px]"
                     >
                       Smlouvy <ExternalLink size={14} />
                     </Link>

@@ -156,6 +156,22 @@ export function NativeOAuthDeepLinkBridge() {
               return;
             }
 
+            // If a session already exists (cold relaunch after a previous successful sign-in),
+            // don't attempt to re-exchange the stale PKCE code — just mark it consumed and land in app.
+            try {
+              const supabase = createClient();
+              const { data: existing } = await supabase.auth.getSession();
+              if (existing?.session) {
+                logNativeOAuthDebug(
+                  "[NativeOAuthDeepLinkBridge] session already present, skipping exchange for stale launch URL code",
+                );
+                writeConsumedCode(code, { outcome: "ok" });
+                return;
+              }
+            } catch {
+              /* fall through to attempt exchange */
+            }
+
             logNativeOAuthDebug("[NativeOAuthDeepLinkBridge] exchanging auth code…");
             try {
               const supabase = createClient();

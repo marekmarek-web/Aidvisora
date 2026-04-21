@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit } from "@/lib/security/rate-limit";
 import { NextResponse } from "next/server";
 
 /**
@@ -11,6 +12,18 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const { searchParams } = url;
     const origin = url.origin;
+
+    // FL-1 rate limit — chráníme OAuth callback před brute-force a DoS.
+    // Klíč je čistě IP (před autentizací není žádný subjektový identifier).
+    const limiter = checkRateLimit(request, "auth-callback", null, {
+      windowMs: 60_000,
+      maxRequests: 20,
+    });
+    if (!limiter.ok) {
+      return NextResponse.redirect(
+        `${origin}/prihlaseni?error=${encodeURIComponent("auth_error")}`,
+      );
+    }
     const code = searchParams.get("code");
     const errorCode = searchParams.get("error_code");
     const errorDesc = searchParams.get("error_description");

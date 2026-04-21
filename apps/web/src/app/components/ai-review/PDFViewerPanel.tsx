@@ -138,7 +138,7 @@ export function PDFViewerPanel({
 
   return (
     <div
-      className={`flex min-h-0 flex-col bg-[#e2e8f0] ${
+      className={`flex min-h-0 flex-col bg-[color:var(--wp-surface-muted)] ${
         isFullscreen ? "fixed inset-0 z-50" : "relative h-full min-h-0"
       }`}
     >

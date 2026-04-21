@@ -6,6 +6,7 @@ import "../styles/aidvisora-components.css";
 import { TooltipBlurListener } from "./components/TooltipBlurListener";
 import { NativeOAuthDeepLinkBridge } from "./components/NativeOAuthDeepLinkBridge";
 import { ConfirmProvider } from "./components/ConfirmDialog";
+import { CookieNoticeBanner } from "./components/CookieNoticeBanner";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const sourceSans = Source_Sans_3({
@@ -74,6 +75,7 @@ export default function RootLayout({
         <TooltipBlurListener />
         <NativeOAuthDeepLinkBridge />
         <ConfirmProvider>{children}</ConfirmProvider>
+        <CookieNoticeBanner />
         <SpeedInsights />
       </body>
     </html>

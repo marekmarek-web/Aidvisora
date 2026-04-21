@@ -32,7 +32,7 @@ describe("F0 — anchor registry + golden expectations fixtures", () => {
   it("loads anchor-golden-expectations.json and ids match registry", () => {
     const reg = loadAnchorRegistry();
     const exp = loadAnchorGoldenExpectations();
-    expect(exp.version).toBe(1);
+    expect(exp.version).toBeGreaterThanOrEqual(1);
     const regIds = new Set(reg.anchors.map((a) => a.id));
     for (const e of exp.expectations) {
       expect(regIds.has(e.id), `expectation id ${e.id} not in anchor-registry`).toBe(true);
@@ -40,5 +40,41 @@ describe("F0 — anchor registry + golden expectations fixtures", () => {
       expect(e.mustHaveAnyOf.length).toBeGreaterThan(0);
     }
     expect(exp.expectations.length).toBe(reg.anchors.length);
+  });
+
+  // FL-3.4 — release gate: nové povinné fieldy v optionalFields (OP, lékař,
+  // fundResolution) musí mít aspoň min. coverage napříč anchor setem, jinak je
+  // golden fixture set v regresi a nezachytává AI extrakci nových polí.
+  it("release-gate v2: optionalFields coverage for new fields (OP, doctor, fundResolution)", () => {
+    const exp = loadAnchorGoldenExpectations();
+    if (exp.version < 2) return; // zpětná kompatibilita — v1 fixtures test nepotřebují.
+
+    const KNOWN_OPTIONAL_FIELDS = new Set([
+      "idCardNumber",
+      "doctorName",
+      "fundResolution",
+    ]);
+
+    const coverage: Record<string, number> = {
+      idCardNumber: 0,
+      doctorName: 0,
+      fundResolution: 0,
+    };
+
+    for (const e of exp.expectations) {
+      for (const f of e.optionalFields ?? []) {
+        expect(
+          KNOWN_OPTIONAL_FIELDS.has(f),
+          `unknown optionalField '${f}' in anchor ${e.id}`,
+        ).toBe(true);
+        coverage[f] = (coverage[f] ?? 0) + 1;
+      }
+    }
+
+    // Každé nové pole je označené jako očekávané alespoň ve 3 anchor scenářích —
+    // mimo tento baseline AI extrakce na novém poli nebude mít golden test.
+    expect(coverage.idCardNumber, "idCardNumber coverage").toBeGreaterThanOrEqual(3);
+    expect(coverage.doctorName, "doctorName coverage").toBeGreaterThanOrEqual(3);
+    expect(coverage.fundResolution, "fundResolution coverage").toBeGreaterThanOrEqual(3);
   });
 });

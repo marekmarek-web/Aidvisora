@@ -162,7 +162,7 @@ export default function TerminationRegistryAdminPage() {
                     value={draft.officialFormNotes ?? ""}
                     onChange={(e) => setDraft((d) => ({ ...d, officialFormNotes: e.target.value }))}
                     rows={2}
-                    className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2"
+                    className="w-full rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm"
                   />
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2">

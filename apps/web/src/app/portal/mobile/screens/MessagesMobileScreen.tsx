@@ -24,6 +24,7 @@ import {
   ErrorState,
 } from "@/app/shared/mobile-ui/primitives";
 import { getActionFriendlyErrorMessage } from "@/lib/observability/production-error-ui";
+import { useConfirm } from "@/app/components/ConfirmDialog";
 
 const POLL_INTERVAL = 10_000;
 const POLL_INTERVAL_SLOW = 25_000;
@@ -160,6 +161,7 @@ export function MessagesMobileScreen() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
+  const confirm = useConfirm();
   const contactFromQuery = searchParams.get("contact");
   const pollStableRef = useRef(0);
 
@@ -387,9 +389,15 @@ export function MessagesMobileScreen() {
     router.replace("/portal/messages", { scroll: false });
   }
 
-  function handleDeleteOneMessage(messageId: string) {
-    if (!window.confirm("Smazat tuto zprávu? Tuto akci nelze vrátit zpět.")) return;
+  async function handleDeleteOneMessage(messageId: string) {
     if (!selectedContactId) return;
+    const ok = await confirm({
+      title: "Smazat zprávu?",
+      message: "Smazat tuto zprávu? Tuto akci nelze vrátit zpět.",
+      confirmLabel: "Smazat",
+      variant: "destructive",
+    });
+    if (!ok) return;
     const cid = selectedContactId;
     setDeletingMessageId(messageId);
     startTransition(async () => {
@@ -413,15 +421,16 @@ export function MessagesMobileScreen() {
     });
   }
 
-  function handleDeleteConversation() {
+  async function handleDeleteConversation() {
     if (!selectedContactId) return;
-    if (
-      !window.confirm(
+    const ok = await confirm({
+      title: "Smazat celou konverzaci?",
+      message:
         "Smazat celou konverzaci s tímto klientem? Všechny zprávy a přílohy budou trvale odstraněny. Tuto akci nelze vrátit zpět.",
-      )
-    ) {
-      return;
-    }
+      confirmLabel: "Smazat konverzaci",
+      variant: "destructive",
+    });
+    if (!ok) return;
     const id = selectedContactId;
     startTransition(async () => {
       try {

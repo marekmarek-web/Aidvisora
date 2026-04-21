@@ -33,7 +33,7 @@ export function DashboardCard({
 }: DashboardCardProps) {
   return (
     <div
-      className={`flex min-h-[240px] flex-col overflow-hidden rounded-[32px] border border-[color:var(--wp-surface-card-border)] shadow-[var(--wp-shadow-card)] ${backgroundClass ?? "bg-[color:var(--wp-surface-card)]"} ${topBorderClass ?? ""} ${className}`}
+      className={`flex min-h-[240px] flex-col overflow-hidden rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-[var(--wp-shadow-card)] ${backgroundClass ?? "bg-[color:var(--wp-surface-card)]"} ${topBorderClass ?? ""} ${className}`}
     >
       <div className="flex shrink-0 items-center justify-between px-6 py-5 sm:px-8 sm:py-6">
         <h2 className="flex items-center gap-2 text-xl font-black tracking-tight text-[color:var(--wp-text)] md:text-2xl">
@@ -46,7 +46,7 @@ export function DashboardCard({
         {children}
         {footerLink && (
           <div className="mt-auto flex w-full shrink-0 justify-center px-2 pt-6">
-            <CreateActionButton href={footerLink} icon={ChevronRight} className="max-w-full shadow-md">
+            <CreateActionButton href={footerLink} icon={ChevronRight} className="max-w-full shadow-none">
               {footerLabel}
             </CreateActionButton>
           </div>

@@ -22,6 +22,7 @@ import {
   variableSymbolDisplay,
 } from "@/lib/client-portal/portal-payments-read-model";
 import { resolveInstitutionLogo } from "@/lib/institutions/institution-logo";
+import { Badge, StatusPill } from "@/app/components/ui/primitives";
 import { QrPaymentModal } from "../QrPaymentModal";
 
 type ClientPaymentsViewProps = {
@@ -88,16 +89,17 @@ function CopyMiniButton({ text, label }: { text: string; label: string }) {
           /* ignore */
         }
       }}
-      className="shrink-0 min-h-[44px] min-w-[64px] rounded-lg border border-slate-200 bg-white px-2.5 text-[10px] font-black uppercase tracking-wider text-slate-600 hover:border-indigo-200 hover:text-indigo-700 transition-colors touch-manipulation"
+      className="shrink-0 min-h-[44px] min-w-[64px] rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:border-indigo-200 hover:text-indigo-700 transition-colors touch-manipulation"
     >
       {done ? "Hotovo" : label}
     </button>
   );
 }
 
-function paymentContractStatusBadgeClasses(linkedStatus: string | null | undefined): string {
-  if (linkedStatus === "ended") return "bg-slate-100 text-slate-600 border-slate-200";
-  return "bg-emerald-50 text-emerald-800 border-emerald-100";
+function paymentContractStatusTone(
+  linkedStatus: string | null | undefined,
+): "neutral" | "emerald" {
+  return linkedStatus === "ended" ? "neutral" : "emerald";
 }
 
 function paymentContractStatusBadgeLabel(linkedStatus: string | null | undefined): string {
@@ -208,11 +210,13 @@ export function ClientPaymentsView({
                         <p className={`text-[10px] font-black uppercase tracking-widest ${colors.label}`}>
                           {PAYMENT_CATEGORY_LABELS[cat]}
                         </p>
-                        <span
-                          className={`shrink-0 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-md border ${paymentContractStatusBadgeClasses(instruction.linkedContractPortfolioStatus)}`}
+                        <StatusPill
+                          size="xs"
+                          tone={paymentContractStatusTone(instruction.linkedContractPortfolioStatus)}
+                          className="shrink-0"
                         >
                           {paymentContractStatusBadgeLabel(instruction.linkedContractPortfolioStatus)}
-                        </span>
+                        </StatusPill>
                       </div>
                       <h3 className="font-bold text-slate-900 text-[15px] leading-snug mt-1 line-clamp-2">
                         {instruction.productName || segmentLabel(instruction.segment)}
@@ -221,9 +225,9 @@ export function ClientPaymentsView({
                         <p className="text-xs font-medium text-slate-500 truncate mt-0.5">{institution}</p>
                       ) : null}
                       {pill ? (
-                        <span className="inline-block mt-1.5 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-black uppercase tracking-wide">
+                        <Badge tone="amber" size="xs" variant="tag" className="mt-1.5">
                           {pill}
-                        </span>
+                        </Badge>
                       ) : null}
                     </div>
                   </div>
@@ -235,9 +239,9 @@ export function ClientPaymentsView({
                         <span className="text-2xl font-black text-slate-900">{formatPortalPrimaryAmountLine(instruction)}</span>
                       </div>
                       {freqRow ? (
-                        <span className="text-[10px] font-bold text-slate-500 bg-white px-2 py-1 rounded-md border border-slate-200 shadow-sm shrink-0">
+                        <Badge tone="neutral" size="xs" variant="count" className="shrink-0 bg-white">
                           {freqRow}
-                        </span>
+                        </Badge>
                       ) : null}
                     </div>
 

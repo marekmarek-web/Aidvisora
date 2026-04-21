@@ -60,7 +60,7 @@ export function ClientWelcomeView({
 }: ClientWelcomeViewProps) {
   return (
     <div className="space-y-8 client-fade-in max-w-3xl">
-      <div className="rounded-[28px] bg-gradient-to-br from-slate-900 to-slate-800 p-8 sm:p-10 text-white relative overflow-hidden border border-slate-700/50">
+      <div className="rounded-[24px] bg-gradient-to-br from-slate-900 to-slate-800 p-8 sm:p-10 text-white relative overflow-hidden border border-slate-700/50">
         <div className="absolute -top-16 -right-16 w-56 h-56 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-20 -left-10 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10">

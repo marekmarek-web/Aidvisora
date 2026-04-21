@@ -38,7 +38,7 @@ type ProfileClientViewProps = {
 
 function SectionCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <section className={`bg-white rounded-[28px] border border-slate-100 shadow-sm overflow-hidden ${className}`}>
+    <section className={`bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden ${className}`}>
       {children}
     </section>
   );

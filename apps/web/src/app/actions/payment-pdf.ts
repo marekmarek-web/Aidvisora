@@ -152,7 +152,16 @@ export async function getPaymentInstructionsForContact(contactId: string): Promi
   } else if (!hasPermission(auth.roleName, "contacts:read")) {
     throw new Error("Forbidden");
   }
-  const [contact] = await db.select().from(contacts).where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, contactId))).limit(1);
+  // DŮLEŽITÉ: Nepoužívat `db.select()` bez sloupců — rozbalí se na VŠECHNY sloupce
+  // definované v `contacts` schématu. Pokud produkce nemá zmigrované pozdější sloupce
+  // (PII enc/fingerprint, service-reminder cooldown…), query shoří a chyba se jen tiše
+  // zachytí v page.tsx → klient uvidí "Platební údaje se nepodařilo načíst".
+  // Explicitní seznam = odolné vůči schema drift.
+  const [contact] = await db
+    .select({ id: contacts.id })
+    .from(contacts)
+    .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, contactId)))
+    .limit(1);
   if (!contact) return [];
 
   const aiReviewPaymentRows = await db
@@ -210,8 +219,18 @@ export async function getPaymentInstructionsForContact(contactId: string): Promi
     .map(mapAiPaymentSetupToInstruction)
     .filter((instruction): instruction is PaymentInstruction => instruction !== null);
 
+  // Explicitní sloupce (schema drift safety – viz komentář u `contacts` selectu výše).
   const contractRows = await db
-    .select()
+    .select({
+      id: contracts.id,
+      segment: contracts.segment,
+      partnerId: contracts.partnerId,
+      partnerName: contracts.partnerName,
+      productName: contracts.productName,
+      contractNumber: contracts.contractNumber,
+      premiumAmount: contracts.premiumAmount,
+      portfolioStatus: contracts.portfolioStatus,
+    })
     .from(contracts)
     .where(
       and(

@@ -1457,7 +1457,7 @@ export function PortalCalendarView() {
             }}
           />
 
-          <main className="flex-1 bg-[color:var(--wp-surface-card)] rounded-xl sm:rounded-xl lg:rounded-lg shadow-sm border border-[color:var(--wp-surface-card-border)] flex flex-col overflow-hidden relative min-w-0">
+          <main className="flex-1 bg-[color:var(--wp-surface-card)] rounded-xl shadow-sm border border-[color:var(--wp-surface-card-border)] flex flex-col overflow-hidden relative min-w-0">
             <div className={`px-3 sm:px-4 lg:px-3 py-2 sm:py-2 border-b border-[color:var(--wp-surface-card-border)] flex items-center justify-between bg-[color:var(--wp-surface-card)] z-20 flex-wrap gap-2 lg:gap-2 ${isMobile ? "gap-y-2" : ""}`}>
               <div className="flex items-center gap-2 sm:gap-3 lg:gap-2 min-w-0">
                 <button
@@ -1521,7 +1521,7 @@ export function PortalCalendarView() {
                   type="button"
                   onClick={() => openNew(todayStr)}
                   icon={Plus}
-                  className="!min-h-[44px] !rounded-lg !px-2.5 !py-1.5 !text-[11px] sm:!min-h-0 sm:!px-3 sm:!text-sm"
+                  className="!min-h-[44px] !px-3 !text-sm"
                 >
                   Vytvořit
                 </CreateActionButton>

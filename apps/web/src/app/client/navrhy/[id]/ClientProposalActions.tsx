@@ -103,7 +103,7 @@ export function ClientProposalActions({
               type="button"
               onClick={submitInterested}
               disabled={pending}
-              className="min-h-[44px] inline-flex items-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-xl text-sm font-bold"
+              className="min-h-[44px] inline-flex items-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-xl text-sm font-bold transition-colors shadow-lg shadow-emerald-500/20"
             >
               <CheckCircle2 size={16} />
               {pending ? "Odesílám…" : "Odeslat poradci"}

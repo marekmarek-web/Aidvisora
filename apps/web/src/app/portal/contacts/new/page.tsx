@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { createContact, getContactsList } from "@/app/actions/contacts";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
+import { Button, ButtonLink } from "@/app/components/ui/primitives";
 import { User, Flag } from "lucide-react";
 
 export default function NewContactPage() {
@@ -60,68 +60,73 @@ export default function NewContactPage() {
     }
   }
 
-  const inputCls = "w-full rounded-[6px] border border-monday-border bg-[color:var(--wp-surface-card)] px-3 py-2 text-sm text-monday-text focus:outline-none focus:ring-1 focus:ring-monday-blue";
+  const inputCls =
+    "w-full min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-3 py-3 text-sm text-[color:var(--wp-text)] focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300";
+  const labelCls = "block text-xs font-semibold text-[color:var(--wp-text-secondary)] mb-1";
 
   return (
     <div className="p-4 space-y-6">
-      <h1 className="text-lg font-semibold text-monday-text">Nový kontakt</h1>
-      <form onSubmit={onSubmit} className="max-w-md space-y-4 rounded-lg border border-monday-border bg-monday-surface p-6">
+      <h1 className="text-2xl md:text-3xl font-black text-[color:var(--wp-text)]">Nový kontakt</h1>
+      <form
+        onSubmit={onSubmit}
+        className="max-w-md space-y-4 rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-6 shadow-[var(--wp-shadow-card)]"
+      >
         <div>
-          <label className="block text-xs font-semibold text-monday-text-muted mb-1">Jméno *</label>
+          <label className={labelCls}>Jméno *</label>
           <input name="firstName" required className={inputCls} defaultValue={q("firstName")} />
         </div>
         <div>
-          <label className="block text-xs font-semibold text-monday-text-muted mb-1">Příjmení *</label>
+          <label className={labelCls}>Příjmení *</label>
           <input name="lastName" required className={inputCls} defaultValue={q("lastName")} />
         </div>
         <div>
-          <label className="block text-xs font-semibold text-monday-text-muted mb-1">E-mail</label>
+          <label className={labelCls}>E-mail</label>
           <input name="email" type="email" className={inputCls} defaultValue={q("email")} />
         </div>
         <div>
-          <label className="block text-xs font-semibold text-monday-text-muted mb-1">Telefon</label>
+          <label className={labelCls}>Telefon</label>
           <input name="phone" className={inputCls} defaultValue={q("phone")} />
         </div>
         <div>
-          <label className="block text-xs font-semibold text-monday-text-muted mb-1">Titul</label>
+          <label className={labelCls}>Titul</label>
           <input name="title" className={inputCls} defaultValue={q("title")} />
         </div>
         <div>
-          <label className="block text-xs font-semibold text-monday-text-muted mb-1">Doporučil / zdroj</label>
+          <label className={labelCls}>Doporučil / zdroj</label>
           <input name="referralSource" placeholder="např. web, doporučení" className={inputCls} />
         </div>
         <div>
-          <label className="block text-[13px] font-semibold text-monday-text-muted mb-1">Datum narození</label>
+          <label className={labelCls}>Datum narození</label>
           <input name="birthDate" type="date" className={inputCls} defaultValue={q("birthDate")} />
         </div>
         <div>
-          <label className="block text-[13px] font-semibold text-monday-text-muted mb-1">Rodné číslo / osobní ID</label>
+          <label className={labelCls}>Rodné číslo / osobní ID</label>
           <input name="personalId" className={inputCls} defaultValue={q("personalId")} />
         </div>
         <div>
-          <label className="block text-[13px] font-semibold text-monday-text-muted mb-1">Ulice</label>
+          <label className={labelCls}>Ulice</label>
           <input name="street" className={inputCls} defaultValue={q("street")} />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-[13px] font-semibold text-monday-text-muted mb-1">Město</label>
+            <label className={labelCls}>Město</label>
             <input name="city" className={inputCls} defaultValue={q("city")} />
           </div>
           <div>
-            <label className="block text-[13px] font-semibold text-monday-text-muted mb-1">PSČ</label>
+            <label className={labelCls}>PSČ</label>
             <input name="zip" className={inputCls} defaultValue={q("zip")} />
           </div>
         </div>
         <div>
-          <label className="block text-[13px] font-semibold text-monday-text-muted mb-1">Poznámky</label>
+          <label className={labelCls}>Poznámky</label>
           <textarea name="notes" rows={4} className={inputCls} defaultValue={q("notes")} />
         </div>
         <div>
-          <label className="block text-[13px] font-semibold text-monday-text-muted mb-1">Štítky (oddělené čárkou)</label>
+          <label className={labelCls}>Štítky (oddělené čárkou)</label>
           <input name="tags" placeholder="např. VIP, rodina" className={inputCls} />
         </div>
         <div>
-          <label className="block text-[13px] font-semibold text-monday-text-muted mb-1">Fáze životního cyklu</label>
+          <label className={labelCls}>Fáze životního cyklu</label>
           <CustomDropdown
             value={lifecycleStage}
             onChange={setLifecycleStage}
@@ -137,7 +142,7 @@ export default function NewContactPage() {
           />
         </div>
         <div>
-          <label className="block text-[13px] font-semibold text-monday-text-muted mb-1">Priorita</label>
+          <label className={labelCls}>Priorita</label>
           <CustomDropdown
             value={priority}
             onChange={setPriority}
@@ -153,7 +158,7 @@ export default function NewContactPage() {
           />
         </div>
         <div>
-          <label className="block text-xs font-semibold text-monday-text-muted mb-1">Doporučen od (kontakt)</label>
+          <label className={labelCls}>Doporučen od (kontakt)</label>
           <CustomDropdown
             value={referralContactId}
             onChange={setReferralContactId}
@@ -162,14 +167,18 @@ export default function NewContactPage() {
             icon={User}
           />
         </div>
-        {error && <p className="text-sm text-red-500">{error}</p>}
+        {error && (
+          <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </p>
+        )}
         <div className="flex gap-3">
-          <button type="submit" disabled={loading} className="rounded-[6px] px-4 py-2 text-sm font-semibold text-white bg-monday-blue disabled:opacity-50">
+          <Button type="submit" variant="primary" size="lg" loading={loading}>
             {loading ? "Ukládám…" : "Uložit"}
-          </button>
-          <Link href="/portal/contacts" className="rounded-[6px] px-4 py-2 text-sm font-semibold border border-monday-border text-monday-text hover:bg-monday-row-hover">
+          </Button>
+          <ButtonLink href="/portal/contacts" variant="secondary" size="lg">
             Zrušit
-          </Link>
+          </ButtonLink>
         </div>
       </form>
     </div>

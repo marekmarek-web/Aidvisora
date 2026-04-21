@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { CreditCard, Tag, ExternalLink } from "lucide-react";
 import { AdvisorLegalConsentLabel } from "@/app/components/auth/AdvisorLegalConsentLabel";
 import { useNativePlatform } from "@/lib/capacitor/useNativePlatform";
 import {
   isKnownPromoCode,
+  PREMIUM_BROKERS_PROMO_CODE,
   PROMO_CODE_COOKIE,
   promoCodeDisplayLabel,
 } from "@/lib/stripe/promo-codes-shared";
@@ -123,6 +125,7 @@ export function WorkspaceStripeBilling({
   const [billingAction, setBillingAction] = useState<null | "checkout" | "portal">(null);
   const [billingError, setBillingError] = useState<string | null>(null);
   const [subscriptionLegalConsent, setSubscriptionLegalConsent] = useState(false);
+  const [betaTermsAck, setBetaTermsAck] = useState(false);
   const [activePromoCode, setActivePromoCode] = useState<string | null>(null);
   const { isNative } = useNativePlatform();
 
@@ -171,7 +174,11 @@ export function WorkspaceStripeBilling({
     return tierSupports(cat, tier, interval);
   }, [billing?.checkoutAvailable, cat, usePicker, tier, interval]);
 
-  const canStartPaidCheckout = canSubmitCheckout && subscriptionLegalConsent;
+  const isPilotPromo = activePromoCode === PREMIUM_BROKERS_PROMO_CODE;
+  const canStartPaidCheckout =
+    canSubmitCheckout &&
+    subscriptionLegalConsent &&
+    (!isPilotPromo || betaTermsAck);
 
   if (!billing) return null;
 
@@ -183,6 +190,9 @@ export function WorkspaceStripeBilling({
         billingContext,
         legalAcknowledged: true,
       };
+      if (isPilotPromo) {
+        payload.betaTermsAck = betaTermsAck;
+      }
       if (usePicker) {
         payload.tier = tier;
         payload.interval = interval;
@@ -278,6 +288,14 @@ export function WorkspaceStripeBilling({
             {trialDays} dní zdarma ({ACCESS_MODE_UI_LABEL.trialPlanNote})
           </span>
           , poté pravidelné účtování podle zvoleného tarifu ve Stripe.
+        </p>
+      ) : null}
+      {billing.checkoutAvailable && !isNative ? (
+        <p className="max-w-xl text-xs text-[color:var(--wp-text-secondary)]">
+          Fakturační údaje (firma, adresa, <strong>IČO / DIČ</strong>) zadáte
+          v následujícím kroku v zabezpečeném Stripe checkoutu. DPH je
+          počítána automaticky podle ČR sazeb (Stripe Tax). Faktury později
+          spravujete v Stripe Customer Portalu („Spravovat platby a faktury“).
         </p>
       ) : null}
       {activePromoLabel && billing.checkoutAvailable ? (
@@ -430,6 +448,33 @@ export function WorkspaceStripeBilling({
               linkClassName="font-bold text-indigo-600 underline-offset-2 hover:underline dark:text-indigo-400"
               inputClassName="mt-1 h-5 w-5 shrink-0 rounded border-[color:var(--wp-surface-card-border)] accent-indigo-600"
             />
+          ) : null}
+          {billing.checkoutAvailable && isPilotPromo ? (
+            <label
+              htmlFor="beta-terms-ack"
+              className="flex items-start gap-3 max-w-2xl text-sm text-[color:var(--wp-text-secondary)]"
+            >
+              <input
+                id="beta-terms-ack"
+                type="checkbox"
+                checked={betaTermsAck}
+                onChange={(e) => setBetaTermsAck(e.target.checked)}
+                className="mt-1 h-5 w-5 shrink-0 rounded border-[color:var(--wp-surface-card-border)] accent-indigo-600"
+              />
+              <span>
+                Rozumím, že se účastním <strong>pilotního programu</strong> a
+                potvrzuji{" "}
+                <Link
+                  href="/beta-terms"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-bold text-indigo-600 underline-offset-2 hover:underline dark:text-indigo-400"
+                >
+                  Podmínky beta programu
+                </Link>{" "}
+                (stav produktu, SLA pilotu, zpětná vazba, reference).
+              </span>
+            </label>
           ) : null}
           <div className="flex flex-col sm:flex-row flex-wrap gap-3">
           {billing.checkoutAvailable ? (

@@ -7,6 +7,7 @@ import type { DocumentReviewEnvelope, ExtractedField, PrimaryDocumentType } from
 import { normalizeExtractedFieldDates, normalizeExtractedFieldFrequencies } from "./canonical-date-normalize";
 import { applyFieldSourcePriorityAndEvidence } from "./field-source-priority";
 import {
+  dedupeCzechAccountTrailingBankCode,
   normalizeDomesticAccountAndBankCode,
   sanitizeVariableSymbolForCanonical,
 } from "./payment-field-contract";
@@ -147,6 +148,23 @@ function normalizeVehicleAndPropertyCanonicalFields(ef: Record<string, Extracted
   ]);
 }
 
+/**
+ * Canonical domestic account fields — všechny klíče, které nesou číslo účtu a mohou
+ * obsahovat zdvojený kód banky za lomítkem (např. 213038282/0600/0600). Dedup musí
+ * běžet i na šťastné cestě (nejen v coerce po selhání validace), jinak se duplicita
+ * propaguje do UI i do `client_payment_setups` pro investiční / penzijní smlouvy,
+ * kde se primárně plní `recipientAccount` / `accountNumber`, ne `bankAccount`.
+ */
+const ACCOUNT_LIKE_FIELD_KEYS = [
+  "accountNumber",
+  "paymentAccountNumber",
+  "recipientAccount",
+  "accountForRepayment",
+  "institutionBankAccount",
+  "institutionCollectionAccount",
+  "collectionAccount",
+] as const;
+
 /** Canonical domestic account + numeric VS before dates / evidence (same rules as payment-field-contract). */
 function sanitizeExtractedPaymentAccountAndVariableSymbol(envelope: DocumentReviewEnvelope): void {
   const ef = envelope.extractedFields;
@@ -166,6 +184,16 @@ function sanitizeExtractedPaymentAccountAndVariableSymbol(envelope: DocumentRevi
       } else {
         ef.bankCode = { value: n.bankCode, status: "extracted" as const, confidence: 0.82 };
       }
+    }
+  }
+
+  for (const key of ACCOUNT_LIKE_FIELD_KEYS) {
+    const cell = ef[key];
+    if (!cell || cell.value == null) continue;
+    if (typeof cell.value !== "string") continue;
+    const cleaned = dedupeCzechAccountTrailingBankCode(cell.value);
+    if (cleaned !== cell.value) {
+      cell.value = cleaned;
     }
   }
 

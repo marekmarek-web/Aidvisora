@@ -45,7 +45,7 @@ const MessengerPreview = dynamic(
 
 const DashboardAiAssistant = dynamic(
   () => import("./DashboardAiAssistant").then((m) => m.DashboardAiAssistant),
-  { ssr: false, loading: () => <div className="min-h-[280px] animate-pulse rounded-[32px] border border-fuchsia-500/10 bg-[color:var(--wp-surface-muted)]/50" /> },
+  { ssr: false, loading: () => <div className="min-h-[280px] animate-pulse rounded-[24px] border border-fuchsia-500/10 bg-[color:var(--wp-surface-muted)]/50" /> },
 );
 
 const DashboardCalendarSidePanel = dynamic(
@@ -178,7 +178,7 @@ function DashboardBentoSkeleton({ visibleOrder }: { visibleOrder: WidgetId[] }) 
         return (
           <div
             key={id}
-            className={`${colSpan} min-h-[200px] animate-pulse rounded-[32px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/80`}
+            className={`${colSpan} min-h-[200px] animate-pulse rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/80`}
           />
         );
       })}
@@ -545,7 +545,14 @@ export function DashboardEditable(props: DashboardEditableProps) {
         const hasLegacy = service.length > 0 || ann.length > 0;
         const hasAny = hasRecs || hasLegacy;
         if (!hasAny) {
-          return <p className="text-sm py-3 text-[color:var(--wp-text-secondary)]">Žádná péče k zobrazení.</p>;
+          return (
+            <div className="flex-1 flex flex-col items-center justify-center text-center">
+              <div className="w-12 h-12 bg-[color:var(--wp-surface-muted)] rounded-xl flex items-center justify-center text-[color:var(--wp-text-tertiary)] mb-3 border border-[color:var(--wp-surface-card-border)]">
+                <Clock size={24} />
+              </div>
+              <p className="text-sm font-medium text-[color:var(--wp-text-secondary)] mb-4">Žádná péče k zobrazení.</p>
+            </div>
+          );
         }
         if (hasRecs) {
           return (
@@ -709,7 +716,7 @@ export function DashboardEditable(props: DashboardEditableProps) {
                 onDrop={(e) => handleDrop(e, id)}
                 className={`${colSpan} ${dragClass} transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.01]`}
               >
-                <div className="relative flex min-h-[280px] flex-col rounded-[32px] border border-[color:var(--wp-surface-card-border)] border-t-4 border-t-amber-500 bg-[color:var(--wp-surface-card)] p-6 shadow-[var(--wp-shadow-card)] sm:p-8">
+                <div className="relative flex min-h-[280px] flex-col rounded-[24px] border border-[color:var(--wp-surface-card-border)] border-t-4 border-t-amber-500 bg-[color:var(--wp-surface-card)] p-6 shadow-[var(--wp-shadow-card)] sm:p-8">
                   <div className="mb-6 flex items-center justify-between">
                     <h3 className="flex items-center gap-2 text-xl font-black text-amber-900 dark:text-amber-100 md:text-2xl">
                       <CheckSquare size={20} className="text-amber-500" /> Moje úkoly
@@ -993,7 +1000,7 @@ export function DashboardEditable(props: DashboardEditableProps) {
             .dashboard-edit-scroll { -ms-overflow-style: none; scrollbar-width: none; }
           `}</style>
           <div
-            className="relative w-full max-w-[800px] overflow-hidden rounded-[32px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-2xl shadow-indigo-900/10"
+            className="relative w-full max-w-[800px] overflow-hidden rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-2xl shadow-indigo-900/10"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-gradient-to-br from-indigo-400/20 to-purple-400/20 rounded-full blur-[80px] pointer-events-none -translate-x-1/2 -translate-y-1/2" aria-hidden />

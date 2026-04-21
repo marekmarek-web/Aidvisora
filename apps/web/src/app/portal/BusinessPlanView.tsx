@@ -422,7 +422,7 @@ export function BusinessPlanView() {
         input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #e2e8f0; border-radius: 2px; }
       `}</style>
 
-      <main className="flex-1 w-full max-w-[1400px] mx-auto p-6 md:p-8 flex flex-col relative z-10">
+      <main className="flex-1 w-full max-w-[1400px] mx-auto p-4 sm:p-6 md:p-8 flex flex-col relative z-10">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div>
             <h1 className="text-2xl md:text-3xl font-display font-black text-[color:var(--wp-text)] tracking-tight flex items-center gap-3">

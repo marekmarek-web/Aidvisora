@@ -19,7 +19,7 @@ export default async function ClientCalculatorsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Link
           href="/client/calculators/mortgage"
-          className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-lg hover:border-indigo-200 transition-all text-center flex flex-col items-center min-h-[44px]"
+          className="bg-white p-8 rounded-[24px] border border-slate-100 shadow-sm hover:shadow-lg hover:border-indigo-200 transition-all text-center flex flex-col items-center min-h-[44px]"
         >
           <span className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-6">
             <Home size={32} />
@@ -32,7 +32,7 @@ export default async function ClientCalculatorsPage() {
 
         <Link
           href="/client/calculators/investment"
-          className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-lg hover:border-emerald-200 transition-all text-center flex flex-col items-center min-h-[44px]"
+          className="bg-white p-8 rounded-[24px] border border-slate-100 shadow-sm hover:shadow-lg hover:border-emerald-200 transition-all text-center flex flex-col items-center min-h-[44px]"
         >
           <span className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-6">
             <TrendingUp size={32} />

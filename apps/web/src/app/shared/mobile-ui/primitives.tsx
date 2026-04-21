@@ -1,6 +1,6 @@
 "use client";
 
-import { type ButtonHTMLAttributes, type ReactNode, createElement, useEffect, useState } from "react";
+import React, { type ButtonHTMLAttributes, type ReactNode, createElement, useEffect, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import { X, Plus, AlertCircle, Wifi, WifiOff, PackageOpen, RefreshCw } from "lucide-react";
 import type { DeviceClass } from "@/lib/ui/useDeviceClass";
@@ -266,8 +266,8 @@ export function MobileCard({ children, className, pressable }: { children: React
       )}
       style={{
         borderColor: "var(--aidv-mobile-card-border)",
-        borderRadius: "var(--aidv-radius-card-sm)",
-        boxShadow: "var(--aidv-mobile-card-shadow)",
+        borderRadius: "var(--aidv-card-radius, 1.25rem)",
+        boxShadow: "var(--aidv-shadow-card-sm, 0 1px 2px rgba(15,23,42,0.04), 0 2px 8px rgba(15,23,42,0.03))",
       }}
     >
       {children}
@@ -522,14 +522,70 @@ function OverlayContainer({
   );
 }
 
+/**
+ * Větší tap-target (h-6) s vizuálním "grabberem" uvnitř.
+ * Pointer-down → sledujeme Y; pokud táhnutí překročí 64 px směrem dolů, zavřít.
+ * Klepnutí bez tahu (< 6 px posun, < 300 ms) taky zavírá — stejné UX jako Wise/Revolut.
+ */
 function SheetDragHandle({ onClose }: { onClose: () => void }) {
+  const startRef = React.useRef<{ y: number; t: number } | null>(null);
+  const draggingRef = React.useRef(false);
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    startRef.current = { y: e.clientY, t: Date.now() };
+    draggingRef.current = true;
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!draggingRef.current || !startRef.current) return;
+    const dy = e.clientY - startRef.current.y;
+    // Swipe-to-close threshold ~64px
+    if (dy > 64) {
+      draggingRef.current = false;
+      startRef.current = null;
+      onClose();
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!startRef.current) {
+      draggingRef.current = false;
+      return;
+    }
+    const dy = e.clientY - startRef.current.y;
+    const dt = Date.now() - startRef.current.t;
+    startRef.current = null;
+    draggingRef.current = false;
+    // Treat near-stationary release as a tap and close.
+    if (Math.abs(dy) < 6 && dt < 300) {
+      onClose();
+    }
+  };
+
   return (
-    <button
-      type="button"
-      onClick={onClose}
+    <div
+      role="button"
+      tabIndex={0}
       aria-label="Zavřít panel"
-      className="mx-auto mt-2 mb-1 h-1 w-10 shrink-0 rounded-full bg-[color:var(--wp-surface-card-border)] transition-colors hover:bg-[color:var(--wp-text-tertiary)]"
-    />
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClose();
+        }
+      }}
+      className="flex h-6 w-full shrink-0 cursor-grab touch-none select-none items-center justify-center active:cursor-grabbing"
+    >
+      <span className="pointer-events-none h-1 w-9 rounded-full bg-[color:var(--wp-surface-card-border)]" />
+    </div>
   );
 }
 
@@ -603,7 +659,7 @@ export function FullscreenSheet({
   return (
     <OverlayContainer open={open} onClose={onClose} fullScreen labelId={labelId}>
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="flex shrink-0 items-center gap-3 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-5 py-4">
+        <div className="flex shrink-0 items-center gap-3 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-5 py-3">
           <h3
             id={labelId}
             className="min-w-0 flex-1 truncate text-[15px] font-black leading-tight text-[color:var(--wp-text)]"
@@ -614,7 +670,7 @@ export function FullscreenSheet({
             type="button"
             onClick={onClose}
             aria-label="Zavřít"
-            className="grid min-h-[40px] min-w-[40px] shrink-0 place-items-center rounded-xl border border-transparent text-[color:var(--wp-text-secondary)] transition-colors hover:border-[color:var(--wp-surface-card-border)] hover:bg-[color:var(--wp-surface-muted)] hover:text-[color:var(--wp-text)]"
+            className="grid min-h-[44px] min-w-[44px] shrink-0 place-items-center rounded-full bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text)] transition-colors hover:bg-[color:var(--wp-surface-card-border)]"
           >
             <X size={18} strokeWidth={2.25} />
           </button>

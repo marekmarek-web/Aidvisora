@@ -9,6 +9,7 @@ import type { TeamMemberMetrics } from "@/lib/team-overview-alerts";
 import { formatCareerProgramLabel, formatCareerTrackLabel } from "@/lib/career/evaluate-career-progress";
 import type { CareerEvaluationViewModel } from "@/lib/career/career-evaluation-vm";
 import { careerProgressShortLabel } from "@/lib/career/career-ui-labels";
+import { toAvatarDisplayUrl } from "@/lib/storage/avatar-proxy";
 
 function mixPercents(mix: AdvisorProductionMix): {
   investice: number;
@@ -95,14 +96,17 @@ export function TeamOverviewCrmCardModal({
         </button>
 
         <div className="flex flex-col gap-6 border-b border-slate-100 p-10 sm:flex-row sm:items-center">
-          {avatarUrl ? (
+          {(() => {
+            const avatarDisplay = toAvatarDisplayUrl(avatarUrl);
+            return avatarDisplay ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={avatarUrl} alt="" className="h-24 w-24 rounded-[20px] border border-slate-200 shadow-sm" />
+            <img src={avatarDisplay} alt="" className="h-24 w-24 rounded-[20px] border border-slate-200 shadow-sm" />
           ) : (
             <div className="flex h-24 w-24 items-center justify-center rounded-[20px] bg-slate-100 text-2xl font-black text-slate-500">
               {memberName.slice(0, 1)}
             </div>
-          )}
+          );
+          })()}
           <div>
             <h2 className="text-3xl font-black tracking-tight text-slate-900">{memberName}</h2>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">

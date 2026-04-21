@@ -10,13 +10,32 @@ import { aggregatePortfolioMetrics } from "@/lib/client-portfolio/read-model";
 type ContractReader = Pick<typeof db, "select">;
 
 type DashboardMetricSummary = {
-  /** Roční ekvivalent investic (INV/DIP/DPS) z publikovaného portfolia */
+  /**
+   * Přibližná výše spravovaných investičních aktiv (INV/DIP/DPS) z publikovaného portfolia.
+   *
+   * Pravidla:
+   * - Jednorázová investice (`paymentType === "one_time"`): použije se `premium_amount`
+   *   jako jistina (NIKDY × 12 — to by jednorázovou částku 1 mil. Kč propsalo jako 12 mil. Kč).
+   * - Pravidelná investice: prefer `portfolioAttributes.intendedInvestment` (celková plánovaná
+   *   investice za celou dobu), jinak roční ekvivalent (monthly × 12) jako hrubý proxy.
+   * - Ukončené smlouvy (`portfolio_status = 'ended'`) se nepočítají.
+   */
   assetsUnderManagement: number;
   monthlyInvestments: number;
   /** Součet měsíčních pojistných z publikovaného portfolia */
   monthlyInsurancePremiums: number;
   activeContractCount: number;
 };
+
+/** Bezpečný parser — toleruje české formáty typu "980 392 Kč" i lokalizované desetinné čárky. */
+function parseAmountLoose(raw: unknown): number {
+  if (raw == null) return 0;
+  if (typeof raw === "number") return Number.isFinite(raw) ? raw : 0;
+  const s = String(raw).replace(/\s|Kč|CZK|EUR|USD/gi, "").replace(/,/g, ".").trim();
+  if (!s) return 0;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : 0;
+}
 
 export type ClientAdvisorInfo = {
   userId: string;
@@ -74,10 +93,35 @@ export async function getClientDashboardMetrics(
   for (const contract of contractRows) {
     if (contract.portfolioStatus === "ended") continue;
     if (!investmentSegments.has(contract.segment)) continue;
+
+    const attrs = (contract.portfolioAttributes ?? {}) as Record<string, unknown>;
+    const paymentType = typeof attrs.paymentType === "string" ? attrs.paymentType : null;
+
+    if (paymentType === "one_time") {
+      // Jednorázová investice — premium_amount je přímo investovaná jistina.
+      // Historický bug: násobilo se × 12 a 1 mil. Kč se propisovalo jako 12 mil. Kč.
+      const lump = Number(contract.premiumAmount ?? 0);
+      if (Number.isFinite(lump) && lump > 0) assetsUnderManagement += lump;
+      continue;
+    }
+
+    // Pravidelná investice: preferuj `intendedInvestment` (celková plánovaná částka).
+    const intended =
+      parseAmountLoose(attrs.intendedInvestment) ||
+      parseAmountLoose(attrs.investmentAmount) ||
+      parseAmountLoose(attrs.targetAmount);
+    if (intended > 0) {
+      assetsUnderManagement += intended;
+      continue;
+    }
+
+    // Fallback: roční ekvivalent měsíčních příspěvků (best-effort proxy).
     const monthly = Number(contract.premiumAmount ?? 0);
     const annual = Number(contract.premiumAnnual ?? 0);
     const normalizedAnnual = annual > 0 ? annual : monthly * 12;
-    if (Number.isFinite(normalizedAnnual)) assetsUnderManagement += normalizedAnnual;
+    if (Number.isFinite(normalizedAnnual) && normalizedAnnual > 0) {
+      assetsUnderManagement += normalizedAnnual;
+    }
   }
 
   return {

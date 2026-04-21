@@ -37,6 +37,12 @@ type UpsertCoverageInput = {
   contactId: string;
   contractId: string;
   row: ContractReviewRow;
+  /**
+   * FL-1 — volitelný tx runner. Když je předán, coverage upsert běží v rámci
+   * apply transakce (atomicky s contact + contract zápisem). Bez něj padá do
+   * globálního `db` a chová se jako legacy post-commit varianta.
+   */
+  tx?: typeof db;
 };
 
 /**
@@ -51,6 +57,7 @@ export async function upsertCoverageFromAppliedReview(
   input: UpsertCoverageInput
 ): Promise<void> {
   const { tenantId, userId, contactId, contractId, row } = input;
+  const runner = input.tx ?? db;
 
   const extractedPayload = row.extractedPayload as Record<string, unknown> | null;
   const documentClassification = extractedPayload?.documentClassification as Record<string, unknown> | undefined;
@@ -115,7 +122,7 @@ export async function upsertCoverageFromAppliedReview(
   const now = new Date();
 
   for (const { itemKey, segmentCode } of coverageItems) {
-    const existing = await db
+    const existing = await runner
       .select({ id: contactCoverage.id, status: contactCoverage.status, linkedContractId: contactCoverage.linkedContractId })
       .from(contactCoverage)
       .where(
@@ -130,7 +137,7 @@ export async function upsertCoverageFromAppliedReview(
     if (existing[0]?.status === "done" && existing[0].linkedContractId === contractId) continue;
 
     if (existing[0]) {
-      await db
+      await runner
         .update(contactCoverage)
         .set({
           status: "done",
@@ -141,7 +148,7 @@ export async function upsertCoverageFromAppliedReview(
         })
         .where(eq(contactCoverage.id, existing[0].id));
     } else {
-      await db.insert(contactCoverage).values({
+      await runner.insert(contactCoverage).values({
         tenantId,
         contactId,
         itemKey,

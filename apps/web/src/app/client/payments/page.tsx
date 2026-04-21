@@ -13,7 +13,14 @@ export default async function ClientPaymentsPage() {
   let paymentsLoadFailed = false;
   try {
     paymentInstructions = await getPaymentInstructionsForContact(auth.contactId);
-  } catch {
+  } catch (err) {
+    // Log do Vercel / Sentry — dříve se chyba tiše spolkla a klient jen viděl
+    // "Platební údaje se nepodařilo načíst", což bránilo diagnostice (např.
+    // schema drift po zapomenuté migraci contacts → SELECT * v action spadlo).
+    console.error("[client/payments] getPaymentInstructionsForContact failed", {
+      contactId: auth.contactId,
+      error: err instanceof Error ? { name: err.name, message: err.message, stack: err.stack } : err,
+    });
     paymentsLoadFailed = true;
     paymentInstructions = [];
   }

@@ -598,7 +598,7 @@ export function AIReviewExtractionShell({
   }, [doc, state.dismissedRecommendations, state.editedFields, toast]);
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col bg-[#f8fafc] font-sans text-[color:var(--wp-text)] overflow-hidden">
+    <div className="flex h-full min-h-0 flex-1 flex-col bg-[color:var(--wp-surface-raised)] font-sans text-[color:var(--wp-text)] overflow-hidden">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800;900&display=swap');
         .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
@@ -895,7 +895,7 @@ export function AIReviewExtractionShell({
       <main className="flex min-h-0 flex-1 overflow-hidden">
         {/* Left panel */}
         <section
-          className={`flex min-h-0 w-full min-w-0 flex-col bg-[#f4f7f9] border-r border-[color:var(--wp-surface-card-border)] lg:max-w-[48%] lg:flex-[0_0_48%] ${
+          className={`flex min-h-0 w-full min-w-0 flex-col bg-[color:var(--wp-surface-inset)] border-r border-[color:var(--wp-surface-card-border)] lg:max-w-[48%] lg:flex-[0_0_48%] ${
             state.showPdfOnMobile ? "hidden lg:flex" : "flex"
           }`}
         >
@@ -940,7 +940,7 @@ export function AIReviewExtractionShell({
                       type="button"
                       onClick={() => setShowRejectModal(true)}
                       disabled={!!actionLoading}
-                      className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-black uppercase tracking-widest text-rose-700 transition-colors hover:bg-rose-50 disabled:opacity-50"
+                      className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-black uppercase tracking-widest text-rose-700 transition-colors hover:bg-rose-50 disabled:opacity-50"
                       title="Zamítnout extrakci"
                     >
                       <X size={13} />
@@ -950,7 +950,7 @@ export function AIReviewExtractionShell({
                       type="button"
                       onClick={handleApproveClick}
                       disabled={!!actionLoading}
-                      className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] transition-colors hover:bg-[color:var(--wp-surface-card)] hover:text-[color:var(--wp-text)] disabled:opacity-60"
+                      className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)] transition-colors hover:bg-[color:var(--wp-surface-card)] hover:text-[color:var(--wp-text)] disabled:opacity-60"
                       title="Jen schválit extrahované údaje (bez propsání do Aidvisory)"
                     >
                       {isApproving ? (

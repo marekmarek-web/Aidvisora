@@ -48,6 +48,9 @@ import { loadContactPortalAccessSnapshot } from "./client-portal-access";
 import { computeAccessVerdict } from "@/lib/auth/access-verdict";
 import { resolveFundFromPortfolioAttributes } from "@/lib/fund-library/fund-resolution";
 import { resolveApplyClientContactId } from "@/lib/ai/apply-client-resolution";
+import { buildContactsPiiPatch } from "@/lib/pii/contacts-write-through";
+import { upsertCoverageFromAppliedReview } from "@/lib/ai/apply-coverage-from-review";
+import { applyDocumentLinkInTx } from "@/lib/ai/apply-document-link-in-tx";
 import { buildContactMergePayloadFromExtractedEnvelope } from "@/lib/ai/draft-actions";
 import {
   ensureUserProfileRowForAdvisor,
@@ -591,7 +594,15 @@ async function updateExistingContactFromPayloadWithMerge(
     );
 
     if (decision.action === "apply_incoming" && decision.resolvedValue != null) {
-      patch[fieldDef.fieldKey] = decision.resolvedValue;
+      // WS-2 Batch 5 — PII pole jdou přes write-through helper (plaintext + enc + fp).
+      if (fieldDef.fieldKey === "personalId" || fieldDef.fieldKey === "idCardNumber") {
+        const piiPatch = buildContactsPiiPatch({
+          [fieldDef.fieldKey]: decision.resolvedValue,
+        } as { personalId?: string | null; idCardNumber?: string | null });
+        Object.assign(patch, piiPatch);
+      } else {
+        patch[fieldDef.fieldKey] = decision.resolvedValue;
+      }
     } else if (decision.action === "flag_pending") {
       pendingFields.push({
         fieldKey: fieldDef.fieldKey,
@@ -866,6 +877,11 @@ export async function applyContractReview(
               String(ep.firstName ?? createClientAction.payload.firstName ?? splitName.firstName ?? "").trim() || "Klient";
             const lastName =
               String(ep.lastName ?? createClientAction.payload.lastName ?? splitName.lastName ?? "").trim() || "ze smlouvy";
+            // WS-2 Batch 5 — AI review vytvořený kontakt: plaintext + envelope + fingerprint atomicky.
+            const piiPatchInsert = buildContactsPiiPatch({
+              personalId: (ep.personalId as string)?.trim() || null,
+              idCardNumber: (ep.idCardNumber as string)?.trim() || null,
+            });
             const [inserted] = await tx
               .insert(contacts)
               .values({
@@ -878,8 +894,7 @@ export async function applyContractReview(
                 email: (ep.email as string)?.trim() || null,
                 phone: (ep.phone as string)?.trim() || null,
                 birthDate: normalizeDateToISO(ep.birthDate as string) || null,
-                personalId: (ep.personalId as string)?.trim() || null,
-                idCardNumber: (ep.idCardNumber as string)?.trim() || null,
+                ...piiPatchInsert,
                 idCardIssuedBy: (ep.idCardIssuedBy as string)?.trim() || null,
                 idCardValidUntil: normalizeDateToISO(ep.idCardValidUntil as string) || null,
                 idCardIssuedAt: normalizeDateToISO(ep.idCardIssuedAt as string) || null,
@@ -1239,6 +1254,44 @@ export async function applyContractReview(
           throw new Error(
             "Aplikace do CRM: smlouva/produkt nebyl vytvořen — downstream artefakt chybí.",
           );
+        }
+      }
+
+      // FL-1 — canonical transaction: coverage + document link běží ve stejné
+      // transakci jako contact/contract/payment zápisy. Pokud tyto pure-DB
+      // operace selžou, apply se rolbackuje celé (původní SOFT-fail + Sentry
+      // warning pattern zůstal pouze pro notifikace + activity log post-commit,
+      // které nelze dát do DB transakce).
+      if (effectiveContactId && resultPayload.createdContractId) {
+        await upsertCoverageFromAppliedReview({
+          tenantId,
+          userId,
+          contactId: effectiveContactId,
+          contractId: resultPayload.createdContractId,
+          row,
+          tx: tx as unknown as typeof db,
+        });
+
+        if (row.storagePath) {
+          const docLink = await applyDocumentLinkInTx({
+            tenantId,
+            contactId: effectiveContactId,
+            contractId: resultPayload.createdContractId,
+            reviewId,
+            storagePath: row.storagePath,
+            fileName: row.fileName ?? "smlouva.pdf",
+            mimeType: row.mimeType ?? null,
+            sizeBytes: row.sizeBytes ?? null,
+            uploadedByUserId: userId,
+            // Apply = approved + publish → dokument je ihned viditelný klientovi.
+            // Publish-guard: kdyby byla review `rejected`, nedostali bychom se sem vůbec.
+            visibleToClient: true,
+            tx: tx as unknown as typeof db,
+          });
+          resultPayload.linkedDocumentId = docLink.documentId;
+          (resultPayload as Record<string, unknown>).__docLinkWasInsert = docLink.wasInsert;
+          (resultPayload as Record<string, unknown>).__docLinkVisibilityOn =
+            docLink.visibilityTurnedOn;
         }
       }
     });

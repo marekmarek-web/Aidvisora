@@ -9,6 +9,7 @@ import { setContactHousehold } from "@/app/actions/households";
 import { ArrowLeft, Flag, User, Home, RefreshCw } from "lucide-react";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import { useKeyboardAware } from "@/lib/ui/useKeyboardAware";
+import { toAvatarDisplayUrl } from "@/lib/storage/avatar-proxy";
 import dynamic from "next/dynamic";
 import type { AddressComponents } from "@/app/components/aidvisora/AddressAutocomplete";
 
@@ -318,11 +319,14 @@ export default function EditContactPage() {
                 <label className="block text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Profilová fotka</label>
                 <div className="flex flex-wrap items-center gap-4">
                   <div className="relative w-24 h-24 rounded-2xl bg-[color:var(--wp-surface-muted)] overflow-hidden flex items-center justify-center text-[color:var(--wp-text-tertiary)] text-2xl font-bold shrink-0">
-                    {avatarUrl ? (
-                      <Image src={avatarUrl} alt="" fill sizes="96px" className="object-cover" />
-                    ) : (
-                      (form.firstName?.[0] ?? "") + (form.lastName?.[0] ?? "")
-                    )}
+                    {(() => {
+                      const avatarDisplay = toAvatarDisplayUrl(avatarUrl);
+                      return avatarDisplay ? (
+                        <Image src={avatarDisplay} alt="" fill sizes="96px" className="object-cover" unoptimized />
+                      ) : (
+                        (form.firstName?.[0] ?? "") + (form.lastName?.[0] ?? "")
+                      );
+                    })()}
                   </div>
                   <div className="flex flex-col gap-2">
                     <div className="flex flex-wrap items-center gap-2">

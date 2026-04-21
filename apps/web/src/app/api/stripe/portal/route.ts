@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getMembership } from "@/lib/auth/get-membership";
 import { getBillingReturnUrls, parseBillingContext } from "@/lib/stripe/billing-return-paths";
 import { getStripe, isStripePortalAvailable } from "@/lib/stripe/server";
+import { checkRateLimit } from "@/lib/security/rate-limit";
 import { db, tenants, eq } from "db";
 
 export const dynamic = "force-dynamic";
@@ -34,6 +35,18 @@ export async function POST(request: Request) {
   }
   if (!canManageWorkspaceBilling(m.roleName)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  // FL-1 rate limit — Stripe billing portal session create.
+  const limiter = checkRateLimit(request, "stripe-portal", `${m.tenantId}:${user.id}`, {
+    windowMs: 60_000,
+    maxRequests: 10,
+  });
+  if (!limiter.ok) {
+    return NextResponse.json(
+      { error: "Příliš mnoho pokusů. Zkuste to za chvíli znovu." },
+      { status: 429, headers: { "Retry-After": String(limiter.retryAfterSec) } },
+    );
   }
 
   const [tenantRow] = await db

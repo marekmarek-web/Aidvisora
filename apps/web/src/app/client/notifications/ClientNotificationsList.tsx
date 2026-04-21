@@ -72,10 +72,10 @@ export function ClientNotificationsList({
             <button
               type="button"
               onClick={() => handleClick(n)}
-              className={`w-full text-left rounded-[20px] border shadow-sm p-4 transition-all hover:shadow-md ${
+              className={`w-full text-left rounded-xl border shadow-sm p-4 transition-all hover:shadow-md ${
                 isUnread
                   ? "bg-indigo-50/60 border-indigo-200 hover:border-indigo-300"
-                  : "bg-white border-slate-100 hover:border-slate-200 opacity-80"
+                  : "bg-white border-slate-100 hover:border-slate-200"
               }`}
             >
               <div className="flex items-start gap-3">

@@ -76,15 +76,15 @@ export function MeetingNotesListClient({
         ) : (
           <ul className="divide-y divide-[color:var(--wp-border)]">
             {notes.map((n) => (
-              <li key={n.id} className="flex items-center justify-between p-3">
-                <span className="text-sm text-[color:var(--wp-text)]">
+              <li key={n.id} className="flex items-center justify-between gap-3 p-3">
+                <span className="min-w-0 flex-1 truncate text-sm text-[color:var(--wp-text)]">
                   {new Date(n.meetingAt).toLocaleDateString("cs-CZ")} – {n.contactName} ({n.domain})
                 </span>
-                <span className="flex gap-2">
+                <span className="flex shrink-0 gap-2">
                   <button
                     type="button"
                     onClick={() => handleEdit(n.id)}
-                    className="rounded border border-[color:var(--wp-surface-card-border)] px-2 py-0.5 text-xs font-medium hover:bg-[color:var(--wp-surface-muted)]"
+                    className="inline-flex min-h-[40px] items-center rounded-lg border border-[color:var(--wp-surface-card-border)] px-3 py-2 text-xs font-medium hover:bg-[color:var(--wp-surface-muted)]"
                     style={{ color: "var(--brand-main)" }}
                   >
                     Upravit
@@ -92,7 +92,7 @@ export function MeetingNotesListClient({
                   <button
                     type="button"
                     onClick={() => handleDelete(n.id)}
-                    className="text-xs font-medium text-red-600 hover:text-red-800 px-2 py-0.5"
+                    className="inline-flex min-h-[40px] items-center rounded-lg px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 hover:text-red-800"
                   >
                     Smazat
                   </button>

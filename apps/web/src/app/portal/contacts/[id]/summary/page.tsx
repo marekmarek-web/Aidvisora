@@ -26,7 +26,7 @@ export default async function ClientSummaryPage({
         </Link>
       </div>
       <div className="rounded-lg border border-monday-border bg-monday-surface p-8">
-        <h1 className="text-lg font-bold text-monday-text mb-6">Klientská zpráva</h1>
+        <h1 className="text-2xl md:text-3xl font-black text-monday-text mb-6">Klientská zpráva</h1>
         <section className="mb-6">
           <h2 className="text-xs font-semibold text-monday-text-muted uppercase mb-2">Kontakt</h2>
           <p className="font-medium text-monday-text">{contact.firstName} {contact.lastName}</p>

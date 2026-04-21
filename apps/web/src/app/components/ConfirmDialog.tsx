@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { Button } from "./ui/primitives";
 
 export type ConfirmOptions = {
   title?: string;
@@ -108,25 +109,21 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
               {message}
             </p>
             <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
-              <button
-                type="button"
+              <Button
+                variant="secondary"
+                size="lg"
                 onClick={() => close(false)}
-                className="min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] px-4 py-2.5 text-sm font-semibold text-[color:var(--wp-text)] transition-colors hover:bg-[color:var(--wp-surface-card)]"
               >
                 {cancelLabel}
-              </button>
-              <button
+              </Button>
+              <Button
                 ref={confirmButtonRef}
-                type="button"
+                variant={variant === "destructive" ? "destructive" : "primary"}
+                size="lg"
                 onClick={() => close(true)}
-                className={
-                  variant === "destructive"
-                    ? "min-h-[44px] rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 dark:focus:ring-offset-[color:var(--wp-surface-card)]"
-                    : "min-h-[44px] rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-[color:var(--wp-surface-card)]"
-                }
               >
                 {confirmLabel}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

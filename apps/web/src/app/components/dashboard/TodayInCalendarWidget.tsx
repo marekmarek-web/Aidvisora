@@ -104,7 +104,7 @@ export function TodayInCalendarWidget({
   return (
     <>
     <div
-      className="w-full rounded-[32px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-8 shadow-[0_4px_24px_-6px_rgba(15,23,42,0.03),0_0_1px_rgba(15,23,42,0.04)] transition-all duration-\\[400ms\\] md:p-10 relative overflow-hidden dark:shadow-[0_4px_28px_-8px_rgba(0,0,0,0.45),0_0_1px_rgba(255,255,255,0.06)] [font-family:var(--wp-font)]"
+      className="w-full rounded-[24px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-8 shadow-[0_4px_24px_-6px_rgba(15,23,42,0.03),0_0_1px_rgba(15,23,42,0.04)] transition-all duration-\\[400ms\\] md:p-10 relative overflow-hidden dark:shadow-[0_4px_28px_-8px_rgba(0,0,0,0.45),0_0_1px_rgba(255,255,255,0.06)] [font-family:var(--wp-font)]"
     >
         <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#5A4BFF] via-purple-400 to-emerald-400 opacity-80 dark:opacity-90" />
 

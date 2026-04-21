@@ -1,29 +1,33 @@
 {
-  "version": 1,
-  "description": "F0 — Minimum acceptance hints per anchor (not full LLM truth; used for structure + future regression). Aligns with MAX_INCLUSION master plan §35–§37.",
+  "version": 2,
+  "description": "F0 — Minimum acceptance hints per anchor (not full LLM truth; used for structure + future regression). Aligns with MAX_INCLUSION master plan §35–§37. v2 adds optionalFields for FL-3.4 new-field coverage (OP, lékař, fundResolution).",
   "notes": [
     "expectedPrimaryTypes: pipeline may return any listed value as valid routing for that document.",
     "mustHaveAnyOf: at least one field in each group should be non-empty after extraction (contract products).",
-    "supportingDocs: payslip/tax use supporting-document rules — non-empty stub + correct lane."
+    "supportingDocs: payslip/tax use supporting-document rules — non-empty stub + correct lane.",
+    "optionalFields (v2): fields the pipeline SHOULD ideally extract but whose absence does NOT block the gate. Used as coverage signal for release-gate reports (idCardNumber = OP; doctorName = registered GP; fundResolution = DIP/pension fund outcome on retirement)."
   ],
   "expectations": [
     {
       "id": "GCP",
       "segment": "amendment_life",
       "expectedPrimaryTypes": ["life_insurance_amendment", "life_insurance_contract", "life_insurance_proposal", "generic_financial_document"],
-      "mustHaveAnyOf": [["insurer", "institutionName", "provider"], ["fullName", "clientFullName"], ["contractNumber", "proposalNumber", "proposalNumber_or_contractNumber"]]
+      "mustHaveAnyOf": [["insurer", "institutionName", "provider"], ["fullName", "clientFullName"], ["contractNumber", "proposalNumber", "proposalNumber_or_contractNumber"]],
+      "optionalFields": ["idCardNumber", "doctorName"]
     },
     {
       "id": "AMUNDI",
       "segment": "dip_investment",
       "expectedPrimaryTypes": ["investment_subscription_document", "dip_contract", "investment_service_agreement", "generic_financial_document"],
-      "mustHaveAnyOf": [["institutionName", "provider", "investmentCompany"], ["fullName", "clientFullName", "investorFullName"], ["contractNumber", "proposalNumber", "proposalNumber_or_contractNumber"]]
+      "mustHaveAnyOf": [["institutionName", "provider", "investmentCompany"], ["fullName", "clientFullName", "investorFullName"], ["contractNumber", "proposalNumber", "proposalNumber_or_contractNumber"]],
+      "optionalFields": ["fundResolution", "idCardNumber"]
     },
     {
       "id": "MAXIMA",
       "segment": "life_proposal",
       "expectedPrimaryTypes": ["life_insurance_proposal", "life_insurance_final_contract", "life_insurance_investment_contract"],
-      "mustHaveAnyOf": [["insurer", "institutionName"], ["fullName", "clientFullName"], ["contractNumber", "proposalNumber", "proposalNumber_or_contractNumber"]]
+      "mustHaveAnyOf": [["insurer", "institutionName"], ["fullName", "clientFullName"], ["contractNumber", "proposalNumber", "proposalNumber_or_contractNumber"]],
+      "optionalFields": ["idCardNumber", "doctorName"]
     },
     {
       "id": "CSOB",
@@ -31,7 +35,8 @@
       "expectedPrimaryTypes": ["consumer_loan_contract", "mortgage_document", "generic_financial_document"],
       "forbiddenPrimaryTypes": ["life_insurance_final_contract",
         "life_insurance_proposal"],
-      "mustHaveAnyOf": [["lender", "institutionName"], ["fullName", "clientFullName", "borrowerName"], ["loanAmount", "installmentAmount"]]
+      "mustHaveAnyOf": [["lender", "institutionName"], ["fullName", "clientFullName", "borrowerName"], ["loanAmount", "installmentAmount"]],
+      "optionalFields": ["idCardNumber"]
     },
     {
       "id": "PAYSLIP",
@@ -49,7 +54,8 @@
       "id": "PILLOW",
       "segment": "life_proposal",
       "expectedPrimaryTypes": ["life_insurance_proposal", "life_insurance_final_contract", "life_insurance_investment_contract", "non_life_insurance_contract"],
-      "mustHaveAnyOf": [["insurer", "institutionName"], ["fullName", "clientFullName"], ["totalMonthlyPremium", "annualPremium", "premiumAmount"], ["bankAccount", "iban"], ["variableSymbol"]]
+      "mustHaveAnyOf": [["insurer", "institutionName"], ["fullName", "clientFullName"], ["totalMonthlyPremium", "annualPremium", "premiumAmount"], ["bankAccount", "iban"], ["variableSymbol"]],
+      "optionalFields": ["idCardNumber", "doctorName"]
     },
     {
       "id": "UNIQA_MAJETEK",
@@ -61,13 +67,15 @@
       "id": "UNIQA_ROMAN",
       "segment": "life_family",
       "expectedPrimaryTypes": ["life_insurance_proposal", "life_insurance_final_contract", "life_insurance_investment_contract"],
-      "mustHaveAnyOf": [["insurer", "institutionName"], ["fullName", "clientFullName"], ["contractNumber", "proposalNumber"]]
+      "mustHaveAnyOf": [["insurer", "institutionName"], ["fullName", "clientFullName"], ["contractNumber", "proposalNumber"]],
+      "optionalFields": ["idCardNumber", "doctorName"]
     },
     {
       "id": "UNIQA_ZIVOT",
       "segment": "life",
       "expectedPrimaryTypes": ["life_insurance_proposal", "life_insurance_final_contract", "life_insurance_investment_contract"],
-      "mustHaveAnyOf": [["insurer", "institutionName"], ["fullName", "clientFullName"]]
+      "mustHaveAnyOf": [["insurer", "institutionName"], ["fullName", "clientFullName"]],
+      "optionalFields": ["idCardNumber", "doctorName"]
     },
     {
       "id": "DIRECT_POR",
@@ -80,13 +88,15 @@
       "id": "IZP_GENERALI",
       "segment": "life_family",
       "expectedPrimaryTypes": ["life_insurance_proposal", "life_insurance_investment_contract", "life_insurance_final_contract"],
-      "mustHaveAnyOf": [["insurer", "institutionName"], ["fullName", "clientFullName"]]
+      "mustHaveAnyOf": [["insurer", "institutionName"], ["fullName", "clientFullName"]],
+      "optionalFields": ["idCardNumber", "doctorName"]
     },
     {
       "id": "HANNA_GCP",
       "segment": "life_modelation_family",
       "expectedPrimaryTypes": ["life_insurance_modelation", "life_insurance_proposal", "life_insurance_investment_contract", "life_insurance_final_contract"],
-      "mustHaveAnyOf": [["insurer", "institutionName"], ["fullName", "clientFullName"]]
+      "mustHaveAnyOf": [["insurer", "institutionName"], ["fullName", "clientFullName"]],
+      "optionalFields": ["idCardNumber", "doctorName"]
     },
     {
       "id": "CPP_ZMENA",
@@ -110,13 +120,15 @@
       "id": "DPS",
       "segment": "pension",
       "expectedPrimaryTypes": ["pension_contract", "investment_subscription_document", "generic_financial_document"],
-      "mustHaveAnyOf": [["institutionName", "provider", "insurer"], ["fullName", "clientFullName"]]
+      "mustHaveAnyOf": [["institutionName", "provider", "insurer"], ["fullName", "clientFullName"]],
+      "optionalFields": ["fundResolution", "idCardNumber"]
     },
     {
       "id": "PATROCH_AMUNDI",
       "segment": "investment",
       "expectedPrimaryTypes": ["investment_subscription_document", "dip_contract", "investment_service_agreement"],
-      "mustHaveAnyOf": [["institutionName", "provider"], ["fullName", "clientFullName"]]
+      "mustHaveAnyOf": [["institutionName", "provider"], ["fullName", "clientFullName"]],
+      "optionalFields": ["fundResolution"]
     },
     {
       "id": "CODYA_INV",
@@ -134,20 +146,23 @@
       "id": "SMLOUVA_UVER",
       "segment": "loan",
       "expectedPrimaryTypes": ["consumer_loan_contract", "mortgage_document", "leasing", "generic_financial_document"],
-      "mustHaveAnyOf": [["lender", "institutionName"], ["fullName", "clientFullName", "borrowerName"]]
+      "mustHaveAnyOf": [["lender", "institutionName"], ["fullName", "clientFullName", "borrowerName"]],
+      "optionalFields": ["idCardNumber"]
     },
     {
       "id": "KONSOLIDACE",
       "segment": "consolidation",
       "expectedPrimaryTypes": ["consumer_loan_contract", "mortgage_document", "generic_financial_document"],
       "forbiddenPrimaryTypes": ["life_insurance_final_contract"],
-      "mustHaveAnyOf": [["lender", "institutionName"], ["fullName", "clientFullName", "borrowerName"], ["loanAmount", "installmentAmount"]]
+      "mustHaveAnyOf": [["lender", "institutionName"], ["fullName", "clientFullName", "borrowerName"], ["loanAmount", "installmentAmount"]],
+      "optionalFields": ["idCardNumber"]
     },
     {
       "id": "HYPOTEKA",
       "segment": "mortgage",
       "expectedPrimaryTypes": ["mortgage_document", "consumer_loan_contract", "generic_financial_document"],
-      "mustHaveAnyOf": [["lender", "institutionName"], ["fullName", "clientFullName", "borrowerName"]]
+      "mustHaveAnyOf": [["lender", "institutionName"], ["fullName", "clientFullName", "borrowerName"]],
+      "optionalFields": ["idCardNumber"]
     },
     {
       "id": "LEASING",
@@ -165,13 +180,15 @@
       "id": "METLIFE",
       "segment": "life_multi_person",
       "expectedPrimaryTypes": ["life_insurance_proposal", "life_insurance_final_contract", "life_insurance_investment_contract"],
-      "mustHaveAnyOf": [["insurer", "institutionName"], ["fullName", "clientFullName"]]
+      "mustHaveAnyOf": [["insurer", "institutionName"], ["fullName", "clientFullName"]],
+      "optionalFields": ["idCardNumber", "doctorName"]
     },
     {
       "id": "MODELACE_KOOP",
       "segment": "life_modelation",
       "expectedPrimaryTypes": ["life_insurance_modelation", "life_insurance_proposal", "life_insurance_investment_contract"],
-      "mustHaveAnyOf": [["insurer", "institutionName"], ["fullName", "clientFullName"]]
+      "mustHaveAnyOf": [["insurer", "institutionName"], ["fullName", "clientFullName"]],
+      "optionalFields": ["idCardNumber", "doctorName"]
     },
     {
       "id": "ALLIANZ_POV",
@@ -189,13 +206,15 @@
       "id": "INVESTIKA",
       "segment": "investment_subscription",
       "expectedPrimaryTypes": ["investment_subscription_document", "investment_service_agreement", "generic_financial_document"],
-      "mustHaveAnyOf": [["institutionName", "provider", "insurer"], ["fullName", "clientFullName", "investorFullName"], ["contractNumber", "proposalNumber"]]
+      "mustHaveAnyOf": [["institutionName", "provider", "insurer"], ["fullName", "clientFullName", "investorFullName"], ["contractNumber", "proposalNumber"]],
+      "optionalFields": ["fundResolution"]
     },
     {
       "id": "KB_DPS",
       "segment": "pension",
       "expectedPrimaryTypes": ["pension_contract", "investment_subscription_document", "generic_financial_document"],
-      "mustHaveAnyOf": [["institutionName", "provider", "insurer"], ["fullName", "clientFullName", "participantFullName"]]
+      "mustHaveAnyOf": [["institutionName", "provider", "insurer"], ["fullName", "clientFullName", "participantFullName"]],
+      "optionalFields": ["fundResolution", "idCardNumber"]
     },
     {
       "id": "MAXIMA_NEMOV",

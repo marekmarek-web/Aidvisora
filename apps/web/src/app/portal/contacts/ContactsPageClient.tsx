@@ -222,7 +222,27 @@ export function ContactsPageClient({
       setPermanentDeleteOpen(false);
       await queryClient.invalidateQueries({ queryKey: queryKeys.contacts.list() });
     } catch (e) {
-      toast.showToast(e instanceof Error ? e.message : "Smazání se nezdařilo", "error");
+      // Re-auth guard: server action vyhodí `ReauthRequiredError` (viz
+      // `lib/auth/require-recent-auth.ts`). Next.js ji propaguje na klient jako
+      // běžný Error s originální `message` a bez code pole — proto matchujeme
+      // přes digest / typeguard. V v1.0 zobrazíme toast a nasměrujeme uživatele
+      // na /login?reauth=1 se zachovaným návratem; plnohodnotný re-auth modal
+      // je v1.1 backlog (viz docs/security/reauth-guard.md).
+      const err = e instanceof Error ? e : new Error("Smazání se nezdařilo");
+      const isReauth =
+        (err as { code?: string }).code === "REAUTH_REQUIRED" ||
+        /vyžaduje nedávné přihlášení/i.test(err.message);
+      if (isReauth) {
+        toast.showToast(err.message, "error");
+        const returnTo = typeof window !== "undefined" ? window.location.pathname + window.location.search : "/portal/contacts";
+        setTimeout(() => {
+          if (typeof window !== "undefined") {
+            window.location.href = `/login?reauth=1&return=${encodeURIComponent(returnTo)}`;
+          }
+        }, 1200);
+      } else {
+        toast.showToast(err.message, "error");
+      }
     } finally {
       setPermanentDeleteBusy(false);
     }

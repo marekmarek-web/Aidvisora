@@ -16,6 +16,7 @@ import { hasPermission, isRoleAtLeast, type RoleName } from "@/shared/rolePermis
 import { validateCareerFieldsForWrite } from "@/lib/career/career-write-validation";
 import { normalizeCareerProgramFromDb } from "@/lib/career/registry";
 import { logAuditAction } from "@/lib/audit";
+import { checkRecentAuth } from "@/lib/auth/require-recent-auth";
 
 const STAFF_INVITE_EXPIRY_DAYS = 7;
 
@@ -182,10 +183,24 @@ export async function updateMemberCareer(
 export async function updateMemberRole(
   membershipId: string,
   newRoleName: string,
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; error?: string; code?: string }> {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "team_members:write")) {
     return { ok: false, error: "Nemáte oprávnění měnit role." };
+  }
+  // P1 — privilege escalation = fresh auth do 15 min. Fail-open
+  // varianta: když Supabase session nemá `last_sign_in_at`, nechceme padnout,
+  // ale zároveň to je známka, že někdo jede přes exotickou auth flow, tak
+  // requireme re-auth stejně.
+  {
+    const recent = await checkRecentAuth({ action: "team.update_role", maxAgeSeconds: 900 });
+    if (!recent.ok) {
+      return {
+        ok: false,
+        code: "REAUTH_REQUIRED",
+        error: "Změna role vyžaduje nedávné přihlášení. Přihlaste se prosím znovu.",
+      };
+    }
   }
 
   const [target] = await db
@@ -280,10 +295,22 @@ export async function updateMemberParent(
 
 export async function removeMember(
   membershipId: string,
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; error?: string; code?: string }> {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "team_members:write")) {
     return { ok: false, error: "Nemáte oprávnění odebírat členy." };
+  }
+  // P1 — odebrání člena je reverzibilní pozvánkou, ale na 30 minut stačí
+  // freshness check.
+  {
+    const recent = await checkRecentAuth({ action: "team.remove_member", maxAgeSeconds: 1800 });
+    if (!recent.ok) {
+      return {
+        ok: false,
+        code: "REAUTH_REQUIRED",
+        error: "Odebrání člena týmu vyžaduje nedávné přihlášení. Přihlaste se prosím znovu.",
+      };
+    }
   }
 
   const [target] = await db

@@ -1,6 +1,23 @@
 import clsx from "clsx";
 
 /**
+ * Pravidlo „primary“ barev v appce (viz UX polish plan, SF8):
+ *
+ *   - **Portál (poradce):** `aidv` gradient – canonical primary (viz
+ *     `portalPrimaryButtonClassName`, `createActionButtonSurfaceClassName`).
+ *     Reprezentuje `Button variant="primary"` a `CreateActionButton`.
+ *   - **Klientská zóna:** `emerald-600` pro hlavní „hotovo / souhlas“ akce
+ *     (viz `/client/navrhy/[id]/ClientProposalActions.tsx`). Neotvírá se
+ *     novým místům – pro obecná CTA v klientu používej `Button variant="primary"`.
+ *   - **Destruktivní akce:** `rose-600` (delete, zamítnout, odstranit).
+ *     Nepoužívat `red-*` – má být rose z Button primitivu (`variant="destructive"`).
+ *   - **Neutrální link / vizuální zvýraznění:** `indigo-600` jen v textových
+ *     odkazech (inline links, hover underline). Nepatří na tlačítka – zbytky
+ *     `bg-indigo-600` CTA se postupně migrují na `Button variant="primary"`.
+ *
+ * Jedním slovem: **nic nového s `bg-indigo-600` ani `bg-emerald-600`
+ * mimo explicitně vyjmenované patterny.**
+ *
  * Společný povrch primárních CTA: světlý motiv `bg-aidv-create` + bílý text;
  * tmavý motiv světlý panel z tokenů `--aidv-create-on-dark-*` (čitelnost na tmavém UI).
  * Bez velikosti/typografie – pro skládání vlastních tlačítek.

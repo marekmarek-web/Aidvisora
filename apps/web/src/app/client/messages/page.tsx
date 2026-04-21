@@ -9,7 +9,7 @@ export default async function ClientMessagesPage() {
   const advisor = await getAssignedAdvisorForClient(auth.contactId).catch(() => null);
 
   return (
-    <div className="max-w-5xl mx-auto h-[calc(100dvh-200px)] min-h-[480px] flex flex-col bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden client-fade-in">
+    <div className="max-w-5xl mx-auto w-full flex-1 min-h-[480px] flex flex-col bg-white rounded-[24px] border border-slate-100 shadow-sm overflow-hidden client-fade-in">
       <div className="px-8 py-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 text-white flex items-center justify-center font-black text-sm shadow-md">

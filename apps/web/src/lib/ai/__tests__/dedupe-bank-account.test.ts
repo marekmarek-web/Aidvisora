@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { dedupeCzechAccountTrailingBankCode } from "../payment-field-contract";
+import { applyExtractedFieldAliasNormalizations } from "../extraction-field-alias-normalize";
+import type { DocumentReviewEnvelope } from "../document-review-types";
 
 /**
  * Regression tests pro bug „opakující se kód banky za lomítkem" (AI Review).
@@ -46,5 +48,59 @@ describe("dedupeCzechAccountTrailingBankCode", () => {
 
   it("zachová prázdné vstupy", () => {
     expect(dedupeCzechAccountTrailingBankCode("")).toBe("");
+  });
+});
+
+/**
+ * Happy-path normalizace při extrakci — `applyExtractedFieldAliasNormalizations`
+ * musí dedupe aplikovat nejen na `bankAccount`, ale i na `accountNumber`,
+ * `recipientAccount`, `paymentAccountNumber`, `accountForRepayment`
+ * (typicky investiční / penzijní doklady plní jiný klíč než `bankAccount`).
+ */
+describe("applyExtractedFieldAliasNormalizations — dedupe account-like fields", () => {
+  function buildEnvelope(fields: Record<string, string>): DocumentReviewEnvelope {
+    const ef: DocumentReviewEnvelope["extractedFields"] = {};
+    for (const [k, v] of Object.entries(fields)) {
+      ef[k] = { value: v, status: "extracted", confidence: 0.9 };
+    }
+    return {
+      documentClassification: {
+        primaryType: "investment_subscription_document",
+        lifecycleStatus: "active",
+        documentIntent: "new_contract",
+        confidence: 0.9,
+        reasons: [],
+      },
+      documentMeta: { scannedVsDigital: "digital" },
+      extractedFields: ef,
+      financialTerms: {},
+      parties: [],
+      evidence: [],
+      reviewWarnings: [],
+      suggestedActions: [],
+    } as unknown as DocumentReviewEnvelope;
+  }
+
+  it("dedupuje recipientAccount na investiční smlouvě (happy path)", () => {
+    const env = buildEnvelope({ recipientAccount: "213038282/0600/0600" });
+    applyExtractedFieldAliasNormalizations(env);
+    expect(env.extractedFields.recipientAccount?.value).toBe("213038282/0600");
+  });
+
+  it("dedupuje accountNumber i paymentAccountNumber", () => {
+    const env = buildEnvelope({
+      accountNumber: "123456789/0100/0100",
+      paymentAccountNumber: "19-123456789/0800/0800",
+    });
+    applyExtractedFieldAliasNormalizations(env);
+    expect(env.extractedFields.accountNumber?.value).toBe("123456789/0100");
+    expect(env.extractedFields.paymentAccountNumber?.value).toBe("19-123456789/0800");
+  });
+
+  it("dedupuje accountForRepayment u úvěrových dokumentů", () => {
+    const env = buildEnvelope({ accountForRepayment: "229875956/0600/0600" });
+    env.documentClassification.primaryType = "consumer_loan_contract";
+    applyExtractedFieldAliasNormalizations(env);
+    expect(env.extractedFields.accountForRepayment?.value).toBe("229875956/0600");
   });
 });

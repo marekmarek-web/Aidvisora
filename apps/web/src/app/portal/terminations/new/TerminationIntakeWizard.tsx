@@ -1674,9 +1674,9 @@ export function TerminationIntakeWizard({
         </form>
       </div>
 
-      {/* Akční lišta — bez „wrapperu“, tlačítka přímo na pozadí plátna */}
+      {/* Akční lišta — sticky v rámci kontejneru wizardu (SF6) */}
       <div
-        className="mt-6 w-full"
+        className="sticky bottom-0 z-20 mt-6 w-full border-t border-slate-200/80 bg-[#f8fafc]/90 backdrop-blur supports-[backdrop-filter]:bg-[#f8fafc]/75 dark:border-[color:var(--wp-surface-card-border)] dark:bg-[color:var(--wp-bg)]/85 dark:supports-[backdrop-filter]:bg-[color:var(--wp-bg)]/70"
         style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom, 0px))" }}
       >
         <div className="mx-auto flex max-w-[1440px] flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-10 xl:px-14">

@@ -7,6 +7,7 @@ import { eq, and } from "db";
 import { getDefaultQuickActionsConfig } from "@/lib/quick-actions";
 import { loadQuickActionsConfig } from "@/lib/quick-actions/load-quick-actions-config";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
+import { buildAvatarProxyUrl } from "@/lib/storage/avatar-proxy";
 import { resolveResendReplyTo } from "@/lib/email/resend-reply-to";
 import { isBirthdayEmailTheme, type BirthdayEmailTheme } from "@/lib/email/birthday/types";
 
@@ -106,41 +107,30 @@ export async function uploadAdvisorAvatar(formData: FormData): Promise<string | 
       : uploadError.message;
     throw new Error(msg);
   }
-  const { data: signedData } = await admin.storage
-    .from("documents")
-    .createSignedUrl(path, 60 * 60 * 24 * 365);
-  let url: string | null = null;
-  if (signedData?.signedUrl) {
-    url = signedData.signedUrl;
-  } else {
-    const { data: urlData } = admin.storage.from("documents").getPublicUrl(path);
-    url = urlData?.publicUrl ?? null;
-  }
-  if (url) {
-    const existing = await db
-      .select({ id: advisorPreferences.id })
-      .from(advisorPreferences)
-      .where(
-        and(
-          eq(advisorPreferences.tenantId, auth.tenantId),
-          eq(advisorPreferences.userId, auth.userId)
-        )
+  // WS-2 Batch 5 / W4: ukládáme storage path (ne 365-denní signed URL).
+  const existing = await db
+    .select({ id: advisorPreferences.id })
+    .from(advisorPreferences)
+    .where(
+      and(
+        eq(advisorPreferences.tenantId, auth.tenantId),
+        eq(advisorPreferences.userId, auth.userId)
       )
-      .limit(1);
-    if (existing.length > 0) {
-      await db
-        .update(advisorPreferences)
-        .set({ avatarUrl: url, updatedAt: new Date() })
-        .where(eq(advisorPreferences.id, existing[0].id));
-    } else {
-      await db.insert(advisorPreferences).values({
-        userId: auth.userId,
-        tenantId: auth.tenantId,
-        avatarUrl: url,
-      });
-    }
+    )
+    .limit(1);
+  if (existing.length > 0) {
+    await db
+      .update(advisorPreferences)
+      .set({ avatarUrl: path, updatedAt: new Date() })
+      .where(eq(advisorPreferences.id, existing[0].id));
+  } else {
+    await db.insert(advisorPreferences).values({
+      userId: auth.userId,
+      tenantId: auth.tenantId,
+      avatarUrl: path,
+    });
   }
-  return url;
+  return buildAvatarProxyUrl(path);
 }
 
 const PDF_REPORT_AUTHOR_FALLBACK = "Marek Marek";
@@ -176,7 +166,18 @@ export async function getAdvisorReportBranding(): Promise<AdvisorReportBranding>
     const phone = row[0]?.phone?.trim() || "";
     const website = row[0]?.website?.trim() || "";
     const reportContactEmail = row[0]?.reportContactEmail?.trim() || "";
-    const logoUrl = row[0]?.reportLogoUrl?.trim() || null;
+    const storedLogo = row[0]?.reportLogoUrl?.trim() || null;
+    // WS-2 Batch 5 / W4: pokud v DB je uložena jen storage path (bez http/data),
+    // podepíšeme ji čerstvým, krátkodobým signed URL (1 h), které PDF engine stihne
+    // stáhnout. Starší 365-denní URL zatím ponecháme kvůli kompatibilitě.
+    let logoUrl: string | null = storedLogo;
+    if (storedLogo && !/^(https?:|data:)/i.test(storedLogo)) {
+      const admin = await createAdminClient();
+      const { data: signed } = await admin.storage
+        .from("documents")
+        .createSignedUrl(storedLogo, 60 * 60);
+      logoUrl = signed?.signedUrl ?? null;
+    }
 
     const parts: string[] = [
       authorName ? `${authorName} – Privátní finanční plánování` : "",
@@ -302,41 +303,30 @@ export async function uploadReportLogo(formData: FormData): Promise<string | nul
         : uploadError.message;
     throw new Error(msg);
   }
-  const { data: signedData } = await admin.storage
-    .from("documents")
-    .createSignedUrl(path, 60 * 60 * 24 * 365);
-  let url: string | null = null;
-  if (signedData?.signedUrl) {
-    url = signedData.signedUrl;
-  } else {
-    const { data: urlData } = admin.storage.from("documents").getPublicUrl(path);
-    url = urlData?.publicUrl ?? null;
-  }
-  if (url) {
-    const existing = await db
-      .select({ id: advisorPreferences.id })
-      .from(advisorPreferences)
-      .where(
-        and(
-          eq(advisorPreferences.tenantId, auth.tenantId),
-          eq(advisorPreferences.userId, auth.userId)
-        )
+  // WS-2 Batch 5 / W4: ukládáme storage path (ne 365-denní signed URL).
+  const existing = await db
+    .select({ id: advisorPreferences.id })
+    .from(advisorPreferences)
+    .where(
+      and(
+        eq(advisorPreferences.tenantId, auth.tenantId),
+        eq(advisorPreferences.userId, auth.userId)
       )
-      .limit(1);
-    if (existing.length > 0) {
-      await db
-        .update(advisorPreferences)
-        .set({ reportLogoUrl: url, updatedAt: new Date() })
-        .where(eq(advisorPreferences.id, existing[0].id));
-    } else {
-      await db.insert(advisorPreferences).values({
-        userId: auth.userId,
-        tenantId: auth.tenantId,
-        reportLogoUrl: url,
-      });
-    }
+    )
+    .limit(1);
+  if (existing.length > 0) {
+    await db
+      .update(advisorPreferences)
+      .set({ reportLogoUrl: path, updatedAt: new Date() })
+      .where(eq(advisorPreferences.id, existing[0].id));
+  } else {
+    await db.insert(advisorPreferences).values({
+      userId: auth.userId,
+      tenantId: auth.tenantId,
+      reportLogoUrl: path,
+    });
   }
-  return url;
+  return buildAvatarProxyUrl(path);
 }
 
 export type NotificationPrefs = Record<string, boolean>;

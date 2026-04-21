@@ -30,6 +30,7 @@ import { ConversationQuickActions } from "./components/ConversationQuickActions"
 import { MessageThread } from "./components/MessageThread";
 import { MessageComposer } from "./components/MessageComposer";
 import { ConversationContextPanel } from "./components/ConversationContextPanel";
+import { useConfirm } from "@/app/components/ConfirmDialog";
 
 const ChatModal = dynamic(
   () => import("./components/ChatModal").then((m) => ({ default: m.ChatModal })),
@@ -65,6 +66,7 @@ function humanMessageError(e: unknown, fallback: string): string {
 
 export function PortalMessagesView({ initialContactId }: { initialContactId: string | null }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const queryClient = useQueryClient();
   const conversationsRef = useRef<ConversationListItem[]>([]);
   const pollStableRef = useRef(0);
@@ -396,9 +398,15 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
     bottomRef.current?.scrollIntoView({ block: "end", behavior: "auto" });
   }, [msgs.length]);
 
-  function handleDeleteOneMessage(messageId: string) {
-    if (!window.confirm("Smazat tuto zprávu? Tuto akci nelze vrátit zpět.")) return;
+  async function handleDeleteOneMessage(messageId: string) {
     if (!selectedContactId) return;
+    const ok = await confirm({
+      title: "Smazat zprávu?",
+      message: "Smazat tuto zprávu? Tuto akci nelze vrátit zpět.",
+      confirmLabel: "Smazat",
+      variant: "destructive",
+    });
+    if (!ok) return;
     const cid = selectedContactId;
     setDeletingMessageId(messageId);
     startTransition(async () => {
@@ -422,15 +430,16 @@ export function PortalMessagesView({ initialContactId }: { initialContactId: str
     });
   }
 
-  function handleDeleteConversation() {
+  async function handleDeleteConversation() {
     if (!selectedContactId) return;
-    if (
-      !window.confirm(
+    const ok = await confirm({
+      title: "Smazat celou konverzaci?",
+      message:
         "Smazat celou konverzaci s tímto klientem? Všechny zprávy a přílohy budou trvale odstraněny. Tuto akci nelze vrátit zpět.",
-      )
-    ) {
-      return;
-    }
+      confirmLabel: "Smazat konverzaci",
+      variant: "destructive",
+    });
+    if (!ok) return;
     const id = selectedContactId;
     startTransition(async () => {
       try {

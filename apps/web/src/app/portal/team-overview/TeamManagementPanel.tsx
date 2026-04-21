@@ -14,6 +14,7 @@ import { normalizeCareerProgramFromDb } from "@/lib/career/registry";
 import { TeamMemberCareerFields } from "@/app/portal/setup/TeamMemberCareerFields";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import { useToast } from "@/app/components/Toast";
+import { useConfirm } from "@/app/components/ConfirmDialog";
 
 export interface TeamManagementPanelProps {
   currentUserId: string;
@@ -29,6 +30,7 @@ export function TeamManagementPanel({
   roleName,
 }: TeamManagementPanelProps) {
   const toast = useToast();
+  const confirm = useConfirm();
   const canManageTeamCareer = hasPermission(roleName as RoleName, "team_members:write");
 
   const resolvedCareerProgramForMember = useCallback((raw: string | null) => {
@@ -267,12 +269,28 @@ export function TeamManagementPanel({
                           type="button"
                           className="text-[11px] font-extrabold text-rose-500 transition hover:text-rose-700 hover:underline"
                           onClick={async () => {
-                            const confirmed = window.confirm(`Opravdu chcete odebrat tohoto člena z workspace?`);
+                            const confirmed = await confirm({
+                              title: "Odebrat člena?",
+                              message: "Opravdu chcete odebrat tohoto člena z workspace? Tuto akci nelze vrátit zpět.",
+                              confirmLabel: "Odebrat",
+                              variant: "destructive",
+                            });
                             if (!confirmed) return;
                             const res = await removeMember(m.membershipId);
                             if (res.ok) {
                               toast.showToast("Člen byl odebrán.");
                               setTeamMembers((prev) => prev.filter((x) => x.membershipId !== m.membershipId));
+                            } else if (res.code === "REAUTH_REQUIRED") {
+                              toast.showToast(res.error ?? "Je potřeba se znovu přihlásit.", "error");
+                              const returnTo =
+                                typeof window !== "undefined"
+                                  ? window.location.pathname + window.location.search
+                                  : "/portal/team-overview";
+                              setTimeout(() => {
+                                if (typeof window !== "undefined") {
+                                  window.location.href = `/login?reauth=1&return=${encodeURIComponent(returnTo)}`;
+                                }
+                              }, 1200);
                             } else {
                               toast.showToast(res.error ?? "Odebrání se nezdařilo.", "error");
                             }

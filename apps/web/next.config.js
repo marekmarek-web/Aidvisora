@@ -10,7 +10,22 @@ const nextMajor = Number.parseInt(nextVersion.split(".")[0] || "0", 10);
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   async rewrites() {
-    return [{ source: "/favicon.ico", destination: "/favicon.png" }];
+    return [
+      { source: "/favicon.ico", destination: "/favicon.png" },
+      // iOS Universal Links — Apple fetchuje přesně tento path, musí vrátit
+      // `application/json` bez přípony a bez redirectu. Rewrite (ne redirect)
+      // zachová URL, kterou Apple handshake očekává.
+      {
+        source: "/.well-known/apple-app-site-association",
+        destination: "/api/apple-app-site-association",
+      },
+    ];
+  },
+  async redirects() {
+    // `/vop` a `/dpa` redirecty řeší page-level `permanentRedirect` v
+    // `apps/web/src/app/vop/page.tsx` a `apps/web/src/app/dpa/page.tsx` —
+    // necháváme tam, aby se legal routing nešířil do dvou míst.
+    return [];
   },
   // Monorepo: lockfile lives at git repo root (project name e.g. aidvisora). A parent folder
   // on disk may contain another pnpm-lock.yaml — pin tracing root so Next does not infer the wrong root.

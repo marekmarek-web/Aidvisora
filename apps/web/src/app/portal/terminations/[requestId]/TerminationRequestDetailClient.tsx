@@ -13,6 +13,11 @@ import { TerminationRequestFieldsForm } from "./TerminationRequestFieldsForm";
 import type { TerminationDeliveryChannel, TerminationRequestStatus } from "@/lib/db/schema-for-client";
 import { terminationDeliveryChannels, terminationRequestStatuses } from "@/lib/db/schema-for-client";
 import { terminationDeliveryChannelLabel, terminationDispatchStatusLabel } from "@/lib/terminations/client";
+import {
+  getTerminationStatusBadgeClassName,
+  getTerminationStatusLabel,
+} from "@/lib/terminations/status-meta";
+import { ButtonLink } from "@/app/components/ui/primitives";
 import { formatIsoDateForUiCs } from "@/lib/forms/cz-date";
 
 type Props = {
@@ -26,25 +31,6 @@ type Props = {
 const DISPATCH_STATUS = ["pending", "sent", "delivered", "failed", "bounced", "cancelled"] as const;
 
 const WIZARD_CONTINUE_BLOCKED = new Set(["completed", "cancelled", "dispatched"]);
-
-function statusLabelCs(s: string): string {
-  const map: Record<string, string> = {
-    draft: "Koncept",
-    intake: "Intake",
-    rules_evaluating: "Vyhodnocování pravidel",
-    awaiting_data: "Čeká na data",
-    awaiting_review: "Kontrola",
-    ready_to_generate: "Připraveno k dokumentu",
-    document_draft: "Návrh dokumentu",
-    final_review: "Finální kontrola",
-    dispatch_pending: "Čeká na odeslání",
-    dispatched: "Odesláno",
-    completed: "Dokončeno",
-    cancelled: "Zrušeno",
-    failed: "Selhání",
-  };
-  return map[s] ?? s;
-}
 
 export function TerminationRequestDetailClient({
   requestId,
@@ -137,7 +123,7 @@ export function TerminationRequestDetailClient({
             >
               {terminationRequestStatuses.map((s) => (
                 <option key={s} value={s}>
-                  {statusLabelCs(s)}
+                  {getTerminationStatusLabel(s)}
                 </option>
               ))}
             </select>
@@ -288,27 +274,22 @@ export function TerminationRequestDetailClient({
         </div>
         <div className="flex flex-wrap gap-2">
           {!WIZARD_CONTINUE_BLOCKED.has(r.status) ? (
-            <Link
+            <ButtonLink
               href={`/portal/terminations/new?draftId=${requestId}`}
-              className="rounded-[var(--wp-radius)] bg-violet-600 px-3 py-2 text-sm font-semibold text-white min-h-[44px] inline-flex items-center"
+              variant="primary"
+              size="lg"
             >
               Pokračovat v úpravách
-            </Link>
+            </ButtonLink>
           ) : null}
           {r.contactId ? (
-            <Link
-              href={`/portal/contacts/${r.contactId}`}
-              className="rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm font-semibold min-h-[44px] inline-flex items-center"
-            >
+            <ButtonLink href={`/portal/contacts/${r.contactId}`} variant="secondary" size="lg">
               Kontakt
-            </Link>
+            </ButtonLink>
           ) : null}
-          <Link
-            href="/portal/terminations/new"
-            className="rounded-[var(--wp-radius)] border border-[color:var(--wp-border)] px-3 py-2 text-sm font-semibold min-h-[44px] inline-flex items-center"
-          >
+          <ButtonLink href="/portal/terminations/new" variant="secondary" size="lg">
             Nová žádost
-          </Link>
+          </ButtonLink>
         </div>
       </div>
 
@@ -331,7 +312,11 @@ export function TerminationRequestDetailClient({
           </div>
           <div>
             <dt className="font-semibold text-[color:var(--wp-text)]">Stav</dt>
-            <dd>{statusLabelCs(r.status)}</dd>
+            <dd>
+              <span className={getTerminationStatusBadgeClassName(r.status)}>
+                {getTerminationStatusLabel(r.status)}
+              </span>
+            </dd>
           </div>
           <div>
             <dt className="font-semibold text-[color:var(--wp-text)]">Kanál doručení</dt>
