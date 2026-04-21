@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import { signOutAndRedirectClient } from "@/lib/auth/sign-out-client";
 import { isClientMobileSpaPath } from "@/lib/client-portal/client-mobile-spa-paths";
-import { householdRoleLabel } from "@/lib/households/roles";
+import { householdRoleLabel, isHouseholdChildLikeRole } from "@/lib/households/roles";
 import * as Sentry from "@sentry/nextjs";
 import {
   createClientPortalRequestFromForm,
@@ -1692,9 +1692,10 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
               ) : (
                 household.members.map((member) => {
                   const roleLabel = householdRoleLabel(member.role ?? null);
+                  const childLike = isHouseholdChildLikeRole(member.role);
                   return (
                     <MobileCard key={member.id} className="p-3.5 flex items-center gap-3">
-                      <div className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-xs font-black ${role === "child" ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-700"}`}>
+                      <div className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-xs font-black ${childLike ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-700"}`}>
                         {`${member.firstName[0] ?? ""}${member.lastName[0] ?? ""}`}
                       </div>
                       <div>

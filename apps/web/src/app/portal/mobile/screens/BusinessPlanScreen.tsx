@@ -11,7 +11,7 @@ import {
   Trash2,
   ChevronRight,
 } from "lucide-react";
-import type { PeriodType } from "@/lib/business-plan/types";
+import type { PeriodType, PlanHealthStatus } from "@/lib/business-plan/types";
 import {
   createBusinessPlan,
   getActivePlan,
@@ -27,12 +27,19 @@ import { getCurrentPeriodNumbers } from "@/lib/business-plan/types";
 import {
   AIInsightCard,
   BottomSheet,
-  EmptyState,
-  ErrorState,
-  FilterChips,
   MobileCard,
   MobileSection,
 } from "@/app/shared/mobile-ui/primitives";
+import {
+  HeroCard,
+  HeroAction,
+  HeroMetaDot,
+  InlineAlert,
+  KpiCard,
+  MetricGrid,
+  SegmentPills,
+  type KpiHealth,
+} from "@/app/shared/portal-ui/primitives";
 import type { DeviceClass } from "@/lib/ui/useDeviceClass";
 
 function cx(...classes: Array<string | false | null | undefined>) {
@@ -58,70 +65,26 @@ function pickMetric(
   };
 }
 
-function HealthBadge({ health }: { health: string }) {
-  const config =
-    health === "critical"
-      ? { cls: "bg-rose-50 text-rose-600 border-rose-200", label: "Kritické" }
-      : health === "warning"
-        ? { cls: "bg-amber-50 text-amber-700 border-amber-200", label: "Pozor" }
-        : { cls: "bg-emerald-50 text-emerald-700 border-emerald-200", label: "OK" };
-  return (
-    <span className={cx("text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-lg border", config.cls)}>
-      {config.label}
-    </span>
-  );
+function mapHealth(health: string): KpiHealth {
+  if (health === "critical") return "critical";
+  if (health === "warning") return "warning";
+  if (health === "ok") return "ok";
+  return "neutral";
 }
 
-function MetricCard({
-  label,
-  actual,
-  target,
-  unit,
-  health,
-  icon: Icon,
-}: {
-  label: string;
-  actual: number;
-  target: number;
-  unit: string;
-  health: string;
-  icon: React.ElementType;
-}) {
-  const pct = target > 0 ? Math.min(100, Math.round((actual / target) * 100)) : 0;
-  const barColor =
-    health === "critical"
-      ? "bg-rose-500"
-      : health === "warning"
-        ? "bg-amber-500"
-        : "bg-emerald-500";
+/** Zjednodušená 3-stavová paleta pro hero (PlanHealthStatus ≠ staré stringy critical/warning/ok). */
+function overallHealthHeroTone(health: PlanHealthStatus): "critical" | "warning" | "ok" {
+  if (health === "significant_slip") return "critical";
+  if (health === "slight_slip" || health === "no_data") return "warning";
+  return "ok";
+}
 
-  return (
-    <MobileCard className="p-3.5">
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-[color:var(--wp-surface-muted)] flex items-center justify-center flex-shrink-0">
-            <Icon size={15} className="text-[color:var(--wp-text-secondary)]" />
-          </div>
-          <p className="text-xs font-black uppercase tracking-wider text-[color:var(--wp-text-secondary)]">{label}</p>
-        </div>
-        <HealthBadge health={health} />
-      </div>
-      <p className="text-xl font-black text-[color:var(--wp-text)] tabular-nums">
-        {actual.toLocaleString("cs-CZ")}
-        {unit ? <span className="text-sm font-bold text-[color:var(--wp-text-secondary)] ml-1">{unit}</span> : null}
-      </p>
-      <div className="flex items-center justify-between mt-1">
-        <p className="text-[11px] text-[color:var(--wp-text-tertiary)]">
-          Cíl: {target.toLocaleString("cs-CZ")}
-          {unit ? ` ${unit}` : ""}
-        </p>
-        <p className="text-[11px] font-black text-[color:var(--wp-text-secondary)]">{pct}%</p>
-      </div>
-      <div className="mt-2 h-1.5 rounded-full bg-[color:var(--wp-surface-muted)] overflow-hidden">
-        <div className={cx("h-full rounded-full transition-all", barColor)} style={{ width: `${pct}%` }} />
-      </div>
-    </MobileCard>
-  );
+function formatKpiValue(actual: number, unit: string): string {
+  if (unit === "Kč") {
+    if (actual >= 1_000_000) return `${(actual / 1_000_000).toFixed(1).replace(".", ",")} M`;
+    if (actual >= 10_000) return `${Math.round(actual / 1_000)} tis.`;
+  }
+  return actual.toLocaleString("cs-CZ");
 }
 
 function VisionCard({ item }: { item: VisionDraft }) {
@@ -175,7 +138,8 @@ export function BusinessPlanScreen({ deviceClass = "phone" }: { deviceClass?: De
   const meetings = useMemo(() => pickMetric(progressResult, "meetings"), [progressResult]);
   const newClients = useMemo(() => pickMetric(progressResult, "new_clients"), [progressResult]);
 
-  const overallHealth = progressResult?.progress.overallHealth ?? "ok";
+  const overallHealth = progressResult?.progress.overallHealth ?? "no_data";
+  const healthTone = overallHealthHeroTone(overallHealth);
 
   function loadData() {
     startTransition(async () => {
@@ -302,120 +266,160 @@ export function BusinessPlanScreen({ deviceClass = "phone" }: { deviceClass?: De
 
   const hasPlanData = plan !== null || progressResult !== null;
 
+  const productionPct =
+    production.target > 0
+      ? Math.max(0, Math.round((production.actual / production.target) * 100))
+      : 0;
+
   return (
     <>
-      {error ? <ErrorState title={error} onRetry={loadData} /> : null}
       <div
         className={cx(
-          "pb-6",
+          "space-y-3 px-4 pt-4 pb-6",
           pending && hasPlanData && "opacity-60 pointer-events-none transition-opacity duration-200"
         )}
       >
+      {error ? (
+        <InlineAlert
+          tone="danger"
+          title="Business plán se nepodařilo načíst"
+          description={error}
+          action={
+            <button
+              type="button"
+              onClick={loadData}
+              className="inline-flex min-h-[34px] items-center gap-1.5 rounded-lg border border-rose-300 bg-white px-3 text-[11px] font-black uppercase tracking-wide text-rose-700 hover:bg-rose-50"
+            >
+              Zkusit znovu
+            </button>
+          }
+        />
+      ) : null}
+
       {/* Hero */}
-      <div className="bg-gradient-to-br from-[#0a0f29] to-indigo-950 px-4 pt-4 pb-5">
-        <div className="flex items-start justify-between gap-3">
+      <HeroCard
+        eyebrow="Business plán"
+        title={plan?.periodLabel ?? "Aktuální období"}
+        subtitle={
+          plan
+            ? production.target > 0
+              ? `${productionPct} % produkce (${production.actual.toLocaleString("cs-CZ")} / ${production.target.toLocaleString("cs-CZ")} Kč)`
+              : "Nastav cíle produkce, schůzek a nových klientů."
+            : "Plán pro tohle období zatím neexistuje."
+        }
+        icon={<Target size={20} className="text-white" />}
+        actions={
+          <HeroAction onClick={openTargets}>
+            <Target size={13} />
+            {plan ? "Upravit" : "Nastavit"}
+          </HeroAction>
+        }
+        meta={
+          plan ? (
+            <>
+              <span
+                className={cx(
+                  "inline-flex items-center rounded-md border px-1.5 py-[2px] text-[10px] font-black uppercase tracking-wider",
+                  healthTone === "critical"
+                    ? "border-rose-300/30 bg-rose-500/20 text-rose-50"
+                    : healthTone === "warning"
+                      ? "border-amber-300/30 bg-amber-500/20 text-amber-50"
+                      : "border-emerald-300/30 bg-emerald-500/20 text-emerald-50"
+                )}
+              >
+                {healthTone === "critical" ? "Kritické" : healthTone === "warning" ? "Pozor" : "Na cestě"}
+              </span>
+              <HeroMetaDot />
+              <span>
+                {meetings.actual} / {meetings.target || 0} schůzek
+              </span>
+              <HeroMetaDot />
+              <span>
+                {newClients.actual} / {newClients.target || 0} klientů
+              </span>
+            </>
+          ) : undefined
+        }
+      >
+        {plan && production.target > 0 ? (
           <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-300">
-              Business plán
-            </p>
-            <h2 className="text-lg font-black text-white mt-1">
-              {plan?.periodLabel ?? "Aktuální období"}
-            </h2>
-            {plan ? (
-              <div className="mt-2 flex items-center gap-2">
-                <HealthBadge health={overallHealth} />
-                <span className="text-xs text-indigo-200">
-                  {production.actual > 0
-                    ? `${Math.round((production.actual / (production.target || 1)) * 100)}% produkce`
-                    : "Žádná data"}
-                </span>
-              </div>
-            ) : null}
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/15">
+              <div
+                className={cx(
+                  "h-full rounded-full transition-[width] duration-700",
+                  healthTone === "critical"
+                    ? "bg-rose-400"
+                    : healthTone === "warning"
+                      ? "bg-amber-400"
+                      : "bg-emerald-400"
+                )}
+                style={{ width: `${Math.min(100, productionPct)}%` }}
+              />
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={openTargets}
-            className="flex items-center gap-1.5 min-h-[36px] px-3 rounded-xl bg-[color:var(--wp-surface-card)]/10 border border-white/20 text-white text-xs font-bold"
-          >
-            <Target size={13} /> Cíle
-          </button>
-        </div>
-      </div>
+        ) : null}
+      </HeroCard>
 
       {/* Period filter */}
-      <div className="px-4 py-3 bg-[color:var(--wp-surface-card)] border-b border-[color:var(--wp-surface-card-border)]">
-        <FilterChips
-          value={periodType}
-          onChange={(id) => setPeriodType(id as PeriodType)}
-          options={[
-            { id: "month", label: "Měsíc" },
-            { id: "quarter", label: "Kvartál" },
-            { id: "year", label: "Rok" },
-          ]}
-        />
-      </div>
+      <SegmentPills
+        label="Období"
+        value={periodType}
+        onChange={(id) => setPeriodType(id as PeriodType)}
+        options={[
+          { id: "month", label: "Měsíc" },
+          { id: "quarter", label: "Kvartál" },
+          { id: "year", label: "Rok" },
+        ]}
+      />
 
       {/* No plan CTA */}
       {!plan ? (
-        <MobileSection>
-          <MobileCard className="border-dashed border-indigo-200 bg-indigo-50/40 p-4 text-center">
-            <Target size={24} className="text-indigo-400 mx-auto mb-2" />
-            <p className="text-sm font-bold text-indigo-900">Plán není nastavený</p>
-            <p className="text-xs text-indigo-600/80 mt-1 mb-3">
-              Nastavte cíle produkce, schůzek a nových klientů.
-            </p>
-            <button
-              type="button"
-              onClick={openTargets}
-              className="min-h-[44px] w-full rounded-xl bg-indigo-600 text-white text-sm font-bold"
-            >
-              Nastavit cíle
-            </button>
-          </MobileCard>
-        </MobileSection>
-      ) : null}
-
-      {/* KPI metrics */}
-      {plan ? (
-        <MobileSection
-          title="Klíčové metriky"
+        <InlineAlert
+          tone="info"
+          title="Plán není nastavený"
+          description="Nastavte cíle produkce, schůzek a nových klientů, abyste viděli progress v reálném čase."
           action={
             <button
               type="button"
               onClick={openTargets}
-              className="flex items-center gap-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-lg min-h-[32px]"
+              className="inline-flex min-h-[40px] items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 text-[12px] font-black uppercase tracking-wide text-white shadow-[0_6px_18px_rgba(79,70,229,0.35)]"
             >
-              Upravit <ChevronRight size={10} />
+              <Target size={13} />
+              Nastavit cíle
             </button>
           }
-        >
-          <div className={cx("grid gap-2", isTablet ? "grid-cols-3" : "grid-cols-1")}>
-            <MetricCard
-              label="Produkce"
-              actual={production.actual}
-              target={production.target}
-              unit="Kč"
-              health={production.health}
-              icon={TrendingUp}
-            />
-            <MetricCard
-              label="Schůzky"
-              actual={meetings.actual}
-              target={meetings.target}
-              unit=""
-              health={meetings.health}
-              icon={Calendar}
-            />
-            <MetricCard
-              label="Noví klienti"
-              actual={newClients.actual}
-              target={newClients.target}
-              unit=""
-              health={newClients.health}
-              icon={Users}
-            />
-          </div>
-        </MobileSection>
+        />
+      ) : null}
+
+      {/* KPI metrics */}
+      {plan ? (
+        <MetricGrid cols={isTablet ? 3 : 2}>
+          <KpiCard
+            label="Produkce"
+            value={formatKpiValue(production.actual, "Kč")}
+            unit="Kč"
+            target={production.target || undefined}
+            health={mapHealth(production.health)}
+            icon={<TrendingUp size={14} />}
+            variant="large"
+          />
+          <KpiCard
+            label="Schůzky"
+            value={meetings.actual}
+            target={meetings.target || undefined}
+            health={mapHealth(meetings.health)}
+            icon={<Calendar size={14} />}
+            variant="large"
+          />
+          <KpiCard
+            label="Noví klienti"
+            value={newClients.actual}
+            target={newClients.target || undefined}
+            health={mapHealth(newClients.health)}
+            icon={<Users size={14} />}
+            variant="large"
+          />
+        </MetricGrid>
       ) : null}
 
       {/* Interní AI přehled */}

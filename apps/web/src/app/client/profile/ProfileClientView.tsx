@@ -19,6 +19,7 @@ import {
 import { useRouter } from "next/navigation";
 import { clientUpdateProfile } from "@/app/actions/contacts";
 import type { ClientHouseholdDetail } from "@/app/actions/households";
+import { householdRoleLabel, isHouseholdChildLikeRole } from "@/lib/households/roles";
 import { AddFamilyMemberModal } from "../AddFamilyMemberModal";
 import { SignOutButton } from "@/app/components/SignOutButton";
 
@@ -241,17 +242,16 @@ export function ProfileClientView({ profile, household }: ProfileClientViewProps
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {household.members.map((member) => {
-                const role = member.role?.toLowerCase() || "member";
-                const roleLabel =
-                  role === "child" ? "Dítě" : role === "partner" ? "Partner" : role === "primary" ? "Hlavní člen" : "Člen";
+                const roleLabel = householdRoleLabel(member.role ?? null);
+                const childLike = isHouseholdChildLikeRole(member.role);
                 return (
                   <div key={member.id} className="p-4 border border-slate-100 rounded-2xl flex items-center gap-3">
                     <div
                       className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-black shrink-0 ${
-                        role === "child" ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-700"
+                        childLike ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-700"
                       }`}
                     >
-                      {role === "child" ? <Baby size={18} /> : `${member.firstName[0] ?? ""}${member.lastName[0] ?? ""}`}
+                      {childLike ? <Baby size={18} /> : `${member.firstName[0] ?? ""}${member.lastName[0] ?? ""}`}
                     </div>
                     <div>
                       <h4 className="font-bold text-slate-900 text-sm">
