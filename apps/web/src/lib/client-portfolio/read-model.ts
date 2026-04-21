@@ -131,7 +131,9 @@ export function aggregatePortfolioMetrics(
     }
 
     if (INVESTMENT_SEGMENTS.has(row.segment)) {
-      // Annual investment contributions normalised to monthly equivalent
+      // Jednorázová investice (lump-sum) NEPATŘÍ do součtu „Investice / měsíčně".
+      const attrs = (row.portfolioAttributes ?? {}) as Record<string, unknown>;
+      if (attrs.paymentType === "one_time") continue;
       if (monthly > 0) monthlyInvestments += monthly;
       else if (annual > 0) monthlyInvestments += annual / 12;
       continue;

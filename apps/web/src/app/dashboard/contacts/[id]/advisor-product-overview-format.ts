@@ -28,8 +28,19 @@ export function advisorPrimaryAmountPresentation(
   if (d?.kind === "pension" && d.participantContribution?.trim()) {
     return { label: "Příspěvek účastníka", value: d.participantContribution.trim() };
   }
-  const line = formatPortalPremiumLineCs(contract.premiumAmount, contract.premiumAnnual);
-  if (d?.kind === "investment") return { label: "Platba", value: line };
+  const investmentPaymentType =
+    d?.kind === "investment" ? d.paymentType : null;
+  const line = formatPortalPremiumLineCs(
+    contract.premiumAmount,
+    contract.premiumAnnual,
+    investmentPaymentType,
+  );
+  if (d?.kind === "investment") {
+    return {
+      label: d.paymentType === "one_time" ? "Jednorázová investice" : "Platba",
+      value: line,
+    };
+  }
   if (d?.kind === "life_insurance") return { label: "Pojistné", value: line };
   if (d?.kind === "vehicle" || d?.kind === "property") return { label: "Pojistné", value: line };
   return { label: "Částka", value: line };

@@ -63,10 +63,15 @@ export function normalizeContractFormForSave(form: ContractFormState): ContractP
   if (!segment) return { segment: "" };
 
   const showPremium = segmentShowsPremiumOrContributionFields(segment);
+  const isOneTimeInvestment = form.paymentType === "one_time";
   let premiumAmount = form.premiumAmount?.trim() || undefined;
   let premiumAnnual = form.premiumAnnual?.trim() || undefined;
   if (showPremium) {
-    if (segmentUsesAnnualPremiumPrimaryInput(segment)) {
+    if (isOneTimeInvestment) {
+      // Jednorázová investice: částka v premiumAmount je lump-sum, NESMÍME ji násobit 12.
+      // Dříve portál ukazoval „12 000 000 Kč / rok“ místo „1 000 000 Kč jednorázově“.
+      premiumAnnual = undefined;
+    } else if (segmentUsesAnnualPremiumPrimaryInput(segment)) {
       if (premiumAnnual) {
         const m = monthlyPremiumFromAnnualInput(premiumAnnual);
         if (m) premiumAmount = m;
@@ -186,13 +191,15 @@ export function buildContractReviewRows(
         rows.push({ label: "Pojistné (měs.)", value: `${normalized.premiumAmount} Kč` });
       }
     } else {
+      const oneTime = group === "investment" && normalized.paymentType === "one_time";
       if (normalized.premiumAmount) {
+        const investmentLabel = oneTime ? "Jednorázová investice" : "Pravidelná platba (měs.)";
         rows.push({
-          label: group === "investment" ? "Pravidelná platba (měs.)" : "Pojistné (měs.)",
+          label: group === "investment" ? investmentLabel : "Pojistné (měs.)",
           value: `${normalized.premiumAmount} Kč`,
         });
       }
-      if (normalized.premiumAnnual) {
+      if (!oneTime && normalized.premiumAnnual) {
         rows.push({
           label: group === "investment" ? "Příspěvek (roční)" : "Pojistné (roční)",
           value: `${normalized.premiumAnnual} Kč`,

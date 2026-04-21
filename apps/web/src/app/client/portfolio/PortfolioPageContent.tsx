@@ -117,6 +117,8 @@ function ProductCard({ contract, canonical: p, visibleSourceDocs }: ProductCardP
   const logoAlt = displayLogo?.alt ?? "Logo instituce";
 
   const fvEligible = isFvEligibleSegment(contract.segment);
+  const isOneTimeInvestment =
+    p.segmentDetail?.kind === "investment" && p.segmentDetail.paymentType === "one_time";
   const fvShared =
     fvEligible && p.fvReadiness.fvSourceType
       ? computeSharedFutureValue({
@@ -125,7 +127,8 @@ function ProductCard({ contract, canonical: p, visibleSourceDocs }: ProductCardP
           resolvedFundCategory: p.fvReadiness.resolvedFundCategory,
           investmentHorizon: p.fvReadiness.investmentHorizon,
           monthlyContribution: resolveFvMonthlyContribution(p),
-          annualContribution: p.premiumAnnual,
+          annualContribution: isOneTimeInvestment ? null : p.premiumAnnual,
+          lumpContribution: isOneTimeInvestment ? p.premiumMonthly : null,
         })
       : null;
   const fv =
@@ -234,7 +237,11 @@ function ProductCard({ contract, canonical: p, visibleSourceDocs }: ProductCardP
                 {st}
               </span>
               <span className="text-[15px] font-black text-slate-900 tabular-nums whitespace-nowrap">
-                {formatPortalPremiumLineCs(contract.premiumAmount, contract.premiumAnnual)}
+                {formatPortalPremiumLineCs(
+                  contract.premiumAmount,
+                  contract.premiumAnnual,
+                  p.segmentDetail?.kind === "investment" ? p.segmentDetail.paymentType : null,
+                )}
               </span>
             </div>
           </div>

@@ -112,6 +112,9 @@ export function ContactContractModals({ contactId }: { contactId: string }) {
       startDate: form.startDate || undefined,
       anniversaryDate: form.anniversaryDate || undefined,
       note: form.note || undefined,
+      ...(getSegmentUiGroup(form.segment) === "investment" && form.paymentType
+        ? { paymentType: form.paymentType }
+        : {}),
       visibleToClient: visibleToClientEdit,
       portfolioStatus: portfolioStatusEdit,
     };

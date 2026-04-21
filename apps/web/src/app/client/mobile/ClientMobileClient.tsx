@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { signOutAndRedirectClient } from "@/lib/auth/sign-out-client";
 import { isClientMobileSpaPath } from "@/lib/client-portal/client-mobile-spa-paths";
+import { householdRoleLabel } from "@/lib/households/roles";
 import * as Sentry from "@sentry/nextjs";
 import {
   createClientPortalRequestFromForm,
@@ -641,13 +642,16 @@ function PortfolioScreen({
   for (const c of contracts) {
     const p = canonicalById.get(c.id);
     if (!p || !isFvEligibleSegment(c.segment) || !p.fvReadiness.fvSourceType) continue;
+    const isOneTime =
+      p.segmentDetail?.kind === "investment" && p.segmentDetail.paymentType === "one_time";
     const hit = computeSharedFutureValue({
       fvSourceType: p.fvReadiness.fvSourceType,
       resolvedFundId: p.fvReadiness.resolvedFundId,
       resolvedFundCategory: p.fvReadiness.resolvedFundCategory,
       investmentHorizon: p.fvReadiness.investmentHorizon,
       monthlyContribution: resolveFvMonthlyContribution(p),
-      annualContribution: p.premiumAnnual,
+      annualContribution: isOneTime ? null : p.premiumAnnual,
+      lumpContribution: isOneTime ? p.premiumMonthly : null,
     });
     if (hit.projectionState === "complete" && hit.projectedFutureValue != null) {
       anyFvShown = true;
@@ -707,6 +711,8 @@ function PortfolioScreen({
                   : st === "Ukončené"
                     ? "bg-slate-100 text-slate-600 border-slate-200"
                     : "bg-amber-50 text-amber-800 border-amber-100";
+              const isOneTimeInv =
+                p.segmentDetail?.kind === "investment" && p.segmentDetail.paymentType === "one_time";
               const fvShared =
                 isFvEligibleSegment(contract.segment) && p.fvReadiness.fvSourceType
                   ? computeSharedFutureValue({
@@ -715,7 +721,8 @@ function PortfolioScreen({
                       resolvedFundCategory: p.fvReadiness.resolvedFundCategory,
                       investmentHorizon: p.fvReadiness.investmentHorizon,
                       monthlyContribution: resolveFvMonthlyContribution(p),
-                      annualContribution: p.premiumAnnual,
+                      annualContribution: isOneTimeInv ? null : p.premiumAnnual,
+                      lumpContribution: isOneTimeInv ? p.premiumMonthly : null,
                     })
                   : null;
               const fv =
@@ -770,7 +777,11 @@ function PortfolioScreen({
                     <div>
                       <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Platba</p>
                       <p className="font-bold text-slate-900">
-                        {formatPortalPremiumLineCs(contract.premiumAmount, contract.premiumAnnual)}
+                        {formatPortalPremiumLineCs(
+                          contract.premiumAmount,
+                          contract.premiumAnnual,
+                          p.segmentDetail?.kind === "investment" ? p.segmentDetail.paymentType : null,
+                        )}
                       </p>
                     </div>
                     {contract.contractNumber ? (
@@ -1680,8 +1691,7 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
                 <EmptyState title="Domácnost je prázdná" description="Přidejte partnera nebo dítě." />
               ) : (
                 household.members.map((member) => {
-                  const role = member.role?.toLowerCase() || "member";
-                  const roleLabel = role === "child" ? "Dítě" : role === "partner" ? "Partner" : role === "primary" ? "Hlavní člen" : "Člen";
+                  const roleLabel = householdRoleLabel(member.role ?? null);
                   return (
                     <MobileCard key={member.id} className="p-3.5 flex items-center gap-3">
                       <div className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-xs font-black ${role === "child" ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-700"}`}>

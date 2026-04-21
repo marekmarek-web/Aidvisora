@@ -8,9 +8,17 @@ import type { CanonicalProduct } from "@/lib/products/canonical-product-read";
 import { fundLibraryLogoPathForPortal } from "@/lib/fund-library/shared-future-value";
 import { resolveInstitutionLogo } from "@/lib/institutions/institution-logo";
 
-export function formatPortalPremiumLineCs(monthly: string | null, annual: string | null): string {
+export function formatPortalPremiumLineCs(
+  monthly: string | null,
+  annual: string | null,
+  paymentType?: "one_time" | "regular" | null,
+): string {
   const m = Number(monthly ?? "");
   const y = Number(annual ?? "");
+  // Jednorázová investice: částka je lump-sum — NESMÍ být formátována jako /rok ani /měsíc.
+  if (paymentType === "one_time" && Number.isFinite(m) && m > 0) {
+    return `${m.toLocaleString("cs-CZ")} Kč jednorázově`;
+  }
   if (Number.isFinite(y) && y > 0) return `${y.toLocaleString("cs-CZ")} Kč / rok`;
   if (Number.isFinite(m) && m > 0) return `${m.toLocaleString("cs-CZ")} Kč / měsíc`;
   return "Dle smlouvy";
@@ -36,6 +44,11 @@ export function resolveFvMonthlyContribution(p: CanonicalProduct): number | null
   if (p.segment === "DPS" && p.segmentDetail?.kind === "pension") {
     const explicit = p.segmentDetail.participantContributionNumeric;
     if (explicit != null && explicit > 0) return explicit;
+  }
+  // U jednorázové investice je částka v `premiumAmount` lump-sum, ne měsíční příspěvek.
+  // Nechceme, aby FV vrstva počítala „1 000 000 Kč měsíčně“ → vracíme null a FV modul ať to bere jako lump sum.
+  if (p.segmentDetail?.kind === "investment" && p.segmentDetail.paymentType === "one_time") {
+    return null;
   }
   return p.premiumMonthly;
 }
@@ -122,12 +135,22 @@ export function canonicalPortfolioDetailRows(p: CanonicalProduct): { label: stri
     if (d.investmentStrategy) rows.push({ label: "Strategie", value: d.investmentStrategy });
     if (d.investmentHorizon) rows.push({ label: "Investiční horizont", value: d.investmentHorizon });
     if (d.monthlyContribution != null && d.monthlyContribution > 0) {
-      rows.push({
-        label: "Pravidelná částka",
-        value: `${d.monthlyContribution.toLocaleString("cs-CZ")} Kč / měsíc`,
-      });
+      if (d.paymentType === "one_time") {
+        rows.push({
+          label: "Jednorázová investice",
+          value: `${d.monthlyContribution.toLocaleString("cs-CZ")} Kč`,
+        });
+      } else {
+        rows.push({
+          label: "Pravidelná částka",
+          value: `${d.monthlyContribution.toLocaleString("cs-CZ")} Kč / měsíc`,
+        });
+      }
     }
-    if (d.targetAmount) rows.push({ label: "Cílová částka", value: d.targetAmount });
+    // Cílová částka nemá u jednorázové investice smysl — je výstupem spořícího modelu × období.
+    if (d.paymentType !== "one_time" && d.targetAmount) {
+      rows.push({ label: "Cílová částka", value: d.targetAmount });
+    }
   } else if (d?.kind === "life_insurance") {
     const cn = p.contractNumber?.trim();
     if (cn) rows.push({ label: "Číslo smlouvy", value: cn });

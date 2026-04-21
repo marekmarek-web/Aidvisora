@@ -179,8 +179,12 @@ function ContractDetailCard({
   // Format premium display from canonical fields
   const premiumMonthly = product.premiumMonthly;
   const premiumAnnual = product.premiumAnnual;
+  const investmentPaymentType =
+    product.segmentDetail?.kind === "investment" ? product.segmentDetail.paymentType : null;
   let premium = "—";
-  if (premiumMonthly) {
+  if (investmentPaymentType === "one_time" && premiumMonthly) {
+    premium = premiumMonthly.toLocaleString("cs-CZ", { maximumFractionDigits: 0 }) + " Kč jednorázově";
+  } else if (premiumMonthly) {
     premium = premiumMonthly.toLocaleString("cs-CZ", { maximumFractionDigits: 0 }) + " Kč / měs";
   } else if (premiumAnnual) {
     premium = premiumAnnual.toLocaleString("cs-CZ", { maximumFractionDigits: 0 }) + " Kč / rok";

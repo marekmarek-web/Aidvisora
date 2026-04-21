@@ -103,7 +103,10 @@ export type InvestmentDetail = {
   fundAllocation: string | null;
   investmentStrategy: string | null;
   investmentHorizon: string | null;
+  /** U `paymentType === "one_time"` je v této hodnotě jednorázová částka (ne měsíční). */
   monthlyContribution: number | null;
+  /** "one_time" = jednorázová investice; "regular" = pravidelná; null = neznámo. */
+  paymentType: "one_time" | "regular" | null;
   targetAmount: string | null;
   resolvedFundId: string | null;
   resolvedFundCategory: ResolvedFundCategory | null;
@@ -274,6 +277,12 @@ function resolveDisplayProductName(
 // Per-segment detail builders
 // ---------------------------------------------------------------------------
 
+function readPaymentType(attrs: Record<string, unknown>): "one_time" | "regular" | null {
+  const raw = attrs.paymentType;
+  if (raw === "one_time" || raw === "regular") return raw;
+  return null;
+}
+
 function buildInvestmentDetail(
   contract: RawContractInput,
   attrs: Record<string, unknown>,
@@ -286,6 +295,7 @@ function buildInvestmentDetail(
     investmentStrategy: safeString(attrs.investmentStrategy),
     investmentHorizon: safeString(attrs.investmentHorizon),
     monthlyContribution: safeNumber(contract.premiumAmount),
+    paymentType: readPaymentType(attrs),
     targetAmount: safeString(attrs.targetAmount),
     resolvedFundId: safeString(attrs.resolvedFundId),
     resolvedFundCategory: (attrs.resolvedFundCategory as ResolvedFundCategory) ?? null,
