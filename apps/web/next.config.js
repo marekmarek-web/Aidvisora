@@ -19,6 +19,12 @@ const nextConfig = {
         source: "/.well-known/apple-app-site-association",
         destination: "/api/apple-app-site-association",
       },
+      // Android App Links handshake (analogie k Apple souboru výše). Google
+      // Play vyžaduje `assetlinks.json` bez redirectu. Viz `docs/android/APP-LINKS.md`.
+      {
+        source: "/.well-known/assetlinks.json",
+        destination: "/api/assetlinks",
+      },
     ];
   },
   async redirects() {
@@ -26,6 +32,74 @@ const nextConfig = {
     // `apps/web/src/app/vop/page.tsx` a `apps/web/src/app/dpa/page.tsx` —
     // necháváme tam, aby se legal routing nešířil do dvou míst.
     return [];
+  },
+  async headers() {
+    // Security headers (A6 delta audit). CSP runs v `Report-Only` módu, dokud
+    // neověříme, že allowlist pokrývá všechny produkční callery (Stripe, Supabase,
+    // Vimeo, Vercel, Sentry, Google Fonts, Resend attachmenty). Přepnutí na
+    // `Content-Security-Policy` (enforcing) = CUTLIST item po 2 týdnech monitoringu.
+    const csp = [
+      "default-src 'self'",
+      // Next inline runtime + Vercel Speed Insights. `unsafe-inline` je nutné pro
+      // Next 16 dev; `unsafe-eval` jen v dev.
+      "script-src 'self' 'unsafe-inline' " +
+        (process.env.NODE_ENV === "production" ? "" : "'unsafe-eval' ") +
+        "https://js.stripe.com " +
+        "https://player.vimeo.com " +
+        "https://www.youtube.com " +
+        "https://*.vercel-insights.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' data: https://fonts.gstatic.com",
+      "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https://*.public.blob.vercel-storage.com https://lh3.googleusercontent.com https://i.vimeocdn.com https://i.ytimg.com",
+      "media-src 'self' blob: https://*.supabase.co https://player.vimeo.com",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://api.resend.com https://*.sentry.io https://*.ingest.sentry.io https://*.ingest.de.sentry.io https://*.ingest.us.sentry.io https://api.openai.com https://api.anthropic.com https://*.vercel-insights.com",
+      "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://player.vimeo.com https://www.youtube.com",
+      "worker-src 'self' blob:",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self' https://checkout.stripe.com https://billing.stripe.com",
+      "frame-ancestors 'none'",
+      "upgrade-insecure-requests",
+      "report-uri /api/security/csp-report",
+    ].join("; ");
+
+    const baseHeaders = [
+      { key: "X-Content-Type-Options", value: "nosniff" },
+      { key: "X-Frame-Options", value: "DENY" },
+      { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+      {
+        key: "Permissions-Policy",
+        // Aidvisora používá kameru (AI Review scan), mikrofon NE, geoloc NE,
+        // clipboard-write ano (kopírování telefonního čísla / IBAN v detailu klienta).
+        value:
+          "camera=(self), microphone=(), geolocation=(), payment=(self), fullscreen=(self), clipboard-write=(self), interest-cohort=()",
+      },
+      { key: "X-DNS-Prefetch-Control", value: "on" },
+      // Next 16 respektuje header "Content-Security-Policy-Report-Only". Po 2
+      // týdnech produkce → flip na "Content-Security-Policy" (enforcing).
+      { key: "Content-Security-Policy-Report-Only", value: csp },
+    ];
+
+    const productionHeaders = [
+      { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+    ];
+
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          ...baseHeaders,
+          ...(process.env.NODE_ENV === "production" ? productionHeaders : []),
+        ],
+      },
+      // Universal links / asset links musí být bez cache & frame-ancestors. Pozn.:
+      // default headers se aplikují i tady — pro tyto soubory Apple/Google nepřečtou
+      // CSP, ale frame-ancestors='none' a ostatní nevadí.
+      {
+        source: "/.well-known/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=300, s-maxage=300" }],
+      },
+    ];
   },
   // Monorepo: lockfile lives at git repo root (project name e.g. aidvisora). A parent folder
   // on disk may contain another pnpm-lock.yaml — pin tracing root so Next does not infer the wrong root.

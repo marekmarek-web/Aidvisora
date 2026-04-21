@@ -242,6 +242,68 @@ describe("Phase 3F — dedicated payment instruction envelope", () => {
   });
 });
 
+describe("FUNDOO RYTMUS pravidelná investice — summary nesmí ukázat totál jako měsíční", () => {
+  // Reprodukce reálného bugu: 3 000 Kč/měs × 12 × 16 let = 576 000 Kč (intendedInvestment).
+  // Dřív summary ukázal „576 000 CZK (měsíčně)" místo „3 000 CZK (měsíčně)".
+  it("vybere investmentPremium (3 000) místo intendedInvestment (576 000) v Platby řádku", () => {
+    const env = minimalEnvelope("final_contract", "investment_subscription_document");
+    env.extractedFields = {
+      investmentPremium: { value: "3 000", status: "extracted", confidence: 0.92 },
+      intendedInvestment: { value: "576 000", status: "extracted", confidence: 0.9 },
+      paymentFrequency: { value: "měsíčně", status: "extracted", confidence: 0.95 },
+      iban: { value: "CZ9727000000001387691786", status: "extracted", confidence: 0.92 },
+      variableSymbol: { value: "7023398569", status: "extracted", confidence: 0.9 },
+      currency: { value: "CZK", status: "extracted", confidence: 0.99 },
+      institutionName: { value: "AMUNDI", status: "extracted", confidence: 0.9 },
+      productName: { value: "AMUNDI PLATFORMA Pravidelné investování RYTMUS FUNDOO", status: "extracted", confidence: 0.9 },
+    };
+    const vm = buildAdvisorReviewViewModel({ envelope: env });
+    expect(vm.payments).toMatch(/3\s?000.*měsíčně/);
+    expect(vm.payments).not.toMatch(/576\s?000.*měsíčně/);
+  });
+
+  it("fallback na contributionAmount když investmentPremium chybí", () => {
+    const env = minimalEnvelope("final_contract", "investment_subscription_document");
+    env.extractedFields = {
+      contributionAmount: { value: "3 000", status: "extracted", confidence: 0.9 },
+      intendedInvestment: { value: "576 000", status: "extracted", confidence: 0.9 },
+      paymentFrequency: { value: "měsíčně", status: "extracted", confidence: 0.95 },
+      iban: { value: "CZ9727000000001387691786", status: "extracted", confidence: 0.9 },
+      variableSymbol: { value: "7023398569", status: "extracted", confidence: 0.9 },
+      currency: { value: "CZK", status: "extracted", confidence: 0.99 },
+    };
+    const cp = buildCanonicalPaymentPayload(env);
+    expect(cp.amount).toMatch(/3\s?000/);
+    expect(cp.amount).not.toMatch(/576\s?000/);
+  });
+
+  it("když reálná splátka zcela chybí, NESMÍ se intendedInvestment propsat jako měsíční částka", () => {
+    const env = minimalEnvelope("final_contract", "investment_subscription_document");
+    env.extractedFields = {
+      intendedInvestment: { value: "576 000", status: "extracted", confidence: 0.9 },
+      paymentFrequency: { value: "měsíčně", status: "extracted", confidence: 0.95 },
+      iban: { value: "CZ9727000000001387691786", status: "extracted", confidence: 0.9 },
+      variableSymbol: { value: "7023398569", status: "extracted", confidence: 0.9 },
+      currency: { value: "CZK", status: "extracted", confidence: 0.99 },
+    };
+    const cp = buildCanonicalPaymentPayload(env);
+    expect(cp.amount).not.toMatch(/576\s?000/);
+  });
+
+  it("jednorázová investice: intendedInvestment SMÍ být použit (to je skutečná jistina)", () => {
+    const env = minimalEnvelope("final_contract", "investment_subscription_document");
+    env.extractedFields = {
+      intendedInvestment: { value: "1 000 000", status: "extracted", confidence: 0.95 },
+      paymentFrequency: { value: "jednorázově", status: "extracted", confidence: 0.95 },
+      iban: { value: "CZ9727000000001387691786", status: "extracted", confidence: 0.9 },
+      variableSymbol: { value: "7023398569", status: "extracted", confidence: 0.9 },
+      currency: { value: "CZK", status: "extracted", confidence: 0.99 },
+    };
+    const cp = buildCanonicalPaymentPayload(env);
+    expect(cp.amount).toMatch(/1\s?000\s?000/);
+  });
+});
+
 describe("Phase 3F — buildCanonicalPaymentPayloadFromRaw parity", () => {
   it("matches envelope-derived canonical for same extractedFields", () => {
     const env = minimalEnvelope("final_contract");

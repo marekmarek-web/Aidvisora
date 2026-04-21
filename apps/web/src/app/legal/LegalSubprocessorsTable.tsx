@@ -27,9 +27,25 @@ const ROWS: { name: string; purpose: string; region: string }[] = [
     region: "Mezinárodní zpracování dle nastavení Stripe a platných záruk",
   },
   {
-    name: "OpenAI / jiný poskytovatel LLM",
-    purpose: "Technické zpracování požadavků u funkcí založených na AI (pokud jsou zapnuty)",
-    region: "Dle nastavení produkčního režimu a smluv; u mezinárodního přenosu vhodné záruky (např. SCC)",
+    name: "OpenAI, L.L.C.",
+    purpose:
+      "Technické zpracování požadavků u funkcí založených na AI (klasifikace dokumentů, kopilot, shrnutí) — pokud je funkce aktivní",
+    region:
+      "USA; Data Processing Addendum (DPA) poskytovatele, u mezinárodního přenosu vhodné záruky (SCC); opt-out z trénování modelů v rámci účtu",
+  },
+  {
+    name: "Anthropic PBC (Claude)",
+    purpose:
+      "Technické zpracování požadavků u AI Review (extrakce smluv, review decision) — pokud je funkce aktivní",
+    region:
+      "USA; Data Processing Addendum (DPA) poskytovatele, SCC; business accounts neposílají data do tréninku",
+  },
+  {
+    name: "Google (Firebase Cloud Messaging)",
+    purpose:
+      "Doručování push notifikací do mobilní aplikace (APNs/FCM); obsah notifikace projde infrastrukturou Google",
+    region:
+      "Globální; DPA Google Cloud / Firebase, SCC u přenosu mimo EHP",
   },
 ];
 

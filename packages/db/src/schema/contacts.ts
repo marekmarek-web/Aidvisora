@@ -63,6 +63,17 @@ export const contacts = pgTable("contacts", {
   lastServiceReminderSentAt: timestamp("last_service_reminder_sent_at", { withTimezone: true }),
   archivedAt: timestamp("archived_at", { withTimezone: true }),
   archivedReason: text("archived_reason"),
+  /**
+   * Delta A21 — 30denní soft-delete buffer.
+   * `deletedAt` ≠ `archivedAt`:
+   *   - `archivedAt` = advisor označil kontakt jako "neaktivní" (schováme z výchozích seznamů).
+   *   - `deletedAt`  = advisor / klient požádal o trvalé odstranění. Kontakt je v trashi 30 dní,
+   *     po kterých cron `trash-purge-contacts` spustí skutečné hard-delete přes CASCADE.
+   *     Během 30 dnů lze restore přes `/portal/admin/trash`.
+   */
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  deletedBy: text("deleted_by"),
+  deletedReason: text("deleted_reason"),
   preferredChannel: text("preferred_channel"),
   doNotEmail: boolean("do_not_email").notNull().default(false),
   doNotPush: boolean("do_not_push").notNull().default(false),

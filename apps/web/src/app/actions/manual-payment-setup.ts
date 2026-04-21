@@ -116,6 +116,104 @@ export async function createManualPaymentSetup(
   return { ok: true, id: inserted.id };
 }
 
+export type ManualPaymentSetupUpdateInput = ManualPaymentSetupInput & {
+  /** ID existující platební instrukce, která se má přepsat. */
+  id: string;
+};
+
+export async function updateManualPaymentSetup(
+  input: ManualPaymentSetupUpdateInput
+): Promise<ManualPaymentSetupResult> {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, "contacts:write")) {
+    return { ok: false, error: "Nemáte oprávnění upravovat platební instrukce." };
+  }
+
+  const { id, contactId } = input;
+  if (!id) return { ok: false, error: "Chybí ID platební instrukce." };
+
+  const [existing] = await db
+    .select({ id: clientPaymentSetups.id })
+    .from(clientPaymentSetups)
+    .where(
+      and(
+        eq(clientPaymentSetups.id, id),
+        eq(clientPaymentSetups.tenantId, auth.tenantId),
+        eq(clientPaymentSetups.contactId, contactId)
+      )
+    )
+    .limit(1);
+
+  if (!existing) {
+    return { ok: false, error: "Platební instrukce nenalezena." };
+  }
+
+  const providerName = input.providerName.trim();
+  if (!providerName) return { ok: false, error: "Název instituce je povinný." };
+
+  const accountNumberRaw = (input.iban?.trim() || input.accountNumber?.trim()) || null;
+  if (!accountNumberRaw) return { ok: false, error: "Číslo účtu nebo IBAN je povinné." };
+
+  const variableSymbol = input.variableSymbol?.trim() || null;
+  if (!variableSymbol) return { ok: false, error: "Variabilní symbol je povinný." };
+
+  let amountValue: string | null = null;
+  if (input.amount?.trim()) {
+    const numeric = parseFloat(input.amount.replace(/[^\d.,]/g, "").replace(",", "."));
+    if (!isNaN(numeric) && numeric > 0) {
+      amountValue = String(numeric);
+    }
+  }
+
+  const ibanVal = input.iban?.trim() || null;
+  let accountNumberField: string | null = null;
+  let bankCodeField: string | null = null;
+
+  if (!ibanVal && accountNumberRaw) {
+    const deduped = dedupeCzechAccountTrailingBankCode(accountNumberRaw);
+    const slashIdx = deduped.indexOf("/");
+    if (slashIdx !== -1) {
+      accountNumberField = deduped.substring(0, slashIdx).trim();
+      bankCodeField = deduped.substring(slashIdx + 1).trim();
+    } else {
+      accountNumberField = deduped;
+    }
+  }
+
+  await db
+    .update(clientPaymentSetups)
+    .set({
+      paymentType: mapSegmentToPaymentType(input.segment),
+      segment: input.segment,
+      providerName,
+      productName: input.productName?.trim() || null,
+      accountNumber: accountNumberField,
+      bankCode: bankCodeField,
+      iban: ibanVal,
+      variableSymbol,
+      constantSymbol: input.constantSymbol?.trim() || null,
+      specificSymbol: input.specificSymbol?.trim() || null,
+      amount: amountValue,
+      currency: (() => {
+        const raw = (input.currency ?? "").trim().toUpperCase();
+        return raw && SUPPORTED_PAYMENT_CURRENCIES.has(raw) ? raw : "CZK";
+      })(),
+      frequency: input.frequency?.trim() || null,
+      firstPaymentDate: input.firstPaymentDate?.trim() || null,
+      visibleToClient: input.visibleToClient,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(clientPaymentSetups.id, id),
+        eq(clientPaymentSetups.tenantId, auth.tenantId),
+        eq(clientPaymentSetups.contactId, contactId)
+      )
+    );
+
+  return { ok: true, id };
+}
+
 export async function deleteManualPaymentSetup(
   id: string,
   contactId: string

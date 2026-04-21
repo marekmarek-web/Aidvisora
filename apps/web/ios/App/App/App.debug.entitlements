@@ -8,5 +8,16 @@
 	<array>
 		<string>group.cz.aidvisora.app</string>
 	</array>
+	<!--
+		Delta A12 — Universal Links + webcredentials pro aidvisora.cz (i v debug buildu,
+		aby šlo UL otestovat přes TestFlight / lokálně proti preview deploymentu).
+		?mode=developer lze doplnit v Xcode Console pro přepnutí na staging host.
+	-->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:aidvisora.cz</string>
+		<string>applinks:www.aidvisora.cz</string>
+		<string>webcredentials:aidvisora.cz</string>
+	</array>
 </dict>
 </plist>

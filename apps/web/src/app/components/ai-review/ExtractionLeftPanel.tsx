@@ -45,6 +45,7 @@ import {
 import type { PrimaryDocumentType } from "@/lib/ai/document-review-types";
 import { CanonicalFieldsPanel } from "./CanonicalFieldsPanel";
 import { ReviewAttachClientDialog } from "./ReviewAttachClientDialog";
+import { PaymentManualFillCard } from "./PaymentManualFillCard";
 import { formatAiClassifierForAdvisor, humanizeReviewReasonLine } from "@/lib/ai-review/czech-labels";
 import { resolveEffectiveFieldStatus } from "@/lib/ai-review/field-visual-status";
 import type {
@@ -347,6 +348,7 @@ function AdvisorOverviewCard({ doc }: { doc: ExtractionDocument }) {
       {ar.paymentSyncPreview ? (
         <PaymentSyncPreviewCard preview={ar.paymentSyncPreview} />
       ) : null}
+      <PaymentManualFillCard doc={doc} />
       {ar.manualChecklist.length > 0 ? (
         <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/60 p-4">
           <p className="text-[10px] font-black uppercase tracking-widest text-amber-900 mb-2 flex items-center gap-2">

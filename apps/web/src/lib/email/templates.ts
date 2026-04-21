@@ -948,3 +948,231 @@ export function documentAttachmentEmailTemplate(params: { documentName: string }
     bodyHtml,
   });
 }
+
+// ---------------------------------------------------------------------------
+// Billing / subscription lifecycle templates (delta A4)
+// Volaní z Stripe webhooku (invoice.payment_failed, customer.subscription.deleted,
+// customer.subscription.trial_will_end) + crons (grace-period check).
+// ---------------------------------------------------------------------------
+
+const BILLING_PORTAL_PATH = "/portal/predplatne";
+
+export function trialEndingTemplate(params: {
+  advisorName?: string;
+  daysLeft: number;
+  trialEndsAt: string;
+  billingPortalUrl?: string;
+}) {
+  const plural = params.daysLeft === 1 ? "den" : params.daysLeft < 5 ? "dny" : "dní";
+  const subject = `Zkušební období končí za ${params.daysLeft} ${plural}`;
+  const url = params.billingPortalUrl ?? `${normalizedSiteUrl()}${BILLING_PORTAL_PATH}`;
+
+  const bodyHtml = [
+    greeting(params.advisorName),
+    paragraph(
+      `vaše zkušební období Aidvisory končí <strong style="color:#0B1021;">${e(params.trialEndsAt)}</strong>. Poté začne běžet placené předplatné podle zvoleného tarifu — přechod proběhne automaticky, pokud jste zadali platební kartu.`,
+    ),
+    paragraph(
+      "Pokud ještě nemáte kartu nebo chcete změnit tarif, otevřete fakturaci a upravte nastavení. Jinak nemusíte nic dělat — vaše data, klienti a nastavení zůstanou zachovány.",
+    ),
+    `<div style="margin-top:28px;text-align:center;">${brandedButton(
+      "Otevřít fakturaci",
+      url,
+    )}</div>`,
+    signature(),
+  ].join("");
+
+  const secondaryBoxHtml = infoBox({
+    title: "Co se změní",
+    bodyHtml:
+      `<p style="margin:0;font-family:'Inter',sans-serif;font-size:14px;line-height:1.6;color:#64748B;">` +
+      `Po skončení zkušebního období běží účet v placeném režimu. Fakturu najdete ve fakturačním portálu a posíláme ji i e-mailem. Pokud si budete chtít Aidvisoru zrušit, jednoklikové zrušení je vždy dostupné ve fakturačním portálu.` +
+      `</p>`,
+  });
+
+  return buildTemplate({
+    subject,
+    preheader: `Zkušební období končí ${params.trialEndsAt}. Připravte si kartu nebo upravte tarif.`,
+    badge: "Předplatné",
+    headline: "Zkušební období končí",
+    bodyHtml,
+    secondaryBoxHtml,
+  });
+}
+
+export function paymentFailedTemplate(params: {
+  advisorName?: string;
+  invoiceNumber?: string;
+  amountFormatted: string;
+  nextRetryAt?: string;
+  gracePeriodEnds?: string;
+  billingPortalUrl?: string;
+}) {
+  const subject = "Platba se nezdařila — aktualizujte platební metodu";
+  const url = params.billingPortalUrl ?? `${normalizedSiteUrl()}${BILLING_PORTAL_PATH}`;
+
+  const details: string[] = [
+    params.invoiceNumber
+      ? `<strong style="color:#0B1021;">Faktura č. ${e(params.invoiceNumber)}</strong>`
+      : "",
+    `Částka: <strong style="color:#0B1021;">${e(params.amountFormatted)}</strong>`,
+    params.nextRetryAt
+      ? `Automatické opakování pokusu: <strong style="color:#0B1021;">${e(params.nextRetryAt)}</strong>`
+      : "",
+    params.gracePeriodEnds
+      ? `Účet zůstane aktivní do: <strong style="color:#0B1021;">${e(params.gracePeriodEnds)}</strong>`
+      : "",
+  ].filter(Boolean);
+
+  const bodyHtml = [
+    greeting(params.advisorName),
+    paragraph("při poslední platbě se nepodařilo strhnout částku z karty. Nejčastější důvody bývají nedostatek prostředků, expirace karty nebo 3‑D Secure blokace."),
+    bulletList(details),
+    paragraph(
+      "Prosíme, aktualizujte platební metodu ve fakturačním portálu — opakování proběhne automaticky. Do té doby zůstává účet plně funkční.",
+      0,
+    ),
+    `<div style="margin-top:28px;text-align:center;">${brandedButton(
+      "Aktualizovat platební metodu",
+      url,
+    )}</div>`,
+    signature(),
+  ].join("");
+
+  const secondaryBoxHtml = infoBox({
+    title: "Pokud nestihnete reagovat",
+    bodyHtml:
+      `<p style="margin:0;font-family:'Inter',sans-serif;font-size:14px;line-height:1.6;color:#64748B;">` +
+      `Po vyčerpání 7denní grace period se účet dočasně pozastaví. Data, klienti a dokumenty zůstávají bezpečně uložené — po obnovení platby se vše okamžitě vrátí. Pro otázky napište na <a href="mailto:${SUPPORT_EMAIL}" class="link-hover" style="color:#5A4BFF;text-decoration:underline;">${SUPPORT_EMAIL}</a>.` +
+      `</p>`,
+  });
+
+  return buildTemplate({
+    subject,
+    preheader: `Platba ${params.amountFormatted} se nezdařila. Aktualizujte kartu ve fakturačním portálu.`,
+    badge: "Upozornění",
+    headline: "Platba se nezdařila",
+    bodyHtml,
+    secondaryBoxHtml,
+  });
+}
+
+export function gracePeriodReminderTemplate(params: {
+  advisorName?: string;
+  gracePeriodEnds: string;
+  billingPortalUrl?: string;
+}) {
+  const subject = "Účet bude pozastaven — poslední výzva k platbě";
+  const url = params.billingPortalUrl ?? `${normalizedSiteUrl()}${BILLING_PORTAL_PATH}`;
+
+  const bodyHtml = [
+    greeting(params.advisorName),
+    paragraph(
+      `připomínáme, že u vašeho Aidvisora účtu se nepodařilo strhnout poslední platbu. Grace period končí <strong style="color:#0B1021;">${e(params.gracePeriodEnds)}</strong>, poté účet přejde do režimu jen pro čtení (data zůstávají, ale nepůjde vytvářet nové záznamy).`,
+    ),
+    paragraph(
+      "Aktualizujte prosím platební metodu, abychom mohli platbu dokončit a nenarušit vám provoz.",
+      0,
+    ),
+    `<div style="margin-top:28px;text-align:center;">${brandedButton(
+      "Vyřešit platbu",
+      url,
+    )}</div>`,
+    signature(),
+  ].join("");
+
+  return buildTemplate({
+    subject,
+    preheader: `Grace period končí ${params.gracePeriodEnds}.`,
+    badge: "Poslední výzva",
+    headline: "Grace period končí",
+    bodyHtml,
+  });
+}
+
+export function subscriptionCanceledTemplate(params: {
+  advisorName?: string;
+  effectiveUntil?: string;
+  reactivationUrl?: string;
+  exportUrl?: string;
+}) {
+  const subject = "Potvrzení zrušení předplatného Aidvisora";
+  const reactivate =
+    params.reactivationUrl ?? `${normalizedSiteUrl()}${BILLING_PORTAL_PATH}`;
+
+  const bodyHtml = [
+    greeting(params.advisorName),
+    paragraph("potvrzujeme zrušení vašeho Aidvisora předplatného. Děkujeme za čas, který jste s Aidvisora strávili."),
+    params.effectiveUntil
+      ? paragraph(
+          `Přístup k účtu vám zůstává do <strong style="color:#0B1021;">${e(params.effectiveUntil)}</strong>. Do té doby můžete volně exportovat klientská data a dokumenty.`,
+        )
+      : "",
+    paragraph(
+      "Pokud si to rozmyslíte, účet lze kdykoli reaktivovat ve fakturačním portálu — vaše data, klienti, dokumenty a konfigurace zůstávají uložené podle retenční politiky (viz Zásady zpracování osobních údajů).",
+      0,
+    ),
+    `<div style="margin-top:28px;text-align:center;">${brandedButton(
+      "Reaktivovat účet",
+      reactivate,
+    )}</div>`,
+    params.exportUrl
+      ? `<div style="margin-top:16px;text-align:center;">${ghostButton("Exportovat data", params.exportUrl)}</div>`
+      : "",
+    signature(),
+  ].join("");
+
+  const secondaryBoxHtml = infoBox({
+    title: "Vaše data",
+    bodyHtml:
+      `<p style="margin:0 0 12px 0;font-family:'Inter',sans-serif;font-size:14px;line-height:1.6;color:#64748B;">` +
+      `Po ukončení přístupu držíme data 90 dnů v záloze pro případ reaktivace. Poté následuje definitivní smazání podle čl. 17 GDPR.` +
+      `</p>` +
+      `<p style="margin:0;font-family:'Inter',sans-serif;font-size:14px;line-height:1.6;color:#64748B;">` +
+      `Dotazy ohledně exportu / smazání pište na <a href="mailto:${SUPPORT_EMAIL}" class="link-hover" style="color:#5A4BFF;text-decoration:underline;">${SUPPORT_EMAIL}</a>.` +
+      `</p>`,
+  });
+
+  return buildTemplate({
+    subject,
+    preheader: "Předplatné bylo zrušeno. Data zůstávají zachována.",
+    badge: "Předplatné",
+    headline: "Předplatné zrušeno",
+    bodyHtml,
+    secondaryBoxHtml,
+  });
+}
+
+export function invoiceReceiptTemplate(params: {
+  advisorName?: string;
+  invoiceNumber: string;
+  amountFormatted: string;
+  periodLabel?: string;
+  hostedInvoiceUrl?: string;
+  pdfUrl?: string;
+}) {
+  const subject = `Potvrzení platby — faktura ${params.invoiceNumber}`;
+
+  const bodyHtml = [
+    greeting(params.advisorName),
+    paragraph(
+      `děkujeme — platba za ${params.periodLabel ? e(params.periodLabel) : "předplatné Aidvisory"} ve výši <strong style="color:#0B1021;">${e(params.amountFormatted)}</strong> proběhla úspěšně.`,
+    ),
+    paragraph(`Faktura č. <strong style="color:#0B1021;">${e(params.invoiceNumber)}</strong> je připravena k zobrazení a stažení.`, 0),
+    params.hostedInvoiceUrl
+      ? `<div style="margin-top:28px;text-align:center;">${brandedButton("Zobrazit fakturu", params.hostedInvoiceUrl)}</div>`
+      : "",
+    params.pdfUrl
+      ? `<div style="margin-top:16px;text-align:center;">${ghostButton("Stáhnout PDF", params.pdfUrl)}</div>`
+      : "",
+    signature(),
+  ].join("");
+
+  return buildTemplate({
+    subject,
+    preheader: `Platba ${params.amountFormatted} proběhla. Faktura v příloze.`,
+    badge: "Potvrzení",
+    headline: "Platba proběhla",
+    bodyHtml,
+  });
+}

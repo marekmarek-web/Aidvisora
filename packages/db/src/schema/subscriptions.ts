@@ -19,6 +19,8 @@ export const subscriptions = pgTable("subscriptions", {
   promoCode: text("promo_code"),
   /** Kdy se workspace přepnul do restricted kvůli neuhrazené faktuře. */
   restrictedAt: timestamp("restricted_at", { withTimezone: true }),
+  /** Kdy jsme naposledy poslali grace-period reminder, abychom neposílali každý cron tick. */
+  gracePeriodReminderSentAt: timestamp("grace_period_reminder_sent_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

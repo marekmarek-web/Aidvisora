@@ -17,6 +17,13 @@ import {
   writeBillingAudit,
   type BillingAuditAction,
 } from "@/lib/stripe/billing-audit";
+import {
+  sendPaymentFailedEmail,
+  sendSubscriptionCanceledEmail,
+  sendInvoiceReceiptEmail,
+  sendTrialEndingEmail,
+} from "@/lib/stripe/billing-email-notifier";
+import { recordTermsAcceptance } from "@/lib/legal/terms-acceptance";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +57,18 @@ async function handleStripeEvent(event: Stripe.Event): Promise<void> {
       await upsertSubscriptionFromStripe(tenantId, sub);
       await markTenantTrialConverted(tenantId);
 
+      // Delta A10: při checkoutu uživatel akceptuje Terms + DPA (tlačítko
+      // "Zaplatit a přijmout podmínky"). Evidujeme jako důkaz pro enterprise DD.
+      const stripeUserId = session.metadata?.user_id?.trim() || null;
+      if (stripeUserId) {
+        await recordTermsAcceptance({
+          userId: stripeUserId,
+          tenantId,
+          context: "checkout",
+          documents: ["terms", "dpa", "privacy"],
+        });
+      }
+
       await writeBillingAudit({
         tenantId,
         action: BILLING_AUDIT_ACTIONS.CHECKOUT_COMPLETED,
@@ -60,6 +79,35 @@ async function handleStripeEvent(event: Stripe.Event): Promise<void> {
           subscriptionId: sub.id,
           status: sub.status,
           promoCode: session.metadata?.promo_code ?? null,
+        },
+      });
+      return;
+    }
+    case "customer.subscription.trial_will_end": {
+      const sub = event.data.object as Stripe.Subscription;
+      const tenantId = await resolveTenantIdForSubscription(sub);
+      if (!tenantId) return;
+      const trialEnd = sub.trial_end ? new Date(sub.trial_end * 1000) : null;
+      const daysLeft = trialEnd
+        ? Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / 86_400_000))
+        : 3;
+      if (trialEnd) {
+        await sendTrialEndingEmail({
+          tenantId,
+          daysLeft,
+          trialEndsAt: trialEnd,
+        });
+      }
+      await writeBillingAudit({
+        tenantId,
+        action: BILLING_AUDIT_ACTIONS.SUBSCRIPTION_UPDATED,
+        actorKind: "webhook",
+        stripeEventId: event.id,
+        stripeObjectId: sub.id,
+        metadata: {
+          trialWillEnd: true,
+          trialEnd: trialEnd?.toISOString() ?? null,
+          daysLeft,
         },
       });
       return;
@@ -78,6 +126,14 @@ async function handleStripeEvent(event: Stripe.Event): Promise<void> {
       await upsertSubscriptionFromStripe(tenantId, sub);
       if (event.type !== "customer.subscription.deleted") {
         await markTenantTrialConverted(tenantId);
+      }
+
+      if (event.type === "customer.subscription.deleted") {
+        const effectiveUntilUnix = sub.items.data[0]?.current_period_end ?? null;
+        await sendSubscriptionCanceledEmail({
+          tenantId,
+          effectiveUntil: effectiveUntilUnix ? new Date(effectiveUntilUnix * 1000) : null,
+        });
       }
 
       const action: BillingAuditAction =
@@ -141,6 +197,10 @@ async function handleStripeEvent(event: Stripe.Event): Promise<void> {
       if (!tenantId) return;
       await upsertInvoiceFromStripe(tenantId, inv);
 
+      if (inv.amount_paid > 0) {
+        await sendInvoiceReceiptEmail({ tenantId, invoice: inv });
+      }
+
       const recovery = await applySucceededInvoiceToSubscription(tenantId);
       if (recovery.recoveredFromDunning) {
         await writeBillingAudit({
@@ -177,6 +237,12 @@ async function handleStripeEvent(event: Stripe.Event): Promise<void> {
       await upsertInvoiceFromStripe(tenantId, inv);
 
       const dunning = await applyFailedInvoiceToSubscription(tenantId);
+
+      await sendPaymentFailedEmail({
+        tenantId,
+        invoice: inv,
+        gracePeriodEndsAt: dunning.gracePeriodEndsAt ?? null,
+      });
 
       await writeBillingAudit({
         tenantId,

@@ -9,6 +9,7 @@ import {
   Eye,
   EyeOff,
   Loader2,
+  Pencil,
   X,
 } from "lucide-react";
 import {
@@ -82,11 +83,13 @@ function PaymentSetupCard({
   contactId,
   onDeleted,
   onVisibilityChanged,
+  onEdit,
 }: {
   row: PaymentSetupRow;
   contactId: string;
   onDeleted: (id: string) => void;
   onVisibilityChanged: (id: string, visible: boolean) => void;
+  onEdit: (row: PaymentSetupRow) => void;
 }) {
   const [isPending, startTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -155,6 +158,16 @@ function PaymentSetupCard({
         <div className="flex items-center gap-1 shrink-0">
           <button
             type="button"
+            onClick={() => onEdit(row)}
+            disabled={isPending}
+            title="Upravit instrukci"
+            className="p-2 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors disabled:opacity-50 min-h-[36px] min-w-[36px] flex items-center justify-center"
+            aria-label="Upravit platební instrukci"
+          >
+            <Pencil size={16} />
+          </button>
+          <button
+            type="button"
             onClick={handleToggleVisibility}
             disabled={isPending}
             title={row.visibleToClient ? "Skrýt z portálu klienta" : "Zobrazit v portálu klienta"}
@@ -213,10 +226,13 @@ function PaymentSetupCard({
 export function ContactManualPaymentSection({
   contactId,
   onOpenModal,
+  onEditSetup,
 }: {
   contactId: string;
   /** Zavolá rodičovský wrapper, který drží stav modalu. */
   onOpenModal: () => void;
+  /** Otevře modal v editačním režimu s předvyplněnými daty. */
+  onEditSetup: (row: PaymentSetupRow) => void;
 }) {
   const [items, setItems] = useState<PaymentSetupRow[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -302,6 +318,7 @@ export function ContactManualPaymentSection({
               contactId={contactId}
               onDeleted={handleDeleted}
               onVisibilityChanged={handleVisibilityChanged}
+              onEdit={onEditSetup}
             />
           ))}
         </ul>

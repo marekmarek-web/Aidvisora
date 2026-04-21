@@ -15,6 +15,27 @@ export const LEGAL_PODPORA_EMAIL = "podpora@aidvisora.cz";
 /** Datum účinnosti veřejných právních textů (shodně ve všech dokumentech). */
 export const LEGAL_EFFECTIVE_CS = "27. 3. 2026";
 
+/**
+ * Semver-like verze publikovaných právních textů. Inkrementuje se při každé
+ * materiální změně (jiné formulace, nové klauzule). Uložena v
+ * `user_terms_acceptance.version` jako důkaz, kterou verzi uživatel akceptoval.
+ *
+ * Cross-reference: `apps/web/src/lib/legal/terms-acceptance.ts`.
+ */
+export const LEGAL_DOCUMENT_VERSION = "2026-03-27";
+
+/**
+ * Kontexty, v nichž evidujeme souhlas (CHECK constraint na DB straně).
+ */
+export const LEGAL_ACCEPTANCE_CONTEXTS = [
+  "register",
+  "checkout",
+  "staff-invite",
+  "client-invite",
+  "beta-terms",
+] as const;
+export type LegalAcceptanceContext = (typeof LEGAL_ACCEPTANCE_CONTEXTS)[number];
+
 /** Odkaz na kotvu ceníku na landing page. */
 export const LEGAL_PRICING_HREF = "/#cenik";
 

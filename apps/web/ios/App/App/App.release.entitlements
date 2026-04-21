@@ -8,5 +8,16 @@
 	<array>
 		<string>group.cz.aidvisora.app</string>
 	</array>
+	<!--
+		Delta A12 — Universal Links + webcredentials pro aidvisora.cz.
+		AASA handshake: apps/web/src/app/api/apple-app-site-association/route.ts
+		(proxováno na /.well-known/apple-app-site-association přes next.config.js rewrite).
+	-->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:aidvisora.cz</string>
+		<string>applinks:www.aidvisora.cz</string>
+		<string>webcredentials:aidvisora.cz</string>
+	</array>
 </dict>
 </plist>

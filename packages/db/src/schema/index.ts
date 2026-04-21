@@ -24,6 +24,7 @@ export * from "./contract-review-corrections";
 export * from "./document-extractions";
 export * from "./board-views";
 export * from "./notifications";
+export * from "./user-terms-acceptance";
 export * from "./messages";
 export * from "./message-attachments";
 export * from "./portal-notifications";

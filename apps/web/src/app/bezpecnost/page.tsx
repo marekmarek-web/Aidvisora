@@ -163,6 +163,18 @@ export default function BezpecnostPage() {
                 stav a rozsah dokumentujeme v rámci due diligence.
               </p>
             </TopicCard>
+            <TopicCard icon={FileText} title="Kontrola nahraných souborů" status="live">
+              <p>
+                Uploady prochází serverovou validací velikosti, MIME typu a&nbsp;kontrolou magic bytes
+                (PDF / JPEG / PNG / DOCX / XLSX). Soubory jsou ukládány do privátních buckettů a&nbsp;nikdy
+                nejsou přímo servírovány jako veřejný obsah.
+              </p>
+              <p className="mt-2 text-slate-400">
+                <strong className="text-slate-200">Co neděláme:</strong> neprovádíme antivirový ani malware
+                scan obsahu souborů. Poradce odpovídá za&nbsp;bezpečnost souborů, které&nbsp;do&nbsp;platformy
+                nahraje. Nasazení AV skenu (ClamAV) je na roadmapě pro enterprise režim.
+              </p>
+            </TopicCard>
           </div>
         </section>
 

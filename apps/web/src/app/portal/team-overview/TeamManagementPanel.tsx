@@ -8,6 +8,7 @@ import {
   getTenantTeamCareerDefaults,
   setTenantTeamCareerDefaultProgram,
   removeMember,
+  getMemberOffboardingPreview,
 } from "@/app/actions/team";
 import { hasPermission, type RoleName } from "@/shared/rolePermissions";
 import { normalizeCareerProgramFromDb } from "@/lib/career/registry";
@@ -269,16 +270,74 @@ export function TeamManagementPanel({
                           type="button"
                           className="text-[11px] font-extrabold text-rose-500 transition hover:text-rose-700 hover:underline"
                           onClick={async () => {
+                            // Delta A7: preview dopadu + ownership-transfer modal
+                            const preview = await getMemberOffboardingPreview(m.membershipId);
+                            if (!preview.ok) {
+                              toast.showToast(preview.error, "error");
+                              return;
+                            }
+                            const c = preview.counts;
+                            const totalAssignments =
+                              c.tasksAssigned + c.eventsAssigned + c.opportunitiesAssigned;
+                            const totalRevoked =
+                              c.googleDriveIntegrations +
+                              c.googleGmailIntegrations +
+                              c.googleCalendarIntegrations +
+                              c.pushDevices;
+
+                            let transferToUserId: string | undefined;
+                            if (totalAssignments > 0) {
+                              const candidates = teamMembers.filter(
+                                (x) => x.userId !== m.userId && x.userId !== currentUserId,
+                              );
+                              const defaultSuccessor = candidates[0]?.userId ?? currentUserId;
+                              const candidateList = candidates
+                                .map((x) => `  • ${x.displayName ?? x.email ?? x.userId}`)
+                                .join("\n");
+                              const chosen =
+                                typeof window !== "undefined"
+                                  ? window.prompt(
+                                      `Převod přiřazení při odebrání člena\n\n` +
+                                        `Tento člen má přiřazeno:\n` +
+                                        `  • ${c.tasksAssigned} úkolů\n` +
+                                        `  • ${c.eventsAssigned} událostí\n` +
+                                        `  • ${c.opportunitiesAssigned} příležitostí\n\n` +
+                                        `Dále se odvolá:\n` +
+                                        `  • ${c.googleDriveIntegrations} Google Drive\n` +
+                                        `  • ${c.googleGmailIntegrations} Gmail\n` +
+                                        `  • ${c.googleCalendarIntegrations} Calendar\n` +
+                                        `  • ${c.pushDevices} push zařízení\n\n` +
+                                        `Zadejte user_id nástupce (nebo potvrďte výchozího):\n` +
+                                        `${candidateList}\n\n` +
+                                        `Výchozí: ${defaultSuccessor}`,
+                                      defaultSuccessor,
+                                    )
+                                  : defaultSuccessor;
+                              if (!chosen) return;
+                              transferToUserId = chosen.trim();
+                            }
+
                             const confirmed = await confirm({
                               title: "Odebrat člena?",
-                              message: "Opravdu chcete odebrat tohoto člena z workspace? Tuto akci nelze vrátit zpět.",
+                              message:
+                                totalAssignments > 0
+                                  ? `Převede se ${totalAssignments} přiřazení na nového vlastníka a odvolá se ${totalRevoked} integrací / zařízení. Pokračovat?`
+                                  : totalRevoked > 0
+                                    ? `Odvolá se ${totalRevoked} integrací / zařízení bývalého člena. Pokračovat?`
+                                    : "Opravdu chcete odebrat tohoto člena z workspace? Tuto akci nelze vrátit zpět.",
                               confirmLabel: "Odebrat",
                               variant: "destructive",
                             });
                             if (!confirmed) return;
-                            const res = await removeMember(m.membershipId);
+
+                            const res = await removeMember(m.membershipId, {
+                              transferToUserId,
+                            });
                             if (res.ok) {
-                              toast.showToast("Člen byl odebrán.");
+                              const summary = res.offboarding
+                                ? ` (převedeno: ${res.offboarding.reassigned.tasks} úkolů, ${res.offboarding.reassigned.events} událostí, ${res.offboarding.reassigned.opportunities} příležitostí)`
+                                : "";
+                              toast.showToast(`Člen byl odebrán.${summary}`);
                               setTeamMembers((prev) => prev.filter((x) => x.membershipId !== m.membershipId));
                             } else if (res.code === "REAUTH_REQUIRED") {
                               toast.showToast(res.error ?? "Je potřeba se znovu přihlásit.", "error");
@@ -291,6 +350,8 @@ export function TeamManagementPanel({
                                   window.location.href = `/login?reauth=1&return=${encodeURIComponent(returnTo)}`;
                                 }
                               }, 1200);
+                            } else if (res.code === "TRANSFER_REQUIRED") {
+                              toast.showToast(res.error ?? "Vyberte nástupce.", "error");
                             } else {
                               toast.showToast(res.error ?? "Odebrání se nezdařilo.", "error");
                             }

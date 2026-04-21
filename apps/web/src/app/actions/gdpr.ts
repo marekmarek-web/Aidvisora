@@ -3,8 +3,26 @@
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { hasPermission } from "@/lib/auth/permissions";
 import { db } from "db";
-import { contacts, contracts, documents } from "db";
-import { eq, and } from "db";
+import {
+  contacts,
+  contracts,
+  documents,
+  messages,
+  meetingNotes,
+  contractUploadReviews,
+  documentExtractions,
+  paymentAccounts,
+  consents,
+  auditLog,
+  opportunities,
+  timelineItems,
+  userTermsAcceptance,
+  portalFeedback,
+  clientContacts,
+  advisorProposals,
+  portalNotifications,
+} from "db";
+import { eq, and, or, sql } from "db";
 import { logAuditAction } from "@/lib/audit";
 
 /** Uložení souhlasu s GDPR (registrace / kontakt). */
@@ -26,7 +44,6 @@ export async function exportContactData(contactId: string): Promise<Record<strin
     throw new Error("Forbidden");
   }
   const data = await doExportContactData(auth.tenantId, contactId);
-  // WS-2 Batch 2 / minimal audit coverage — GDPR export.
   logAuditAction({
     tenantId: auth.tenantId,
     userId: auth.userId,
@@ -42,7 +59,9 @@ export async function exportContactData(contactId: string): Promise<Record<strin
 export async function exportContactDataForClient(): Promise<Record<string, unknown>> {
   const auth = await requireAuthInAction();
   if (auth.roleName !== "Client" || !auth.contactId) throw new Error("Forbidden");
-  const data = await doExportContactData(auth.tenantId, auth.contactId);
+  const data = await doExportContactData(auth.tenantId, auth.contactId, {
+    includeAdvisorAuditMetadata: false,
+  });
   logAuditAction({
     tenantId: auth.tenantId,
     userId: auth.userId,
@@ -54,30 +73,236 @@ export async function exportContactDataForClient(): Promise<Record<string, unkno
   return data;
 }
 
-async function doExportContactData(tenantId: string, contactId: string): Promise<Record<string, unknown>> {
-  const [contact] = await db.select().from(contacts).where(and(eq(contacts.tenantId, tenantId), eq(contacts.id, contactId))).limit(1);
+type ExportOptions = {
+  /**
+   * Pro advisor-triggered export obsahuje i interní audit metadata (kdo co kdy nahrál).
+   * Pro client-triggered export tyto položky vynecháváme (nepatří do osobního GDPR exportu).
+   */
+  includeAdvisorAuditMetadata?: boolean;
+};
+
+/**
+ * Delta A8 — kompletní GDPR export kontaktu.
+ *
+ * Rozsah dle GDPR článku 15 (Právo na přístup) + článku 20 (Portabilita):
+ *   - Identifikační údaje (jméno, e-mail, telefon, adresa, datum narození, OP, rodné číslo).
+ *   - Smlouvy, portfolio, platební účty.
+ *   - Komunikace (messages, meeting notes obsahující tento kontakt).
+ *   - AI review dokumentů klienta + extrahovaná pole.
+ *   - Doklady o souhlasech (consents, user_terms_acceptance, GDPR consent timestamp).
+ *   - Raw soubory — pouze **metadata** (ID, name, createdAt), samotné bytes je třeba
+ *     stáhnout přes klientský portál (signed URL), jinak by export překročil limit 4 MB.
+ *   - Audit log — výběr akcí týkajících se tohoto contact_id (bez admin-only polí).
+ *   - Opportunities (pipeline), timeline, notifications.
+ *
+ * Data NE-exportovaná (musí zůstat u advisora):
+ *   - Interní poznámky jiných kontaktů.
+ *   - AI feedback, business plán, vision goals.
+ *   - Obsah messages odeslaných **mezi advisory** bez účasti klienta.
+ */
+async function doExportContactData(
+  tenantId: string,
+  contactId: string,
+  options: ExportOptions = {},
+): Promise<Record<string, unknown>> {
+  const [contact] = await db
+    .select()
+    .from(contacts)
+    .where(and(eq(contacts.tenantId, tenantId), eq(contacts.id, contactId)))
+    .limit(1);
   if (!contact) throw new Error("Kontakt nenalezen");
-  const contractRows = await db.select().from(contracts).where(and(eq(contracts.tenantId, tenantId), eq(contracts.contactId, contactId)));
-  const docRows = await db.select({ id: documents.id, name: documents.name, createdAt: documents.createdAt }).from(documents).where(and(eq(documents.tenantId, tenantId), eq(documents.contactId, contactId)));
+
+  const [
+    contractRows,
+    docRows,
+    messageRows,
+    meetingNoteRows,
+    uploadReviewRows,
+    extractionRows,
+    paymentAccountRows,
+    consentRows,
+    opportunityRows,
+    timelineRows,
+    termsAcceptanceRows,
+    portalFeedbackRows,
+    clientLinkRows,
+    advisorProposalRows,
+    portalNotificationRows,
+    auditLogRows,
+  ] = await Promise.all([
+    db.select().from(contracts).where(and(eq(contracts.tenantId, tenantId), eq(contracts.contactId, contactId))),
+    db
+      .select({
+        id: documents.id,
+        name: documents.name,
+        mimeType: documents.mimeType,
+        sizeBytes: documents.sizeBytes,
+        createdAt: documents.createdAt,
+        sourceChannel: documents.sourceChannel,
+      })
+      .from(documents)
+      .where(and(eq(documents.tenantId, tenantId), eq(documents.contactId, contactId))),
+    db.select().from(messages).where(and(eq(messages.tenantId, tenantId), eq(messages.contactId, contactId))),
+    db
+      .select()
+      .from(meetingNotes)
+      .where(and(eq(meetingNotes.tenantId, tenantId), eq(meetingNotes.contactId, contactId))),
+    db
+      .select({
+        id: contractUploadReviews.id,
+        status: contractUploadReviews.status,
+        createdAt: contractUploadReviews.createdAt,
+        documentId: contractUploadReviews.documentId,
+      })
+      .from(contractUploadReviews)
+      .where(
+        and(
+          eq(contractUploadReviews.tenantId, tenantId),
+          eq(contractUploadReviews.contactId, contactId),
+        ),
+      ),
+    db
+      .select({
+        id: documentExtractions.id,
+        documentId: documentExtractions.documentId,
+        status: documentExtractions.status,
+        model: documentExtractions.model,
+        createdAt: documentExtractions.createdAt,
+      })
+      .from(documentExtractions)
+      .where(
+        and(
+          eq(documentExtractions.tenantId, tenantId),
+          eq(documentExtractions.contactId, contactId),
+        ),
+      ),
+    db
+      .select()
+      .from(paymentAccounts)
+      .where(and(eq(paymentAccounts.tenantId, tenantId), eq(paymentAccounts.contactId, contactId))),
+    db
+      .select()
+      .from(consents)
+      .where(and(eq(consents.tenantId, tenantId), eq(consents.contactId, contactId))),
+    db
+      .select()
+      .from(opportunities)
+      .where(and(eq(opportunities.tenantId, tenantId), eq(opportunities.contactId, contactId))),
+    db
+      .select()
+      .from(timelineItems)
+      .where(and(eq(timelineItems.tenantId, tenantId), eq(timelineItems.contactId, contactId))),
+    db
+      .select()
+      .from(userTermsAcceptance)
+      .where(
+        and(
+          eq(userTermsAcceptance.tenantId, tenantId),
+          eq(userTermsAcceptance.contactId, contactId),
+        ),
+      ),
+    db
+      .select()
+      .from(portalFeedback)
+      .where(and(eq(portalFeedback.tenantId, tenantId), eq(portalFeedback.contactId, contactId))),
+    db
+      .select({ userId: clientContacts.userId })
+      .from(clientContacts)
+      .where(and(eq(clientContacts.tenantId, tenantId), eq(clientContacts.contactId, contactId))),
+    db
+      .select()
+      .from(advisorProposals)
+      .where(and(eq(advisorProposals.tenantId, tenantId), eq(advisorProposals.contactId, contactId))),
+    db
+      .select()
+      .from(portalNotifications)
+      .where(
+        and(
+          eq(portalNotifications.tenantId, tenantId),
+          eq(portalNotifications.contactId, contactId),
+        ),
+      ),
+    options.includeAdvisorAuditMetadata
+      ? db
+          .select({
+            action: auditLog.action,
+            entityType: auditLog.entityType,
+            createdAt: auditLog.createdAt,
+            userId: auditLog.userId,
+          })
+          .from(auditLog)
+          .where(
+            and(
+              eq(auditLog.tenantId, tenantId),
+              or(
+                and(eq(auditLog.entityType, "contact"), eq(auditLog.entityId, contactId)),
+                sql`${auditLog.meta}->>'contactId' = ${contactId}`,
+              ),
+            ),
+          )
+      : Promise.resolve([] as unknown[]),
+  ]);
+
   return {
     exportDate: new Date().toISOString(),
+    exportScope: "gdpr_article_15_and_20",
     contact: {
+      id: contact.id,
       firstName: contact.firstName,
       lastName: contact.lastName,
       email: contact.email,
       phone: contact.phone,
       title: contact.title,
+      street: contact.street,
+      city: contact.city,
+      zip: contact.zip,
+      birthDate: contact.birthDate,
+      // Personal ID / OP: ze šifrovaného úložiště nerozšifrováváme pro export (právní
+      // riziko leaky export). Klient má právo znát, že jsme ho uložili, ale obsah zná sám.
+      hasPersonalId: contact.personalId !== null || contact.personalIdEnc !== null,
+      hasIdCardNumber: contact.idCardNumber !== null || contact.idCardNumberEnc !== null,
+      idCardIssuedAt: contact.idCardIssuedAt,
+      idCardValidUntil: contact.idCardValidUntil,
+      idCardIssuedBy: contact.idCardIssuedBy,
+      notes: contact.notes,
+      tags: contact.tags,
+      lifecycleStage: contact.lifecycleStage,
+      referralSource: contact.referralSource,
+      preferredChannel: contact.preferredChannel,
+      preferredSalutation: contact.preferredSalutation,
       gdprConsentAt: contact.gdprConsentAt?.toISOString() ?? null,
       notificationUnsubscribedAt: contact.notificationUnsubscribedAt?.toISOString() ?? null,
+      doNotEmail: contact.doNotEmail,
+      doNotPush: contact.doNotPush,
+      createdAt: contact.createdAt?.toISOString() ?? null,
+      updatedAt: contact.updatedAt?.toISOString() ?? null,
     },
-    contracts: contractRows.map((c) => ({
-      segment: c.segment,
-      partnerName: c.partnerName,
-      productName: c.productName,
-      contractNumber: c.contractNumber,
-      startDate: c.startDate,
-      anniversaryDate: c.anniversaryDate,
+    contracts: contractRows,
+    documents: docRows.map((d) => ({
+      ...d,
+      createdAt: d.createdAt?.toISOString() ?? null,
+      note: "Samotný obsah souborů lze stáhnout přes Client Zone (signed URL).",
     })),
-    documents: docRows.map((d) => ({ name: d.name, createdAt: d.createdAt })),
+    messages: messageRows.map((m) => ({
+      senderType: m.senderType,
+      body: m.body,
+      readAt: m.readAt?.toISOString() ?? null,
+      createdAt: m.createdAt?.toISOString() ?? null,
+    })),
+    meetingNotes: meetingNoteRows,
+    aiReviews: {
+      uploadReviews: uploadReviewRows,
+      extractions: extractionRows,
+    },
+    paymentAccounts: paymentAccountRows,
+    consents: consentRows,
+    termsAcceptance: termsAcceptanceRows,
+    opportunities: opportunityRows,
+    timeline: timelineRows,
+    advisorProposals: advisorProposalRows,
+    portalNotifications: portalNotificationRows,
+    portalFeedback: portalFeedbackRows,
+    portalAccount: clientLinkRows,
+    ...(options.includeAdvisorAuditMetadata ? { auditLog: auditLogRows } : {}),
   };
 }

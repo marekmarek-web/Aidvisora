@@ -30,6 +30,24 @@
                 <!-- aidvisora://auth/done – used by /auth/callback route after code exchange -->
                 <data android:scheme="aidvisora" android:host="auth" android:path="/done" />
             </intent-filter>
+
+            <!--
+                Delta A12 — Android App Links (https://aidvisora.cz/portal/..., /client/..., /auth/...).
+                autoVerify=true → Play Protect ověří assetlinks.json na startu a po update.
+                AASA ekvivalent: apps/web/src/app/api/assetlinks/route.ts
+                (proxováno na /.well-known/assetlinks.json přes next.config.js rewrite).
+            -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="aidvisora.cz" android:pathPrefix="/portal" />
+                <data android:scheme="https" android:host="aidvisora.cz" android:pathPrefix="/client" />
+                <data android:scheme="https" android:host="aidvisora.cz" android:pathPrefix="/auth" />
+                <data android:scheme="https" android:host="www.aidvisora.cz" android:pathPrefix="/portal" />
+                <data android:scheme="https" android:host="www.aidvisora.cz" android:pathPrefix="/client" />
+                <data android:scheme="https" android:host="www.aidvisora.cz" android:pathPrefix="/auth" />
+            </intent-filter>
         </activity>
 
         <activity

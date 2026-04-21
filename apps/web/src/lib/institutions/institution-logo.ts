@@ -38,17 +38,52 @@ const LOGO_MAP: { keywords: string[]; logo: LogoEntry }[] = [
   { keywords: ["ishares", "blackrock"], logo: { file: "ishares.png", alt: "iShares" } },
 ];
 
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Normalizuje název pro porovnání: lowercase + odstranění diakritiky,
+ * aby „Česká spořitelna" → „ceska sporitelna" a hranice slov (\b) fungovaly
+ * deterministicky pro ASCII klíčová slova.
+ */
+function normalizeForMatch(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+/**
+ * Ověří, že se klíčové slovo v názvu vyskytuje jako samostatné slovo
+ * (nebo jako sekvence slov). Tím se vyhneme falešným shodám jako „nn"
+ * uvnitř slova „cennými" nebo „cs" uvnitř „docs".
+ */
+function keywordMatchesAsWord(normalizedName: string, keyword: string): boolean {
+  const normalizedKeyword = normalizeForMatch(keyword);
+  if (!normalizedKeyword) return false;
+  const pattern = new RegExp(
+    `(^|[^a-z0-9])${escapeRegex(normalizedKeyword)}($|[^a-z0-9])`,
+    "i"
+  );
+  return pattern.test(normalizedName);
+}
+
 /**
  * Returns { src, alt } for a known institution or null for unknowns.
  * `src` is a root-relative path to the Next.js public/logos directory.
+ *
+ * Porovnání je provedeno po odstranění diakritiky a pouze na hranicích slov,
+ * aby 2–3písmenné zkratky (nn, cs, kb, rb, …) nemohly omylem matchnout
+ * uprostřed jiných slov v názvu subjektu.
  */
 export function resolveInstitutionLogo(
   institutionName: string | null | undefined
 ): { src: string; alt: string } | null {
   if (!institutionName) return null;
-  const lower = institutionName.toLowerCase();
+  const normalized = normalizeForMatch(institutionName);
   for (const entry of LOGO_MAP) {
-    if (entry.keywords.some((kw) => lower.includes(kw))) {
+    if (entry.keywords.some((kw) => keywordMatchesAsWord(normalized, kw))) {
       return { src: `/logos/${entry.logo.file}`, alt: entry.logo.alt };
     }
   }

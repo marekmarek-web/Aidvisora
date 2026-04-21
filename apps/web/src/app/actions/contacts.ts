@@ -7,7 +7,7 @@ import { getHouseholdIdForContactWithAuth, getHouseholdsListWithAuth } from "@/a
 import { hasPermission } from "@/lib/auth/permissions";
 import { db } from "db";
 import { contacts, contractUploadReviews } from "db";
-import { eq, and, asc, inArray, isNull, sql, desc, or } from "db";
+import { eq, and, asc, inArray, isNull, isNotNull, sql, desc, or } from "db";
 import { createAdminClient } from "@/lib/supabase/server";
 import { logAuditAction } from "@/lib/audit";
 import { requireRecentAuth } from "@/lib/auth/require-recent-auth";
@@ -742,15 +742,21 @@ export async function restoreContact(id: string): Promise<void> {
   }
 }
 
-/** Trvalé smazání řádků kontaktu (CASCADE / SET NULL v DB). Vyžaduje `contacts:delete`. */
+/**
+ * Delta A21 — soft-delete buffer 30 dní.
+ *
+ * `permanentlyDeleteContacts` přestává okamžitě mazat; místo toho přesunuje kontakty
+ * do trashe (`deleted_at = now()`). Skutečné hard-delete provádí cron
+ * `/api/cron/trash-purge-contacts` po 30 dnech.
+ *
+ * Obnova do 30 dnů přes `restoreContactFromTrash` (a UI v `/portal/admin/trash`).
+ *
+ * Vyžaduje `contacts:delete` a recent auth (≤ 15 min).
+ */
 export async function permanentlyDeleteContacts(ids: string[]): Promise<void> {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "contacts:delete")) throw new Error("Forbidden");
-  // P1 — re-auth guard pro high-risk delete. Vyhodí `ReauthRequiredError`
-  // (code `REAUTH_REQUIRED`), když je session starší než 15 minut. Klient v
-  // `ContactsPageClient` tuto chybu chytne a otevře re-auth modal; zbytek
-  // handling padá do generické error toast vrstvy.
-  await requireRecentAuth({ action: "contact.permanent_delete", maxAgeSeconds: 900 });
+  await requireRecentAuth({ action: "contact.soft_delete", maxAgeSeconds: 900 });
   const unique = [...new Set(ids.map((x) => x.trim()).filter(Boolean))];
   if (unique.length === 0) return;
 
@@ -764,45 +770,114 @@ export async function permanentlyDeleteContacts(ids: string[]): Promise<void> {
     throw new Error("Některé kontakty neexistují nebo k nim nemáte přístup.");
   }
 
-  const admin = createAdminClient();
-  const prefix = `${auth.tenantId}/avatars/`;
-  for (const row of rows) {
-    try {
-      const folder = `${prefix}${row.id}`;
-      const { data: files } = await admin.storage.from("documents").list(folder);
-      if (files?.length) {
-        const paths = files.map((f) => `${folder}/${f.name}`);
-        await admin.storage.from("documents").remove(paths);
-      }
-    } catch (e) {
-      console.warn("[permanentlyDeleteContacts] avatar storage cleanup", row.id, e);
-    }
-  }
-
   try {
+    const now = new Date();
     await withTenantContextFromAuth(auth, (tx) =>
-      tx.delete(contacts).where(and(eq(contacts.tenantId, auth.tenantId), inArray(contacts.id, unique))),
+      tx
+        .update(contacts)
+        .set({
+          deletedAt: now,
+          deletedBy: auth.userId,
+          updatedAt: now,
+        })
+        .where(and(eq(contacts.tenantId, auth.tenantId), inArray(contacts.id, unique))),
     );
-    // WS-2 Batch 2 / minimal audit coverage — hard delete kontaktu.
-    // Critical risk — log vždy, nikdy ne fire-and-forget na úrovni tohoto volání.
     for (const contactId of unique) {
       logAuditAction({
         tenantId: auth.tenantId,
         userId: auth.userId,
-        action: "contact.delete",
+        action: "contact.soft_delete",
         entityType: "contact",
         entityId: contactId,
-        meta: { roleName: auth.roleName, batchSize: unique.length },
+        meta: {
+          roleName: auth.roleName,
+          batchSize: unique.length,
+          purgeAfterDays: 30,
+        },
       });
     }
   } catch (e) {
     console.error("[permanentlyDeleteContacts]", e);
-    const code = typeof e === "object" && e !== null && "code" in e ? String((e as { code?: string }).code) : "";
-    if (code === "23503") {
-      throw new Error("Kontakt nelze smazat kvůli vazbám v databázi. Zkuste nejdřív odstranit související záznamy.");
-    }
-    throw new Error(e instanceof Error ? e.message : "Kontakty se nepodařilo smazat.");
+    throw new Error(e instanceof Error ? e.message : "Kontakty se nepodařilo přesunout do koše.");
   }
+}
+
+/**
+ * Delta A21 — obnova z trashe. Admin-only: `contacts:delete` (stejný permission jako
+ * přesun do trashe), aby nemohl kdokoli v kanceláři omylem resuscitovat klienta,
+ * u kterého byl požádán o GDPR výmaz.
+ */
+export async function restoreContactFromTrash(id: string): Promise<void> {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, "contacts:delete")) throw new Error("Forbidden");
+  await requireRecentAuth({ action: "contact.restore_from_trash", maxAgeSeconds: 900 });
+
+  await withAuthContext(async (a, tx) => {
+    await tx
+      .update(contacts)
+      .set({ deletedAt: null, deletedBy: null, deletedReason: null, updatedAt: new Date() })
+      .where(and(eq(contacts.tenantId, a.tenantId), eq(contacts.id, id)));
+
+    logAuditAction({
+      tenantId: a.tenantId,
+      userId: a.userId,
+      action: "contact.restore_from_trash",
+      entityType: "contact",
+      entityId: id,
+      meta: { roleName: a.roleName },
+    });
+  });
+}
+
+/**
+ * Delta A21 — list of contacts currently in trash (deleted < 30 days ago).
+ * Starší než 30 dnů jsou v průběhu každého cron runu čištěny hard-deletem, takže
+ * v listě se nikdy neobjeví.
+ */
+export async function listTrashContacts(): Promise<
+  Array<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string | null;
+    deletedAt: string;
+    deletedBy: string | null;
+    purgeScheduledAt: string;
+  }>
+> {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, "contacts:delete")) throw new Error("Forbidden");
+
+  const rows = await withTenantContextFromAuth(auth, (tx) =>
+    tx
+      .select({
+        id: contacts.id,
+        firstName: contacts.firstName,
+        lastName: contacts.lastName,
+        email: contacts.email,
+        deletedAt: contacts.deletedAt,
+        deletedBy: contacts.deletedBy,
+      })
+      .from(contacts)
+      .where(and(eq(contacts.tenantId, auth.tenantId), isNotNull(contacts.deletedAt))),
+  );
+
+  const PURGE_DAYS = 30;
+  return rows
+    .filter((r) => r.deletedAt !== null)
+    .map((r) => {
+      const deleted = r.deletedAt as Date;
+      const purge = new Date(deleted.getTime() + PURGE_DAYS * 86400_000);
+      return {
+        id: r.id,
+        firstName: r.firstName,
+        lastName: r.lastName,
+        email: r.email,
+        deletedAt: deleted.toISOString(),
+        deletedBy: r.deletedBy,
+        purgeScheduledAt: purge.toISOString(),
+      };
+    });
 }
 
 export async function getContactDependencyCounts(id: string): Promise<{

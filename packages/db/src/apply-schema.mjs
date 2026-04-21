@@ -103,6 +103,10 @@ CREATE TABLE IF NOT EXISTS notification_log (
   subject text,
   recipient text,
   status text NOT NULL DEFAULT 'sent',
+  provider_message_id text,
+  last_status text,
+  last_status_at timestamptz,
+  last_error text,
   meta jsonb,
   sent_at timestamptz NOT NULL DEFAULT now(),
   created_at timestamptz NOT NULL DEFAULT now()

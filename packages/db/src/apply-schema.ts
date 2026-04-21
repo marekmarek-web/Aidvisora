@@ -75,10 +75,20 @@ CREATE TABLE IF NOT EXISTS notification_log (
   subject text,
   recipient text,
   status text NOT NULL DEFAULT 'sent',
+  provider_message_id text,
+  last_status text,
+  last_status_at timestamptz,
+  last_error text,
   meta jsonb,
   sent_at timestamptz NOT NULL DEFAULT now(),
   created_at timestamptz NOT NULL DEFAULT now()
 );
+ALTER TABLE notification_log ADD COLUMN IF NOT EXISTS provider_message_id text;
+ALTER TABLE notification_log ADD COLUMN IF NOT EXISTS last_status text;
+ALTER TABLE notification_log ADD COLUMN IF NOT EXISTS last_status_at timestamptz;
+ALTER TABLE notification_log ADD COLUMN IF NOT EXISTS last_error text;
+CREATE INDEX IF NOT EXISTS notification_log_provider_message_id_idx ON notification_log(provider_message_id);
+CREATE INDEX IF NOT EXISTS notification_log_tenant_sent_at_idx ON notification_log(tenant_id, sent_at);
 CREATE TABLE IF NOT EXISTS mindmap_maps (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL,

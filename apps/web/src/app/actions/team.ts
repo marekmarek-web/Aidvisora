@@ -17,6 +17,11 @@ import { validateCareerFieldsForWrite } from "@/lib/career/career-write-validati
 import { normalizeCareerProgramFromDb } from "@/lib/career/registry";
 import { logAuditAction } from "@/lib/audit";
 import { checkRecentAuth } from "@/lib/auth/require-recent-auth";
+import {
+  previewOffboarding,
+  executeOffboarding,
+  type OffboardingResult,
+} from "@/lib/team/offboarding";
 
 const STAFF_INVITE_EXPIRY_DAYS = 7;
 
@@ -293,9 +298,41 @@ export async function updateMemberParent(
   return { ok: true };
 }
 
+/**
+ * Delta A7: Preview dopadu offboardingu — kolik úkolů, eventů, oppů, integrací se převede /
+ * odvolá. Voláno z klienta PŘED zobrazením confirm dialogu, aby admin viděl rozsah.
+ */
+export async function getMemberOffboardingPreview(
+  membershipId: string,
+): Promise<
+  | { ok: true; counts: Awaited<ReturnType<typeof previewOffboarding>>; userId: string }
+  | { ok: false; error: string }
+> {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, "team_members:write")) {
+    return { ok: false, error: "Nemáte oprávnění odebírat členy." };
+  }
+  const [target] = await db
+    .select({ tenantId: memberships.tenantId, userId: memberships.userId })
+    .from(memberships)
+    .where(eq(memberships.id, membershipId))
+    .limit(1);
+  if (!target || target.tenantId !== auth.tenantId) {
+    return { ok: false, error: "Člen nenalezen." };
+  }
+  const counts = await previewOffboarding(auth.tenantId, target.userId);
+  return { ok: true, counts, userId: target.userId };
+}
+
 export async function removeMember(
   membershipId: string,
-): Promise<{ ok: boolean; error?: string; code?: string }> {
+  options?: { transferToUserId?: string },
+): Promise<{
+  ok: boolean;
+  error?: string;
+  code?: string;
+  offboarding?: OffboardingResult;
+}> {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "team_members:write")) {
     return { ok: false, error: "Nemáte oprávnění odebírat členy." };
@@ -327,8 +364,64 @@ export async function removeMember(
     return { ok: false, error: "Nemůžete odebrat sami sebe." };
   }
 
+  // Delta A7 — ownership transfer: pokud má user aktivní assignments / integrace,
+  // vyžadujeme explicitní volbu nástupce (transferToUserId). Jinak by úkoly / eventy
+  // zmizely z pohledu všech ostatních a Google tokeny by zůstaly platné.
+  const counts = await previewOffboarding(auth.tenantId, target.userId);
+  const hasAssignments =
+    counts.tasksAssigned > 0 || counts.eventsAssigned > 0 || counts.opportunitiesAssigned > 0;
+  const hasIntegrations =
+    counts.googleDriveIntegrations > 0 ||
+    counts.googleGmailIntegrations > 0 ||
+    counts.googleCalendarIntegrations > 0 ||
+    counts.pushDevices > 0;
+
+  let offboardingResult: OffboardingResult | undefined;
+
+  if (hasAssignments) {
+    if (!options?.transferToUserId) {
+      return {
+        ok: false,
+        code: "TRANSFER_REQUIRED",
+        error:
+          "Člen má přiřazené úkoly, události nebo příležitosti. Vyberte nástupce, na kterého se převedou.",
+      };
+    }
+    if (options.transferToUserId === target.userId) {
+      return {
+        ok: false,
+        error: "Nástupcem nemůže být stejný uživatel, kterého odebíráte.",
+      };
+    }
+    offboardingResult = await executeOffboarding(
+      auth.tenantId,
+      target.userId,
+      options.transferToUserId,
+    );
+  } else if (hasIntegrations) {
+    // I bez assignments smažeme integrace (tokeny, devices) — bezpečnostní default.
+    offboardingResult = await executeOffboarding(
+      auth.tenantId,
+      target.userId,
+      options?.transferToUserId || auth.userId,
+    );
+  }
+
   await db.delete(memberships).where(eq(memberships.id, membershipId));
-  return { ok: true };
+
+  logAuditAction({
+    action: "team.remove_member",
+    tenantId: auth.tenantId,
+    userId: auth.userId,
+    meta: {
+      removedUserId: target.userId,
+      transferToUserId: options?.transferToUserId ?? null,
+      reassigned: offboardingResult?.reassigned ?? null,
+      revoked: offboardingResult?.revoked ?? null,
+    },
+  });
+
+  return { ok: true, offboarding: offboardingResult };
 }
 
 export type SendTeamMemberInvitationResult =

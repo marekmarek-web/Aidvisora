@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { X, Plus, Loader2 } from "lucide-react";
+import { X, Plus, Loader2, Save } from "lucide-react";
 import {
   createManualPaymentSetup,
+  updateManualPaymentSetup,
   type ManualPaymentSetupInput,
 } from "@/app/actions/manual-payment-setup";
 import { getPartnersForTenant } from "@/app/actions/contracts";
@@ -87,39 +88,99 @@ export type ManualPaymentSetupPrefill = {
   firstPaymentDate?: string;
 };
 
+/** Existující instrukce k editaci — všechny hodnoty načtené z DB. */
+export type ManualPaymentSetupEdit = {
+  id: string;
+  providerName?: string | null;
+  productName?: string | null;
+  segment?: string | null;
+  variableSymbol?: string | null;
+  accountNumber?: string | null;
+  bankCode?: string | null;
+  iban?: string | null;
+  constantSymbol?: string | null;
+  specificSymbol?: string | null;
+  amount?: string | null;
+  currency?: string | null;
+  frequency?: string | null;
+  firstPaymentDate?: string | null;
+  visibleToClient?: boolean | null;
+};
+
+/** Převede ISO/DD.MM.YYYY na yyyy-mm-dd pro <input type="date">. */
+function toDateInputValue(value?: string | null): string {
+  if (!value) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const czMatch = value.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  if (czMatch) {
+    const [, d, m, y] = czMatch;
+    return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+  }
+  return "";
+}
+
 export function ManualPaymentSetupModal({
   contactId,
   onClose,
   onSaved,
   prefill,
+  editSetup,
 }: {
   contactId: string;
   onClose: () => void;
   /** Zavoláno po úspěšném uložení — nadřazená komponenta může obnovit seznam. */
   onSaved: () => void;
-  /** Volitelné předvyplnění z kontextu smlouvy. */
+  /** Volitelné předvyplnění z kontextu smlouvy (jen při vytváření). */
   prefill?: ManualPaymentSetupPrefill;
+  /** Pokud je předáno, modal se přepne do režimu úpravy existujícího záznamu. */
+  editSetup?: ManualPaymentSetupEdit;
 }) {
+  const isEditMode = Boolean(editSetup?.id);
   const [partners, setPartners] = useState<PartnerOption[]>([]);
-  const [form, setForm] = useState<FormState>({
-    ...EMPTY_FORM,
-    ...(prefill?.providerName ? { providerName: prefill.providerName } : {}),
-    ...(prefill?.productName ? { productName: prefill.productName } : {}),
-    ...(prefill?.segment ? { segment: prefill.segment } : {}),
-    ...(prefill?.variableSymbol ? { variableSymbol: prefill.variableSymbol } : {}),
-    ...(prefill?.accountNumber
-      ? {
-          accountNumber: prefill.bankCode
-            ? `${prefill.accountNumber}/${prefill.bankCode}`.replace(/\/+$/, "")
-            : prefill.accountNumber,
-        }
-      : {}),
-    ...(prefill?.iban ? { iban: prefill.iban } : {}),
-    ...(prefill?.constantSymbol ? { constantSymbol: prefill.constantSymbol } : {}),
-    ...(prefill?.specificSymbol ? { specificSymbol: prefill.specificSymbol } : {}),
-    ...(prefill?.amount ? { amount: prefill.amount } : {}),
-    ...(prefill?.frequency ? { frequency: prefill.frequency } : {}),
-    ...(prefill?.firstPaymentDate ? { firstPaymentDate: prefill.firstPaymentDate } : {}),
+  const [form, setForm] = useState<FormState>(() => {
+    if (editSetup) {
+      const combinedAccount =
+        editSetup.accountNumber && editSetup.bankCode
+          ? `${editSetup.accountNumber}/${editSetup.bankCode}`
+          : editSetup.accountNumber ?? "";
+      return {
+        providerName: editSetup.providerName ?? "",
+        productName: editSetup.productName ?? "",
+        segment: editSetup.segment ?? "ZP",
+        accountNumber: combinedAccount,
+        iban: editSetup.iban ?? "",
+        variableSymbol: editSetup.variableSymbol ?? "",
+        constantSymbol: editSetup.constantSymbol ?? "",
+        specificSymbol: editSetup.specificSymbol ?? "",
+        amount: editSetup.amount ?? "",
+        currency: editSetup.currency ?? "CZK",
+        frequency: editSetup.frequency ?? "",
+        firstPaymentDate: toDateInputValue(editSetup.firstPaymentDate),
+        visibleToClient: editSetup.visibleToClient ?? true,
+      };
+    }
+    return {
+      ...EMPTY_FORM,
+      ...(prefill?.providerName ? { providerName: prefill.providerName } : {}),
+      ...(prefill?.productName ? { productName: prefill.productName } : {}),
+      ...(prefill?.segment ? { segment: prefill.segment } : {}),
+      ...(prefill?.variableSymbol ? { variableSymbol: prefill.variableSymbol } : {}),
+      ...(prefill?.accountNumber
+        ? {
+            accountNumber: prefill.bankCode
+              ? `${prefill.accountNumber}/${prefill.bankCode}`.replace(/\/+$/, "")
+              : prefill.accountNumber,
+          }
+        : {}),
+      ...(prefill?.iban ? { iban: prefill.iban } : {}),
+      ...(prefill?.constantSymbol ? { constantSymbol: prefill.constantSymbol } : {}),
+      ...(prefill?.specificSymbol ? { specificSymbol: prefill.specificSymbol } : {}),
+      ...(prefill?.amount ? { amount: prefill.amount } : {}),
+      ...(prefill?.frequency ? { frequency: prefill.frequency } : {}),
+      ...(prefill?.firstPaymentDate
+        ? { firstPaymentDate: toDateInputValue(prefill.firstPaymentDate) }
+        : {}),
+    };
   });
   const [formError, setFormError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -167,12 +228,14 @@ export function ManualPaymentSetupModal({
     };
 
     startTransition(async () => {
-      const result = await createManualPaymentSetup(input);
+      const result = isEditMode && editSetup
+        ? await updateManualPaymentSetup({ ...input, id: editSetup.id })
+        : await createManualPaymentSetup(input);
       if (!result.ok) {
         setFormError(result.error);
         return;
       }
-      setForm(EMPTY_FORM);
+      if (!isEditMode) setForm(EMPTY_FORM);
       onSaved();
       onClose();
     });
@@ -196,7 +259,9 @@ export function ManualPaymentSetupModal({
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-[color:var(--wp-surface-card-border)] shrink-0">
           <div>
-            <h3 className="text-base font-black text-[color:var(--wp-text)]">Přidat platební instrukci</h3>
+            <h3 className="text-base font-black text-[color:var(--wp-text)]">
+              {isEditMode ? "Upravit platební instrukci" : "Přidat platební instrukci"}
+            </h3>
             <p className="text-xs text-[color:var(--wp-text-secondary)] mt-0.5">
               Interní evidence pro klientský portál — nezahrnuje doporučení produktu.
             </p>
@@ -428,8 +493,14 @@ export function ManualPaymentSetupModal({
             disabled={isPending}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-black transition-colors disabled:opacity-60 min-h-[44px]"
           >
-            {isPending ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-            Uložit instrukci
+            {isPending ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : isEditMode ? (
+              <Save size={16} />
+            ) : (
+              <Plus size={16} />
+            )}
+            {isEditMode ? "Uložit změny" : "Uložit instrukci"}
           </button>
           <button
             type="button"

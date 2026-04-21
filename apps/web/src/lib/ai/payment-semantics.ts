@@ -121,24 +121,31 @@ export function selectCanonicalPaymentAmount(
   }
 
   if (INVESTMENT_PRIMARIES.has(primary)) {
-    // `intendedInvestment` = celková zamýšlená investice za celý horizont
-    // (viz RULE v combined-extraction: „Předpokládaná výše investice"),
-    // a `amountToPay` může být cílový target. U pravidelného investování
-    // (měsíčně / čtvrtletně / pololetně / ročně) NESMÍ tyto součtové/cílové
-    // hodnoty přebít skutečnou splátku (regularAmount / premiumAmount /
-    // totalMonthlyPremium / installmentAmount). Jinak shrnutí ukáže např.
-    // „576 000 CZK (měsíčně)" místo reálných 3 000 CZK / měs.
+    // ⚠️ Sémantika polí u investičních dokumentů (viz prompt v
+    // `ai-review-prompt-templates-content.ts`):
+    //  • investmentPremium / contributionAmount / monthlyPremium / regularAmount /
+    //    premiumAmount / totalMonthlyPremium / installmentAmount / annualPremium
+    //    = REÁLNÁ SPLÁTKA (to je to, co klient reálně platí v dané frekvenci).
+    //  • intendedInvestment = CELKOVÁ zamýšlená investice za celý horizont
+    //    (např. 3 000 Kč × 12 × 16 let = 576 000 Kč).
+    //  • amountToPay = cílová částka k úhradě (u pravidelné investice typicky
+    //    také celkový target, ne měsíční splátka).
+    //
+    // U pravidelné frekvence (monthly / quarterly / semi_annual / annual)
+    // tyto CELKOVÉ/CÍLOVÉ hodnoty NESMÍ přebít reálnou splátku — jinak
+    // summary ukáže např. „576 000 CZK (měsíčně)" místo reálných 3 000 CZK/měs.
+    // Když reálnou splátku AI nenajde, radši vrátit prázdno (→ „—") než
+    // nesprávně označit total jako měsíční/roční.
     if (freq === "monthly" || freq === "quarterly" || freq === "semi_annual" || freq === "annual") {
       return fv(ef, [
+        "investmentPremium",
+        "contributionAmount",
         "regularAmount",
         "premiumAmount",
+        "monthlyPremium",
         "totalMonthlyPremium",
         "installmentAmount",
         "annualPremium",
-        // až jako poslední – pokud nic explicitního není nalezeno,
-        // povol i cílové / celkové pole (lepší něco než „—").
-        "amountToPay",
-        "intendedInvestment",
       ]);
     }
     // one_time / unknown → lump-sum pořadí (zde má intendedInvestment smysl).
