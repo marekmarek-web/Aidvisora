@@ -709,6 +709,8 @@ export function TeamOverviewView({
             />
           ) : null
         }
+        mobileAsideOpen={Boolean(selectedUserId)}
+        onMobileAsideClose={() => selectMember(null)}
         aside={
           <TeamOverviewSelectedMemberPanel
             detail={selectedDetail}

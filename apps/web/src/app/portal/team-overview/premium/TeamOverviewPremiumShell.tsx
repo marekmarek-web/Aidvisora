@@ -2,8 +2,9 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { UserPlus, RefreshCw } from "lucide-react";
+import { UserPlus, RefreshCw, X } from "lucide-react";
 import { PremiumToggleGroup } from "./primitives";
+import { PortalPageShell } from "@/app/components/layout/PortalPageShell";
 
 type ShellProps = {
   title: string;
@@ -29,6 +30,9 @@ type ShellProps = {
   runtimeChecksSlot?: ReactNode;
   children: ReactNode;
   aside: ReactNode;
+  /** Pod xl: zobrazovat aside jako bottom-sheet (když je vybraný člen). */
+  mobileAsideOpen?: boolean;
+  onMobileAsideClose?: () => void;
 };
 
 export function TeamOverviewPremiumShell({
@@ -52,15 +56,15 @@ export function TeamOverviewPremiumShell({
   runtimeChecksSlot,
   children,
   aside,
+  mobileAsideOpen = false,
+  onMobileAsideClose,
 }: ShellProps) {
   void _title;
   void _subtitle;
   return (
-    <div className="min-h-screen bg-[#f4f5f8] text-slate-900">
-      <div className="mx-auto max-w-[1680px] px-5 pb-12 pt-6 xl:px-8">
-
+    <PortalPageShell maxWidth="full">
         {/* HEADER SHELL — kompaktní bez duplicitního portal titulku */}
-        <div className="mb-6 rounded-[24px] border border-white/80 bg-white px-5 py-4 shadow-[0_10px_30px_rgba(15,23,42,0.05)] md:px-7 md:py-5">
+        <div className="mb-6 rounded-[var(--wp-radius-card,24px)] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-5 py-4 shadow-[var(--wp-shadow-card,0_10px_30px_rgba(15,23,42,0.05))] md:px-7 md:py-5">
 
           {/* Filtr pills + utility actions: jedna řada na desktopu, wrap na mobilu */}
           <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center md:justify-between">
@@ -117,15 +121,42 @@ export function TeamOverviewPremiumShell({
 
         {runtimeChecksSlot}
 
-        {/* MAIN LAYOUT: aside stejná výšková osa jako hlavní sloupec (empty i detail) */}
+        {/* MAIN LAYOUT: na xl dvousloupec; pod xl jen hlavní obsah, aside je bottom-sheet po výběru člena. */}
         <div className="grid gap-7 xl:grid-cols-[minmax(0,1fr)_minmax(368px,404px)] xl:items-start">
           <div className="min-w-0 space-y-6">{children}</div>
-          <div className="flex min-h-0 min-w-0 flex-col xl:sticky xl:top-6 xl:max-h-[calc(100vh-5.5rem)] xl:self-start">
+          <div className="hidden min-h-0 min-w-0 xl:flex xl:flex-col xl:sticky xl:top-6 xl:max-h-[calc(100vh-5.5rem)] xl:self-start">
             <div className="flex min-h-[min(76vh,calc(100vh-6.5rem))] w-full flex-1 flex-col">{aside}</div>
           </div>
         </div>
-      </div>
-    </div>
+
+        {/* Mobile / tablet bottom-sheet s detailem vybraného člena */}
+        {mobileAsideOpen ? (
+          <div className="fixed inset-0 z-[60] flex items-end bg-black/40 backdrop-blur-sm xl:hidden" role="dialog" aria-modal="true">
+            <button
+              type="button"
+              aria-label="Zavřít"
+              className="absolute inset-0"
+              onClick={() => onMobileAsideClose?.()}
+            />
+            <div className="relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[24px] border-t border-slate-200 bg-white shadow-[0_-18px_48px_rgba(15,23,42,0.2)]">
+              <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+                <span className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-400">Detail člena</span>
+                <button
+                  type="button"
+                  onClick={() => onMobileAsideClose?.()}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100"
+                  aria-label="Zavřít detail"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2">
+                {aside}
+              </div>
+            </div>
+          </div>
+        ) : null}
+    </PortalPageShell>
   );
 }
 
