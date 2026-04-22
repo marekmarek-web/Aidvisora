@@ -1,8 +1,9 @@
 "use server";
 
 import { requireAuthInAction } from "@/lib/auth/require-auth";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { getGenerationById } from "@/lib/ai/ai-generations-repository";
-import { db, aiFeedback } from "db";
+import { aiFeedback } from "db";
 
 export type AiFeedbackVerdict = "accepted" | "rejected" | "edited";
 export type AiFeedbackActionTaken =
@@ -34,18 +35,20 @@ export async function createAiFeedback(
       return { ok: false, error: "Generování nenalezeno nebo nemáte oprávnění." };
     }
 
-    const inserted = await db
-      .insert(aiFeedback as any)
-      .values({
-        generationId,
-        userId: auth.userId,
-        verdict,
-        actionTaken: options?.actionTaken ?? null,
-        createdEntityType: options?.createdEntityType ?? null,
-        createdEntityId: options?.createdEntityId ?? null,
-        note: options?.note?.trim() || null,
-      })
-      .returning({ id: aiFeedback.id } as any);
+    const inserted = await withTenantContextFromAuth(auth, async (tx) =>
+      tx
+        .insert(aiFeedback as any)
+        .values({
+          generationId,
+          userId: auth.userId,
+          verdict,
+          actionTaken: options?.actionTaken ?? null,
+          createdEntityType: options?.createdEntityType ?? null,
+          createdEntityId: options?.createdEntityId ?? null,
+          note: options?.note?.trim() || null,
+        })
+        .returning({ id: aiFeedback.id } as any),
+    );
     const row = inserted[0] as { id: string } | undefined;
     const id = row?.id;
     if (!id || typeof id !== "string") return { ok: false, error: "Nepodařilo se uložit feedback." };

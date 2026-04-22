@@ -2,8 +2,8 @@
 
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { hasPermission } from "@/lib/auth/permissions";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { FA_ERROR_NO_READ, FA_ERROR_NO_WRITE } from "@/lib/analyses/financial/financialAnalysisErrors";
-import { db } from "db";
 import { financialAnalyses, householdMembers, contacts, households } from "db";
 import { eq, and, desc, sql } from "db";
 
@@ -72,30 +72,32 @@ const financialAnalysisBaseSelection = {
 export async function getFinancialAnalysis(id: string): Promise<FinancialAnalysisRow | null> {
   try {
     const auth = await requireAuthInAction();
-    const [row] = await db
-      .select(financialAnalysisBaseSelection)
-      .from(financialAnalyses)
-      .where(and(eq(financialAnalyses.tenantId, auth.tenantId), eq(financialAnalyses.id, id)));
-    if (!row) return null;
-    if (auth.roleName === "Client") {
-      if (row.contactId === auth.contactId) return row as FinancialAnalysisRow;
-      if (row.householdId && auth.contactId) {
-        const [member] = await db
-          .select({ id: householdMembers.id })
-          .from(householdMembers)
-          .where(
-            and(
-              eq(householdMembers.householdId, row.householdId),
-              eq(householdMembers.contactId, auth.contactId)
+    return await withTenantContextFromAuth(auth, async (tx) => {
+      const [row] = await tx
+        .select(financialAnalysisBaseSelection)
+        .from(financialAnalyses)
+        .where(and(eq(financialAnalyses.tenantId, auth.tenantId), eq(financialAnalyses.id, id)));
+      if (!row) return null;
+      if (auth.roleName === "Client") {
+        if (row.contactId === auth.contactId) return row as FinancialAnalysisRow;
+        if (row.householdId && auth.contactId) {
+          const [member] = await tx
+            .select({ id: householdMembers.id })
+            .from(householdMembers)
+            .where(
+              and(
+                eq(householdMembers.householdId, row.householdId),
+                eq(householdMembers.contactId, auth.contactId)
+              )
             )
-          )
-          .limit(1);
-        if (member) return row as FinancialAnalysisRow;
+            .limit(1);
+          if (member) return row as FinancialAnalysisRow;
+        }
+        return null;
       }
-      return null;
-    }
-    if (!hasPermission(auth.roleName, "financial_analyses:read")) throw new Error(FA_ERROR_NO_READ);
-    return row as FinancialAnalysisRow;
+      if (!hasPermission(auth.roleName, "financial_analyses:read")) throw new Error(FA_ERROR_NO_READ);
+      return row as FinancialAnalysisRow;
+    });
   } catch (err) {
     console.error("[getFinancialAnalysis] failed for id=" + id, err);
     throw err;
@@ -112,27 +114,29 @@ export async function listFinancialAnalyses(): Promise<FinancialAnalysisListItem
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "financial_analyses:read")) throw new Error(FA_ERROR_NO_READ);
   try {
-    const rows = await db
-      .select({
-        id: financialAnalyses.id,
-        type: financialAnalyses.type,
-        status: financialAnalyses.status,
-        contactId: financialAnalyses.contactId,
-        householdId: financialAnalyses.householdId,
-        createdAt: financialAnalyses.createdAt,
-        updatedAt: financialAnalyses.updatedAt,
-        lastExportedAt: financialAnalyses.lastExportedAt,
-        linkedCompanyId: financialAnalyses.linkedCompanyId,
-        lastRefreshedFromSharedAt: financialAnalyses.lastRefreshedFromSharedAt,
-        clientNameRaw: sql<string | null>`${financialAnalyses.payload}->'data'->'client'->>'name'`,
-        companyNameRaw: sql<string | null>`${financialAnalyses.payload}->'company'->>'name'`,
-        notesRaw: sql<string | null>`${financialAnalyses.payload}->'data'->>'notes'`,
-        currentStepRaw: sql<number>`coalesce((${financialAnalyses.payload}->>'currentStep')::int, 0)`,
-      })
-      .from(financialAnalyses)
-      .where(eq(financialAnalyses.tenantId, auth.tenantId))
-      .orderBy(desc(financialAnalyses.updatedAt))
-      .limit(50);
+    const rows = await withTenantContextFromAuth(auth, async (tx) =>
+      tx
+        .select({
+          id: financialAnalyses.id,
+          type: financialAnalyses.type,
+          status: financialAnalyses.status,
+          contactId: financialAnalyses.contactId,
+          householdId: financialAnalyses.householdId,
+          createdAt: financialAnalyses.createdAt,
+          updatedAt: financialAnalyses.updatedAt,
+          lastExportedAt: financialAnalyses.lastExportedAt,
+          linkedCompanyId: financialAnalyses.linkedCompanyId,
+          lastRefreshedFromSharedAt: financialAnalyses.lastRefreshedFromSharedAt,
+          clientNameRaw: sql<string | null>`${financialAnalyses.payload}->'data'->'client'->>'name'`,
+          companyNameRaw: sql<string | null>`${financialAnalyses.payload}->'company'->>'name'`,
+          notesRaw: sql<string | null>`${financialAnalyses.payload}->'data'->>'notes'`,
+          currentStepRaw: sql<number>`coalesce((${financialAnalyses.payload}->>'currentStep')::int, 0)`,
+        })
+        .from(financialAnalyses)
+        .where(eq(financialAnalyses.tenantId, auth.tenantId))
+        .orderBy(desc(financialAnalyses.updatedAt))
+        .limit(50)
+    );
     return rows.map((r) => {
       const personal = (r.clientNameRaw ?? "").trim();
       let clientName = personal;
@@ -175,21 +179,23 @@ export async function getFinancialAnalysesForContact(contactId: string): Promise
   const auth = await requireAuthInAction();
   if (auth.roleName === "Client" && auth.contactId !== contactId) throw new Error("Forbidden");
   if (auth.roleName !== "Client" && !hasPermission(auth.roleName, "financial_analyses:read")) throw new Error(FA_ERROR_NO_READ);
-  const rows = await db
-    .select({
-      id: financialAnalyses.id,
-      status: financialAnalyses.status,
-      createdAt: financialAnalyses.createdAt,
-      updatedAt: financialAnalyses.updatedAt,
-      lastExportedAt: financialAnalyses.lastExportedAt,
-      linkedCompanyId: financialAnalyses.linkedCompanyId,
-      lastRefreshedFromSharedAt: financialAnalyses.lastRefreshedFromSharedAt,
-    })
-    .from(financialAnalyses)
-    .where(
-      and(eq(financialAnalyses.tenantId, auth.tenantId), eq(financialAnalyses.contactId, contactId))
-    )
-    .orderBy(desc(financialAnalyses.updatedAt));
+  const rows = await withTenantContextFromAuth(auth, async (tx) =>
+    tx
+      .select({
+        id: financialAnalyses.id,
+        status: financialAnalyses.status,
+        createdAt: financialAnalyses.createdAt,
+        updatedAt: financialAnalyses.updatedAt,
+        lastExportedAt: financialAnalyses.lastExportedAt,
+        linkedCompanyId: financialAnalyses.linkedCompanyId,
+        lastRefreshedFromSharedAt: financialAnalyses.lastRefreshedFromSharedAt,
+      })
+      .from(financialAnalyses)
+      .where(
+        and(eq(financialAnalyses.tenantId, auth.tenantId), eq(financialAnalyses.contactId, contactId))
+      )
+      .orderBy(desc(financialAnalyses.updatedAt))
+  );
   return rows.map((r) => ({
     id: r.id,
     status: r.status,
@@ -205,37 +211,39 @@ export async function getFinancialAnalysesForContact(contactId: string): Promise
 
 export async function getFinancialAnalysesForHousehold(householdId: string): Promise<FinancialAnalysisListItem[]> {
   const auth = await requireAuthInAction();
-  if (auth.roleName === "Client" && auth.contactId) {
-    const [member] = await db
-      .select({ id: householdMembers.id })
-      .from(householdMembers)
-      .innerJoin(households, eq(householdMembers.householdId, households.id))
-      .where(
-        and(
-          eq(householdMembers.householdId, householdId),
-          eq(householdMembers.contactId, auth.contactId),
-          eq(households.tenantId, auth.tenantId)
+  return withTenantContextFromAuth(auth, async (tx) => {
+    if (auth.roleName === "Client" && auth.contactId) {
+      const [member] = await tx
+        .select({ id: householdMembers.id })
+        .from(householdMembers)
+        .innerJoin(households, eq(householdMembers.householdId, households.id))
+        .where(
+          and(
+            eq(householdMembers.householdId, householdId),
+            eq(householdMembers.contactId, auth.contactId),
+            eq(households.tenantId, auth.tenantId)
+          )
         )
+        .limit(1);
+      if (!member) throw new Error("Forbidden");
+    } else if (!hasPermission(auth.roleName, "households:read")) {
+      throw new Error("Forbidden");
+    }
+    const rows = await tx
+      .select({
+        id: financialAnalyses.id,
+        status: financialAnalyses.status,
+        createdAt: financialAnalyses.createdAt,
+        updatedAt: financialAnalyses.updatedAt,
+        lastExportedAt: financialAnalyses.lastExportedAt,
+      })
+      .from(financialAnalyses)
+      .where(
+        and(eq(financialAnalyses.tenantId, auth.tenantId), eq(financialAnalyses.householdId, householdId))
       )
-      .limit(1);
-    if (!member) throw new Error("Forbidden");
-  } else if (!hasPermission(auth.roleName, "households:read")) {
-    throw new Error("Forbidden");
-  }
-  const rows = await db
-    .select({
-      id: financialAnalyses.id,
-      status: financialAnalyses.status,
-      createdAt: financialAnalyses.createdAt,
-      updatedAt: financialAnalyses.updatedAt,
-      lastExportedAt: financialAnalyses.lastExportedAt,
-    })
-    .from(financialAnalyses)
-    .where(
-      and(eq(financialAnalyses.tenantId, auth.tenantId), eq(financialAnalyses.householdId, householdId))
-    )
-    .orderBy(desc(financialAnalyses.updatedAt));
-  return rows as FinancialAnalysisListItem[];
+      .orderBy(desc(financialAnalyses.updatedAt));
+    return rows as FinancialAnalysisListItem[];
+  });
 }
 
 export async function saveFinancialAnalysisDraft(params: {
@@ -248,76 +256,80 @@ export async function saveFinancialAnalysisDraft(params: {
   if (!hasPermission(auth.roleName, "financial_analyses:write")) throw new Error(FA_ERROR_NO_WRITE);
   const { id, contactId, householdId, payload } = params;
 
-  if (contactId) {
-    const [c] = await db
-      .select({ id: contacts.id })
-      .from(contacts)
-      .where(and(eq(contacts.id, contactId), eq(contacts.tenantId, auth.tenantId)))
-      .limit(1);
-    if (!c) throw new Error("Kontakt nenalezen.");
-  }
-  if (householdId) {
-    const [h] = await db
-      .select({ id: households.id })
-      .from(households)
-      .where(and(eq(households.id, householdId), eq(households.tenantId, auth.tenantId)))
-      .limit(1);
-    if (!h) throw new Error("Domácnost nenalezena.");
-  }
+  return withTenantContextFromAuth(auth, async (tx) => {
+    if (contactId) {
+      const [c] = await tx
+        .select({ id: contacts.id })
+        .from(contacts)
+        .where(and(eq(contacts.id, contactId), eq(contacts.tenantId, auth.tenantId)))
+        .limit(1);
+      if (!c) throw new Error("Kontakt nenalezen.");
+    }
+    if (householdId) {
+      const [h] = await tx
+        .select({ id: households.id })
+        .from(households)
+        .where(and(eq(households.id, householdId), eq(households.tenantId, auth.tenantId)))
+        .limit(1);
+      if (!h) throw new Error("Domácnost nenalezena.");
+    }
 
-  const now = new Date();
-  if (id) {
-    const updateSet: Record<string, unknown> = {
-      payload: payload as unknown as typeof financialAnalyses.$inferInsert.payload,
-      updatedBy: auth.userId,
-      updatedAt: now,
-    };
-    if (contactId !== undefined) updateSet.contactId = contactId ?? null;
-    if (householdId !== undefined) updateSet.householdId = householdId ?? null;
-    const [updated] = await db
-      .update(financialAnalyses)
-      .set(updateSet as typeof financialAnalyses.$inferInsert)
-      .where(
-        and(
-          eq(financialAnalyses.tenantId, auth.tenantId),
-          eq(financialAnalyses.id, id),
-          eq(financialAnalyses.type, "financial")
+    const now = new Date();
+    if (id) {
+      const updateSet: Record<string, unknown> = {
+        payload: payload as unknown as typeof financialAnalyses.$inferInsert.payload,
+        updatedBy: auth.userId,
+        updatedAt: now,
+      };
+      if (contactId !== undefined) updateSet.contactId = contactId ?? null;
+      if (householdId !== undefined) updateSet.householdId = householdId ?? null;
+      const [updated] = await tx
+        .update(financialAnalyses)
+        .set(updateSet as typeof financialAnalyses.$inferInsert)
+        .where(
+          and(
+            eq(financialAnalyses.tenantId, auth.tenantId),
+            eq(financialAnalyses.id, id),
+            eq(financialAnalyses.type, "financial")
+          )
         )
-      )
+        .returning({ id: financialAnalyses.id });
+      if (!updated?.id) throw new Error("Analýzu se nepodařilo uložit.");
+      return updated.id;
+    }
+    const [row] = await tx
+      .insert(financialAnalyses)
+      .values({
+        tenantId: auth.tenantId,
+        contactId: contactId ?? null,
+        householdId: householdId ?? null,
+        type: "financial",
+        status: "draft",
+        payload: payload as unknown as typeof financialAnalyses.$inferInsert.payload,
+        createdBy: auth.userId,
+        updatedBy: auth.userId,
+      })
       .returning({ id: financialAnalyses.id });
-    if (!updated?.id) throw new Error("Analýzu se nepodařilo uložit.");
-    return updated.id;
-  }
-  const [row] = await db
-    .insert(financialAnalyses)
-    .values({
-      tenantId: auth.tenantId,
-      contactId: contactId ?? null,
-      householdId: householdId ?? null,
-      type: "financial",
-      status: "draft",
-      payload: payload as unknown as typeof financialAnalyses.$inferInsert.payload,
-      createdBy: auth.userId,
-      updatedBy: auth.userId,
-    })
-    .returning({ id: financialAnalyses.id });
-  if (!row?.id) throw new Error("Failed to create analysis");
-  return row.id;
+    if (!row?.id) throw new Error("Failed to create analysis");
+    return row.id;
+  });
 }
 
 /** Odstraní záznam z databáze (včetně navázaných řádků dle FK cascade / set null). */
 export async function deleteFinancialAnalysisPermanently(id: string): Promise<void> {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "financial_analyses:write")) throw new Error(FA_ERROR_NO_WRITE);
-  const [row] = await db
-    .select({ id: financialAnalyses.id })
-    .from(financialAnalyses)
-    .where(and(eq(financialAnalyses.tenantId, auth.tenantId), eq(financialAnalyses.id, id)))
-    .limit(1);
-  if (!row) throw new Error("Analýza nenalezena.");
-  await db
-    .delete(financialAnalyses)
-    .where(and(eq(financialAnalyses.tenantId, auth.tenantId), eq(financialAnalyses.id, id)));
+  await withTenantContextFromAuth(auth, async (tx) => {
+    const [row] = await tx
+      .select({ id: financialAnalyses.id })
+      .from(financialAnalyses)
+      .where(and(eq(financialAnalyses.tenantId, auth.tenantId), eq(financialAnalyses.id, id)))
+      .limit(1);
+    if (!row) throw new Error("Analýza nenalezena.");
+    await tx
+      .delete(financialAnalyses)
+      .where(and(eq(financialAnalyses.tenantId, auth.tenantId), eq(financialAnalyses.id, id)));
+  });
 }
 
 export async function setFinancialAnalysisStatus(
@@ -326,10 +338,12 @@ export async function setFinancialAnalysisStatus(
 ): Promise<void> {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "financial_analyses:write")) throw new Error(FA_ERROR_NO_WRITE);
-  await db
-    .update(financialAnalyses)
-    .set({ status, updatedBy: auth.userId, updatedAt: new Date() })
-    .where(and(eq(financialAnalyses.tenantId, auth.tenantId), eq(financialAnalyses.id, id)));
+  await withTenantContextFromAuth(auth, async (tx) =>
+    tx
+      .update(financialAnalyses)
+      .set({ status, updatedBy: auth.userId, updatedAt: new Date() })
+      .where(and(eq(financialAnalyses.tenantId, auth.tenantId), eq(financialAnalyses.id, id)))
+  );
 
   if (status === "completed") {
     try {
@@ -349,14 +363,16 @@ export async function setFinancialAnalysisStatus(
 export async function setFinancialAnalysisLastExportedAt(id: string): Promise<void> {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "financial_analyses:write")) throw new Error(FA_ERROR_NO_WRITE);
-  await db
-    .update(financialAnalyses)
-    .set({
-      lastExportedAt: new Date(),
-      updatedBy: auth.userId,
-      updatedAt: new Date(),
-    })
-    .where(and(eq(financialAnalyses.tenantId, auth.tenantId), eq(financialAnalyses.id, id)));
+  await withTenantContextFromAuth(auth, async (tx) =>
+    tx
+      .update(financialAnalyses)
+      .set({
+        lastExportedAt: new Date(),
+        updatedBy: auth.userId,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(financialAnalyses.tenantId, auth.tenantId), eq(financialAnalyses.id, id)))
+  );
 }
 
 /** Phase 7: set link metadata (linked company, last refreshed from shared facts). */
@@ -366,47 +382,51 @@ export async function setFinancialAnalysisLinkMetadata(
 ): Promise<void> {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "financial_analyses:write")) throw new Error(FA_ERROR_NO_WRITE);
-  await db
-    .update(financialAnalyses)
-    .set({
-      ...params,
-      updatedBy: auth.userId,
-      updatedAt: new Date(),
-    })
-    .where(
-      and(
-        eq(financialAnalyses.tenantId, auth.tenantId),
-        eq(financialAnalyses.id, id),
-        eq(financialAnalyses.type, "financial")
+  await withTenantContextFromAuth(auth, async (tx) =>
+    tx
+      .update(financialAnalyses)
+      .set({
+        ...params,
+        updatedBy: auth.userId,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(financialAnalyses.tenantId, auth.tenantId),
+          eq(financialAnalyses.id, id),
+          eq(financialAnalyses.type, "financial")
+        )
       )
-    );
+  );
 }
 
 /** Phase 7: list personal analyses linked to a company. */
 export async function getPersonalAnalysesLinkedToCompany(companyId: string): Promise<FinancialAnalysisListItem[]> {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "financial_analyses:read")) throw new Error(FA_ERROR_NO_READ);
-  const rows = await db
-    .select({
-      id: financialAnalyses.id,
-      status: financialAnalyses.status,
-      createdAt: financialAnalyses.createdAt,
-      updatedAt: financialAnalyses.updatedAt,
-      lastExportedAt: financialAnalyses.lastExportedAt,
-      contactId: financialAnalyses.contactId,
-      householdId: financialAnalyses.householdId,
-      payload: financialAnalyses.payload,
-      lastRefreshedFromSharedAt: financialAnalyses.lastRefreshedFromSharedAt,
-    })
-    .from(financialAnalyses)
-    .where(
-      and(
-        eq(financialAnalyses.tenantId, auth.tenantId),
-        eq(financialAnalyses.type, "financial"),
-        eq(financialAnalyses.linkedCompanyId, companyId)
+  const rows = await withTenantContextFromAuth(auth, async (tx) =>
+    tx
+      .select({
+        id: financialAnalyses.id,
+        status: financialAnalyses.status,
+        createdAt: financialAnalyses.createdAt,
+        updatedAt: financialAnalyses.updatedAt,
+        lastExportedAt: financialAnalyses.lastExportedAt,
+        contactId: financialAnalyses.contactId,
+        householdId: financialAnalyses.householdId,
+        payload: financialAnalyses.payload,
+        lastRefreshedFromSharedAt: financialAnalyses.lastRefreshedFromSharedAt,
+      })
+      .from(financialAnalyses)
+      .where(
+        and(
+          eq(financialAnalyses.tenantId, auth.tenantId),
+          eq(financialAnalyses.type, "financial"),
+          eq(financialAnalyses.linkedCompanyId, companyId)
+        )
       )
-    )
-    .orderBy(desc(financialAnalyses.updatedAt));
+      .orderBy(desc(financialAnalyses.updatedAt))
+  );
   return rows.map((r) => {
     const payload = r.payload as { data?: { client?: { name?: string } } } | null;
     const clientName = payload?.data?.client?.name ?? null;
@@ -462,14 +482,16 @@ export async function applyRefreshFromShared(
     patch,
     pathsToApply
   );
-  await db
-    .update(financialAnalyses)
-    .set({
-      payload: { data: mergedData as unknown as Record<string, unknown>, currentStep },
-      updatedBy: auth.userId,
-      updatedAt: new Date(),
-    })
-    .where(and(eq(financialAnalyses.tenantId, auth.tenantId), eq(financialAnalyses.id, analysisId)));
+  await withTenantContextFromAuth(auth, async (tx) =>
+    tx
+      .update(financialAnalyses)
+      .set({
+        payload: { data: mergedData as unknown as Record<string, unknown>, currentStep },
+        updatedBy: auth.userId,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(financialAnalyses.tenantId, auth.tenantId), eq(financialAnalyses.id, analysisId)))
+  );
   await setFinancialAnalysisLinkMetadata(analysisId, { linkedCompanyId, lastRefreshedFromSharedAt: new Date() });
   return { ok: true };
 }
@@ -487,15 +509,17 @@ export async function clearFinancialAnalysisLink(analysisId: string): Promise<{ 
     if (prov[k] === "linked") prov[k] = "overridden";
   }
   data._provenance = prov;
-  await db
-    .update(financialAnalyses)
-    .set({
-      linkedCompanyId: null,
-      lastRefreshedFromSharedAt: null,
-      payload: { ...payload, data },
-      updatedBy: auth.userId,
-      updatedAt: new Date(),
-    })
-    .where(and(eq(financialAnalyses.tenantId, auth.tenantId), eq(financialAnalyses.id, analysisId)));
+  await withTenantContextFromAuth(auth, async (tx) =>
+    tx
+      .update(financialAnalyses)
+      .set({
+        linkedCompanyId: null,
+        lastRefreshedFromSharedAt: null,
+        payload: { ...payload, data },
+        updatedBy: auth.userId,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(financialAnalyses.tenantId, auth.tenantId), eq(financialAnalyses.id, analysisId)))
+  );
   return { ok: true };
 }

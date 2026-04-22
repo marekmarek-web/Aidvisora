@@ -1,9 +1,9 @@
 "use server";
 
 import { requireAuthInAction } from "@/lib/auth/require-auth";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { hasPermission } from "@/lib/auth/permissions";
 import { assertCapabilityForAction } from "@/lib/billing/server-action-plan-guard";
-import { db } from "db";
 import { contracts, SEGMENT_LABELS } from "db";
 import { eq, and, gte, lt, sql } from "db";
 import {
@@ -153,26 +153,28 @@ export async function getProductionSummary(
     count: number;
   }>;
   try {
-    rows = await db
-      .select({
-        segment: contracts.segment,
-        partnerName: contracts.partnerName,
-        totalPremium: sql<number>`coalesce(sum(${contracts.premiumAmount}::numeric), 0)`,
-        totalAnnual: sql<number>`coalesce(sum(${contracts.premiumAnnual}::numeric), 0)`,
-        totalBjUnits: sql<number>`coalesce(sum(${contracts.bjUnits}::numeric), 0)`,
-        count: sql<number>`count(*)::int`,
-      })
-      .from(contracts)
-      .where(
-        and(
-          eq(contracts.tenantId, auth.tenantId),
-          eq(contracts.advisorId, auth.userId),
-          contractProductionDateGte(start.toISOString().slice(0, 10)),
-          contractProductionDateLt(end.toISOString().slice(0, 10))
+    rows = await withTenantContextFromAuth(auth, async (tx) =>
+      tx
+        .select({
+          segment: contracts.segment,
+          partnerName: contracts.partnerName,
+          totalPremium: sql<number>`coalesce(sum(${contracts.premiumAmount}::numeric), 0)`,
+          totalAnnual: sql<number>`coalesce(sum(${contracts.premiumAnnual}::numeric), 0)`,
+          totalBjUnits: sql<number>`coalesce(sum(${contracts.bjUnits}::numeric), 0)`,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(contracts)
+        .where(
+          and(
+            eq(contracts.tenantId, auth.tenantId),
+            eq(contracts.advisorId, auth.userId),
+            contractProductionDateGte(start.toISOString().slice(0, 10)),
+            contractProductionDateLt(end.toISOString().slice(0, 10))
+          )
         )
-      )
-      .groupBy(contracts.segment, contracts.partnerName)
-      .orderBy(contracts.segment, contracts.partnerName);
+        .groupBy(contracts.segment, contracts.partnerName)
+        .orderBy(contracts.segment, contracts.partnerName),
+    );
   } catch (err) {
     if (isMissingSchemaError(err)) throw new Error(MISSING_SCHEMA_HINT);
     throw err;
@@ -200,14 +202,16 @@ export async function getProductionSummary(
     | { careerPositionKey: string | null; careerBjBonusCzk: string | null }
     | undefined;
   try {
-    [prefRow] = await db
-      .select({
-        careerPositionKey: advisorPreferences.careerPositionKey,
-        careerBjBonusCzk: advisorPreferences.careerBjBonusCzk,
-      })
-      .from(advisorPreferences)
-      .where(and(eq(advisorPreferences.tenantId, auth.tenantId), eq(advisorPreferences.userId, auth.userId)))
-      .limit(1);
+    [prefRow] = await withTenantContextFromAuth(auth, async (tx) =>
+      tx
+        .select({
+          careerPositionKey: advisorPreferences.careerPositionKey,
+          careerBjBonusCzk: advisorPreferences.careerBjBonusCzk,
+        })
+        .from(advisorPreferences)
+        .where(and(eq(advisorPreferences.tenantId, auth.tenantId), eq(advisorPreferences.userId, auth.userId)))
+        .limit(1),
+    );
   } catch (err) {
     if (isMissingSchemaError(err)) throw new Error(MISSING_SCHEMA_HINT);
     throw err;
@@ -286,36 +290,38 @@ export async function getContractsForPeriod(
     premiumAnnual: string | null;
   }>;
   try {
-    rows = await db
-    .select({
-      id: contracts.id,
-      contactId: contracts.contactId,
-      segment: contracts.segment,
-      partnerName: contracts.partnerName,
-      contractNumber: contracts.contractNumber,
-      startDate: contracts.startDate,
-      productionDate: sql<string>`CASE
+    rows = await withTenantContextFromAuth(auth, async (tx) =>
+      tx
+        .select({
+          id: contracts.id,
+          contactId: contracts.contactId,
+          segment: contracts.segment,
+          partnerName: contracts.partnerName,
+          contractNumber: contracts.contractNumber,
+          startDate: contracts.startDate,
+          productionDate: sql<string>`CASE
         WHEN ${contracts.sourceKind} = 'ai_review'
           THEN COALESCE(${contracts.advisorConfirmedAt}::date::text, ${contracts.startDate})
         ELSE ${contracts.startDate}
       END`,
-      premiumAmount: contracts.premiumAmount,
-      premiumAnnual: contracts.premiumAnnual,
-    })
-    .from(contracts)
-    .where(
-      and(
-        eq(contracts.tenantId, auth.tenantId),
-        eq(contracts.advisorId, auth.userId),
-        contractProductionDateGte(start.toISOString().slice(0, 10)),
-        contractProductionDateLt(end.toISOString().slice(0, 10))
-      )
-    )
-    .orderBy(sql`CASE
+          premiumAmount: contracts.premiumAmount,
+          premiumAnnual: contracts.premiumAnnual,
+        })
+        .from(contracts)
+        .where(
+          and(
+            eq(contracts.tenantId, auth.tenantId),
+            eq(contracts.advisorId, auth.userId),
+            contractProductionDateGte(start.toISOString().slice(0, 10)),
+            contractProductionDateLt(end.toISOString().slice(0, 10))
+          )
+        )
+        .orderBy(sql`CASE
       WHEN ${contracts.sourceKind} = 'ai_review'
         THEN COALESCE(${contracts.advisorConfirmedAt}::date, ${contracts.startDate}::date)
       ELSE ${contracts.startDate}::date
-    END`, contracts.segment);
+    END`, contracts.segment),
+    );
   } catch (err) {
     if (isMissingSchemaError(err)) throw new Error(MISSING_SCHEMA_HINT);
     throw err;

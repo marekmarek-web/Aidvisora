@@ -2,7 +2,7 @@
 
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
-import { db } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import { portalNotifications } from "db";
 import { eq, and, desc, isNull, sql } from "db";
 import { sendPushForPortalNotification } from "@/lib/push/send";
@@ -126,56 +126,63 @@ export async function createPortalNotification(params: {
     Boolean(params.relatedEntityId) &&
     (params.title === "Požadavek splněn" || params.title === "Požadavek uzavřen");
 
-  if (isTerminalAdvisorMaterialRequest) {
-    await db
-      .update(portalNotifications)
-      .set({ readAt: new Date() })
-      .where(
-        and(
-          eq(portalNotifications.tenantId, params.tenantId),
-          eq(portalNotifications.contactId, params.contactId),
-          eq(portalNotifications.type, "advisor_material_request"),
-          eq(portalNotifications.relatedEntityId, params.relatedEntityId!),
-          isNull(portalNotifications.readAt),
-        )
-      );
-  }
-
-  // 5C: Dedup — skip if an unread notification already exists for same type + entity
-  const dedupMinutes = params.dedupWindowMinutes ?? (params.relatedEntityId ? 5 : 0);
-  if (dedupMinutes > 0 && params.relatedEntityId) {
-    const [existing] = await db
-      .select({ id: portalNotifications.id })
-      .from(portalNotifications)
-      .where(
-        and(
-          eq(portalNotifications.tenantId, params.tenantId),
-          eq(portalNotifications.contactId, params.contactId),
-          eq(portalNotifications.type, params.type),
-          eq(portalNotifications.relatedEntityId, params.relatedEntityId),
-          isNull(portalNotifications.readAt),
-        )
-      )
-      .limit(1);
-    if (existing && existing.id) {
-      // Recent unread notification for same entity already exists — skip
-      return { id: existing.id, deduped: true };
+  const result = await withTenantContext({ tenantId: params.tenantId }, async (tx) => {
+    if (isTerminalAdvisorMaterialRequest) {
+      await tx
+        .update(portalNotifications)
+        .set({ readAt: new Date() })
+        .where(
+          and(
+            eq(portalNotifications.tenantId, params.tenantId),
+            eq(portalNotifications.contactId, params.contactId),
+            eq(portalNotifications.type, "advisor_material_request"),
+            eq(portalNotifications.relatedEntityId, params.relatedEntityId!),
+            isNull(portalNotifications.readAt),
+          )
+        );
     }
-  }
 
-  const inserted = await db
-    .insert(portalNotifications)
-    .values({
-      tenantId: params.tenantId,
-      contactId: params.contactId,
-      type: params.type,
-      title: params.title,
-      body: params.body ?? null,
-      relatedEntityType: params.relatedEntityType ?? null,
-      relatedEntityId: params.relatedEntityId ?? null,
-    })
-    .returning({ id: portalNotifications.id });
-  const insertedId = inserted[0]?.id ?? null;
+    // 5C: Dedup — skip if an unread notification already exists for same type + entity
+    const dedupMinutes = params.dedupWindowMinutes ?? (params.relatedEntityId ? 5 : 0);
+    if (dedupMinutes > 0 && params.relatedEntityId) {
+      const [existing] = await tx
+        .select({ id: portalNotifications.id })
+        .from(portalNotifications)
+        .where(
+          and(
+            eq(portalNotifications.tenantId, params.tenantId),
+            eq(portalNotifications.contactId, params.contactId),
+            eq(portalNotifications.type, params.type),
+            eq(portalNotifications.relatedEntityId, params.relatedEntityId),
+            isNull(portalNotifications.readAt),
+          )
+        )
+        .limit(1);
+      if (existing && existing.id) {
+        // Recent unread notification for same entity already exists — skip
+        return { id: existing.id, deduped: true as const };
+      }
+    }
+
+    const inserted = await tx
+      .insert(portalNotifications)
+      .values({
+        tenantId: params.tenantId,
+        contactId: params.contactId,
+        type: params.type,
+        title: params.title,
+        body: params.body ?? null,
+        relatedEntityType: params.relatedEntityType ?? null,
+        relatedEntityId: params.relatedEntityId ?? null,
+      })
+      .returning({ id: portalNotifications.id });
+    return { id: inserted[0]?.id ?? null, deduped: false as const };
+  });
+
+  if (result.deduped) {
+    return result;
+  }
+  const insertedId = result.id;
 
   try {
     await sendPushForPortalNotification({

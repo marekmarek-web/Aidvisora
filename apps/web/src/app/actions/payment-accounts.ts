@@ -1,8 +1,9 @@
 "use server";
 
 import { requireAuthInAction } from "@/lib/auth/require-auth";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import { hasPermission } from "@/lib/auth/permissions";
-import { db } from "db";
 import { paymentAccounts, partners } from "db";
 import { eq, and, or, isNull, asc } from "db";
 
@@ -21,16 +22,19 @@ export type PaymentAccountRow = {
 export async function getPaymentAccountsForTenant(): Promise<PaymentAccountRow[]> {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "contacts:read")) throw new Error("Forbidden");
-  const globalRows = await db
-    .select()
-    .from(paymentAccounts)
-    .where(isNull(paymentAccounts.tenantId))
-    .orderBy(asc(paymentAccounts.segment), asc(paymentAccounts.partnerName));
-  const tenantRows = await db
-    .select()
-    .from(paymentAccounts)
-    .where(eq(paymentAccounts.tenantId, auth.tenantId))
-    .orderBy(asc(paymentAccounts.segment), asc(paymentAccounts.partnerName));
+  const { globalRows, tenantRows } = await withTenantContextFromAuth(auth, async (tx) => {
+    const g = await tx
+      .select()
+      .from(paymentAccounts)
+      .where(isNull(paymentAccounts.tenantId))
+      .orderBy(asc(paymentAccounts.segment), asc(paymentAccounts.partnerName));
+    const t = await tx
+      .select()
+      .from(paymentAccounts)
+      .where(eq(paymentAccounts.tenantId, auth.tenantId))
+      .orderBy(asc(paymentAccounts.segment), asc(paymentAccounts.partnerName));
+    return { globalRows: g, tenantRows: t };
+  });
   const byKey = new Map<string, PaymentAccountRow>();
   for (const r of globalRows) {
     byKey.set(`${r.partnerId ?? r.partnerName ?? ""}-${r.segment}`, { ...r, tenantId: null });
@@ -48,27 +52,29 @@ export async function getPaymentAccountForContract(
   partnerName: string | null,
   segment: string
 ): Promise<PaymentAccountRow | null> {
-  const tenantRows = await db
-    .select()
-    .from(paymentAccounts)
-    .where(
-      and(
-        eq(paymentAccounts.tenantId, tenantId),
-        eq(paymentAccounts.segment, segment)
-      )
+  return withTenantContext({ tenantId }, async (tx) => {
+    const tenantRows = await tx
+      .select()
+      .from(paymentAccounts)
+      .where(
+        and(
+          eq(paymentAccounts.tenantId, tenantId),
+          eq(paymentAccounts.segment, segment)
+        )
+      );
+    const match = tenantRows.find(
+      (r) => (partnerId && r.partnerId === partnerId) || (partnerName && r.partnerName === partnerName)
     );
-  const match = tenantRows.find(
-    (r) => (partnerId && r.partnerId === partnerId) || (partnerName && r.partnerName === partnerName)
-  );
-  if (match) return { ...match, tenantId: match.tenantId };
-  const globalRows = await db
-    .select()
-    .from(paymentAccounts)
-    .where(and(isNull(paymentAccounts.tenantId), eq(paymentAccounts.segment, segment)));
-  const globalMatch = globalRows.find(
-    (r) => (partnerId && r.partnerId === partnerId) || (partnerName && r.partnerName === partnerName)
-  );
-  return globalMatch ? { ...globalMatch, tenantId: null } : null;
+    if (match) return { ...match, tenantId: match.tenantId };
+    const globalRows = await tx
+      .select()
+      .from(paymentAccounts)
+      .where(and(isNull(paymentAccounts.tenantId), eq(paymentAccounts.segment, segment)));
+    const globalMatch = globalRows.find(
+      (r) => (partnerId && r.partnerId === partnerId) || (partnerName && r.partnerName === partnerName)
+    );
+    return globalMatch ? { ...globalMatch, tenantId: null } : null;
+  });
 }
 
 export async function createPaymentAccount(form: {
@@ -81,18 +87,20 @@ export async function createPaymentAccount(form: {
 }) {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
-  const [row] = await db
-    .insert(paymentAccounts)
-    .values({
-      tenantId: auth.tenantId,
-      partnerId: form.partnerId || null,
-      partnerName: form.partnerName?.trim() || null,
-      segment: form.segment,
-      accountNumber: form.accountNumber.trim(),
-      bank: form.bank?.trim() || null,
-      note: form.note?.trim() || null,
-    })
-    .returning({ id: paymentAccounts.id });
+  const [row] = await withTenantContextFromAuth(auth, async (tx) =>
+    tx
+      .insert(paymentAccounts)
+      .values({
+        tenantId: auth.tenantId,
+        partnerId: form.partnerId || null,
+        partnerName: form.partnerName?.trim() || null,
+        segment: form.segment,
+        accountNumber: form.accountNumber.trim(),
+        bank: form.bank?.trim() || null,
+        note: form.note?.trim() || null,
+      })
+      .returning({ id: paymentAccounts.id }),
+  );
   return row?.id ?? null;
 }
 
@@ -102,21 +110,25 @@ export async function updatePaymentAccount(
 ) {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
-  await db
-    .update(paymentAccounts)
-    .set({
-      ...(form.accountNumber != null && { accountNumber: form.accountNumber.trim() }),
-      ...(form.bank != null && { bank: form.bank?.trim() || null }),
-      ...(form.note != null && { note: form.note?.trim() || null }),
-      updatedAt: new Date(),
-    })
-    .where(and(eq(paymentAccounts.tenantId, auth.tenantId), eq(paymentAccounts.id, id)));
+  await withTenantContextFromAuth(auth, async (tx) =>
+    tx
+      .update(paymentAccounts)
+      .set({
+        ...(form.accountNumber != null && { accountNumber: form.accountNumber.trim() }),
+        ...(form.bank != null && { bank: form.bank?.trim() || null }),
+        ...(form.note != null && { note: form.note?.trim() || null }),
+        updatedAt: new Date(),
+      })
+      .where(and(eq(paymentAccounts.tenantId, auth.tenantId), eq(paymentAccounts.id, id))),
+  );
 }
 
 export async function deletePaymentAccount(id: string) {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
-  await db
-    .delete(paymentAccounts)
-    .where(and(eq(paymentAccounts.tenantId, auth.tenantId), eq(paymentAccounts.id, id)));
+  await withTenantContextFromAuth(auth, async (tx) =>
+    tx
+      .delete(paymentAccounts)
+      .where(and(eq(paymentAccounts.tenantId, auth.tenantId), eq(paymentAccounts.id, id))),
+  );
 }

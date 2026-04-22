@@ -1,7 +1,8 @@
 "use server";
 
 import { requireAuthInAction } from "@/lib/auth/require-auth";
-import { db, userProfiles, eq } from "db";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
+import { userProfiles, eq } from "db";
 
 export type CalendarReminderChannelPrefs = {
   pushEnabled: boolean;
@@ -10,14 +11,16 @@ export type CalendarReminderChannelPrefs = {
 
 export async function getCalendarReminderChannelPrefs(): Promise<CalendarReminderChannelPrefs> {
   const auth = await requireAuthInAction();
-  const [row] = await db
-    .select({
-      pushEnabled: userProfiles.calendarReminderPushEnabled,
-      emailEnabled: userProfiles.calendarReminderEmailEnabled,
-    })
-    .from(userProfiles)
-    .where(eq(userProfiles.userId, auth.userId))
-    .limit(1);
+  const [row] = await withTenantContextFromAuth(auth, async (tx) =>
+    tx
+      .select({
+        pushEnabled: userProfiles.calendarReminderPushEnabled,
+        emailEnabled: userProfiles.calendarReminderEmailEnabled,
+      })
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, auth.userId))
+      .limit(1),
+  );
   return {
     pushEnabled: row?.pushEnabled !== false,
     emailEnabled: row?.emailEnabled !== false,
@@ -32,24 +35,26 @@ export async function updateCalendarReminderChannelPrefs(
     return { ok: false, error: "Nic ke změně." };
   }
   try {
-    await db
-      .insert(userProfiles)
-      .values({
-        userId: auth.userId,
-        fullName: null,
-        email: null,
-        calendarReminderPushEnabled: prefs.pushEnabled ?? true,
-        calendarReminderEmailEnabled: prefs.emailEnabled ?? true,
-        updatedAt: new Date(),
-      })
-      .onConflictDoUpdate({
-        target: userProfiles.userId,
-        set: {
-          ...(prefs.pushEnabled !== undefined && { calendarReminderPushEnabled: prefs.pushEnabled }),
-          ...(prefs.emailEnabled !== undefined && { calendarReminderEmailEnabled: prefs.emailEnabled }),
+    await withTenantContextFromAuth(auth, async (tx) => {
+      await tx
+        .insert(userProfiles)
+        .values({
+          userId: auth.userId,
+          fullName: null,
+          email: null,
+          calendarReminderPushEnabled: prefs.pushEnabled ?? true,
+          calendarReminderEmailEnabled: prefs.emailEnabled ?? true,
           updatedAt: new Date(),
-        },
-      });
+        })
+        .onConflictDoUpdate({
+          target: userProfiles.userId,
+          set: {
+            ...(prefs.pushEnabled !== undefined && { calendarReminderPushEnabled: prefs.pushEnabled }),
+            ...(prefs.emailEnabled !== undefined && { calendarReminderEmailEnabled: prefs.emailEnabled }),
+            updatedAt: new Date(),
+          },
+        });
+    });
     return { ok: true };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Uložení se nepovedlo." };

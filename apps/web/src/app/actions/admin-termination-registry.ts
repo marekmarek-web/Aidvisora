@@ -1,8 +1,9 @@
 "use server";
 
 import { requireAuthInAction } from "@/lib/auth/require-auth";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { hasPermission } from "@/lib/auth/permissions";
-import { db, insurerTerminationRegistry, or, eq, isNull, and, asc } from "db";
+import { insurerTerminationRegistry, or, eq, isNull, and, asc } from "db";
 
 export type InsurerRegistryAdminRow = {
   id: string;
@@ -30,32 +31,34 @@ export async function listInsurerTerminationRegistryAdmin(): Promise<ListRegistr
     return { ok: false, error: "Vyžadováno oprávnění nastavení (Admin)." };
   }
 
-  const rows = await db
-    .select({
-      id: insurerTerminationRegistry.id,
-      tenantId: insurerTerminationRegistry.tenantId,
-      catalogKey: insurerTerminationRegistry.catalogKey,
-      insurerName: insurerTerminationRegistry.insurerName,
-      registryNeedsVerification: insurerTerminationRegistry.registryNeedsVerification,
-      lastVerifiedAt: insurerTerminationRegistry.lastVerifiedAt,
-      registryInternalNotes: insurerTerminationRegistry.registryInternalNotes,
-      officialFormNotes: insurerTerminationRegistry.officialFormNotes,
-      webFormUrl: insurerTerminationRegistry.webFormUrl,
-      email: insurerTerminationRegistry.email,
-      dataBox: insurerTerminationRegistry.dataBox,
-      mailingAddress: insurerTerminationRegistry.mailingAddress,
-      freeformLetterAllowed: insurerTerminationRegistry.freeformLetterAllowed,
-      requiresOfficialForm: insurerTerminationRegistry.requiresOfficialForm,
-      active: insurerTerminationRegistry.active,
-    })
-    .from(insurerTerminationRegistry)
-    .where(
-      and(
-        eq(insurerTerminationRegistry.active, true),
-        or(isNull(insurerTerminationRegistry.tenantId), eq(insurerTerminationRegistry.tenantId, auth.tenantId))
+  const rows = await withTenantContextFromAuth(auth, async (tx) =>
+    tx
+      .select({
+        id: insurerTerminationRegistry.id,
+        tenantId: insurerTerminationRegistry.tenantId,
+        catalogKey: insurerTerminationRegistry.catalogKey,
+        insurerName: insurerTerminationRegistry.insurerName,
+        registryNeedsVerification: insurerTerminationRegistry.registryNeedsVerification,
+        lastVerifiedAt: insurerTerminationRegistry.lastVerifiedAt,
+        registryInternalNotes: insurerTerminationRegistry.registryInternalNotes,
+        officialFormNotes: insurerTerminationRegistry.officialFormNotes,
+        webFormUrl: insurerTerminationRegistry.webFormUrl,
+        email: insurerTerminationRegistry.email,
+        dataBox: insurerTerminationRegistry.dataBox,
+        mailingAddress: insurerTerminationRegistry.mailingAddress,
+        freeformLetterAllowed: insurerTerminationRegistry.freeformLetterAllowed,
+        requiresOfficialForm: insurerTerminationRegistry.requiresOfficialForm,
+        active: insurerTerminationRegistry.active,
+      })
+      .from(insurerTerminationRegistry)
+      .where(
+        and(
+          eq(insurerTerminationRegistry.active, true),
+          or(isNull(insurerTerminationRegistry.tenantId), eq(insurerTerminationRegistry.tenantId, auth.tenantId))
+        )
       )
-    )
-    .orderBy(asc(insurerTerminationRegistry.insurerName));
+      .orderBy(asc(insurerTerminationRegistry.insurerName)),
+  );
 
   return {
     ok: true,
@@ -89,65 +92,67 @@ export async function updateInsurerTerminationRegistryAdmin(payload: UpdateRegis
     return { ok: false, error: "Vyžadováno oprávnění nastavení (Admin)." };
   }
 
-  const [row] = await db
-    .select({
-      id: insurerTerminationRegistry.id,
-      tenantId: insurerTerminationRegistry.tenantId,
-    })
-    .from(insurerTerminationRegistry)
-    .where(eq(insurerTerminationRegistry.id, payload.id))
-    .limit(1);
-  if (!row) return { ok: false, error: "Záznam nenalezen." };
+  return withTenantContextFromAuth(auth, async (tx) => {
+    const [row] = await tx
+      .select({
+        id: insurerTerminationRegistry.id,
+        tenantId: insurerTerminationRegistry.tenantId,
+      })
+      .from(insurerTerminationRegistry)
+      .where(eq(insurerTerminationRegistry.id, payload.id))
+      .limit(1);
+    if (!row) return { ok: false, error: "Záznam nenalezen." };
 
-  if (row.tenantId === null && auth.roleName !== "Admin") {
-    return { ok: false, error: "Globální katalog může upravovat jen role Admin." };
-  }
-  if (row.tenantId !== null && row.tenantId !== auth.tenantId) {
-    return { ok: false, error: "Záznam nepatří k vašemu tenantovi." };
-  }
+    if (row.tenantId === null && auth.roleName !== "Admin") {
+      return { ok: false, error: "Globální katalog může upravovat jen role Admin." };
+    }
+    if (row.tenantId !== null && row.tenantId !== auth.tenantId) {
+      return { ok: false, error: "Záznam nepatří k vašemu tenantovi." };
+    }
 
-  let mailingAddress: Record<string, unknown> | undefined;
-  if (payload.mailingAddressJson !== undefined) {
-    const raw = payload.mailingAddressJson?.trim();
-    if (!raw) {
-      mailingAddress = {};
-    } else {
-      try {
-        mailingAddress = JSON.parse(raw) as Record<string, unknown>;
-        if (!mailingAddress || typeof mailingAddress !== "object" || Array.isArray(mailingAddress)) {
-          return { ok: false, error: "mailingAddress musí být JSON objekt." };
+    let mailingAddress: Record<string, unknown> | undefined;
+    if (payload.mailingAddressJson !== undefined) {
+      const raw = payload.mailingAddressJson?.trim();
+      if (!raw) {
+        mailingAddress = {};
+      } else {
+        try {
+          mailingAddress = JSON.parse(raw) as Record<string, unknown>;
+          if (!mailingAddress || typeof mailingAddress !== "object" || Array.isArray(mailingAddress)) {
+            return { ok: false, error: "mailingAddress musí být JSON objekt." };
+          }
+        } catch {
+          return { ok: false, error: "Neplatný JSON u adresy." };
         }
-      } catch {
-        return { ok: false, error: "Neplatný JSON u adresy." };
       }
     }
-  }
 
-  await db
-    .update(insurerTerminationRegistry)
-    .set({
-      ...(payload.registryNeedsVerification !== undefined
-        ? { registryNeedsVerification: payload.registryNeedsVerification }
-        : {}),
-      ...(payload.lastVerifiedAt !== undefined
-        ? {
-            lastVerifiedAt:
-              payload.lastVerifiedAt && payload.lastVerifiedAt.trim()
-                ? new Date(payload.lastVerifiedAt)
-                : null,
-          }
-        : {}),
-      ...(payload.registryInternalNotes !== undefined
-        ? { registryInternalNotes: payload.registryInternalNotes }
-        : {}),
-      ...(payload.officialFormNotes !== undefined ? { officialFormNotes: payload.officialFormNotes } : {}),
-      ...(payload.webFormUrl !== undefined ? { webFormUrl: payload.webFormUrl } : {}),
-      ...(payload.email !== undefined ? { email: payload.email } : {}),
-      ...(payload.dataBox !== undefined ? { dataBox: payload.dataBox } : {}),
-      ...(mailingAddress !== undefined ? { mailingAddress } : {}),
-      updatedAt: new Date(),
-    })
-    .where(eq(insurerTerminationRegistry.id, payload.id));
+    await tx
+      .update(insurerTerminationRegistry)
+      .set({
+        ...(payload.registryNeedsVerification !== undefined
+          ? { registryNeedsVerification: payload.registryNeedsVerification }
+          : {}),
+        ...(payload.lastVerifiedAt !== undefined
+          ? {
+              lastVerifiedAt:
+                payload.lastVerifiedAt && payload.lastVerifiedAt.trim()
+                  ? new Date(payload.lastVerifiedAt)
+                  : null,
+            }
+          : {}),
+        ...(payload.registryInternalNotes !== undefined
+          ? { registryInternalNotes: payload.registryInternalNotes }
+          : {}),
+        ...(payload.officialFormNotes !== undefined ? { officialFormNotes: payload.officialFormNotes } : {}),
+        ...(payload.webFormUrl !== undefined ? { webFormUrl: payload.webFormUrl } : {}),
+        ...(payload.email !== undefined ? { email: payload.email } : {}),
+        ...(payload.dataBox !== undefined ? { dataBox: payload.dataBox } : {}),
+        ...(mailingAddress !== undefined ? { mailingAddress } : {}),
+        updatedAt: new Date(),
+      })
+      .where(eq(insurerTerminationRegistry.id, payload.id));
 
-  return { ok: true };
+    return { ok: true };
+  });
 }

@@ -1,8 +1,9 @@
 "use server";
 
 import { requireAuthInAction } from "@/lib/auth/require-auth";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { hasPermission } from "@/lib/auth/permissions";
-import { db, documents, eq, and } from "db";
+import { documents, eq, and } from "db";
 import { createAdminClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/audit";
 import { logNotification } from "@/lib/email/send-email";
@@ -40,18 +41,20 @@ export async function sendDocumentByEmail(
     return { ok: false, error: "Neplatná e-mailová adresa." };
   }
 
-  const [doc] = await db
-    .select({
-      id: documents.id,
-      name: documents.name,
-      mimeType: documents.mimeType,
-      storagePath: documents.storagePath,
-      sizeBytes: documents.sizeBytes,
-      contactId: documents.contactId,
-    })
-    .from(documents)
-    .where(and(eq(documents.tenantId, auth.tenantId), eq(documents.id, documentId)))
-    .limit(1);
+  const [doc] = await withTenantContextFromAuth(auth, async (tx) =>
+    tx
+      .select({
+        id: documents.id,
+        name: documents.name,
+        mimeType: documents.mimeType,
+        storagePath: documents.storagePath,
+        sizeBytes: documents.sizeBytes,
+        contactId: documents.contactId,
+      })
+      .from(documents)
+      .where(and(eq(documents.tenantId, auth.tenantId), eq(documents.id, documentId)))
+      .limit(1),
+  );
 
   if (!doc) {
     return { ok: false, error: "Dokument nenalezen." };

@@ -1,9 +1,9 @@
 "use server";
 
 import { requireAuthInAction } from "@/lib/auth/require-auth";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { hasPermission } from "@/lib/auth/permissions";
 import {
-  db,
   contacts,
   advisorPreferences,
   userProfiles,
@@ -12,6 +12,7 @@ import {
   and,
   sql,
 } from "db";
+import type { TenantContextDb } from "@/lib/db/with-tenant-context";
 import { getPragueCalendarParts } from "@/lib/calendar/cz-public-holidays";
 import { getEffectiveBranding, setBrandingField } from "@/lib/admin/branding-settings";
 import { sendEmail, logNotification } from "@/lib/email/send-email";
@@ -32,8 +33,12 @@ function isBirthdayToday(birthDate: string | null | undefined, pragueMmdd: strin
   return birthDate.slice(5, 10) === pragueMmdd;
 }
 
-async function birthdaySentToday(tenantId: string, contactId: string): Promise<boolean> {
-  const rows = await db
+async function birthdaySentToday(
+  tx: TenantContextDb,
+  tenantId: string,
+  contactId: string,
+): Promise<boolean> {
+  const rows = await tx
     .select({ id: notificationLog.id })
     .from(notificationLog)
     .where(
@@ -60,6 +65,7 @@ type AdvisorBirthdayCtx = {
 };
 
 async function loadAdvisorBirthdayContext(
+  tx: TenantContextDb,
   tenantId: string,
   userId: string
 ): Promise<AdvisorBirthdayCtx> {
@@ -69,7 +75,7 @@ async function loadAdvisorBirthdayContext(
     "premium_dark"
   );
 
-  const [pref] = await db
+  const [pref] = await tx
     .select({
       birthdayEmailTheme: advisorPreferences.birthdayEmailTheme,
       birthdaySignatureName: advisorPreferences.birthdaySignatureName,
@@ -85,7 +91,7 @@ async function loadAdvisorBirthdayContext(
   const requested = parseBirthdayThemePreference(pref?.birthdayEmailTheme, workspaceTheme);
   const { theme, asset } = resolveEffectiveBirthdayTheme(requested);
 
-  const [profile] = await db
+  const [profile] = await tx
     .select({ fullName: userProfiles.fullName })
     .from(userProfiles)
     .where(eq(userProfiles.userId, userId))
@@ -142,76 +148,78 @@ export async function getBirthdayGreetingPreview(
 
   const prague = getPragueCalendarParts();
 
-  const [row] = await db
-    .select({
-      id: contacts.id,
-      firstName: contacts.firstName,
-      lastName: contacts.lastName,
-      email: contacts.email,
-      birthDate: contacts.birthDate,
-      doNotEmail: contacts.doNotEmail,
-      birthGreetingOptOut: contacts.birthGreetingOptOut,
-      preferredSalutation: contacts.preferredSalutation,
-      preferredGreetingName: contacts.preferredGreetingName,
-    })
-    .from(contacts)
-    .where(and(eq(contacts.id, contactId), eq(contacts.tenantId, auth.tenantId)))
-    .limit(1);
+  return withTenantContextFromAuth(auth, async (tx) => {
+    const [row] = await tx
+      .select({
+        id: contacts.id,
+        firstName: contacts.firstName,
+        lastName: contacts.lastName,
+        email: contacts.email,
+        birthDate: contacts.birthDate,
+        doNotEmail: contacts.doNotEmail,
+        birthGreetingOptOut: contacts.birthGreetingOptOut,
+        preferredSalutation: contacts.preferredSalutation,
+        preferredGreetingName: contacts.preferredGreetingName,
+      })
+      .from(contacts)
+      .where(and(eq(contacts.id, contactId), eq(contacts.tenantId, auth.tenantId)))
+      .limit(1);
 
-  if (!row) return { ok: false, message: "Kontakt nenalezen." };
-  if (!isBirthdayToday(row.birthDate, prague.mmdd)) {
-    return { ok: false, message: "Kontakt dnes nemá narozeniny." };
-  }
+    if (!row) return { ok: false, message: "Kontakt nenalezen." };
+    if (!isBirthdayToday(row.birthDate, prague.mmdd)) {
+      return { ok: false, message: "Kontakt dnes nemá narozeniny." };
+    }
 
-  const contactName = `${row.firstName} ${row.lastName}`.trim();
-  const email = row.email?.trim() || "";
-  const salutation = resolveBirthdaySalutation({
-    preferredSalutation: row.preferredSalutation,
-    preferredGreetingName: row.preferredGreetingName,
+    const contactName = `${row.firstName} ${row.lastName}`.trim();
+    const email = row.email?.trim() || "";
+    const salutation = resolveBirthdaySalutation({
+      preferredSalutation: row.preferredSalutation,
+      preferredGreetingName: row.preferredGreetingName,
+    });
+    const openingForPlain = birthdayOpeningLinePlain({ preferredSalutation: row.preferredSalutation });
+
+    const defaultSubject = defaultBirthdaySubject(salutation.salutationShort);
+    const defaultBody = defaultBirthdayBodyPlain(openingForPlain);
+    const subject = draft?.subject?.trim() ? draft.subject.trim() : defaultSubject;
+    const bodyPlain = draft?.bodyPlain?.trim() ? draft.bodyPlain.trim() : defaultBody;
+
+    const advisorCtx = await loadAdvisorBirthdayContext(tx, auth.tenantId, auth.userId);
+    const built = buildBirthdayEmailHtml({
+      subject,
+      bodyPlain,
+      theme: advisorCtx.theme,
+      assetForMeta: advisorCtx.assetForMeta,
+      advisorDisplayName: advisorCtx.advisorName,
+      advisorRoleLine: advisorCtx.advisorRoleLine,
+      advisorPhone: advisorCtx.advisorPhone,
+      advisorWebsite: advisorCtx.advisorWebsite,
+    });
+
+    const alreadySent = await birthdaySentToday(tx, auth.tenantId, contactId);
+
+    let blockReason: string | null = null;
+    if (row.birthGreetingOptOut) blockReason = "Klient má vypnutá narozeninová přání.";
+    else if (row.doNotEmail) blockReason = "U kontaktu je zapnuto „neemailovat“.";
+    else if (!email) blockReason = "Kontakt nemá e-mailovou adresu.";
+    const canSend = !blockReason && !alreadySent;
+
+    return {
+      ok: true,
+      contactId,
+      contactName,
+      contactEmail: email,
+      subject: built.subject,
+      preheader: built.preheader,
+      html: built.html,
+      bodyPlain,
+      theme: built.theme,
+      asset: built.asset,
+      birthdayDate: prague.ymd,
+      alreadySentToday: alreadySent,
+      canSend,
+      blockReason,
+    };
   });
-  const openingForPlain = birthdayOpeningLinePlain({ preferredSalutation: row.preferredSalutation });
-
-  const defaultSubject = defaultBirthdaySubject(salutation.salutationShort);
-  const defaultBody = defaultBirthdayBodyPlain(openingForPlain);
-  const subject = draft?.subject?.trim() ? draft.subject.trim() : defaultSubject;
-  const bodyPlain = draft?.bodyPlain?.trim() ? draft.bodyPlain.trim() : defaultBody;
-
-  const advisorCtx = await loadAdvisorBirthdayContext(auth.tenantId, auth.userId);
-  const built = buildBirthdayEmailHtml({
-    subject,
-    bodyPlain,
-    theme: advisorCtx.theme,
-    assetForMeta: advisorCtx.assetForMeta,
-    advisorDisplayName: advisorCtx.advisorName,
-    advisorRoleLine: advisorCtx.advisorRoleLine,
-    advisorPhone: advisorCtx.advisorPhone,
-    advisorWebsite: advisorCtx.advisorWebsite,
-  });
-
-  const alreadySent = await birthdaySentToday(auth.tenantId, contactId);
-
-  let blockReason: string | null = null;
-  if (row.birthGreetingOptOut) blockReason = "Klient má vypnutá narozeninová přání.";
-  else if (row.doNotEmail) blockReason = "U kontaktu je zapnuto „neemailovat“.";
-  else if (!email) blockReason = "Kontakt nemá e-mailovou adresu.";
-  const canSend = !blockReason && !alreadySent;
-
-  return {
-    ok: true,
-    contactId,
-    contactName,
-    contactEmail: email,
-    subject: built.subject,
-    preheader: built.preheader,
-    html: built.html,
-    bodyPlain,
-    theme: built.theme,
-    asset: built.asset,
-    birthdayDate: prague.ymd,
-    alreadySentToday: alreadySent,
-    canSend,
-    blockReason,
-  };
 }
 
 export type SendBirthdayGreetingResult =
@@ -234,35 +242,42 @@ export async function sendBirthdayGreeting(params: {
   if (!subject) return { ok: false, message: "Chybí předmět." };
   if (!bodyPlain) return { ok: false, message: "Chybí text zprávy." };
 
-  const [row] = await db
-    .select({
-      id: contacts.id,
-      firstName: contacts.firstName,
-      lastName: contacts.lastName,
-      email: contacts.email,
-      birthDate: contacts.birthDate,
-      doNotEmail: contacts.doNotEmail,
-      birthGreetingOptOut: contacts.birthGreetingOptOut,
-    })
-    .from(contacts)
-    .where(and(eq(contacts.id, params.contactId), eq(contacts.tenantId, auth.tenantId)))
-    .limit(1);
+  const prepared = await withTenantContextFromAuth(auth, async (tx) => {
+    const [row] = await tx
+      .select({
+        id: contacts.id,
+        firstName: contacts.firstName,
+        lastName: contacts.lastName,
+        email: contacts.email,
+        birthDate: contacts.birthDate,
+        doNotEmail: contacts.doNotEmail,
+        birthGreetingOptOut: contacts.birthGreetingOptOut,
+      })
+      .from(contacts)
+      .where(and(eq(contacts.id, params.contactId), eq(contacts.tenantId, auth.tenantId)))
+      .limit(1);
 
-  if (!row) return { ok: false, message: "Kontakt nenalezen." };
-  if (!isBirthdayToday(row.birthDate, prague.mmdd)) {
-    return { ok: false, message: "Kontakt dnes nemá narozeniny." };
-  }
-  if (row.birthGreetingOptOut) return { ok: false, message: "Klient si nepřeje narozeninová přání." };
-  if (row.doNotEmail) return { ok: false, message: "U kontaktu je zapnuto „neemailovat“." };
-  const to = row.email?.trim() || "";
-  if (!to) return { ok: false, message: "Kontakt nemá e-mail." };
+    if (!row) return { ok: false as const, message: "Kontakt nenalezen." };
+    if (!isBirthdayToday(row.birthDate, prague.mmdd)) {
+      return { ok: false as const, message: "Kontakt dnes nemá narozeniny." };
+    }
+    if (row.birthGreetingOptOut) return { ok: false as const, message: "Klient si nepřeje narozeninová přání." };
+    if (row.doNotEmail) return { ok: false as const, message: "U kontaktu je zapnuto „neemailovat“." };
+    const to = row.email?.trim() || "";
+    if (!to) return { ok: false as const, message: "Kontakt nemá e-mail." };
 
-  if (await birthdaySentToday(auth.tenantId, params.contactId)) {
-    return { ok: false, message: "Blahopřání tomuto klientovi už dnes bylo odesláno." };
-  }
+    if (await birthdaySentToday(tx, auth.tenantId, params.contactId)) {
+      return { ok: false as const, message: "Blahopřání tomuto klientovi už dnes bylo odesláno." };
+    }
 
-  const contactName = `${row.firstName} ${row.lastName}`.trim();
-  const advisorCtx = await loadAdvisorBirthdayContext(auth.tenantId, auth.userId);
+    const contactName = `${row.firstName} ${row.lastName}`.trim();
+    const advisorCtx = await loadAdvisorBirthdayContext(tx, auth.tenantId, auth.userId);
+    return { ok: true as const, to, contactName, advisorCtx };
+  });
+
+  if (!prepared.ok) return prepared;
+
+  const { to, contactName, advisorCtx } = prepared;
   const built = buildBirthdayEmailHtml({
     subject,
     bodyPlain,

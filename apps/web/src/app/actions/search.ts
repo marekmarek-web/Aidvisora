@@ -1,7 +1,7 @@
 "use server";
 
 import { requireAuthInAction } from "@/lib/auth/require-auth";
-import { db } from "db";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { contacts, contracts, opportunities, events, households, meetingNotes, documents } from "db";
 import { eq, and, or, sql } from "db";
 
@@ -25,120 +25,122 @@ export async function globalSearch(query: string): Promise<SearchResult> {
   const pattern = `%${trimmed}%`;
 
   const [contactRows, contractRows, opportunityRows, eventRows, householdRows, noteRows, docRows] =
-    await Promise.all([
-      db
-        .select({
-          id: contacts.id,
-          firstName: contacts.firstName,
-          lastName: contacts.lastName,
-          email: contacts.email,
-        })
-        .from(contacts)
-        .where(
-          and(
-            eq(contacts.tenantId, auth.tenantId),
-            or(
-              sql`${contacts.firstName} ILIKE ${pattern}`,
-              sql`${contacts.lastName} ILIKE ${pattern}`,
-              sql`${contacts.email} ILIKE ${pattern}`,
-              sql`${contacts.phone} ILIKE ${pattern}`,
+    await withTenantContextFromAuth(auth, async (tx) =>
+      Promise.all([
+        tx
+          .select({
+            id: contacts.id,
+            firstName: contacts.firstName,
+            lastName: contacts.lastName,
+            email: contacts.email,
+          })
+          .from(contacts)
+          .where(
+            and(
+              eq(contacts.tenantId, auth.tenantId),
+              or(
+                sql`${contacts.firstName} ILIKE ${pattern}`,
+                sql`${contacts.lastName} ILIKE ${pattern}`,
+                sql`${contacts.email} ILIKE ${pattern}`,
+                sql`${contacts.phone} ILIKE ${pattern}`,
+              ),
             ),
-          ),
-        )
-        .limit(5),
+          )
+          .limit(5),
 
-      db
-        .select({
-          id: contracts.id,
-          contractNumber: contracts.contractNumber,
-          partnerName: contracts.partnerName,
-          productName: contracts.productName,
-          contactId: contracts.contactId,
-        })
-        .from(contracts)
-        .where(
-          and(
-            eq(contracts.tenantId, auth.tenantId),
-            or(
-              sql`${contracts.contractNumber} ILIKE ${pattern}`,
-              sql`${contracts.partnerName} ILIKE ${pattern}`,
-              sql`${contracts.productName} ILIKE ${pattern}`,
+        tx
+          .select({
+            id: contracts.id,
+            contractNumber: contracts.contractNumber,
+            partnerName: contracts.partnerName,
+            productName: contracts.productName,
+            contactId: contracts.contactId,
+          })
+          .from(contracts)
+          .where(
+            and(
+              eq(contracts.tenantId, auth.tenantId),
+              or(
+                sql`${contracts.contractNumber} ILIKE ${pattern}`,
+                sql`${contracts.partnerName} ILIKE ${pattern}`,
+                sql`${contracts.productName} ILIKE ${pattern}`,
+              ),
             ),
-          ),
-        )
-        .limit(5),
+          )
+          .limit(5),
 
-      db
-        .select({
-          id: opportunities.id,
-          title: opportunities.title,
-        })
-        .from(opportunities)
-        .where(
-          and(
-            eq(opportunities.tenantId, auth.tenantId),
-            sql`${opportunities.title} ILIKE ${pattern}`,
-          ),
-        )
-        .limit(5),
+        tx
+          .select({
+            id: opportunities.id,
+            title: opportunities.title,
+          })
+          .from(opportunities)
+          .where(
+            and(
+              eq(opportunities.tenantId, auth.tenantId),
+              sql`${opportunities.title} ILIKE ${pattern}`,
+            ),
+          )
+          .limit(5),
 
-      db
-        .select({
-          id: events.id,
-          title: events.title,
-          startAt: events.startAt,
-        })
-        .from(events)
-        .where(
-          and(
-            eq(events.tenantId, auth.tenantId),
-            sql`${events.title} ILIKE ${pattern}`,
-          ),
-        )
-        .limit(5),
+        tx
+          .select({
+            id: events.id,
+            title: events.title,
+            startAt: events.startAt,
+          })
+          .from(events)
+          .where(
+            and(
+              eq(events.tenantId, auth.tenantId),
+              sql`${events.title} ILIKE ${pattern}`,
+            ),
+          )
+          .limit(5),
 
-      db
-        .select({ id: households.id, name: households.name })
-        .from(households)
-        .where(
-          and(
-            eq(households.tenantId, auth.tenantId),
-            sql`${households.name} ILIKE ${pattern}`,
-          ),
-        )
-        .limit(5),
+        tx
+          .select({ id: households.id, name: households.name })
+          .from(households)
+          .where(
+            and(
+              eq(households.tenantId, auth.tenantId),
+              sql`${households.name} ILIKE ${pattern}`,
+            ),
+          )
+          .limit(5),
 
-      db
-        .select({
-          id: meetingNotes.id,
-          domain: meetingNotes.domain,
-          meetingAt: meetingNotes.meetingAt,
-          contactId: meetingNotes.contactId,
-        })
-        .from(meetingNotes)
-        .where(
-          and(
-            eq(meetingNotes.tenantId, auth.tenantId),
-            sql`${meetingNotes.domain} ILIKE ${pattern}`,
-          ),
-        )
-        .limit(5),
+        tx
+          .select({
+            id: meetingNotes.id,
+            domain: meetingNotes.domain,
+            meetingAt: meetingNotes.meetingAt,
+            contactId: meetingNotes.contactId,
+          })
+          .from(meetingNotes)
+          .where(
+            and(
+              eq(meetingNotes.tenantId, auth.tenantId),
+              sql`${meetingNotes.domain} ILIKE ${pattern}`,
+            ),
+          )
+          .limit(5),
 
-      db
-        .select({
-          id: documents.id,
-          name: documents.name,
-          contactId: documents.contactId,
-        })
-        .from(documents)
-        .where(
-          and(
-            eq(documents.tenantId, auth.tenantId),
-            sql`${documents.name} ILIKE ${pattern}`,
-          ),
-        )
-        .limit(5),
-    ]);
+        tx
+          .select({
+            id: documents.id,
+            name: documents.name,
+            contactId: documents.contactId,
+          })
+          .from(documents)
+          .where(
+            and(
+              eq(documents.tenantId, auth.tenantId),
+              sql`${documents.name} ILIKE ${pattern}`,
+            ),
+          )
+          .limit(5),
+      ]),
+    );
 
   return {
     contacts: contactRows.map((c) => ({

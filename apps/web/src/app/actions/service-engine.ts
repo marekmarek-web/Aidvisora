@@ -1,6 +1,7 @@
 "use server";
 
 import { requireAuthInAction } from "@/lib/auth/require-auth";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { hasPermission } from "@/lib/auth/permissions";
 import { getHouseholdForContact } from "@/app/actions/households";
 import { getServiceInputData } from "@/lib/service-engine/data";
@@ -9,7 +10,6 @@ import {
   computeServiceStatus,
 } from "@/lib/service-engine/rules";
 import type { ServiceRecommendation, ServiceStatus } from "@/lib/service-engine/types";
-import { db } from "db";
 import { contacts, contracts, tasks } from "db";
 import { eq, and, isNull, sql } from "db";
 
@@ -89,51 +89,55 @@ export async function getServiceRecommendationsForDashboard(
   const sevenDaysAgoStr = sevenDaysAgo.toISOString().slice(0, 10);
 
   // Contact IDs: service due (overdue or next 7 days), contract anniversary in 60 days, or overdue task
-  const [serviceDueRows, anniversaryRows, overdueTaskRows] = await Promise.all([
-    db
-      .select({ id: contacts.id, firstName: contacts.firstName, lastName: contacts.lastName })
-      .from(contacts)
-      .where(
-        and(
-          eq(contacts.tenantId, auth.tenantId),
-          sql`${contacts.nextServiceDue} IS NOT NULL`,
-          sql`${contacts.nextServiceDue}::date <= ${in7Str}::date`
-        )
-      )
-      .limit(30),
-    db
-      .select({
-        contactId: contacts.id,
-        firstName: contacts.firstName,
-        lastName: contacts.lastName,
-      })
-      .from(contracts)
-      .innerJoin(contacts, eq(contracts.contactId, contacts.id))
-      .where(
-        and(
-          eq(contracts.tenantId, auth.tenantId),
-          sql`${contracts.anniversaryDate}::date >= ${todayStr}::date`,
-          sql`${contracts.anniversaryDate}::date <= ${in60Str}::date`
-        )
-      )
-      .limit(30),
-    db
-      .select({
-        contactId: contacts.id,
-        firstName: contacts.firstName,
-        lastName: contacts.lastName,
-      })
-      .from(tasks)
-      .innerJoin(contacts, eq(tasks.contactId, contacts.id))
-      .where(
-        and(
-          eq(tasks.tenantId, auth.tenantId),
-          isNull(tasks.completedAt),
-          sql`${tasks.dueDate}::date < ${sevenDaysAgoStr}::date`
-        )
-      )
-      .limit(20),
-  ]);
+  const [serviceDueRows, anniversaryRows, overdueTaskRows] = await withTenantContextFromAuth(
+    auth,
+    async (tx) =>
+      Promise.all([
+        tx
+          .select({ id: contacts.id, firstName: contacts.firstName, lastName: contacts.lastName })
+          .from(contacts)
+          .where(
+            and(
+              eq(contacts.tenantId, auth.tenantId),
+              sql`${contacts.nextServiceDue} IS NOT NULL`,
+              sql`${contacts.nextServiceDue}::date <= ${in7Str}::date`
+            )
+          )
+          .limit(30),
+        tx
+          .select({
+            contactId: contacts.id,
+            firstName: contacts.firstName,
+            lastName: contacts.lastName,
+          })
+          .from(contracts)
+          .innerJoin(contacts, eq(contracts.contactId, contacts.id))
+          .where(
+            and(
+              eq(contracts.tenantId, auth.tenantId),
+              sql`${contracts.anniversaryDate}::date >= ${todayStr}::date`,
+              sql`${contracts.anniversaryDate}::date <= ${in60Str}::date`
+            )
+          )
+          .limit(30),
+        tx
+          .select({
+            contactId: contacts.id,
+            firstName: contacts.firstName,
+            lastName: contacts.lastName,
+          })
+          .from(tasks)
+          .innerJoin(contacts, eq(tasks.contactId, contacts.id))
+          .where(
+            and(
+              eq(tasks.tenantId, auth.tenantId),
+              isNull(tasks.completedAt),
+              sql`${tasks.dueDate}::date < ${sevenDaysAgoStr}::date`
+            )
+          )
+          .limit(20),
+      ]),
+  );
 
   const contactIdSet = new Set<string>();
   const contactNames: Record<string, { firstName: string; lastName: string }> = {};

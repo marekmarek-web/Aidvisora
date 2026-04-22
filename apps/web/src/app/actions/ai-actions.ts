@@ -1,6 +1,7 @@
 "use server";
 
 import { requireAuthInAction } from "@/lib/auth/require-auth";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { hasPermission } from "@/lib/auth/permissions";
 import { getContact } from "@/app/actions/contacts";
 import {
@@ -18,7 +19,7 @@ import type {
   AiActionSuggestion,
   AiActionType,
 } from "@/lib/ai/actions/action-suggestions";
-import { aiFeedback, aiGenerations, and, db, eq, sql } from "db";
+import { aiFeedback, aiGenerations, and, eq, sql } from "db";
 
 async function ensureContactAccess(contactId: string): Promise<void> {
   const auth = await requireAuthInAction();
@@ -157,37 +158,41 @@ export async function getAiActionUsageStats(): Promise<{
     };
   }
 
-  const totalGenerationsRows = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(aiGenerations)
-    .where(eq(aiGenerations.tenantId, auth.tenantId));
+  const { totalGenerationsRows, actionRows, verdictRows } = await withTenantContextFromAuth(
+    auth,
+    async (tx) => {
+      const totalGen = await tx
+        .select({ count: sql<number>`count(*)::int` })
+        .from(aiGenerations)
+        .where(eq(aiGenerations.tenantId, auth.tenantId));
+      const actions = await tx
+        .select({
+          actionTaken: aiFeedback.actionTaken,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(aiFeedback)
+        .innerJoin(aiGenerations, eq(aiFeedback.generationId, aiGenerations.id))
+        .where(
+          and(
+            eq(aiGenerations.tenantId, auth.tenantId),
+            sql`${aiFeedback.actionTaken} is not null`,
+            sql`${aiFeedback.actionTaken} <> 'none'`
+          )
+        )
+        .groupBy(aiFeedback.actionTaken);
+      const verdicts = await tx
+        .select({
+          verdict: aiFeedback.verdict,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(aiFeedback)
+        .innerJoin(aiGenerations, eq(aiFeedback.generationId, aiGenerations.id))
+        .where(eq(aiGenerations.tenantId, auth.tenantId))
+        .groupBy(aiFeedback.verdict);
+      return { totalGenerationsRows: totalGen, actionRows: actions, verdictRows: verdicts };
+    },
+  );
   const totalGenerations = Number(totalGenerationsRows[0]?.count ?? 0);
-
-  const actionRows = await db
-    .select({
-      actionTaken: aiFeedback.actionTaken,
-      count: sql<number>`count(*)::int`,
-    })
-    .from(aiFeedback)
-    .innerJoin(aiGenerations, eq(aiFeedback.generationId, aiGenerations.id))
-    .where(
-      and(
-        eq(aiGenerations.tenantId, auth.tenantId),
-        sql`${aiFeedback.actionTaken} is not null`,
-        sql`${aiFeedback.actionTaken} <> 'none'`
-      )
-    )
-    .groupBy(aiFeedback.actionTaken);
-
-  const verdictRows = await db
-    .select({
-      verdict: aiFeedback.verdict,
-      count: sql<number>`count(*)::int`,
-    })
-    .from(aiFeedback)
-    .innerJoin(aiGenerations, eq(aiFeedback.generationId, aiGenerations.id))
-    .where(eq(aiGenerations.tenantId, auth.tenantId))
-    .groupBy(aiFeedback.verdict);
 
   const actionsByType: Record<string, number> = {};
   let totalActionsCreated = 0;
@@ -233,59 +238,66 @@ export async function getTeamAiUsageStats(): Promise<TeamAiUsageStats> {
     };
   }
 
-  const teamGenCount = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(aiGenerations)
-    .where(
-      and(
-        eq(aiGenerations.tenantId, auth.tenantId),
-        eq(aiGenerations.entityType, "team"),
-        eq(aiGenerations.promptType, "teamSummary")
-      )
-    );
+  const { teamGenCount, withActions, verdictRows, actionRows } = await withTenantContextFromAuth(
+    auth,
+    async (tx) => {
+      const genCount = await tx
+        .select({ count: sql<number>`count(*)::int` })
+        .from(aiGenerations)
+        .where(
+          and(
+            eq(aiGenerations.tenantId, auth.tenantId),
+            eq(aiGenerations.entityType, "team"),
+            eq(aiGenerations.promptType, "teamSummary")
+          )
+        );
+
+      const withAct = await tx
+        .select({ count: sql<number>`count(distinct ${aiFeedback.generationId})::int` })
+        .from(aiFeedback)
+        .innerJoin(aiGenerations, eq(aiFeedback.generationId, aiGenerations.id))
+        .where(
+          and(
+            eq(aiGenerations.tenantId, auth.tenantId),
+            eq(aiGenerations.entityType, "team"),
+            eq(aiGenerations.promptType, "teamSummary"),
+            sql`${aiFeedback.actionTaken} is not null`,
+            sql`${aiFeedback.actionTaken} <> 'none'`
+          )
+        );
+
+      const verdicts = await tx
+        .select({ verdict: aiFeedback.verdict, count: sql<number>`count(*)::int` })
+        .from(aiFeedback)
+        .innerJoin(aiGenerations, eq(aiFeedback.generationId, aiGenerations.id))
+        .where(
+          and(
+            eq(aiGenerations.tenantId, auth.tenantId),
+            eq(aiGenerations.entityType, "team"),
+            eq(aiGenerations.promptType, "teamSummary")
+          )
+        )
+        .groupBy(aiFeedback.verdict);
+
+      const actions = await tx
+        .select({ actionTaken: aiFeedback.actionTaken, count: sql<number>`count(*)::int` })
+        .from(aiFeedback)
+        .innerJoin(aiGenerations, eq(aiFeedback.generationId, aiGenerations.id))
+        .where(
+          and(
+            eq(aiGenerations.tenantId, auth.tenantId),
+            eq(aiGenerations.entityType, "team"),
+            eq(aiGenerations.promptType, "teamSummary"),
+            sql`${aiFeedback.actionTaken} is not null`
+          )
+        )
+        .groupBy(aiFeedback.actionTaken);
+
+      return { teamGenCount: genCount, withActions: withAct, verdictRows: verdicts, actionRows: actions };
+    },
+  );
   const teamSummariesGenerated = Number(teamGenCount[0]?.count ?? 0);
-
-  const withActions = await db
-    .select({ count: sql<number>`count(distinct ${aiFeedback.generationId})::int` })
-    .from(aiFeedback)
-    .innerJoin(aiGenerations, eq(aiFeedback.generationId, aiGenerations.id))
-    .where(
-      and(
-        eq(aiGenerations.tenantId, auth.tenantId),
-        eq(aiGenerations.entityType, "team"),
-        eq(aiGenerations.promptType, "teamSummary"),
-        sql`${aiFeedback.actionTaken} is not null`,
-        sql`${aiFeedback.actionTaken} <> 'none'`
-      )
-    );
   const summariesWithActionsCreated = Number(withActions[0]?.count ?? 0);
-
-  const verdictRows = await db
-    .select({ verdict: aiFeedback.verdict, count: sql<number>`count(*)::int` })
-    .from(aiFeedback)
-    .innerJoin(aiGenerations, eq(aiFeedback.generationId, aiGenerations.id))
-    .where(
-      and(
-        eq(aiGenerations.tenantId, auth.tenantId),
-        eq(aiGenerations.entityType, "team"),
-        eq(aiGenerations.promptType, "teamSummary")
-      )
-    )
-    .groupBy(aiFeedback.verdict);
-
-  const actionRows = await db
-    .select({ actionTaken: aiFeedback.actionTaken, count: sql<number>`count(*)::int` })
-    .from(aiFeedback)
-    .innerJoin(aiGenerations, eq(aiFeedback.generationId, aiGenerations.id))
-    .where(
-      and(
-        eq(aiGenerations.tenantId, auth.tenantId),
-        eq(aiGenerations.entityType, "team"),
-        eq(aiGenerations.promptType, "teamSummary"),
-        sql`${aiFeedback.actionTaken} is not null`
-      )
-    )
-    .groupBy(aiFeedback.actionTaken);
 
   const verdictCounts = { accepted: 0, rejected: 0, edited: 0 };
   for (const row of verdictRows) {

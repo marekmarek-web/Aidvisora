@@ -1,8 +1,9 @@
 "use server";
 
 import { requireAuthInAction } from "@/lib/auth/require-auth";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { hasPermission } from "@/lib/auth/permissions";
-import { db, paymentAccounts, eq, and, isNull } from "db";
+import { paymentAccounts, eq, and, isNull } from "db";
 
 /**
  * Institucionální defaultní platební účet (globální, tenant-free).
@@ -167,31 +168,33 @@ export async function getInstitutionDefaultAccount(
   const paymentType = opts.paymentType ?? "regular";
   const productCode = opts.productCode ?? null;
 
-  const tenantRows = (
-    await db
-      .select()
-      .from(paymentAccounts)
-      .where(and(eq(paymentAccounts.tenantId, auth.tenantId), eq(paymentAccounts.segment, segment)))
-  ).filter((r) => r.partnerName && normalizeProviderName(r.partnerName) === normalized);
+  return withTenantContextFromAuth(auth, async (tx) => {
+    const tenantRows = (
+      await tx
+        .select()
+        .from(paymentAccounts)
+        .where(and(eq(paymentAccounts.tenantId, auth.tenantId), eq(paymentAccounts.segment, segment)))
+    ).filter((r) => r.partnerName && normalizeProviderName(r.partnerName) === normalized);
 
-  const tenantPick = pickBest(tenantRows, paymentType, productCode);
-  if (tenantPick) {
-    const alternatives = tenantRows.filter((r) => r !== tenantPick).map(toAlternative);
-    return buildResult(tenantPick, "tenant", alternatives);
-  }
+    const tenantPick = pickBest(tenantRows, paymentType, productCode);
+    if (tenantPick) {
+      const alternatives = tenantRows.filter((r) => r !== tenantPick).map(toAlternative);
+      return buildResult(tenantPick, "tenant", alternatives);
+    }
 
-  const globalRows = (
-    await db
-      .select()
-      .from(paymentAccounts)
-      .where(and(isNull(paymentAccounts.tenantId), eq(paymentAccounts.segment, segment)))
-  ).filter((r) => r.partnerName && normalizeProviderName(r.partnerName) === normalized);
+    const globalRows = (
+      await tx
+        .select()
+        .from(paymentAccounts)
+        .where(and(isNull(paymentAccounts.tenantId), eq(paymentAccounts.segment, segment)))
+    ).filter((r) => r.partnerName && normalizeProviderName(r.partnerName) === normalized);
 
-  const globalPick = pickBest(globalRows, paymentType, productCode);
-  if (!globalPick) return null;
+    const globalPick = pickBest(globalRows, paymentType, productCode);
+    if (!globalPick) return null;
 
-  const alternatives = globalRows.filter((r) => r !== globalPick).map(toAlternative);
-  return buildResult(globalPick, "global", alternatives);
+    const alternatives = globalRows.filter((r) => r !== globalPick).map(toAlternative);
+    return buildResult(globalPick, "global", alternatives);
+  });
 }
 
 function buildResult(

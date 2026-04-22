@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { and, desc, eq, inArray } from "db";
-import { db } from "db";
 import {
   advisorProposals,
   advisorProposalSegments,
@@ -13,6 +12,8 @@ import {
 } from "db";
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { hasPermission } from "@/lib/auth/permissions";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
+import type { TenantContextDb } from "@/lib/db/with-tenant-context";
 import { logActivity } from "./activity";
 
 export type AdvisorProposalRow = {
@@ -116,8 +117,8 @@ function sanitizeSegment(value: unknown): AdvisorProposalSegment {
   return "other";
 }
 
-async function assertOwnsContact(tenantId: string, contactId: string): Promise<boolean> {
-  const [row] = await db
+async function assertOwnsContact(tx: TenantContextDb, tenantId: string, contactId: string): Promise<boolean> {
+  const [row] = await tx
     .select({ id: contacts.id })
     .from(contacts)
     .where(and(eq(contacts.tenantId, tenantId), eq(contacts.id, contactId)))
@@ -135,46 +136,52 @@ export async function createAdvisorProposal(
   const title = input.title?.trim();
   if (!title) return { success: false, error: "Vyplňte název návrhu." };
   if (!input.contactId) return { success: false, error: "Chybí kontakt." };
-  const owns = await assertOwnsContact(auth.tenantId, input.contactId);
-  if (!owns) return { success: false, error: "Kontakt nenalezen." };
 
   const segment = sanitizeSegment(input.segment);
   const status: AdvisorProposalStatus = input.publishImmediately ? "published" : "draft";
   const now = new Date();
 
-  const [row] = await db
-    .insert(advisorProposals)
-    .values({
-      tenantId: auth.tenantId,
-      contactId: input.contactId,
-      householdId: input.householdId ?? null,
-      createdBy: auth.userId,
-      segment,
-      title,
-      summary: input.summary?.trim() || null,
-      currentAnnualCost:
-        input.currentAnnualCost !== null && input.currentAnnualCost !== undefined
-          ? String(input.currentAnnualCost)
-          : null,
-      proposedAnnualCost:
-        input.proposedAnnualCost !== null && input.proposedAnnualCost !== undefined
-          ? String(input.proposedAnnualCost)
-          : null,
-      currency: (input.currency || "CZK").toUpperCase().slice(0, 3),
-      benefits: normalizeBenefits(input.benefits),
-      validUntil: input.validUntil || null,
-      status,
-      publishedAt: status === "published" ? now : null,
-      sourceCalculatorRunId: input.sourceCalculatorRunId ?? null,
-    })
-    .returning({ id: advisorProposals.id });
+  const result = await withTenantContextFromAuth(auth, async (tx) => {
+    const owns = await assertOwnsContact(tx, auth.tenantId, input.contactId);
+    if (!owns) return { ok: false as const, error: "Kontakt nenalezen." };
 
-  if (!row?.id) return { success: false, error: "Nepodařilo se uložit návrh." };
+    const [row] = await tx
+      .insert(advisorProposals)
+      .values({
+        tenantId: auth.tenantId,
+        contactId: input.contactId,
+        householdId: input.householdId ?? null,
+        createdBy: auth.userId,
+        segment,
+        title,
+        summary: input.summary?.trim() || null,
+        currentAnnualCost:
+          input.currentAnnualCost !== null && input.currentAnnualCost !== undefined
+            ? String(input.currentAnnualCost)
+            : null,
+        proposedAnnualCost:
+          input.proposedAnnualCost !== null && input.proposedAnnualCost !== undefined
+            ? String(input.proposedAnnualCost)
+            : null,
+        currency: (input.currency || "CZK").toUpperCase().slice(0, 3),
+        benefits: normalizeBenefits(input.benefits),
+        validUntil: input.validUntil || null,
+        status,
+        publishedAt: status === "published" ? now : null,
+        sourceCalculatorRunId: input.sourceCalculatorRunId ?? null,
+      })
+      .returning({ id: advisorProposals.id });
+
+    if (!row?.id) return { ok: false as const, error: "Nepodařilo se uložit návrh." };
+    return { ok: true as const, id: row.id };
+  });
+
+  if (!result.ok) return { success: false, error: result.error };
 
   try {
     await logActivity("contact", input.contactId, "update", {
       source: "advisor_proposal_create",
-      proposalId: row.id,
+      proposalId: result.id,
       segment,
       status,
     });
@@ -189,7 +196,7 @@ export async function createAdvisorProposal(
     /* ignore */
   }
 
-  return { success: true, id: row.id };
+  return { success: true, id: result.id };
 }
 
 export type UpdateAdvisorProposalInput = Partial<
@@ -206,47 +213,52 @@ export async function updateAdvisorProposal(
     return { success: false, error: "Forbidden" };
   }
 
-  const [row] = await db
-    .select()
-    .from(advisorProposals)
-    .where(
-      and(eq(advisorProposals.tenantId, auth.tenantId), eq(advisorProposals.id, input.id))
-    )
-    .limit(1);
-  if (!row) return { success: false, error: "Návrh nebyl nalezen." };
-  if (row.status !== "draft") {
-    return { success: false, error: "Upravovat lze jen nepublikovaný návrh (draft)." };
-  }
+  const result = await withTenantContextFromAuth(auth, async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(advisorProposals)
+      .where(
+        and(eq(advisorProposals.tenantId, auth.tenantId), eq(advisorProposals.id, input.id))
+      )
+      .limit(1);
+    if (!row) return { ok: false as const, error: "Návrh nebyl nalezen." };
+    if (row.status !== "draft") {
+      return { ok: false as const, error: "Upravovat lze jen nepublikovaný návrh (draft)." };
+    }
 
-  const patch: Partial<typeof advisorProposals.$inferInsert> = { updatedAt: new Date() };
-  if (input.title !== undefined) patch.title = input.title.trim();
-  if (input.summary !== undefined) patch.summary = input.summary?.trim() || null;
-  if (input.segment !== undefined) patch.segment = sanitizeSegment(input.segment);
-  if (input.currentAnnualCost !== undefined) {
-    patch.currentAnnualCost =
-      input.currentAnnualCost === null ? null : String(input.currentAnnualCost);
-  }
-  if (input.proposedAnnualCost !== undefined) {
-    patch.proposedAnnualCost =
-      input.proposedAnnualCost === null ? null : String(input.proposedAnnualCost);
-  }
-  if (input.currency !== undefined) {
-    patch.currency = (input.currency || "CZK").toUpperCase().slice(0, 3);
-  }
-  if (input.benefits !== undefined) patch.benefits = normalizeBenefits(input.benefits);
-  if (input.validUntil !== undefined) patch.validUntil = input.validUntil || null;
-  if (input.householdId !== undefined) patch.householdId = input.householdId ?? null;
+    const patch: Partial<typeof advisorProposals.$inferInsert> = { updatedAt: new Date() };
+    if (input.title !== undefined) patch.title = input.title.trim();
+    if (input.summary !== undefined) patch.summary = input.summary?.trim() || null;
+    if (input.segment !== undefined) patch.segment = sanitizeSegment(input.segment);
+    if (input.currentAnnualCost !== undefined) {
+      patch.currentAnnualCost =
+        input.currentAnnualCost === null ? null : String(input.currentAnnualCost);
+    }
+    if (input.proposedAnnualCost !== undefined) {
+      patch.proposedAnnualCost =
+        input.proposedAnnualCost === null ? null : String(input.proposedAnnualCost);
+    }
+    if (input.currency !== undefined) {
+      patch.currency = (input.currency || "CZK").toUpperCase().slice(0, 3);
+    }
+    if (input.benefits !== undefined) patch.benefits = normalizeBenefits(input.benefits);
+    if (input.validUntil !== undefined) patch.validUntil = input.validUntil || null;
+    if (input.householdId !== undefined) patch.householdId = input.householdId ?? null;
 
-  await db
-    .update(advisorProposals)
-    .set(patch)
-    .where(
-      and(eq(advisorProposals.tenantId, auth.tenantId), eq(advisorProposals.id, input.id))
-    );
+    await tx
+      .update(advisorProposals)
+      .set(patch)
+      .where(
+        and(eq(advisorProposals.tenantId, auth.tenantId), eq(advisorProposals.id, input.id))
+      );
+    return { ok: true as const, contactId: row.contactId };
+  });
+
+  if (!result.ok) return { success: false, error: result.error };
 
   try {
-    revalidatePath(`/portal/contacts/${row.contactId}`);
-    revalidatePath(`/dashboard/contacts/${row.contactId}`);
+    revalidatePath(`/portal/contacts/${result.contactId}`);
+    revalidatePath(`/dashboard/contacts/${result.contactId}`);
   } catch {
     /* ignore */
   }
@@ -261,27 +273,32 @@ export async function publishAdvisorProposal(
     return { success: false, error: "Forbidden" };
   }
 
-  const [row] = await db
-    .select({ id: advisorProposals.id, contactId: advisorProposals.contactId, status: advisorProposals.status })
-    .from(advisorProposals)
-    .where(and(eq(advisorProposals.tenantId, auth.tenantId), eq(advisorProposals.id, proposalId)))
-    .limit(1);
-  if (!row) return { success: false, error: "Návrh nebyl nalezen." };
-  if (row.status !== "draft" && row.status !== "withdrawn") {
-    return { success: false, error: "Publikovat lze jen draft nebo stažený návrh." };
-  }
+  const result = await withTenantContextFromAuth(auth, async (tx) => {
+    const [row] = await tx
+      .select({ id: advisorProposals.id, contactId: advisorProposals.contactId, status: advisorProposals.status })
+      .from(advisorProposals)
+      .where(and(eq(advisorProposals.tenantId, auth.tenantId), eq(advisorProposals.id, proposalId)))
+      .limit(1);
+    if (!row) return { ok: false as const, error: "Návrh nebyl nalezen." };
+    if (row.status !== "draft" && row.status !== "withdrawn") {
+      return { ok: false as const, error: "Publikovat lze jen draft nebo stažený návrh." };
+    }
 
-  const now = new Date();
-  await db
-    .update(advisorProposals)
-    .set({ status: "published", publishedAt: now, updatedAt: now })
-    .where(
-      and(eq(advisorProposals.tenantId, auth.tenantId), eq(advisorProposals.id, proposalId))
-    );
+    const now = new Date();
+    await tx
+      .update(advisorProposals)
+      .set({ status: "published", publishedAt: now, updatedAt: now })
+      .where(
+        and(eq(advisorProposals.tenantId, auth.tenantId), eq(advisorProposals.id, proposalId))
+      );
+    return { ok: true as const, contactId: row.contactId };
+  });
+
+  if (!result.ok) return { success: false, error: result.error };
 
   try {
-    revalidatePath(`/portal/contacts/${row.contactId}`);
-    revalidatePath(`/dashboard/contacts/${row.contactId}`);
+    revalidatePath(`/portal/contacts/${result.contactId}`);
+    revalidatePath(`/dashboard/contacts/${result.contactId}`);
     revalidatePath("/client");
     revalidatePath("/client/navrhy");
   } catch {
@@ -298,26 +315,31 @@ export async function withdrawAdvisorProposal(
     return { success: false, error: "Forbidden" };
   }
 
-  const [row] = await db
-    .select({ id: advisorProposals.id, contactId: advisorProposals.contactId, status: advisorProposals.status })
-    .from(advisorProposals)
-    .where(and(eq(advisorProposals.tenantId, auth.tenantId), eq(advisorProposals.id, proposalId)))
-    .limit(1);
-  if (!row) return { success: false, error: "Návrh nebyl nalezen." };
-  if (!["published", "viewed", "expired"].includes(row.status)) {
-    return { success: false, error: "Stáhnout lze jen publikovaný / zobrazený / vypršelý návrh." };
-  }
+  const result = await withTenantContextFromAuth(auth, async (tx) => {
+    const [row] = await tx
+      .select({ id: advisorProposals.id, contactId: advisorProposals.contactId, status: advisorProposals.status })
+      .from(advisorProposals)
+      .where(and(eq(advisorProposals.tenantId, auth.tenantId), eq(advisorProposals.id, proposalId)))
+      .limit(1);
+    if (!row) return { ok: false as const, error: "Návrh nebyl nalezen." };
+    if (!["published", "viewed", "expired"].includes(row.status)) {
+      return { ok: false as const, error: "Stáhnout lze jen publikovaný / zobrazený / vypršelý návrh." };
+    }
 
-  await db
-    .update(advisorProposals)
-    .set({ status: "withdrawn", updatedAt: new Date() })
-    .where(
-      and(eq(advisorProposals.tenantId, auth.tenantId), eq(advisorProposals.id, proposalId))
-    );
+    await tx
+      .update(advisorProposals)
+      .set({ status: "withdrawn", updatedAt: new Date() })
+      .where(
+        and(eq(advisorProposals.tenantId, auth.tenantId), eq(advisorProposals.id, proposalId))
+      );
+    return { ok: true as const, contactId: row.contactId };
+  });
+
+  if (!result.ok) return { success: false, error: result.error };
 
   try {
-    revalidatePath(`/portal/contacts/${row.contactId}`);
-    revalidatePath(`/dashboard/contacts/${row.contactId}`);
+    revalidatePath(`/portal/contacts/${result.contactId}`);
+    revalidatePath(`/dashboard/contacts/${result.contactId}`);
     revalidatePath("/client");
     revalidatePath("/client/navrhy");
   } catch {
@@ -333,24 +355,29 @@ export async function deleteAdvisorProposal(
   if (!hasPermission(auth.roleName, "contacts:write")) {
     return { success: false, error: "Forbidden" };
   }
-  const [row] = await db
-    .select({ contactId: advisorProposals.contactId, status: advisorProposals.status })
-    .from(advisorProposals)
-    .where(and(eq(advisorProposals.tenantId, auth.tenantId), eq(advisorProposals.id, proposalId)))
-    .limit(1);
-  if (!row) return { success: false, error: "Návrh nebyl nalezen." };
-  if (row.status !== "draft") {
-    return { success: false, error: "Smazat lze jen nepublikovaný draft." };
-  }
-  await db
-    .delete(advisorProposals)
-    .where(
-      and(eq(advisorProposals.tenantId, auth.tenantId), eq(advisorProposals.id, proposalId))
-    );
+  const result = await withTenantContextFromAuth(auth, async (tx) => {
+    const [row] = await tx
+      .select({ contactId: advisorProposals.contactId, status: advisorProposals.status })
+      .from(advisorProposals)
+      .where(and(eq(advisorProposals.tenantId, auth.tenantId), eq(advisorProposals.id, proposalId)))
+      .limit(1);
+    if (!row) return { ok: false as const, error: "Návrh nebyl nalezen." };
+    if (row.status !== "draft") {
+      return { ok: false as const, error: "Smazat lze jen nepublikovaný draft." };
+    }
+    await tx
+      .delete(advisorProposals)
+      .where(
+        and(eq(advisorProposals.tenantId, auth.tenantId), eq(advisorProposals.id, proposalId))
+      );
+    return { ok: true as const, contactId: row.contactId };
+  });
+
+  if (!result.ok) return { success: false, error: result.error };
 
   try {
-    revalidatePath(`/portal/contacts/${row.contactId}`);
-    revalidatePath(`/dashboard/contacts/${row.contactId}`);
+    revalidatePath(`/portal/contacts/${result.contactId}`);
+    revalidatePath(`/dashboard/contacts/${result.contactId}`);
   } catch {
     /* ignore */
   }
@@ -360,42 +387,48 @@ export async function deleteAdvisorProposal(
 export async function listProposalsForContact(contactId: string): Promise<AdvisorProposalRow[]> {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "contacts:read")) return [];
-  const rows = await db
-    .select()
-    .from(advisorProposals)
-    .where(
-      and(eq(advisorProposals.tenantId, auth.tenantId), eq(advisorProposals.contactId, contactId))
-    )
-    .orderBy(desc(advisorProposals.createdAt));
+  const rows = await withTenantContextFromAuth(auth, async (tx) =>
+    tx
+      .select()
+      .from(advisorProposals)
+      .where(
+        and(eq(advisorProposals.tenantId, auth.tenantId), eq(advisorProposals.contactId, contactId))
+      )
+      .orderBy(desc(advisorProposals.createdAt))
+  );
   return rows.map(mapRow);
 }
 
 export async function listProposalsForHousehold(householdId: string): Promise<AdvisorProposalRow[]> {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "contacts:read")) return [];
-  const rows = await db
-    .select()
-    .from(advisorProposals)
-    .where(
-      and(
-        eq(advisorProposals.tenantId, auth.tenantId),
-        eq(advisorProposals.householdId, householdId)
+  const rows = await withTenantContextFromAuth(auth, async (tx) =>
+    tx
+      .select()
+      .from(advisorProposals)
+      .where(
+        and(
+          eq(advisorProposals.tenantId, auth.tenantId),
+          eq(advisorProposals.householdId, householdId)
+        )
       )
-    )
-    .orderBy(desc(advisorProposals.createdAt));
+      .orderBy(desc(advisorProposals.createdAt))
+  );
   return rows.map(mapRow);
 }
 
 export async function getAdvisorProposal(proposalId: string): Promise<AdvisorProposalRow | null> {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "contacts:read")) return null;
-  const [row] = await db
-    .select()
-    .from(advisorProposals)
-    .where(
-      and(eq(advisorProposals.tenantId, auth.tenantId), eq(advisorProposals.id, proposalId))
-    )
-    .limit(1);
+  const [row] = await withTenantContextFromAuth(auth, async (tx) =>
+    tx
+      .select()
+      .from(advisorProposals)
+      .where(
+        and(eq(advisorProposals.tenantId, auth.tenantId), eq(advisorProposals.id, proposalId))
+      )
+      .limit(1)
+  );
   return row ? mapRow(row) : null;
 }
 
@@ -407,19 +440,21 @@ export async function getActiveProposalSummaryForContacts(
   if (!hasPermission(auth.roleName, "contacts:read")) return {};
   if (contactIds.length === 0) return {};
 
-  const rows = await db
-    .select({
-      contactId: advisorProposals.contactId,
-      savings: advisorProposals.savingsAnnual,
-      status: advisorProposals.status,
-    })
-    .from(advisorProposals)
-    .where(
-      and(
-        eq(advisorProposals.tenantId, auth.tenantId),
-        inArray(advisorProposals.contactId, contactIds)
+  const rows = await withTenantContextFromAuth(auth, async (tx) =>
+    tx
+      .select({
+        contactId: advisorProposals.contactId,
+        savings: advisorProposals.savingsAnnual,
+        status: advisorProposals.status,
+      })
+      .from(advisorProposals)
+      .where(
+        and(
+          eq(advisorProposals.tenantId, auth.tenantId),
+          inArray(advisorProposals.contactId, contactIds)
+        )
       )
-    );
+  );
 
   const out: Record<string, { activeCount: number; totalAnnualSavings: number }> = {};
   for (const r of rows) {

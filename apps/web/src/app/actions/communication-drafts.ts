@@ -1,7 +1,8 @@
 "use server";
 
-import { db, communicationDrafts, eq, and, desc } from "db";
+import { communicationDrafts, eq, and, desc } from "db";
 import { requireAuthInAction } from "@/lib/auth/require-auth";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { logAuditAction } from "@/lib/audit";
 
 export async function createDraft(params: {
@@ -14,20 +15,23 @@ export async function createDraft(params: {
   metadata?: Record<string, unknown>;
 }) {
   const auth = await requireAuthInAction();
-  const [row] = await db
-    .insert(communicationDrafts)
-    .values({
-      tenantId: auth.tenantId,
-      createdBy: auth.userId,
-      contactId: params.contactId,
-      draftType: params.draftType,
-      subject: params.subject,
-      body: params.body,
-      referencedEntityType: params.referencedEntityType,
-      referencedEntityId: params.referencedEntityId,
-      metadata: params.metadata,
-    })
-    .returning();
+  const row = await withTenantContextFromAuth(auth, async (tx) => {
+    const [inserted] = await tx
+      .insert(communicationDrafts)
+      .values({
+        tenantId: auth.tenantId,
+        createdBy: auth.userId,
+        contactId: params.contactId,
+        draftType: params.draftType,
+        subject: params.subject,
+        body: params.body,
+        referencedEntityType: params.referencedEntityType,
+        referencedEntityId: params.referencedEntityId,
+        metadata: params.metadata,
+      })
+      .returning();
+    return inserted;
+  });
 
   logAuditAction({
     action: "communication_draft_created",
@@ -47,29 +51,32 @@ export async function updateDraft(
 ) {
   const auth = await requireAuthInAction();
 
-  const [existing] = await db
-    .select()
-    .from(communicationDrafts)
-    .where(
-      and(
-        eq(communicationDrafts.id, draftId),
-        eq(communicationDrafts.tenantId, auth.tenantId),
-      ),
-    )
-    .limit(1);
+  const updated = await withTenantContextFromAuth(auth, async (tx) => {
+    const [existing] = await tx
+      .select()
+      .from(communicationDrafts)
+      .where(
+        and(
+          eq(communicationDrafts.id, draftId),
+          eq(communicationDrafts.tenantId, auth.tenantId),
+        ),
+      )
+      .limit(1);
 
-  if (!existing) throw new Error("Draft not found.");
+    if (!existing) throw new Error("Draft not found.");
 
-  const [updated] = await db
-    .update(communicationDrafts)
-    .set({
-      ...(updates.subject != null ? { subject: updates.subject } : {}),
-      ...(updates.body != null ? { body: updates.body } : {}),
-      ...(updates.status != null ? { status: updates.status } : {}),
-      updatedAt: new Date(),
-    })
-    .where(eq(communicationDrafts.id, draftId))
-    .returning();
+    const [row] = await tx
+      .update(communicationDrafts)
+      .set({
+        ...(updates.subject != null ? { subject: updates.subject } : {}),
+        ...(updates.body != null ? { body: updates.body } : {}),
+        ...(updates.status != null ? { status: updates.status } : {}),
+        updatedAt: new Date(),
+      })
+      .where(eq(communicationDrafts.id, draftId))
+      .returning();
+    return row;
+  });
 
   logAuditAction({
     action: "communication_draft_updated",
@@ -89,15 +96,17 @@ export async function approveDraft(draftId: string) {
 
 export async function listDraftsForContact(contactId: string) {
   const auth = await requireAuthInAction();
-  return db
-    .select()
-    .from(communicationDrafts)
-    .where(
-      and(
-        eq(communicationDrafts.tenantId, auth.tenantId),
-        eq(communicationDrafts.contactId, contactId),
-      ),
-    )
-    .orderBy(desc(communicationDrafts.createdAt))
-    .limit(50);
+  return withTenantContextFromAuth(auth, async (tx) =>
+    tx
+      .select()
+      .from(communicationDrafts)
+      .where(
+        and(
+          eq(communicationDrafts.tenantId, auth.tenantId),
+          eq(communicationDrafts.contactId, contactId),
+        ),
+      )
+      .orderBy(desc(communicationDrafts.createdAt))
+      .limit(50),
+  );
 }

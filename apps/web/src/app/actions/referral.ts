@@ -2,7 +2,7 @@
 
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { hasPermission } from "@/lib/auth/permissions";
-import { db } from "db";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import {
   contacts,
   opportunities,
@@ -57,117 +57,119 @@ export async function getReferralSummaryForContact(
   const referredByContactName = contact.referralContactName ?? null;
   const referredBySourceText = contact.referralSource?.trim() || null;
 
-  // Referred contacts: those who have referral_contact_id = this contact
-  const referredList = await db
-    .select({
-      id: contacts.id,
-      firstName: contacts.firstName,
-      lastName: contacts.lastName,
-      createdAt: contacts.createdAt,
-      lifecycleStage: contacts.lifecycleStage,
-    })
-    .from(contacts)
-    .where(
-      and(eq(contacts.tenantId, tenantId), eq(contacts.referralContactId, contactId))
-    )
-    .orderBy(desc(contacts.createdAt));
+  return withTenantContextFromAuth(auth, async (tx) => {
+    // Referred contacts: those who have referral_contact_id = this contact
+    const referredList = await tx
+      .select({
+        id: contacts.id,
+        firstName: contacts.firstName,
+        lastName: contacts.lastName,
+        createdAt: contacts.createdAt,
+        lifecycleStage: contacts.lifecycleStage,
+      })
+      .from(contacts)
+      .where(
+        and(eq(contacts.tenantId, tenantId), eq(contacts.referralContactId, contactId))
+      )
+      .orderBy(desc(contacts.createdAt));
 
-  if (referredList.length === 0) {
+    if (referredList.length === 0) {
+      return {
+        referredByContactId,
+        referredByContactName,
+        referredBySourceText,
+        givenCount: 0,
+        convertedCount: 0,
+        lastReferralAt: null,
+        valueCzk: null,
+        referredContacts: [],
+      };
+    }
+
+    const referredIds = referredList.map((r) => r.id);
+
+    // Won opportunities per contact (for converted + value)
+    const wonOpps = await tx
+      .select({
+        contactId: opportunities.contactId,
+        expectedValue: opportunities.expectedValue,
+      })
+      .from(opportunities)
+      .where(
+        and(
+          eq(opportunities.tenantId, tenantId),
+          eq(opportunities.closedAs, "won"),
+          isNotNull(opportunities.closedAt),
+          inArray(opportunities.contactId, referredIds)
+        )
+      );
+    const wonByContact = new Map<string, { hasWon: boolean; value: number }>();
+    for (const o of wonOpps) {
+      const cid = o.contactId;
+      if (!cid) continue;
+      const value = o.expectedValue ? Number(o.expectedValue) : 0;
+      const existing = wonByContact.get(cid);
+      if (existing) {
+        existing.hasWon = true;
+        existing.value += value;
+      } else {
+        wonByContact.set(cid, { hasWon: true, value });
+      }
+    }
+
+    // Contracts per contact (for converted)
+    const contractCounts = await tx
+      .select({ contactId: contracts.contactId })
+      .from(contracts)
+      .where(
+        and(
+          eq(contracts.tenantId, tenantId),
+          inArray(contracts.contactId, referredIds)
+        )
+      );
+    const hasContractSet = new Set(contractCounts.map((c) => c.contactId).filter(Boolean) as string[]);
+
+    const referredContacts: ReferredContactRow[] = referredList.map((r) => {
+      const hasWonOpportunity = wonByContact.get(r.id)?.hasWon ?? false;
+      const hasContract = hasContractSet.has(r.id);
+      const converted = isReferralConverted({
+        lifecycleStage: r.lifecycleStage ?? null,
+        hasWonOpportunity,
+        hasContract,
+      });
+      const valueCzk = wonByContact.get(r.id)?.value ?? (hasContract ? null : null);
+      return {
+        id: r.id,
+        name: [r.firstName, r.lastName].filter(Boolean).join(" ") || "—",
+        createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
+        converted,
+        valueCzk: valueCzk != null ? valueCzk : null,
+      };
+    });
+
+    const convertedCount = referredContacts.filter((c) => c.converted).length;
+    const lastReferralAt =
+      referredList.length > 0 && referredList[0].createdAt
+        ? (referredList[0].createdAt instanceof Date
+            ? referredList[0].createdAt.toISOString()
+            : String(referredList[0].createdAt))
+        : null;
+    const valueCzk = referredContacts.reduce(
+      (sum, c) => sum + (c.valueCzk ?? 0),
+      0
+    );
+
     return {
       referredByContactId,
       referredByContactName,
       referredBySourceText,
-      givenCount: 0,
-      convertedCount: 0,
-      lastReferralAt: null,
-      valueCzk: null,
-      referredContacts: [],
-    };
-  }
-
-  const referredIds = referredList.map((r) => r.id);
-
-  // Won opportunities per contact (for converted + value)
-  const wonOpps = await db
-    .select({
-      contactId: opportunities.contactId,
-      expectedValue: opportunities.expectedValue,
-    })
-    .from(opportunities)
-    .where(
-      and(
-        eq(opportunities.tenantId, tenantId),
-        eq(opportunities.closedAs, "won"),
-        isNotNull(opportunities.closedAt),
-        inArray(opportunities.contactId, referredIds)
-      )
-    );
-  const wonByContact = new Map<string, { hasWon: boolean; value: number }>();
-  for (const o of wonOpps) {
-    const cid = o.contactId;
-    if (!cid) continue;
-    const value = o.expectedValue ? Number(o.expectedValue) : 0;
-    const existing = wonByContact.get(cid);
-    if (existing) {
-      existing.hasWon = true;
-      existing.value += value;
-    } else {
-      wonByContact.set(cid, { hasWon: true, value });
-    }
-  }
-
-  // Contracts per contact (for converted)
-  const contractCounts = await db
-    .select({ contactId: contracts.contactId })
-    .from(contracts)
-    .where(
-      and(
-        eq(contracts.tenantId, tenantId),
-        inArray(contracts.contactId, referredIds)
-      )
-    );
-  const hasContractSet = new Set(contractCounts.map((c) => c.contactId).filter(Boolean) as string[]);
-
-  const referredContacts: ReferredContactRow[] = referredList.map((r) => {
-    const hasWonOpportunity = wonByContact.get(r.id)?.hasWon ?? false;
-    const hasContract = hasContractSet.has(r.id);
-    const converted = isReferralConverted({
-      lifecycleStage: r.lifecycleStage ?? null,
-      hasWonOpportunity,
-      hasContract,
-    });
-    const valueCzk = wonByContact.get(r.id)?.value ?? (hasContract ? null : null);
-    return {
-      id: r.id,
-      name: [r.firstName, r.lastName].filter(Boolean).join(" ") || "—",
-      createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
-      converted,
-      valueCzk: valueCzk != null ? valueCzk : null,
+      givenCount: referredList.length,
+      convertedCount,
+      lastReferralAt,
+      valueCzk: valueCzk > 0 ? valueCzk : null,
+      referredContacts,
     };
   });
-
-  const convertedCount = referredContacts.filter((c) => c.converted).length;
-  const lastReferralAt =
-    referredList.length > 0 && referredList[0].createdAt
-      ? (referredList[0].createdAt instanceof Date
-          ? referredList[0].createdAt.toISOString()
-          : String(referredList[0].createdAt))
-      : null;
-  const valueCzk = referredContacts.reduce(
-    (sum, c) => sum + (c.valueCzk ?? 0),
-    0
-  );
-
-  return {
-    referredByContactId,
-    referredByContactName,
-    referredBySourceText,
-    givenCount: referredList.length,
-    convertedCount,
-    lastReferralAt,
-    valueCzk: valueCzk > 0 ? valueCzk : null,
-    referredContacts,
-  };
 }
 
 /**
@@ -187,184 +189,186 @@ export async function getReferralRequestSignals(
   const tenantId = auth.tenantId;
   const now = new Date();
 
-  // Only suggest for clients (lifecycle_stage client or has contract)
-  const hasContract = await db
-    .select({ id: contracts.id })
-    .from(contracts)
-    .where(
-      and(
-        eq(contracts.tenantId, tenantId),
-        eq(contracts.contactId, contactId)
-      )
-    )
-    .limit(1);
-  const isClient =
-    contact.lifecycleStage === "client" || (hasContract.length > 0);
-  if (!isClient) {
-    return { signals: [], suppressReason: "Signály pro žádost o referral (nový kontakt) jsou jen u klientů." };
-  }
-
-  // Recently asked: open task with referral-like title in last N months
-  const cutoffTasks = new Date(now);
-  cutoffTasks.setMonth(cutoffTasks.getMonth() - REFERRAL_REQUEST_TASK_MONTHS);
-  const recentTasks = await db
-    .select({ id: tasks.id, title: tasks.title, completedAt: tasks.completedAt, createdAt: tasks.createdAt })
-    .from(tasks)
-    .where(
-      and(
-        eq(tasks.tenantId, tenantId),
-        eq(tasks.contactId, contactId),
-        gte(tasks.createdAt, cutoffTasks)
-      )
-    );
-  const hasRecentOpenReferralTask = recentTasks.some(
-    (t) =>
-      taskTitleIsReferralRequest(t.title) &&
-      !t.completedAt
-  );
-  if (hasRecentOpenReferralTask) {
-    return { signals: [], suppressReason: "Úkol o doporučení už existuje." };
-  }
-
-  const signals: ReferralRequestSignal[] = [];
-
-  // 1. Won deal recent (60 days)
-  const wonCutoff = new Date(now);
-  wonCutoff.setDate(wonCutoff.getDate() - WON_DEAL_DAYS);
-  const wonRecent = await db
-    .select({ id: opportunities.id })
-    .from(opportunities)
-    .where(
-      and(
-        eq(opportunities.tenantId, tenantId),
-        eq(opportunities.contactId, contactId),
-        eq(opportunities.closedAs, "won"),
-        isNotNull(opportunities.closedAt),
-        gte(opportunities.closedAt, wonCutoff)
-      )
-    )
-    .limit(1);
-  if (wonRecent.length > 0) {
-    signals.push({
-      type: "won_deal_recent",
-      label: REFERRAL_REQUEST_SIGNAL_LABELS.won_deal_recent,
-      description: "Obchod byl nedávno uzavřen — typický čas na žádost o referral (nový kontakt).",
-    });
-  }
-
-  // 2. Meeting recent (14 days)
-  const meetingCutoff = new Date(now);
-  meetingCutoff.setDate(meetingCutoff.getDate() - MEETING_RECENT_DAYS);
-  const meetingRecent = await db
-    .select({ id: events.id })
-    .from(events)
-    .where(
-      and(
-        eq(events.tenantId, tenantId),
-        eq(events.contactId, contactId),
-        gte(events.startAt, meetingCutoff),
-        or(
-          eq(events.eventType, "schuzka"),
-          eq(events.eventType, "followup"),
-          eq(events.eventType, "kafe")
-        )
-      )
-    )
-    .limit(1);
-  if (meetingRecent.length > 0 && signals.length === 0) {
-    signals.push({
-      type: "meeting_recent",
-      label: REFERRAL_REQUEST_SIGNAL_LABELS.meeting_recent,
-      description: "Nedávná schůzka — můžete využít k žádosti o referral (nový kontakt).",
-    });
-  }
-
-  // 3. Service current: last_service_date in last 6 months
-  if (contact.lastServiceDate && signals.length === 0) {
-    const lastService = new Date(contact.lastServiceDate);
-    const sixMonthsAgo = new Date(now);
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-    if (lastService >= sixMonthsAgo) {
-      signals.push({
-        type: "service_current",
-        label: REFERRAL_REQUEST_SIGNAL_LABELS.service_current,
-        description: "Servis je v pořádku — typický čas na žádost o referral (nový kontakt).",
-      });
-    }
-  }
-
-  // 4. Contract anniversary in next 60 days
-  if (signals.length === 0 && hasContract.length > 0) {
-    const anniversaries = await db
-      .select({ anniversaryDate: contracts.anniversaryDate })
+  return withTenantContextFromAuth(auth, async (tx) => {
+    // Only suggest for clients (lifecycle_stage client or has contract)
+    const hasContract = await tx
+      .select({ id: contracts.id })
       .from(contracts)
       .where(
         and(
           eq(contracts.tenantId, tenantId),
           eq(contracts.contactId, contactId)
+        )
+      )
+      .limit(1);
+    const isClient =
+      contact.lifecycleStage === "client" || (hasContract.length > 0);
+    if (!isClient) {
+      return { signals: [], suppressReason: "Signály pro žádost o referral (nový kontakt) jsou jen u klientů." };
+    }
+
+    // Recently asked: open task with referral-like title in last N months
+    const cutoffTasks = new Date(now);
+    cutoffTasks.setMonth(cutoffTasks.getMonth() - REFERRAL_REQUEST_TASK_MONTHS);
+    const recentTasks = await tx
+      .select({ id: tasks.id, title: tasks.title, completedAt: tasks.completedAt, createdAt: tasks.createdAt })
+      .from(tasks)
+      .where(
+        and(
+          eq(tasks.tenantId, tenantId),
+          eq(tasks.contactId, contactId),
+          gte(tasks.createdAt, cutoffTasks)
         )
       );
-    const todayStr = now.toISOString().slice(0, 10);
-    const future = new Date(now);
-    future.setDate(future.getDate() + CONTRACT_ANNIVERSARY_DAYS);
-    const futureStr = future.toISOString().slice(0, 10);
-    const inWindow = anniversaries.some((a) => {
-      const d = a.anniversaryDate;
-      if (!d) return false;
-      return d >= todayStr && d <= futureStr;
-    });
-    if (inWindow) {
-      signals.push({
-        type: "contract_anniversary_soon",
-        label: REFERRAL_REQUEST_SIGNAL_LABELS.contract_anniversary_soon,
-        description: "Blíží se výročí smlouvy — typický čas na žádost o referral (nový kontakt).",
-      });
+    const hasRecentOpenReferralTask = recentTasks.some(
+      (t) =>
+        taskTitleIsReferralRequest(t.title) &&
+        !t.completedAt
+    );
+    if (hasRecentOpenReferralTask) {
+      return { signals: [], suppressReason: "Úkol o doporučení už existuje." };
     }
-  }
 
-  // 5. Long relationship + recent activity (first contract > 1 year, event in last 90 days)
-  if (signals.length === 0) {
-    const firstContract = await db
-      .select({ startDate: contracts.startDate })
-      .from(contracts)
+    const signals: ReferralRequestSignal[] = [];
+
+    // 1. Won deal recent (60 days)
+    const wonCutoff = new Date(now);
+    wonCutoff.setDate(wonCutoff.getDate() - WON_DEAL_DAYS);
+    const wonRecent = await tx
+      .select({ id: opportunities.id })
+      .from(opportunities)
       .where(
         and(
-          eq(contracts.tenantId, tenantId),
-          eq(contracts.contactId, contactId)
+          eq(opportunities.tenantId, tenantId),
+          eq(opportunities.contactId, contactId),
+          eq(opportunities.closedAs, "won"),
+          isNotNull(opportunities.closedAt),
+          gte(opportunities.closedAt, wonCutoff)
         )
       )
-      .orderBy(asc(contracts.startDate))
       .limit(1);
-    const oneYearAgo = new Date(now);
-    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - LONG_RELATIONSHIP_YEARS);
-    const oneYearStr = oneYearAgo.toISOString().slice(0, 10);
-    const hasLongRelationship =
-      firstContract.length > 0 &&
-      firstContract[0].startDate != null &&
-      firstContract[0].startDate <= oneYearStr;
+    if (wonRecent.length > 0) {
+      signals.push({
+        type: "won_deal_recent",
+        label: REFERRAL_REQUEST_SIGNAL_LABELS.won_deal_recent,
+        description: "Obchod byl nedávno uzavřen — typický čas na žádost o referral (nový kontakt).",
+      });
+    }
 
-    const activityCutoff = new Date(now);
-    activityCutoff.setDate(activityCutoff.getDate() - RECENT_ACTIVITY_DAYS);
-    const recentEvent = await db
+    // 2. Meeting recent (14 days)
+    const meetingCutoff = new Date(now);
+    meetingCutoff.setDate(meetingCutoff.getDate() - MEETING_RECENT_DAYS);
+    const meetingRecent = await tx
       .select({ id: events.id })
       .from(events)
       .where(
         and(
           eq(events.tenantId, tenantId),
           eq(events.contactId, contactId),
-          gte(events.startAt, activityCutoff)
+          gte(events.startAt, meetingCutoff),
+          or(
+            eq(events.eventType, "schuzka"),
+            eq(events.eventType, "followup"),
+            eq(events.eventType, "kafe")
+          )
         )
       )
       .limit(1);
-
-    if (hasLongRelationship && recentEvent.length > 0) {
+    if (meetingRecent.length > 0 && signals.length === 0) {
       signals.push({
-        type: "long_relationship_recent_activity",
-        label: REFERRAL_REQUEST_SIGNAL_LABELS.long_relationship_recent_activity,
-        description: "Dlouhodobý vztah a nedávná aktivita — typický čas na žádost o referral (nový kontakt).",
+        type: "meeting_recent",
+        label: REFERRAL_REQUEST_SIGNAL_LABELS.meeting_recent,
+        description: "Nedávná schůzka — můžete využít k žádosti o referral (nový kontakt).",
       });
     }
-  }
 
-  return { signals, suppressReason: null };
+    // 3. Service current: last_service_date in last 6 months
+    if (contact.lastServiceDate && signals.length === 0) {
+      const lastService = new Date(contact.lastServiceDate);
+      const sixMonthsAgo = new Date(now);
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      if (lastService >= sixMonthsAgo) {
+        signals.push({
+          type: "service_current",
+          label: REFERRAL_REQUEST_SIGNAL_LABELS.service_current,
+          description: "Servis je v pořádku — typický čas na žádost o referral (nový kontakt).",
+        });
+      }
+    }
+
+    // 4. Contract anniversary in next 60 days
+    if (signals.length === 0 && hasContract.length > 0) {
+      const anniversaries = await tx
+        .select({ anniversaryDate: contracts.anniversaryDate })
+        .from(contracts)
+        .where(
+          and(
+            eq(contracts.tenantId, tenantId),
+            eq(contracts.contactId, contactId)
+          )
+        );
+      const todayStr = now.toISOString().slice(0, 10);
+      const future = new Date(now);
+      future.setDate(future.getDate() + CONTRACT_ANNIVERSARY_DAYS);
+      const futureStr = future.toISOString().slice(0, 10);
+      const inWindow = anniversaries.some((a) => {
+        const d = a.anniversaryDate;
+        if (!d) return false;
+        return d >= todayStr && d <= futureStr;
+      });
+      if (inWindow) {
+        signals.push({
+          type: "contract_anniversary_soon",
+          label: REFERRAL_REQUEST_SIGNAL_LABELS.contract_anniversary_soon,
+          description: "Blíží se výročí smlouvy — typický čas na žádost o referral (nový kontakt).",
+        });
+      }
+    }
+
+    // 5. Long relationship + recent activity (first contract > 1 year, event in last 90 days)
+    if (signals.length === 0) {
+      const firstContract = await tx
+        .select({ startDate: contracts.startDate })
+        .from(contracts)
+        .where(
+          and(
+            eq(contracts.tenantId, tenantId),
+            eq(contracts.contactId, contactId)
+          )
+        )
+        .orderBy(asc(contracts.startDate))
+        .limit(1);
+      const oneYearAgo = new Date(now);
+      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - LONG_RELATIONSHIP_YEARS);
+      const oneYearStr = oneYearAgo.toISOString().slice(0, 10);
+      const hasLongRelationship =
+        firstContract.length > 0 &&
+        firstContract[0].startDate != null &&
+        firstContract[0].startDate <= oneYearStr;
+
+      const activityCutoff = new Date(now);
+      activityCutoff.setDate(activityCutoff.getDate() - RECENT_ACTIVITY_DAYS);
+      const recentEvent = await tx
+        .select({ id: events.id })
+        .from(events)
+        .where(
+          and(
+            eq(events.tenantId, tenantId),
+            eq(events.contactId, contactId),
+            gte(events.startAt, activityCutoff)
+          )
+        )
+        .limit(1);
+
+      if (hasLongRelationship && recentEvent.length > 0) {
+        signals.push({
+          type: "long_relationship_recent_activity",
+          label: REFERRAL_REQUEST_SIGNAL_LABELS.long_relationship_recent_activity,
+          description: "Dlouhodobý vztah a nedávná aktivita — typický čas na žádost o referral (nový kontakt).",
+        });
+      }
+    }
+
+    return { signals, suppressReason: null };
+  });
 }

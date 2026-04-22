@@ -1,8 +1,8 @@
 "use server";
 
 import { requireAuthInAction } from "@/lib/auth/require-auth";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { hasPermission } from "@/lib/auth/permissions";
-import { db } from "db";
 import { calculatorRuns, contacts } from "db";
 import { eq, and, desc } from "db";
 
@@ -38,32 +38,34 @@ export async function logCalculatorRun(params: {
     throw new Error("Forbidden");
   }
 
-  let safeContactId: string | null = null;
-  if (params.contactId) {
-    const [contact] = await db
-      .select({ id: contacts.id })
-      .from(contacts)
-      .where(and(eq(contacts.id, params.contactId), eq(contacts.tenantId, auth.tenantId)))
-      .limit(1);
-    if (!contact) {
-      throw new Error("Kontakt nepatří do vašeho workspace.");
+  return withTenantContextFromAuth(auth, async (tx) => {
+    let safeContactId: string | null = null;
+    if (params.contactId) {
+      const [contact] = await tx
+        .select({ id: contacts.id })
+        .from(contacts)
+        .where(and(eq(contacts.id, params.contactId), eq(contacts.tenantId, auth.tenantId)))
+        .limit(1);
+      if (!contact) {
+        throw new Error("Kontakt nepatří do vašeho workspace.");
+      }
+      safeContactId = contact.id;
     }
-    safeContactId = contact.id;
-  }
 
-  const [row] = await db
-    .insert(calculatorRuns)
-    .values({
-      tenantId: auth.tenantId,
-      createdBy: auth.userId,
-      calculatorType: params.calculatorType,
-      label: params.label ?? null,
-      contactId: safeContactId,
-      inputs: params.inputs ?? null,
-      outputs: params.outputs ?? null,
-    })
-    .returning({ id: calculatorRuns.id });
-  return { id: row.id };
+    const [row] = await tx
+      .insert(calculatorRuns)
+      .values({
+        tenantId: auth.tenantId,
+        createdBy: auth.userId,
+        calculatorType: params.calculatorType,
+        label: params.label ?? null,
+        contactId: safeContactId,
+        inputs: params.inputs ?? null,
+        outputs: params.outputs ?? null,
+      })
+      .returning({ id: calculatorRuns.id });
+    return { id: row.id };
+  });
 }
 
 export async function getRecentCalculatorRuns(
@@ -73,26 +75,28 @@ export async function getRecentCalculatorRuns(
   if (!hasPermission(auth.roleName, "contacts:read")) {
     return [];
   }
-  const rows = await db
-    .select({
-      id: calculatorRuns.id,
-      calculatorType: calculatorRuns.calculatorType,
-      label: calculatorRuns.label,
-      contactId: calculatorRuns.contactId,
-      firstName: contacts.firstName,
-      lastName: contacts.lastName,
-      createdAt: calculatorRuns.createdAt,
-    })
-    .from(calculatorRuns)
-    .leftJoin(contacts, eq(contacts.id, calculatorRuns.contactId))
-    .where(
-      and(
-        eq(calculatorRuns.tenantId, auth.tenantId),
-        eq(calculatorRuns.createdBy, auth.userId)
+  const rows = await withTenantContextFromAuth(auth, async (tx) =>
+    tx
+      .select({
+        id: calculatorRuns.id,
+        calculatorType: calculatorRuns.calculatorType,
+        label: calculatorRuns.label,
+        contactId: calculatorRuns.contactId,
+        firstName: contacts.firstName,
+        lastName: contacts.lastName,
+        createdAt: calculatorRuns.createdAt,
+      })
+      .from(calculatorRuns)
+      .leftJoin(contacts, eq(contacts.id, calculatorRuns.contactId))
+      .where(
+        and(
+          eq(calculatorRuns.tenantId, auth.tenantId),
+          eq(calculatorRuns.createdBy, auth.userId)
+        )
       )
-    )
-    .orderBy(desc(calculatorRuns.createdAt))
-    .limit(limit);
+      .orderBy(desc(calculatorRuns.createdAt))
+      .limit(limit),
+  );
 
   return rows.map((r) => ({
     id: r.id,

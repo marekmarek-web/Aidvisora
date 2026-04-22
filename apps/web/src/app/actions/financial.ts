@@ -2,7 +2,7 @@
 
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { hasPermission } from "@/lib/auth/permissions";
-import { db } from "db";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { contracts, contractSegments } from "db";
 import { eq, and, asc } from "db";
 import { getContractsByContact } from "@/app/actions/contracts";
@@ -38,24 +38,26 @@ export async function getFinancialSummary(
   if (!hasPermission(auth.roleName, "contacts:read"))
     throw new Error("Forbidden");
 
-  const rows = await db
-    .select({
-      id: contracts.id,
-      segment: contracts.segment,
-      partnerName: contracts.partnerName,
-      premiumAmount: contracts.premiumAmount,
-      premiumAnnual: contracts.premiumAnnual,
-      startDate: contracts.startDate,
-      anniversaryDate: contracts.anniversaryDate,
-    })
-    .from(contracts)
-    .where(
-      and(
-        eq(contracts.tenantId, auth.tenantId),
-        eq(contracts.contactId, contactId),
-      ),
-    )
-    .orderBy(asc(contracts.segment));
+  const rows = await withTenantContextFromAuth(auth, async (tx) =>
+    tx
+      .select({
+        id: contracts.id,
+        segment: contracts.segment,
+        partnerName: contracts.partnerName,
+        premiumAmount: contracts.premiumAmount,
+        premiumAnnual: contracts.premiumAnnual,
+        startDate: contracts.startDate,
+        anniversaryDate: contracts.anniversaryDate,
+      })
+      .from(contracts)
+      .where(
+        and(
+          eq(contracts.tenantId, auth.tenantId),
+          eq(contracts.contactId, contactId),
+        ),
+      )
+      .orderBy(asc(contracts.segment)),
+  );
 
   let totalMonthly = 0;
   let totalAnnual = 0;

@@ -2,7 +2,8 @@
 
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { hasPermission, type RoleName } from "@/shared/rolePermissions";
-import { db, invoices, subscriptions, eq, desc } from "db";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
+import { invoices, eq, desc } from "db";
 import { getSubscriptionState, type SubscriptionState } from "@/lib/entitlements";
 
 export type InvoiceRow = {
@@ -31,12 +32,14 @@ export async function getBillingOverview(): Promise<BillingOverview | null> {
 
   const [subState, invoiceRows] = await Promise.all([
     getSubscriptionState(auth.tenantId),
-    db
-      .select()
-      .from(invoices)
-      .where(eq(invoices.tenantId, auth.tenantId))
-      .orderBy(desc(invoices.createdAt))
-      .limit(50),
+    withTenantContextFromAuth(auth, async (tx) =>
+      tx
+        .select()
+        .from(invoices)
+        .where(eq(invoices.tenantId, auth.tenantId))
+        .orderBy(desc(invoices.createdAt))
+        .limit(50),
+    ),
   ]);
 
   return {

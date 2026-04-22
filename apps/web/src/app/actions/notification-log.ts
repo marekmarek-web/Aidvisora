@@ -1,7 +1,8 @@
 "use server";
 
 import { requireAuthInAction } from "@/lib/auth/require-auth";
-import { db, notificationLog, contacts, eq, desc, and, gte, sql, like } from "db";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
+import { notificationLog, contacts, eq, desc, and, gte, sql, like } from "db";
 import type { RoleName } from "@/shared/rolePermissions";
 import { hasPermission } from "@/shared/rolePermissions";
 
@@ -42,25 +43,27 @@ export async function getNotificationLog(limitOrFilter: number | NotificationLog
     );
   }
 
-  const rows = await db
-    .select({
-      id: notificationLog.id,
-      channel: notificationLog.channel,
-      template: notificationLog.template,
-      subject: notificationLog.subject,
-      recipient: notificationLog.recipient,
-      status: notificationLog.status,
-      contactId: notificationLog.contactId,
-      meta: notificationLog.meta,
-      sentAt: notificationLog.sentAt,
-      contactFirstName: contacts.firstName,
-      contactLastName: contacts.lastName,
-    })
-    .from(notificationLog)
-    .leftJoin(contacts, eq(notificationLog.contactId, contacts.id))
-    .where(and(...conditions))
-    .orderBy(desc(notificationLog.sentAt))
-    .limit(limit);
+  const rows = await withTenantContextFromAuth(auth, async (tx) =>
+    tx
+      .select({
+        id: notificationLog.id,
+        channel: notificationLog.channel,
+        template: notificationLog.template,
+        subject: notificationLog.subject,
+        recipient: notificationLog.recipient,
+        status: notificationLog.status,
+        contactId: notificationLog.contactId,
+        meta: notificationLog.meta,
+        sentAt: notificationLog.sentAt,
+        contactFirstName: contacts.firstName,
+        contactLastName: contacts.lastName,
+      })
+      .from(notificationLog)
+      .leftJoin(contacts, eq(notificationLog.contactId, contacts.id))
+      .where(and(...conditions))
+      .orderBy(desc(notificationLog.sentAt))
+      .limit(limit),
+  );
 
   return rows.map((r) => ({
     id: r.id,
@@ -84,11 +87,13 @@ export async function getNotificationLogStats(): Promise<{ sent: number; failed:
   const since = new Date();
   since.setDate(since.getDate() - 30);
 
-  const rows = await db
-    .select({ status: notificationLog.status, c: sql<number>`count(*)::int` })
-    .from(notificationLog)
-    .where(and(eq(notificationLog.tenantId, auth.tenantId), gte(notificationLog.sentAt, since)))
-    .groupBy(notificationLog.status);
+  const rows = await withTenantContextFromAuth(auth, async (tx) =>
+    tx
+      .select({ status: notificationLog.status, c: sql<number>`count(*)::int` })
+      .from(notificationLog)
+      .where(and(eq(notificationLog.tenantId, auth.tenantId), gte(notificationLog.sentAt, since)))
+      .groupBy(notificationLog.status),
+  );
 
   const map = Object.fromEntries(rows.map((r) => [r.status, Number(r.c)]));
   const total = rows.reduce((s, r) => s + Number(r.c), 0);
@@ -100,14 +105,16 @@ export async function getNotificationBadgeCount(): Promise<number> {
   const auth = await requireAuthInAction();
   const since = new Date();
   since.setDate(since.getDate() - 7);
-  const [row] = await db
-    .select({ c: sql<number>`count(*)::int` })
-    .from(notificationLog)
-    .where(
-      and(
-        eq(notificationLog.tenantId, auth.tenantId),
-        gte(notificationLog.sentAt, since)
-      )
-    );
+  const [row] = await withTenantContextFromAuth(auth, async (tx) =>
+    tx
+      .select({ c: sql<number>`count(*)::int` })
+      .from(notificationLog)
+      .where(
+        and(
+          eq(notificationLog.tenantId, auth.tenantId),
+          gte(notificationLog.sentAt, since)
+        )
+      ),
+  );
   return Number(row?.c ?? 0);
 }
