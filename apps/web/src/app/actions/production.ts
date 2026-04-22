@@ -324,6 +324,21 @@ export async function getContractsForPeriod(
     );
   } catch (err) {
     if (isMissingSchemaError(err)) throw new Error(MISSING_SCHEMA_HINT);
+    try {
+      const Sentry = await import("@sentry/nextjs");
+      Sentry.withScope((scope) => {
+        scope.setTag("action", "getContractsForPeriod");
+        scope.setContext("production", {
+          period,
+          refDate: refDate ?? null,
+          tenantId: auth.tenantId,
+          userId: auth.userId,
+        });
+        Sentry.captureException(err);
+      });
+    } catch {
+      /* Sentry best-effort */
+    }
     throw err;
   }
 

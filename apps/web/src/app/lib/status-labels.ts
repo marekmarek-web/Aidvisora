@@ -1,8 +1,22 @@
 /**
- * Status labels for board status column. Persisted in localStorage (aidvisora_labels).
+ * Status labels for board status column.
+ *
+ * Dvouvrstvá perzistence:
+ *   1. `localStorage` (klíč `aidvisora_labels`) — rychlý synchronní read pro
+ *      `getStatusById()` všude v UI (tabulky, filtry, reporty).
+ *   2. `board_labels` tabulka v DB (per-tenant, RLS) — zajišťuje, že
+ *      desktop a mobilní WebView (Capacitor iOS) vidí stejnou sadu i když
+ *      mají oddělené WebKit localStorage.
+ *
+ * Synchronizace:
+ *   - Při bootu (nebo on-demand) `hydrateBoardLabelsFromServer()` natáhne sadu
+ *     z DB a přepíše localStorage.
+ *   - Při každém `setStatusLabels()` se změny v pozadí pushne na server přes
+ *     `bulkUpsertBoardLabels()`.
  */
 
 import { migrateLocalStorageKey } from "@/lib/storage/migrate-weplan-local-storage";
+import { bulkUpsertBoardLabels, listBoardLabels } from "@/app/actions/board-labels";
 
 export type StatusLabel = {
   id: string;
@@ -70,6 +84,7 @@ export function setStatusLabels(labels: StatusLabel[]): void {
     if (labels.length === 0) {
       window.localStorage.removeItem(STORAGE_KEY);
       window.dispatchEvent(new CustomEvent(STATUS_LABELS_UPDATED_EVENT));
+      void pushLabelsToServer([]);
       return;
     }
     const sanitized = labels
@@ -83,13 +98,78 @@ export function setStatusLabels(labels: StatusLabel[]): void {
     if (sanitized.length === 0) {
       window.localStorage.removeItem(STORAGE_KEY);
       window.dispatchEvent(new CustomEvent(STATUS_LABELS_UPDATED_EVENT));
+      void pushLabelsToServer([]);
       return;
     }
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitized));
     window.dispatchEvent(new CustomEvent(STATUS_LABELS_UPDATED_EVENT));
+    void pushLabelsToServer(sanitized);
   } catch {
     // ignore
   }
+}
+
+/** Fire-and-forget: pošle aktuální sadu na server. Chyba se pouze zaloguje. */
+async function pushLabelsToServer(labels: StatusLabel[]): Promise<void> {
+  try {
+    await bulkUpsertBoardLabels(
+      labels.map((l, idx) => ({
+        id: l.id,
+        label: l.label ?? "",
+        color: l.color,
+        isClosedDeal: l.countsTowardPotential === true,
+        sortIndex: idx,
+      })),
+    );
+  } catch (err) {
+    if (typeof console !== "undefined") {
+      // eslint-disable-next-line no-console
+      console.warn("[status-labels] push to server failed", err);
+    }
+  }
+}
+
+let hydrationPromise: Promise<void> | null = null;
+
+/**
+ * Stáhne sadu z DB a přepíše localStorage. Pokud je DB prázdná a v LS už něco
+ * je, naopak nahraje LS na server (one-time seed). Vícenásobné volání za
+ * kratkou dobu se deduplikuje.
+ */
+export function hydrateBoardLabelsFromServer(): Promise<void> {
+  if (typeof window === "undefined") return Promise.resolve();
+  if (hydrationPromise) return hydrationPromise;
+  hydrationPromise = (async () => {
+    try {
+      const serverRows = await listBoardLabels();
+      if (serverRows.length === 0) {
+        const existingLocal = getStatusLabels();
+        if (existingLocal.length > 0) {
+          await pushLabelsToServer(existingLocal);
+        }
+        return;
+      }
+      const normalized: StatusLabel[] = serverRows.map((r) => ({
+        id: r.id,
+        label: r.label ?? "",
+        color: r.color,
+        countsTowardPotential: r.isClosedDeal || LEGACY_POTENTIAL_STATUS_IDS.has(r.id),
+      }));
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+      window.dispatchEvent(new CustomEvent(STATUS_LABELS_UPDATED_EVENT));
+    } catch (err) {
+      if (typeof console !== "undefined") {
+        // eslint-disable-next-line no-console
+        console.warn("[status-labels] hydrate failed", err);
+      }
+    } finally {
+      // Povolíme další hydrataci za chvíli (explicit refresh po editaci).
+      setTimeout(() => {
+        hydrationPromise = null;
+      }, 1500);
+    }
+  })();
+  return hydrationPromise;
 }
 
 /**

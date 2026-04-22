@@ -90,6 +90,24 @@
       "fn": "GET",
       "table": "contractUploadReviews",
       "reason": "Cron watchdog (cronAuthResponse) — globální reaper zaseknutých řádků processing→failed napříč tenanty; není uživatelský kontext."
+    },
+    {
+      "file": "apps/web/src/lib/email/queue-worker.ts",
+      "fn": "processOne",
+      "table": "emailCampaigns",
+      "reason": "Background queue worker (cron-triggered) — zpracovává jobs přes queueId/campaignId, tenant se dereference v rámci SELECTů dál. Není uživatelský kontext."
+    },
+    {
+      "file": "apps/web/src/lib/email/queue-worker.ts",
+      "fn": "processOne",
+      "table": "emailCampaignRecipients",
+      "reason": "Background queue worker — recipient lookup přes campaignId, který byl předtím načten z tenant-scoped emailCampaigns."
+    },
+    {
+      "file": "apps/web/src/lib/email/queue-worker.ts",
+      "fn": "processOne",
+      "table": "contacts",
+      "reason": "Background queue worker — contact lookup přes contactId z recipient řádku, který patří do tenant-gated kampaně."
     }
   ]
 }

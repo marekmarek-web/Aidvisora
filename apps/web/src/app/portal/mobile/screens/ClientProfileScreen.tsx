@@ -374,7 +374,7 @@ function OverviewTab({
   ];
 
   return (
-    <div className="space-y-0 px-3 pt-3 pb-4">
+    <div className="space-y-0 px-2 pt-3 pb-4">
       {/* Shrnutí — stats + meta + household + tags rolled into one card */}
       <MobileCard className="p-0 overflow-hidden mb-3">
         <div className="grid grid-cols-3 divide-x divide-[color:var(--wp-surface-card-border)]">
@@ -814,7 +814,7 @@ export function ClientProfileScreen({
       {toast ? <Toast message={toast.message} variant={toast.variant} onDismiss={dismissToast} /> : null}
 
       {/* Hero — single rounded card, Revolut-ish */}
-      <div className="px-3 pt-3">
+      <div className="px-2 pt-3">
         <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0a0f29] via-[#141b3d] to-indigo-900 p-5 shadow-lg">
           <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-indigo-400/20 blur-3xl" aria-hidden />
           <div className="relative flex items-center gap-3">
@@ -915,7 +915,7 @@ export function ClientProfileScreen({
       </div>
 
       {provenance?.mergeConflictFields && provenance.mergeConflictFields.length > 0 ? (
-        <div className="px-3 pt-3">
+        <div className="px-2 pt-3">
           <ContactMergeConflictGuard
             mergeConflicts={provenance.mergeConflictFields}
             contactId={contactId}
@@ -925,7 +925,7 @@ export function ClientProfileScreen({
       ) : null}
 
       {/* Tab bar — sticky, chips only, clean bottom border inside chip container */}
-      <div className="sticky top-0 z-10 mt-3 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/95 px-3 py-2 backdrop-blur">
+      <div className="sticky top-0 z-10 mt-3 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/95 px-2 py-2 backdrop-blur">
         <FilterChips
           value={tab}
           onChange={(id) => setTab(id as ProfileTab)}

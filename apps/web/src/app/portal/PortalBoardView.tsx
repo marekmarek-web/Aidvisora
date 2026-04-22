@@ -32,6 +32,7 @@ import { PRODUCT_COLUMNS } from "@/app/board/seed-data";
 import {
   getStatusLabels,
   getPotentialDealStatusIds,
+  hydrateBoardLabelsFromServer,
   STATUS_LABELS_UPDATED_EVENT,
   type StatusLabel,
 } from "@/app/lib/status-labels";
@@ -197,6 +198,8 @@ export function PortalBoardView({ dbViewId, initialBoard }: PortalBoardViewProps
     const sync = () => setStatusLabelsSnapshot(getStatusLabels());
     sync();
     window.addEventListener(STATUS_LABELS_UPDATED_EVENT, sync);
+    // Stáhnout server-side sadu (přepíše LS) — sjednocuje desktop + mobile WebView.
+    void hydrateBoardLabelsFromServer();
     return () => window.removeEventListener(STATUS_LABELS_UPDATED_EVENT, sync);
   }, []);
   useEffect(() => {

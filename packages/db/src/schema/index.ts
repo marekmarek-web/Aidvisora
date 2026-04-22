@@ -23,6 +23,7 @@ export * from "./client-payment-setups";
 export * from "./contract-review-corrections";
 export * from "./document-extractions";
 export * from "./board-views";
+export * from "./board-labels";
 export * from "./notifications";
 export * from "./user-terms-acceptance";
 export * from "./messages";

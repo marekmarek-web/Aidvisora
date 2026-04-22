@@ -24,7 +24,10 @@ import {
   UserPlus,
   ScanLine,
   LogOut,
+  FileX2,
+  Megaphone,
 } from "lucide-react";
+import { isTerminationsModuleEnabled } from "@/lib/terminations/terminations-feature-flag";
 import Link from "next/link";
 import Image from "next/image";
 import type { DeviceClass } from "@/lib/ui/useDeviceClass";
@@ -59,6 +62,8 @@ export type DrawerNavItem = {
   label: string;
   Icon: ComponentType<{ size?: number; className?: string }>;
   badge?: number;
+  /** Render with gradient "Ai" treatment, mirroring web sidebar. */
+  isAi?: boolean;
 };
 
 export type DrawerSection = { id: string; title: string; items: DrawerNavItem[] };
@@ -68,7 +73,7 @@ function filterSections(sections: DrawerSection[], showTeamOverview: boolean): D
   return sections.filter((s) => s.id !== "sec-vedeni");
 }
 
-/** Mirrors web `DEFAULT_SECTIONS` in PortalSidebar.tsx, plus mobile-only extras (Dokumenty, Studené kontakty). Items filtered by `hasPermission`. */
+/** Mirrors web `DEFAULT_SECTIONS` (PortalSidebar.tsx) 1:1 in section order + items, plus mobile-only extras (Dokumenty, Skenovat, Studené kontakty). Items filtered by `hasPermission`. */
 function buildSections(showTeamOverview: boolean, roleName: RoleName): DrawerSection[] {
   const prehled: DrawerNavItem[] = [
     { href: "/portal/today", label: "Nástěnka", Icon: Home },
@@ -78,9 +83,32 @@ function buildSections(showTeamOverview: boolean, roleName: RoleName): DrawerSec
     { href: "/portal/notes", label: "Zápisky", Icon: FileText },
   ];
 
+  const nastroje: DrawerNavItem[] = [
+    ...(hasPermission(roleName, "documents:read")
+      ? [{ href: "/portal/contracts/review", label: "AI Review smluv", Icon: AiAssistantBrandIcon, isAi: true } as DrawerNavItem]
+      : []),
+    ...(isTerminationsModuleEnabled()
+      ? [{ href: "/portal/terminations/new", label: "Výpověď smlouvy", Icon: FileX2 } as DrawerNavItem]
+      : []),
+    ...(hasPermission(roleName, "financial_analyses:read")
+      ? [{ href: "/portal/analyses", label: "Finanční analýzy", Icon: BarChart3 } as DrawerNavItem]
+      : []),
+    { href: "/portal/calculators", label: "Kalkulačky", Icon: Calculator },
+    { href: "/portal/mindmap", label: "Mindmap", Icon: Network },
+    ...(hasPermission(roleName, "documents:read")
+      ? [{ href: "/portal/documents", label: "Dokumenty", Icon: FileText } as DrawerNavItem]
+      : []),
+    ...(hasPermission(roleName, "documents:read") && isPortalMultiPageScanEnabled()
+      ? [{ href: "/portal/scan", label: "Skenovat dokument", Icon: ScanLine } as DrawerNavItem]
+      : []),
+    { href: "/portal/tools/drive", label: "Google Disk", Icon: GoogleDriveLogo },
+    { href: "/portal/tools/gmail", label: "Gmail", Icon: GmailLogo },
+  ];
+
   const databaze: DrawerNavItem[] = [
     { href: "/portal/contacts", label: "Klienti", Icon: Users },
     { href: "/portal/households", label: "Domácnosti", Icon: Building2 },
+    { href: "/portal/email-campaigns", label: "E-mail kampaně", Icon: Megaphone },
     ...(isColdContactsEnabled() && hasPermission(roleName, "contacts:read")
       ? [{ href: "/portal/cold-contacts", label: "Studené kontakty", Icon: UserPlus } as DrawerNavItem]
       : []),
@@ -93,30 +121,11 @@ function buildSections(showTeamOverview: boolean, roleName: RoleName): DrawerSec
     { href: "/portal/business-plan", label: "Business plán", Icon: Target },
   ];
 
-  const nastroje: DrawerNavItem[] = [
-    ...(hasPermission(roleName, "documents:read")
-      ? [{ href: "/portal/contracts/review", label: "AI Review smluv", Icon: AiAssistantBrandIcon } as DrawerNavItem]
-      : []),
-    ...(hasPermission(roleName, "documents:read")
-      ? [{ href: "/portal/documents", label: "Dokumenty", Icon: FileText } as DrawerNavItem]
-      : []),
-    ...(hasPermission(roleName, "documents:read") && isPortalMultiPageScanEnabled()
-      ? [{ href: "/portal/scan", label: "Skenovat dokument", Icon: ScanLine } as DrawerNavItem]
-      : []),
-    ...(hasPermission(roleName, "financial_analyses:read")
-      ? [{ href: "/portal/analyses", label: "Finanční analýzy", Icon: BarChart3 } as DrawerNavItem]
-      : []),
-    { href: "/portal/calculators", label: "Kalkulačky", Icon: Calculator },
-    { href: "/portal/mindmap", label: "Mindmap", Icon: Network },
-    { href: "/portal/tools/drive", label: "Google Disk", Icon: GoogleDriveLogo },
-    { href: "/portal/tools/gmail", label: "Gmail", Icon: GmailLogo },
-  ];
-
   const all: DrawerSection[] = [
     { id: "sec-prehled", title: "Přehled", items: prehled },
+    { id: "sec-nastroje", title: "Nástroje poradce", items: nastroje },
     { id: "sec-databaze", title: "Klientská databáze", items: databaze },
     { id: "sec-byznys", title: "Obchod a Byznys", items: byznys },
-    { id: "sec-nastroje", title: "Nástroje poradce", items: nastroje },
     {
       id: "sec-vedeni",
       title: "Vedení týmu",
@@ -294,6 +303,37 @@ export function MobileSideDrawer({
                   let badge: number | undefined;
                   if (item.href === "/portal/tasks" && tasksBadge && tasksBadge > 0) badge = tasksBadge;
                   if (item.href === "/portal/messages" && messagesBadge && messagesBadge > 0) badge = messagesBadge;
+                  if (item.isAi) {
+                    return (
+                      <li key={item.href}>
+                        <button
+                          type="button"
+                          onClick={() => onNavigate(item.href)}
+                          className={cx(
+                            "w-full flex items-center gap-3 min-h-[44px] px-3 rounded-xl text-left text-sm font-black transition-all active:scale-[0.99]",
+                            active
+                              ? "bg-gradient-to-r from-fuchsia-600 to-indigo-600 text-white shadow-md shadow-fuchsia-900/20"
+                              : "hover:bg-[color:var(--wp-surface-muted)]"
+                          )}
+                        >
+                          <span className={cx(
+                            "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
+                            active ? "bg-white/15" : "bg-gradient-to-br from-fuchsia-100 to-indigo-100"
+                          )}>
+                            <Icon size={20} className="max-w-full max-h-full" />
+                          </span>
+                          <span className={cx(
+                            "flex-1 truncate tracking-wide",
+                            active
+                              ? "text-white"
+                              : "text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-600 to-indigo-600"
+                          )}>
+                            {item.label}
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  }
                   return (
                     <li key={item.href}>
                       <button

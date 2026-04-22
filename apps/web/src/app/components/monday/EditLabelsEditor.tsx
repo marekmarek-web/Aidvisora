@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import type { StatusLabel } from "@/app/lib/status-labels";
-import { getStatusLabels, setStatusLabels } from "@/app/lib/status-labels";
+import { getStatusLabels, setStatusLabels, hydrateBoardLabelsFromServer } from "@/app/lib/status-labels";
 
 interface EditLabelsEditorProps {
   open: boolean;
@@ -25,7 +25,12 @@ export function EditLabelsEditor({ open, onClose }: EditLabelsEditorProps) {
   const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
 
   useEffect(() => {
-    if (open) setLabels(getStatusLabels());
+    if (!open) return;
+    setLabels(getStatusLabels());
+    // Po otevření editoru stáhnout server-side verzi a refresh lokálního snapshotu.
+    void hydrateBoardLabelsFromServer().then(() => {
+      setLabels(getStatusLabels());
+    });
   }, [open]);
 
   const colors = useMemo(

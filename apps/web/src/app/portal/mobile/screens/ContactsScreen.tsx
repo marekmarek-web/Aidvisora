@@ -247,7 +247,7 @@ export function ContactsScreen({
 
   const detailPanel =
     selectedContactId ? (
-      <div className="px-3 py-4 space-y-4">
+      <div className="-mx-4 px-0 py-2 space-y-4">
         <ClientProfileScreen
           contactId={selectedContactId}
           onOpenTaskWizard={onTaskWizard}

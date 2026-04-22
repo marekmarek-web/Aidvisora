@@ -1096,7 +1096,7 @@ export function MobilePortalClient({
           onCalendarRoute
             ? " !min-h-0 flex flex-1 flex-col px-0 !space-y-0 pt-2"
             : onAiRoute
-              ? " !min-h-0 flex flex-1 flex-col px-3 pt-2 pb-2 !space-y-3"
+              ? " !min-h-0 flex flex-1 flex-col !px-0 !pt-0 !pb-0 !space-y-0"
               : onMessagesRoute
                 ? " !min-h-0 flex flex-1 flex-col px-0 !space-y-0 !pt-0 !pb-0 !overflow-hidden"
                 : onNotesRoute

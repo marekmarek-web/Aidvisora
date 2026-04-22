@@ -26,6 +26,7 @@ import type { Board, Column, Group, Item } from "@/app/components/monday/types";
 import {
   getStatusLabels,
   getStatusById,
+  hydrateBoardLabelsFromServer,
   STATUS_LABELS_UPDATED_EVENT,
   type StatusLabel,
 } from "@/app/lib/status-labels";
@@ -210,6 +211,8 @@ export function BoardMobileScreen() {
     setStatusLabels(getStatusLabels());
     const handler = () => setStatusLabels(getStatusLabels());
     window.addEventListener(STATUS_LABELS_UPDATED_EVENT, handler);
+    // Stáhnout server-side sadu (přepíše LS) — sjednocuje desktop + mobile WebView.
+    void hydrateBoardLabelsFromServer();
     return () => window.removeEventListener(STATUS_LABELS_UPDATED_EVENT, handler);
   }, []);
 
