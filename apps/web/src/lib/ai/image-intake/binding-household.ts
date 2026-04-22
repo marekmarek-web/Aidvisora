@@ -20,7 +20,8 @@
  */
 
 import "server-only";
-import { db, households, householdMembers, contacts, eq, and, isNull } from "db";
+import { households, householdMembers, contacts, eq, and, isNull } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import type { HouseholdBindingResult, HouseholdMember } from "./types";
 
 // ---------------------------------------------------------------------------
@@ -50,37 +51,37 @@ export async function resolveHouseholdBinding(
   }
 
   try {
-    const rows = await db
-      .select({
-        householdId: householdMembers.householdId,
-        householdName: households.name,
-        contactId: householdMembers.contactId,
-        role: householdMembers.role,
-        firstName: contacts.firstName,
-        lastName: contacts.lastName,
-      })
-      .from(householdMembers)
-      .innerJoin(households, eq(householdMembers.householdId, households.id))
-      .innerJoin(contacts, eq(householdMembers.contactId, contacts.id))
-      .where(
-        and(
-          eq(contacts.tenantId, tenantId),
-          isNull(households.archivedAt),
-          isNull(contacts.archivedAt),
-          // Filter to households where primaryClientId is a member
-          eq(
-            householdMembers.householdId,
-            // Subquery: find the household(s) the primary client belongs to
-            db
-              .select({ householdId: householdMembers.householdId })
-              .from(householdMembers)
-              .where(eq(householdMembers.contactId, primaryClientId))
-              .limit(1)
-              .as("subq"),
+    const rows = await withTenantContext({ tenantId }, (tx) =>
+      tx
+        .select({
+          householdId: householdMembers.householdId,
+          householdName: households.name,
+          contactId: householdMembers.contactId,
+          role: householdMembers.role,
+          firstName: contacts.firstName,
+          lastName: contacts.lastName,
+        })
+        .from(householdMembers)
+        .innerJoin(households, eq(householdMembers.householdId, households.id))
+        .innerJoin(contacts, eq(householdMembers.contactId, contacts.id))
+        .where(
+          and(
+            eq(contacts.tenantId, tenantId),
+            isNull(households.archivedAt),
+            isNull(contacts.archivedAt),
+            eq(
+              householdMembers.householdId,
+              tx
+                .select({ householdId: householdMembers.householdId })
+                .from(householdMembers)
+                .where(eq(householdMembers.contactId, primaryClientId))
+                .limit(1)
+                .as("subq"),
+            ),
           ),
-        ),
-      )
-      .limit(20);
+        )
+        .limit(20),
+    );
 
     if (rows.length === 0) {
       return noHousehold(primaryClientId, null);

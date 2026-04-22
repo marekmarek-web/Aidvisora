@@ -3,6 +3,8 @@
  * Preprocessing, extraction, classification metrics and breakdowns.
  */
 
+import { withTenantContext } from "@/lib/db/with-tenant-context";
+
 import type { TimeWindow } from "./analytics-scope";
 
 export type PipelineMetrics = {
@@ -47,29 +49,31 @@ export async function getPipelineMetrics(
   };
 
   try {
-    const { db, contractUploadReviews, eq, and, gte, sql } = await import("db");
+    const { contractUploadReviews, eq, and, gte, sql } = await import("db");
 
     const windowStart = window?.startDate ?? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-    const [stats] = await db.select({
-      total: sql<number>`count(*)::int`,
-      preprocessed: sql<number>`count(*) filter (where ${contractUploadReviews.processingStatus} <> 'uploaded')::int`,
-      classified: sql<number>`count(*) filter (where ${contractUploadReviews.detectedDocumentType} is not null)::int`,
-      extracted: sql<number>`count(*) filter (where ${contractUploadReviews.processingStatus} in ('extracted','review_required','failed'))::int`,
-      extractionFailed: sql<number>`count(*) filter (where ${contractUploadReviews.processingStatus} = 'failed')::int`,
-      reviewRequired: sql<number>`count(*) filter (where ${contractUploadReviews.processingStatus} = 'review_required')::int`,
-      blocked: sql<number>`count(*) filter (where ${contractUploadReviews.reviewStatus} = 'rejected')::int`,
-    }).from(contractUploadReviews)
-      .where(and(eq(contractUploadReviews.tenantId, tenantId), gte(contractUploadReviews.createdAt, windowStart)));
+    await withTenantContext({ tenantId }, async (tx) => {
+      const [stats] = await tx.select({
+        total: sql<number>`count(*)::int`,
+        preprocessed: sql<number>`count(*) filter (where ${contractUploadReviews.processingStatus} <> 'uploaded')::int`,
+        classified: sql<number>`count(*) filter (where ${contractUploadReviews.detectedDocumentType} is not null)::int`,
+        extracted: sql<number>`count(*) filter (where ${contractUploadReviews.processingStatus} in ('extracted','review_required','failed'))::int`,
+        extractionFailed: sql<number>`count(*) filter (where ${contractUploadReviews.processingStatus} = 'failed')::int`,
+        reviewRequired: sql<number>`count(*) filter (where ${contractUploadReviews.processingStatus} = 'review_required')::int`,
+        blocked: sql<number>`count(*) filter (where ${contractUploadReviews.reviewStatus} = 'rejected')::int`,
+      }).from(contractUploadReviews)
+        .where(and(eq(contractUploadReviews.tenantId, tenantId), gte(contractUploadReviews.createdAt, windowStart)));
 
-    if (stats && stats.total > 0) {
-      metrics.preprocessSuccessRate = Math.round((stats.preprocessed / stats.total) * 100) / 100;
-      metrics.classificationAccuracyProxy = Math.round((stats.classified / stats.total) * 100) / 100;
-      metrics.extractionSuccessRate = Math.round((stats.extracted / stats.total) * 100) / 100;
-      metrics.extractionFailedRate = Math.round((stats.extractionFailed / stats.total) * 100) / 100;
-      metrics.extractionReviewRate = Math.round((stats.reviewRequired / stats.total) * 100) / 100;
-      metrics.applyGateBlockRate = Math.round((stats.blocked / stats.total) * 100) / 100;
-    }
+      if (stats && stats.total > 0) {
+        metrics.preprocessSuccessRate = Math.round((stats.preprocessed / stats.total) * 100) / 100;
+        metrics.classificationAccuracyProxy = Math.round((stats.classified / stats.total) * 100) / 100;
+        metrics.extractionSuccessRate = Math.round((stats.extracted / stats.total) * 100) / 100;
+        metrics.extractionFailedRate = Math.round((stats.extractionFailed / stats.total) * 100) / 100;
+        metrics.extractionReviewRate = Math.round((stats.reviewRequired / stats.total) * 100) / 100;
+        metrics.applyGateBlockRate = Math.round((stats.blocked / stats.total) * 100) / 100;
+      }
+    });
   } catch { /* best-effort */ }
 
   return metrics;
@@ -83,7 +87,7 @@ export async function getPipelineBreakdown(
   const breakdowns: PipelineBreakdown[] = [];
 
   try {
-    const { db, contractUploadReviews, eq, and, gte, sql } = await import("db");
+    const { contractUploadReviews, eq, and, gte, sql } = await import("db");
 
     const windowStart = window?.startDate ?? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
@@ -93,24 +97,26 @@ export async function getPipelineBreakdown(
         ? contractUploadReviews.uploadedBy
         : contractUploadReviews.detectedDocumentType;
 
-    const rows = await db.select({
-      value: groupCol,
-      total: sql<number>`count(*)::int`,
-      applied: sql<number>`count(*) filter (where ${contractUploadReviews.reviewStatus} = 'applied')::int`,
-      avgAge: sql<number>`coalesce(avg(extract(epoch from (now() - ${contractUploadReviews.createdAt})) / 3600), 0)::float`,
-    }).from(contractUploadReviews)
-      .where(and(eq(contractUploadReviews.tenantId, tenantId), gte(contractUploadReviews.createdAt, windowStart)))
-      .groupBy(groupCol);
+    await withTenantContext({ tenantId }, async (tx) => {
+      const rows = await tx.select({
+        value: groupCol,
+        total: sql<number>`count(*)::int`,
+        applied: sql<number>`count(*) filter (where ${contractUploadReviews.reviewStatus} = 'applied')::int`,
+        avgAge: sql<number>`coalesce(avg(extract(epoch from (now() - ${contractUploadReviews.createdAt})) / 3600), 0)::float`,
+      }).from(contractUploadReviews)
+        .where(and(eq(contractUploadReviews.tenantId, tenantId), gte(contractUploadReviews.createdAt, windowStart)))
+        .groupBy(groupCol);
 
-    for (const row of rows) {
-      breakdowns.push({
-        dimension,
-        value: (row.value as string) ?? "unknown",
-        total: row.total,
-        successRate: row.total > 0 ? Math.round((row.applied / row.total) * 100) / 100 : 0,
-        averageAgeHours: Math.round(row.avgAge * 10) / 10,
-      });
-    }
+      for (const row of rows) {
+        breakdowns.push({
+          dimension,
+          value: (row.value as string) ?? "unknown",
+          total: row.total,
+          successRate: row.total > 0 ? Math.round((row.applied / row.total) * 100) / 100 : 0,
+          averageAgeHours: Math.round(row.avgAge * 10) / 10,
+        });
+      }
+    });
   } catch { /* best-effort */ }
 
   return breakdowns;
@@ -128,21 +134,23 @@ export async function getPipelineLatency(
   };
 
   try {
-    const { db, contractUploadReviews, eq, and, gte, sql } = await import("db");
+    const { contractUploadReviews, eq, and, gte, sql } = await import("db");
 
     const windowStart = window?.startDate ?? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-    const [stats] = await db.select({
-      avgTotal: sql<number>`coalesce(avg(extract(epoch from (${contractUploadReviews.updatedAt} - ${contractUploadReviews.createdAt})) / 3600), 0)::float`,
-    }).from(contractUploadReviews)
-      .where(and(
-        eq(contractUploadReviews.tenantId, tenantId),
-        gte(contractUploadReviews.createdAt, windowStart),
-      ));
+    await withTenantContext({ tenantId }, async (tx) => {
+      const [stats] = await tx.select({
+        avgTotal: sql<number>`coalesce(avg(extract(epoch from (${contractUploadReviews.updatedAt} - ${contractUploadReviews.createdAt})) / 3600), 0)::float`,
+      }).from(contractUploadReviews)
+        .where(and(
+          eq(contractUploadReviews.tenantId, tenantId),
+          gte(contractUploadReviews.createdAt, windowStart),
+        ));
 
-    if (stats) {
-      latency.avgReviewToApproveHours = Math.round(stats.avgTotal * 10) / 10;
-    }
+      if (stats) {
+        latency.avgReviewToApproveHours = Math.round(stats.avgTotal * 10) / 10;
+      }
+    });
   } catch { /* best-effort */ }
 
   return latency;

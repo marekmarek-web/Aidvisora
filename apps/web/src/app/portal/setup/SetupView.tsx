@@ -866,7 +866,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
     <div className="min-h-screen bg-[color:var(--wp-main-scroll-bg)] pb-12 text-[color:var(--wp-text)] md:pb-20">
       <style>{`.hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
 
-      <main className="max-w-[1200px] mx-auto px-4 sm:px-6 md:px-8 pt-6 md:pt-8">
+      <main className="max-w-[1200px] mx-auto px-4 sm:px-6 md:px-8 pt-6 md:pt-8 pb-8 md:pb-12">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <h1 className="text-2xl sm:text-3xl font-black text-[color:var(--wp-text)] tracking-tight">Nastavení účtu</h1>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
@@ -1219,68 +1219,66 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 animate-in fade-in duration-300">
             <div className="lg:col-span-12">
               <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm p-6 sm:p-8">
-                <div className="flex flex-col md:flex-row items-start gap-6 md:gap-8 mb-8">
-                  <div className="relative group flex-shrink-0 mx-auto md:mx-0">
-                    <label className="block cursor-pointer">
-                      <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-[28px] bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-black text-3xl sm:text-4xl shadow-xl border-4 border-white overflow-hidden">
-                        {advisorAvatarUrl ? (
-                          <Image
-                            src={advisorAvatarUrl}
-                            alt=""
-                            fill
-                            sizes="(max-width: 640px) 7rem, 8rem"
-                            className="object-cover"
-                          />
-                        ) : (
-                          initials
-                        )}
-                      </div>
-                      <div className="absolute inset-0 bg-[color:var(--wp-overlay-scrim)] rounded-[28px] border-4 border-transparent flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                        <Camera size={28} className="text-white mb-1" />
-                        <span className="text-[10px] font-black uppercase text-white">Nahrát fotku</span>
-                      </div>
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp,image/gif"
-                        className="sr-only"
-                        onChange={onAdvisorAvatarChange}
-                        disabled={advisorAvatarUploading}
-                      />
-                    </label>
+                <div className="grid grid-cols-1 lg:grid-cols-[180px_1fr] gap-6 md:gap-8 items-start">
+                  <div className="flex flex-col items-center lg:items-start gap-2">
+                    <div className="relative group">
+                      <label className="block cursor-pointer">
+                        <div className="relative w-32 h-32 rounded-[28px] bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-black text-4xl shadow-xl border-4 border-white overflow-hidden">
+                          {advisorAvatarUrl ? (
+                            <Image
+                              src={advisorAvatarUrl}
+                              alt=""
+                              fill
+                              sizes="8rem"
+                              className="object-cover"
+                            />
+                          ) : (
+                            initials
+                          )}
+                        </div>
+                        <div className="absolute inset-0 bg-[color:var(--wp-overlay-scrim)] rounded-[28px] border-4 border-transparent flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                          <Camera size={28} className="text-white mb-1" />
+                          <span className="text-[10px] font-black uppercase text-white">Nahrát fotku</span>
+                        </div>
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/gif"
+                          className="sr-only"
+                          onChange={onAdvisorAvatarChange}
+                          disabled={advisorAvatarUploading}
+                        />
+                      </label>
+                    </div>
                     {advisorAvatarUploading && (
-                      <p className="text-xs text-[color:var(--wp-text-secondary)] mt-2 text-center">Nahrávám…</p>
+                      <p className="text-xs text-[color:var(--wp-text-secondary)] text-center lg:text-left">Nahrávám…</p>
                     )}
                     {advisorAvatarError && (
-                      <p className="text-xs text-red-600 mt-2 text-center max-w-[140px]">{advisorAvatarError}</p>
+                      <p className="text-xs text-red-600 text-center lg:text-left max-w-[160px]">{advisorAvatarError}</p>
                     )}
                   </div>
-                  <div className="flex-1 w-full">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      <div>
-                        <label className={labelClass}>Veřejné jméno</label>
-                        <input type="text" value={[firstName, lastName].filter(Boolean).join(" ")} onChange={(e) => { const p = e.target.value.trim().split(/\s+/); setFirstName(p[0] ?? ""); setLastName(p.slice(1).join(" ") ?? ""); }} className={inputClass} />
-                      </div>
-                      <div>
-                        <label className={labelClass}>Pracovní pozice</label>
-                        <input type="text" value={publicRole} onChange={(e) => setPublicRole(e.target.value)} className={inputClass} placeholder="např. Poradce pro majetek" />
-                      </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                      <label className={labelClass}>Veřejné jméno</label>
+                      <input type="text" value={[firstName, lastName].filter(Boolean).join(" ")} onChange={(e) => { const p = e.target.value.trim().split(/\s+/); setFirstName(p[0] ?? ""); setLastName(p.slice(1).join(" ") ?? ""); }} className={inputClass} />
                     </div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:items-start">
-                  <div>
-                    <label className={labelClass}>Název společnosti (Síť)</label>
-                    <input type="text" value={company} onChange={(e) => setCompany(e.target.value)} className={inputClass} />
-                  </div>
-                  <div>
-                    <label className={labelClass}>Krátké Bio (vizitka a rezervační stránka)</label>
-                    <textarea
-                      rows={6}
-                      value={bio}
-                      onChange={(e) => setBio(e.target.value)}
-                      className={`${inputClass} resize-none leading-relaxed min-h-[9rem] lg:min-h-[10.5rem]`}
-                      placeholder="Pomáhám klientům budovat majetek..."
-                    />
+                    <div>
+                      <label className={labelClass}>Pracovní pozice</label>
+                      <input type="text" value={publicRole} onChange={(e) => setPublicRole(e.target.value)} className={inputClass} placeholder="např. Poradce pro majetek" />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Název společnosti (Síť)</label>
+                      <input type="text" value={company} onChange={(e) => setCompany(e.target.value)} className={inputClass} />
+                    </div>
+                    <div className="md:row-span-2">
+                      <label className={labelClass}>Krátké Bio (vizitka a rezervační stránka)</label>
+                      <textarea
+                        rows={6}
+                        value={bio}
+                        onChange={(e) => setBio(e.target.value)}
+                        className={`${inputClass} resize-none leading-relaxed min-h-[9rem] md:min-h-[calc(100%-2rem)]`}
+                        placeholder="Pomáhám klientům budovat majetek..."
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1765,7 +1763,7 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
                       <div className="px-6 pb-6 flex-1">
                         <p className={`text-sm font-medium leading-relaxed transition-colors ${isConnected ? "text-[color:var(--wp-text-secondary)]" : "text-[color:var(--wp-text-secondary)]"}`}>{integration.description}</p>
                       </div>
-                      <div className={`px-6 py-4 bg-[color:var(--wp-surface-muted)]/80 border-t flex items-center justify-between rounded-b-[24px] transition-all ${isConnected ? "border-indigo-50" : "border-[color:var(--wp-surface-card-border)]/50"}`}>
+                      <div className={`px-6 py-5 bg-[color:var(--wp-surface-muted)]/80 border-t flex items-center justify-between rounded-b-[24px] transition-all ${isConnected ? "border-indigo-50" : "border-[color:var(--wp-surface-card-border)]/50"}`}>
                         <button
                           type="button"
                           onClick={() => setExpandedId(expanded ? null : integration.id)}

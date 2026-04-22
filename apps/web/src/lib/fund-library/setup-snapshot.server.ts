@@ -1,7 +1,8 @@
 import "server-only";
 
 import { unstable_cache } from "next/cache";
-import { db, tenantSettings, advisorPreferences, fundAddRequests, eq, and, desc } from "db";
+import { tenantSettings, advisorPreferences, fundAddRequests, eq, and, desc } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import { BASE_FUNDS } from "@/lib/analyses/financial/fund-library/base-funds";
 import { BASE_FUND_KEYS, type BaseFundKey } from "@/lib/analyses/financial/fund-library/legacy-fund-key-map";
 import type { RoleName } from "@/shared/rolePermissions";
@@ -61,20 +62,24 @@ function mergeAdvisorPrefs(
  * Chybějící advisor řádek = default merge (všechna povolená, zapnuté).
  */
 async function fetchTenantAllowlist(tenantId: string) {
-  const [tenantRow] = await db
-    .select({ value: tenantSettings.value })
-    .from(tenantSettings)
-    .where(and(eq(tenantSettings.tenantId, tenantId), eq(tenantSettings.key, TENANT_ALLOWLIST_KEY)))
-    .limit(1);
+  const [tenantRow] = await withTenantContext({ tenantId }, (tx) =>
+    tx
+      .select({ value: tenantSettings.value })
+      .from(tenantSettings)
+      .where(and(eq(tenantSettings.tenantId, tenantId), eq(tenantSettings.key, TENANT_ALLOWLIST_KEY)))
+      .limit(1),
+  );
   return (tenantRow?.value ?? null) as TenantFundAllowlistValue | null;
 }
 
 async function fetchAdvisorFundPrefs(tenantId: string, userId: string) {
-  const [prefRow] = await db
-    .select({ fundLibrary: advisorPreferences.fundLibrary })
-    .from(advisorPreferences)
-    .where(and(eq(advisorPreferences.tenantId, tenantId), eq(advisorPreferences.userId, userId)))
-    .limit(1);
+  const [prefRow] = await withTenantContext({ tenantId, userId }, (tx) =>
+    tx
+      .select({ fundLibrary: advisorPreferences.fundLibrary })
+      .from(advisorPreferences)
+      .where(and(eq(advisorPreferences.tenantId, tenantId), eq(advisorPreferences.userId, userId)))
+      .limit(1),
+  );
   return prefRow?.fundLibrary ?? null;
 }
 
@@ -136,24 +141,26 @@ export async function getFundLibrarySetupSnapshot(
 
   let fundAddRequestQueue: FundAddRequestQueueRow[] | undefined;
   if (canEditTenantAllowlist) {
-    const rows = await db
-      .select({
-        id: fundAddRequests.id,
-        userId: fundAddRequests.userId,
-        fundName: fundAddRequests.fundName,
-        provider: fundAddRequests.provider,
-        isinOrTicker: fundAddRequests.isinOrTicker,
-        factsheetUrl: fundAddRequests.factsheetUrl,
-        category: fundAddRequests.category,
-        note: fundAddRequests.note,
-        status: fundAddRequests.status,
-        createdAt: fundAddRequests.createdAt,
-        updatedAt: fundAddRequests.updatedAt,
-      })
-      .from(fundAddRequests)
-      .where(eq(fundAddRequests.tenantId, tenantId))
-      .orderBy(desc(fundAddRequests.createdAt))
-      .limit(200);
+    const rows = await withTenantContext({ tenantId, userId }, (tx) =>
+      tx
+        .select({
+          id: fundAddRequests.id,
+          userId: fundAddRequests.userId,
+          fundName: fundAddRequests.fundName,
+          provider: fundAddRequests.provider,
+          isinOrTicker: fundAddRequests.isinOrTicker,
+          factsheetUrl: fundAddRequests.factsheetUrl,
+          category: fundAddRequests.category,
+          note: fundAddRequests.note,
+          status: fundAddRequests.status,
+          createdAt: fundAddRequests.createdAt,
+          updatedAt: fundAddRequests.updatedAt,
+        })
+        .from(fundAddRequests)
+        .where(eq(fundAddRequests.tenantId, tenantId))
+        .orderBy(desc(fundAddRequests.createdAt))
+        .limit(200),
+    );
 
     fundAddRequestQueue = rows.map((r) => ({
       id: r.id,

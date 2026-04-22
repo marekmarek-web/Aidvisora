@@ -3,7 +3,8 @@
  * to actual DB entities (contacts, opportunities, documents, contracts).
  */
 
-import { db, contacts, opportunities, documents, eq, and, isNull, desc, sql } from "db";
+import { contacts, opportunities, documents, eq, and, isNull, desc, sql } from "db";
+import { withTenantContext, type TenantContextDb } from "@/lib/db/with-tenant-context";
 import { searchContactsForAssistant, type AssistantContactMatch } from "./assistant-contact-search";
 import type { AssistantSession } from "./assistant-session";
 import type { CanonicalIntent } from "./assistant-domain-model";
@@ -38,12 +39,13 @@ function isUuid(val: string): boolean {
 }
 
 async function resolveClientRef(
+  tx: TenantContextDb,
   tenantId: string,
   ref: string,
   _session: AssistantSession,
 ): Promise<ResolvedEntity | null> {
   if (isUuid(ref)) {
-    const rows = await db
+    const rows = await tx
       .select({ id: contacts.id, firstName: contacts.firstName, lastName: contacts.lastName })
       .from(contacts)
       .where(and(eq(contacts.id, ref), eq(contacts.tenantId, tenantId)))
@@ -86,16 +88,13 @@ async function resolveClientRef(
 }
 
 async function resolveOpportunityRef(
+  tx: TenantContextDb,
   tenantId: string,
   ref: string,
   contactId: string | null,
 ): Promise<ResolvedEntity | null> {
   if (isUuid(ref)) {
-    // L6: when a caller supplies both a uuid and an expected contactId, the
-    // resolver must refuse to return an opportunity that belongs to a
-    // different client. Previously we trusted the uuid blindly and the
-    // opportunity could end up attached to the wrong contact downstream.
-    const rows = await db
+    const rows = await tx
       .select({ id: opportunities.id, title: opportunities.title, contactId: opportunities.contactId })
       .from(opportunities)
       .where(and(eq(opportunities.id, ref), eq(opportunities.tenantId, tenantId), isNull(opportunities.archivedAt)))
@@ -117,7 +116,7 @@ async function resolveOpportunityRef(
   }
 
   if (contactId) {
-    const rows = await db
+    const rows = await tx
       .select({ id: opportunities.id, title: opportunities.title })
       .from(opportunities)
       .where(
@@ -174,12 +173,13 @@ async function resolveOpportunityRef(
 }
 
 async function resolveDocumentRef(
+  tx: TenantContextDb,
   tenantId: string,
   explicitRef: string | undefined,
   session: AssistantSession,
 ): Promise<ResolvedEntity | null> {
   if (session.lockedDocumentId) {
-    const rows = await db
+    const rows = await tx
       .select({ id: documents.id, name: documents.name })
       .from(documents)
       .where(and(eq(documents.id, session.lockedDocumentId), eq(documents.tenantId, tenantId)))
@@ -197,7 +197,7 @@ async function resolveDocumentRef(
   }
 
   if (explicitRef && isUuid(explicitRef)) {
-    const rows = await db
+    const rows = await tx
       .select({ id: documents.id, name: documents.name })
       .from(documents)
       .where(and(eq(documents.id, explicitRef), eq(documents.tenantId, tenantId)))
@@ -224,9 +224,10 @@ export async function resolveEntities(
 ): Promise<EntityResolutionResult> {
   const result = emptyResolution();
 
+  return withTenantContext({ tenantId }, async (tx) => {
   const clientRef = intent.targetClient?.ref;
   if (clientRef) {
-    const resolved = await resolveClientRef(tenantId, clientRef, session);
+    const resolved = await resolveClientRef(tx, tenantId, clientRef, session);
     if (resolved) {
       result.client = resolved;
       if (resolved.ambiguous) {
@@ -242,7 +243,7 @@ export async function resolveEntities(
     !session.pendingClientDisambiguation
   ) {
     const cid = session.lockedClientId ?? session.activeClientId!;
-    const rows = await db
+    const rows = await tx
       .select({ id: contacts.id, firstName: contacts.firstName, lastName: contacts.lastName })
       .from(contacts)
       .where(and(eq(contacts.id, cid), eq(contacts.tenantId, tenantId)))
@@ -261,7 +262,7 @@ export async function resolveEntities(
 
   const oppRef = intent.targetOpportunity?.ref;
   if (oppRef) {
-    const resolved = await resolveOpportunityRef(tenantId, oppRef, result.client?.entityId ?? null);
+    const resolved = await resolveOpportunityRef(tx, tenantId, oppRef, result.client?.entityId ?? null);
     if (resolved) {
       result.opportunity = resolved;
       if (resolved.ambiguous) {
@@ -273,7 +274,7 @@ export async function resolveEntities(
       result.warnings.push(`Obchod „${oppRef}" nebyl nalezen.`);
     }
   } else if (session.lockedOpportunityId) {
-    const resolved = await resolveOpportunityRef(tenantId, session.lockedOpportunityId, result.client?.entityId ?? null);
+    const resolved = await resolveOpportunityRef(tx, tenantId, session.lockedOpportunityId, result.client?.entityId ?? null);
     if (resolved) {
       result.opportunity = resolved;
     }
@@ -281,7 +282,7 @@ export async function resolveEntities(
 
   const docRef = intent.targetDocument?.ref;
   if (docRef || session.lockedDocumentId) {
-    const resolvedDoc = await resolveDocumentRef(tenantId, docRef, session);
+    const resolvedDoc = await resolveDocumentRef(tx, tenantId, docRef, session);
     if (resolvedDoc) {
       result.document = resolvedDoc;
     } else if (docRef && isUuid(docRef)) {
@@ -290,6 +291,7 @@ export async function resolveEntities(
   }
 
   return result;
+  });
 }
 
 /**

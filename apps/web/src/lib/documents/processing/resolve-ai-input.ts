@@ -1,4 +1,5 @@
-import { db, documents, eq, and } from "db";
+import { documents, eq, and } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import { createAdminClient } from "@/lib/supabase/server";
 import { createSignedStorageUrl } from "@/lib/storage/signed-url";
 import type { DocumentAiInputSource } from "db";
@@ -185,7 +186,8 @@ export async function resolveAiInputForDocument(
   if (!tenantId) {
     throw new Error("resolveAiInputForDocument: tenantId is required.");
   }
-  const [doc] = await db
+  const [doc] = await withTenantContext({ tenantId }, (tx) =>
+    tx
     .select({
       id: documents.id,
       tenantId: documents.tenantId,
@@ -206,7 +208,8 @@ export async function resolveAiInputForDocument(
     })
     .from(documents)
     .where(and(eq(documents.tenantId, tenantId), eq(documents.id, documentId)))
-    .limit(1);
+    .limit(1),
+  );
 
   if (!doc) return null;
   return resolveAiInput(doc);

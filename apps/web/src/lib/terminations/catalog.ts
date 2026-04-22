@@ -1,7 +1,7 @@
 import "server-only";
 import { eq, isNull, or } from "drizzle-orm";
-import { db } from "../db-client";
 import { insurerTerminationRegistry, terminationReasonCatalog } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import type { InsurerRegistryRow, ReasonCatalogRow } from "./types";
 import type { TerminationDefaultDateComputation } from "db";
 
@@ -63,12 +63,14 @@ function toReasonRow(r: typeof terminationReasonCatalog.$inferSelect): ReasonCat
  * Výsledky jsou řazeny: tenant-specific první, pak globální.
  */
 export async function getAllInsurers(tenantId: string): Promise<InsurerRegistryRow[]> {
-  const rows = await db
-    .select()
-    .from(insurerTerminationRegistry)
-    .where(
-      or(eq(insurerTerminationRegistry.tenantId, tenantId), isNull(insurerTerminationRegistry.tenantId))
-    );
+  const rows = await withTenantContext({ tenantId }, async (tx) =>
+    tx
+      .select()
+      .from(insurerTerminationRegistry)
+      .where(
+        or(eq(insurerTerminationRegistry.tenantId, tenantId), isNull(insurerTerminationRegistry.tenantId))
+      )
+  );
 
   const active = rows.filter((r) => r.active);
   active.sort((a, b) => {
@@ -87,10 +89,12 @@ export async function findInsurerByCatalogKey(
   tenantId: string,
   catalogKey: string
 ): Promise<InsurerRegistryRow | null> {
-  const rows = await db
-    .select()
-    .from(insurerTerminationRegistry)
-    .where(eq(insurerTerminationRegistry.catalogKey, catalogKey));
+  const rows = await withTenantContext({ tenantId }, async (tx) =>
+    tx
+      .select()
+      .from(insurerTerminationRegistry)
+      .where(eq(insurerTerminationRegistry.catalogKey, catalogKey))
+  );
 
   const tenant = rows.find((r) => r.tenantId === tenantId && r.active);
   if (tenant) return toInsurerRow(tenant);
@@ -140,12 +144,14 @@ export async function getReasonsForSegment(
   tenantId: string,
   segment: string | null
 ): Promise<ReasonCatalogRow[]> {
-  const rows = await db
-    .select()
-    .from(terminationReasonCatalog)
-    .where(
-      or(eq(terminationReasonCatalog.tenantId, tenantId), isNull(terminationReasonCatalog.tenantId))
-    );
+  const rows = await withTenantContext({ tenantId }, async (tx) =>
+    tx
+      .select()
+      .from(terminationReasonCatalog)
+      .where(
+        or(eq(terminationReasonCatalog.tenantId, tenantId), isNull(terminationReasonCatalog.tenantId))
+      )
+  );
 
   return rows
     .filter((r) => {
@@ -165,10 +171,12 @@ export async function findReasonByCode(
   tenantId: string,
   reasonCode: string
 ): Promise<ReasonCatalogRow | null> {
-  const rows = await db
-    .select()
-    .from(terminationReasonCatalog)
-    .where(eq(terminationReasonCatalog.reasonCode, reasonCode));
+  const rows = await withTenantContext({ tenantId }, async (tx) =>
+    tx
+      .select()
+      .from(terminationReasonCatalog)
+      .where(eq(terminationReasonCatalog.reasonCode, reasonCode))
+  );
 
   const tenant = rows.find((r) => r.tenantId === tenantId && r.active);
   if (tenant) return toReasonRow(tenant);

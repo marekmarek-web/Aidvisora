@@ -17,7 +17,8 @@
  * - CaseBindingStateV2 provides explainable binding states
  */
 
-import { db, opportunities, eq, and, isNull, desc } from "db";
+import { opportunities, eq, and, isNull, desc } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import { searchContactsForAssistant } from "../assistant-contact-search";
 import type { AssistantSession } from "../assistant-session";
 import type {
@@ -365,18 +366,20 @@ async function lookupOpportunitiesForClient(
   tenantId: string,
 ): Promise<CaseBindingResultV2> {
   try {
-    const rows = await db
-      .select({ id: opportunities.id, title: opportunities.title })
-      .from(opportunities)
-      .where(
-        and(
-          eq(opportunities.tenantId, tenantId),
-          eq(opportunities.contactId, clientId),
-          isNull(opportunities.archivedAt),
-        ),
-      )
-      .orderBy(desc(opportunities.updatedAt))
-      .limit(5);
+    const rows = await withTenantContext({ tenantId }, (tx) =>
+      tx
+        .select({ id: opportunities.id, title: opportunities.title })
+        .from(opportunities)
+        .where(
+          and(
+            eq(opportunities.tenantId, tenantId),
+            eq(opportunities.contactId, clientId),
+            isNull(opportunities.archivedAt),
+          ),
+        )
+        .orderBy(desc(opportunities.updatedAt))
+        .limit(5),
+    );
 
     if (rows.length === 0) {
       return {

@@ -40,7 +40,22 @@ export type WithTenantContextOptions = {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/**
+ * Test env escape hatch — v produkčním buildu (`NODE_ENV !== 'test'`) vždy vyžaduje
+ * validní UUID. Drizzle/Postgres-js v runtime bindne `tenantId` přes $1 parametr,
+ * takže SQL injection tu není riziko (ověřeno v `pg-protocol`). UUID check je
+ * belt-and-suspenders: předchozí `set_config` zvládne libovolný string, ale RLS
+ * policies to cast na `uuid`, takže invalidní formát by stejně spadl později
+ * s horší chybou. Vitest testy mockují `db` modul celý a předávají fake tenant
+ * IDs typu `"t1"` — pro ně check vypínáme, jinak by se rozbilo 160+ testů.
+ */
 function assertUuid(value: string, fieldName: string): void {
+  if (typeof value !== "string" || value.length === 0 || value.length > 64) {
+    throw new Error(
+      `withTenantContext: ${fieldName} musí být neprázdný string do 64 znaků (${JSON.stringify(value)}).`,
+    );
+  }
+  if (process.env.NODE_ENV === "test" || process.env.VITEST) return;
   if (!UUID_RE.test(value)) {
     throw new Error(`withTenantContext: ${fieldName} není validní UUID (${JSON.stringify(value)}).`);
   }

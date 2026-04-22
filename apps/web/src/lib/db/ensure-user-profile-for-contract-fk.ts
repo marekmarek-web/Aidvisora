@@ -1,24 +1,29 @@
-import { db } from "db";
 import { userProfiles } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 
 /**
  * FK `contracts.advisor_id` / `contracts.confirmed_by_user_id` → `user_profiles.user_id`.
  * Session user id must exist in `user_profiles` before contract writes — same as manual `createContract`.
  * Idempotent UPSERT; safe for any authenticated advisor id.
  */
-export async function ensureUserProfileRowForAdvisor(userId: string): Promise<void> {
+export async function ensureUserProfileRowForAdvisor(
+  userId: string,
+  tenantId: string,
+): Promise<void> {
   const uid = userId.trim();
   if (!uid) return;
-  await db
-    .insert(userProfiles)
-    .values({
-      userId: uid,
-      updatedAt: new Date(),
-    })
-    .onConflictDoUpdate({
-      target: userProfiles.userId,
-      set: { updatedAt: new Date() },
-    });
+  await withTenantContext({ tenantId, userId: uid }, (tx) =>
+    tx
+      .insert(userProfiles)
+      .values({
+        userId: uid,
+        updatedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: userProfiles.userId,
+        set: { updatedAt: new Date() },
+      }),
+  );
 }
 
 /** User-facing message when Postgres reports advisor-related FK violation on contracts. */

@@ -12,7 +12,8 @@ import { getTasksByContactId, type TaskRow } from "@/app/actions/tasks";
 import { listEvents, type EventRow } from "@/app/actions/events";
 import { getPipelineByContact, type StageWithOpportunities } from "@/app/actions/pipeline";
 import { getCoverageForContact } from "@/app/actions/coverage";
-import { db, faPlanItems, financialAnalyses, eq, and } from "db";
+import { faPlanItems, financialAnalyses, eq, and } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import type { ClientTimelineEvent } from "@/lib/timeline/types";
 import type { ClientFinancialSummaryView } from "@/app/actions/client-financial-summary";
 import { SEGMENT_LABELS } from "db";
@@ -141,21 +142,23 @@ export async function buildClientAiContextRaw(clientId: string): Promise<ClientA
   const pendingFaPlanItemsRaw = await (async () => {
     try {
       const { tenantId } = await ensureContactAccess(clientId);
-      const rows = await db
-        .select({
-          label: faPlanItems.label,
-          status: faPlanItems.status,
-          provider: faPlanItems.provider,
-          segmentCode: faPlanItems.segmentCode,
-        })
-        .from(faPlanItems)
-        .innerJoin(financialAnalyses, eq(faPlanItems.analysisId, financialAnalyses.id))
-        .where(
-          and(
-            eq(faPlanItems.tenantId, tenantId),
-            eq(faPlanItems.contactId, clientId),
-          )
-        );
+      const rows = await withTenantContext({ tenantId }, (tx) =>
+        tx
+          .select({
+            label: faPlanItems.label,
+            status: faPlanItems.status,
+            provider: faPlanItems.provider,
+            segmentCode: faPlanItems.segmentCode,
+          })
+          .from(faPlanItems)
+          .innerJoin(financialAnalyses, eq(faPlanItems.analysisId, financialAnalyses.id))
+          .where(
+            and(
+              eq(faPlanItems.tenantId, tenantId),
+              eq(faPlanItems.contactId, clientId),
+            )
+          ),
+      );
       return rows.filter((r) => r.status !== "sold" && r.status !== "not_relevant" && r.status !== "cancelled");
     } catch {
       return [];

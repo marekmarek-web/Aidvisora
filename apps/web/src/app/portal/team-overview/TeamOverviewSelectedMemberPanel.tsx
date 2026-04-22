@@ -175,7 +175,7 @@ export function TeamOverviewSelectedMemberPanel({
     <aside
       className={clsx(
         PANEL_CLASS,
-        "flex max-h-[min(90vh,calc(100vh-4rem))] flex-col overscroll-contain"
+        "flex max-h-[min(90vh,calc(100vh-4rem))] flex-col"
       )}
     >
       {/* Header */}
@@ -215,7 +215,7 @@ export function TeamOverviewSelectedMemberPanel({
         ) : null}
       </div>
 
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain px-7 pb-8 pt-5">
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-y-auto scroll-smooth px-7 pb-8 pt-5">
         {outsideFilter && (
           <div
             className="rounded-[12px] border border-amber-500/20 bg-amber-500/10 px-3.5 py-2.5 text-[11px] text-amber-200"

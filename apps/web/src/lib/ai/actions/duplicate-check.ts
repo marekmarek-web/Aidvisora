@@ -1,7 +1,8 @@
 "use server";
 
-import { db, tasks, events } from "db";
+import { tasks, events } from "db";
 import { eq, and, isNull, gte, lt } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import { getTasksByContactId } from "@/app/actions/tasks";
 import { listEvents } from "@/app/actions/events";
 import { getPipelineByContact } from "@/app/actions/pipeline";
@@ -117,10 +118,12 @@ export async function checkTeamActionDuplicates(
       isNull(tasks.completedAt),
     ];
     if (assignedTo) conditions.push(eq(tasks.assignedTo, assignedTo));
-    const rows = await db
-      .select({ id: tasks.id, title: tasks.title })
-      .from(tasks)
-      .where(and(...conditions));
+    const rows = await withTenantContext({ tenantId }, (tx) =>
+      tx
+        .select({ id: tasks.id, title: tasks.title })
+        .from(tasks)
+        .where(and(...conditions)),
+    );
     const serviceKeywords = ["servis", "revize", "vyroci", "fixace", "obnova"];
     const existingItems = rows
       .filter((task) => {
@@ -147,10 +150,12 @@ export async function checkTeamActionDuplicates(
       lt(events.startAt, end),
     ];
     if (assignedTo) conditions.push(eq(events.assignedTo, assignedTo));
-    const rows = await db
-      .select({ id: events.id, title: events.title })
-      .from(events)
-      .where(and(...conditions));
+    const rows = await withTenantContext({ tenantId }, (tx) =>
+      tx
+        .select({ id: events.id, title: events.title })
+        .from(events)
+        .where(and(...conditions)),
+    );
     const existingItems = rows
       .filter((event) => hasTitleOverlap(event.title, title))
       .map((event) => ({ type: "event", id: event.id, title: event.title }));

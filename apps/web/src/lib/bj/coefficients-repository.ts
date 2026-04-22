@@ -11,9 +11,16 @@
  * zřídka (a adminská změna se projeví do minuty).
  */
 
-import { db } from "db";
 import { bjCoefficients, careerPositionCoefficients } from "db";
 import { or, isNull, eq } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
+
+// Sentinel tenant UUID používaný pro čtení global-only (tenant_id IS NULL)
+// řádků v případech, kdy caller nepředal tenantId. RLS policy na
+// bj_coefficients/career_position_coefficients akceptuje
+// `tenant_id IS NULL OR tenant_id = current_setting('app.tenant_id')::uuid`,
+// takže neexistující tenant jen propustí global řádky — což je žádoucí chování.
+const NULL_TENANT_SENTINEL = "00000000-0000-0000-0000-000000000000";
 import type {
   BjCoefficientRule,
   BjFormula,
@@ -65,21 +72,25 @@ export async function loadBjCoefficientRules(tenantId: string | null): Promise<B
     ? or(isNull(bjCoefficients.tenantId), eq(bjCoefficients.tenantId, tenantId))
     : isNull(bjCoefficients.tenantId);
 
-  const rows = await db
-    .select({
-      tenantId: bjCoefficients.tenantId,
-      productCategory: bjCoefficients.productCategory,
-      partnerPattern: bjCoefficients.partnerPattern,
-      subtype: bjCoefficients.subtype,
-      formula: bjCoefficients.formula,
-      coefficient: bjCoefficients.coefficient,
-      divisor: bjCoefficients.divisor,
-      cap: bjCoefficients.cap,
-      floor: bjCoefficients.floor,
-      note: bjCoefficients.note,
-    })
-    .from(bjCoefficients)
-    .where(whereClause);
+  const rows = await withTenantContext(
+    { tenantId: tenantId ?? NULL_TENANT_SENTINEL },
+    (tx) =>
+      tx
+        .select({
+          tenantId: bjCoefficients.tenantId,
+          productCategory: bjCoefficients.productCategory,
+          partnerPattern: bjCoefficients.partnerPattern,
+          subtype: bjCoefficients.subtype,
+          formula: bjCoefficients.formula,
+          coefficient: bjCoefficients.coefficient,
+          divisor: bjCoefficients.divisor,
+          cap: bjCoefficients.cap,
+          floor: bjCoefficients.floor,
+          note: bjCoefficients.note,
+        })
+        .from(bjCoefficients)
+        .where(whereClause),
+  );
 
   const mapped: BjCoefficientRule[] = [];
   for (const r of rows) {
@@ -124,18 +135,22 @@ export async function loadCareerPositions(tenantId: string | null): Promise<Care
     ? or(isNull(careerPositionCoefficients.tenantId), eq(careerPositionCoefficients.tenantId, tenantId))
     : isNull(careerPositionCoefficients.tenantId);
 
-  const rows = await db
-    .select({
-      tenantId: careerPositionCoefficients.tenantId,
-      positionKey: careerPositionCoefficients.positionKey,
-      positionLabel: careerPositionCoefficients.positionLabel,
-      positionLevel: careerPositionCoefficients.positionLevel,
-      bjValueCzk: careerPositionCoefficients.bjValueCzk,
-      bjThreshold: careerPositionCoefficients.bjThreshold,
-      meta: careerPositionCoefficients.meta,
-    })
-    .from(careerPositionCoefficients)
-    .where(whereClause);
+  const rows = await withTenantContext(
+    { tenantId: tenantId ?? NULL_TENANT_SENTINEL },
+    (tx) =>
+      tx
+        .select({
+          tenantId: careerPositionCoefficients.tenantId,
+          positionKey: careerPositionCoefficients.positionKey,
+          positionLabel: careerPositionCoefficients.positionLabel,
+          positionLevel: careerPositionCoefficients.positionLevel,
+          bjValueCzk: careerPositionCoefficients.bjValueCzk,
+          bjThreshold: careerPositionCoefficients.bjThreshold,
+          meta: careerPositionCoefficients.meta,
+        })
+        .from(careerPositionCoefficients)
+        .where(whereClause),
+  );
 
   const byKey = new Map<string, CareerPositionRow>();
   for (const r of rows) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Mail,
@@ -28,6 +28,8 @@ import {
   Trash2,
   PenSquare,
   Info,
+  Code,
+  Type,
 } from "lucide-react";
 import {
   createEmailCampaignDraft,
@@ -74,7 +76,11 @@ type PreviewDevice = "desktop" | "mobile";
 type Props = {
   initialRows: CampaignListRow[];
   initialSegments: SegmentCount[];
+  /** Jméno (nebo e-mail) autora — pro náhled „Od:“ a branding. */
+  fromName?: string;
 };
+
+type EditorMode = "visual" | "source";
 
 type FormState = {
   /** id draftu – pokud je null, ještě není uložen. */
@@ -122,7 +128,7 @@ function previewReplace(input: string): string {
     .replace(/\{\{unsubscribe_url\}\}/gi, "#");
 }
 
-export function EmailCampaignsClient({ initialRows, initialSegments }: Props) {
+export function EmailCampaignsClient({ initialRows, initialSegments, fromName }: Props) {
   const router = useRouter();
   const toast = useToast();
   const confirm = useConfirm();
@@ -130,7 +136,10 @@ export function EmailCampaignsClient({ initialRows, initialSegments }: Props) {
   const [form, setForm] = useState<FormState>(makeInitialForm());
   const [mobileView, setMobileView] = useState<ViewMode>("editor");
   const [previewDevice, setPreviewDevice] = useState<PreviewDevice>("desktop");
+  const [editorMode, setEditorMode] = useState<EditorMode>("visual");
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const visualRef = useRef<HTMLDivElement | null>(null);
+  const fromLabel = (fromName && fromName.trim()) || "Vy (Aidvisora)";
 
   const segmentMap = useMemo(() => {
     const m = new Map<string, SegmentCount>();
@@ -198,24 +207,61 @@ export function EmailCampaignsClient({ initialRows, initialSegments }: Props) {
     []
   );
 
+  /** Bezpečné execCommand pro contenteditable ve vizuálním režimu. */
+  const execCmd = useCallback(
+    (command: string, value?: string) => {
+      if (editorMode !== "visual" || !visualRef.current) return;
+      visualRef.current.focus();
+      try {
+        document.execCommand(command, false, value);
+        setForm((prev) => ({ ...prev, bodyHtml: visualRef.current?.innerHTML ?? prev.bodyHtml }));
+      } catch {
+        /* fallback – režim zdroje */
+      }
+    },
+    [editorMode]
+  );
+
   const insertVariable = useCallback(
     (variable: string) => {
-      wrapSelection(`{{${variable}}}`);
+      if (editorMode === "visual") {
+        execCmd("insertText", `{{${variable}}}`);
+      } else {
+        wrapSelection(`{{${variable}}}`);
+      }
     },
-    [wrapSelection]
+    [editorMode, execCmd, wrapSelection]
   );
 
   const insertLink = useCallback(() => {
     const url = window.prompt("URL odkazu:", "https://");
     if (!url) return;
-    wrapSelection(`<a href="${url}" style="color:#4f46e5;">`, "</a>", "text odkazu");
-  }, [wrapSelection]);
+    if (editorMode === "visual") {
+      execCmd("createLink", url);
+    } else {
+      wrapSelection(`<a href="${url}" style="color:#4f46e5;">`, "</a>", "text odkazu");
+    }
+  }, [editorMode, execCmd, wrapSelection]);
 
   const insertImage = useCallback(() => {
     const url = window.prompt("URL obrázku:", "https://");
     if (!url) return;
-    wrapSelection(`<img src="${url}" alt="" style="max-width:100%;border-radius:8px;"/>`);
-  }, [wrapSelection]);
+    if (editorMode === "visual") {
+      execCmd("insertImage", url);
+    } else {
+      wrapSelection(`<img src="${url}" alt="" style="max-width:100%;border-radius:8px;"/>`);
+    }
+  }, [editorMode, execCmd, wrapSelection]);
+
+  /** Synchronizuje vizuální editor s aktuálním bodyHtml (např. po loadDraft/loadTemplate/reset). */
+  useEffect(() => {
+    if (editorMode !== "visual") return;
+    const el = visualRef.current;
+    if (!el) return;
+    if (el.innerHTML !== form.bodyHtml) {
+      el.innerHTML = form.bodyHtml;
+    }
+  }, [editorMode, form.bodyHtml]);
 
   const previewSubject = previewReplace(form.subject);
   const previewBody = previewReplace(form.bodyHtml);
@@ -488,24 +534,74 @@ Odeslání nelze vrátit zpět.`,
       </div>
 
       <div>
-        <label className={labelClass}>Obsah e-mailu (HTML)</label>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <label className={labelClass + " !mb-0"}>Obsah e-mailu</label>
+          <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-[11px] font-bold uppercase tracking-wider">
+            <button
+              type="button"
+              onClick={() => setEditorMode("visual")}
+              className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 transition-colors ${
+                editorMode === "visual"
+                  ? "bg-white text-indigo-600 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+              aria-pressed={editorMode === "visual"}
+            >
+              <Type size={12} /> Vizuálně
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditorMode("source")}
+              className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 transition-colors ${
+                editorMode === "source"
+                  ? "bg-white text-indigo-600 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+              aria-pressed={editorMode === "source"}
+            >
+              <Code size={12} /> Zdroj HTML
+            </button>
+          </div>
+        </div>
         <div className="overflow-hidden rounded-xl border border-slate-200 transition-all focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100">
           <div className="flex flex-wrap items-center gap-1 border-b border-slate-200 bg-slate-50 px-3 py-2">
-            <ToolbarBtn onClick={() => wrapSelection("<strong>", "</strong>", "text")} label="Tučně">
+            <ToolbarBtn
+              onClick={() =>
+                editorMode === "visual"
+                  ? execCmd("bold")
+                  : wrapSelection("<strong>", "</strong>", "text")
+              }
+              label="Tučně"
+            >
               <Bold size={16} />
             </ToolbarBtn>
-            <ToolbarBtn onClick={() => wrapSelection("<em>", "</em>", "text")} label="Kurzíva">
+            <ToolbarBtn
+              onClick={() =>
+                editorMode === "visual"
+                  ? execCmd("italic")
+                  : wrapSelection("<em>", "</em>", "text")
+              }
+              label="Kurzíva"
+            >
               <Italic size={16} />
             </ToolbarBtn>
             <div className="mx-1 h-5 w-px bg-slate-300" />
             <ToolbarBtn
-              onClick={() => wrapSelection("<ul><li>", "</li></ul>", "položka")}
+              onClick={() =>
+                editorMode === "visual"
+                  ? execCmd("insertUnorderedList")
+                  : wrapSelection("<ul><li>", "</li></ul>", "položka")
+              }
               label="Odrážky"
             >
               <List size={16} />
             </ToolbarBtn>
             <ToolbarBtn
-              onClick={() => wrapSelection("<ol><li>", "</li></ol>", "položka")}
+              onClick={() =>
+                editorMode === "visual"
+                  ? execCmd("insertOrderedList")
+                  : wrapSelection("<ol><li>", "</li></ol>", "položka")
+              }
               label="Číslovaný seznam"
             >
               <ListOrdered size={16} />
@@ -518,13 +614,35 @@ Odeslání nelze vrátit zpět.`,
               <ImageIcon size={16} />
             </ToolbarBtn>
           </div>
-          <textarea
-            ref={textareaRef}
-            value={form.bodyHtml}
-            onChange={(e) => handleField("bodyHtml", e.target.value)}
-            className="block min-h-[240px] w-full resize-y bg-white p-4 font-mono text-xs leading-relaxed text-slate-800 outline-none md:text-[13px]"
-            placeholder="Začněte psát obsah e-mailu..."
-          />
+          {editorMode === "visual" ? (
+            <div
+              ref={visualRef}
+              contentEditable
+              suppressContentEditableWarning
+              onInput={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  bodyHtml: (e.currentTarget as HTMLDivElement).innerHTML,
+                }))
+              }
+              onBlur={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  bodyHtml: (e.currentTarget as HTMLDivElement).innerHTML,
+                }))
+              }
+              className="block min-h-[240px] w-full resize-y overflow-auto bg-white p-4 text-sm leading-relaxed text-slate-800 outline-none [&_a]:text-indigo-600 [&_a]:underline [&_img]:max-w-full [&_img]:rounded-md [&_ol]:ml-5 [&_ol]:list-decimal [&_ul]:ml-5 [&_ul]:list-disc"
+              data-placeholder="Začněte psát obsah e-mailu..."
+            />
+          ) : (
+            <textarea
+              ref={textareaRef}
+              value={form.bodyHtml}
+              onChange={(e) => handleField("bodyHtml", e.target.value)}
+              className="block min-h-[240px] w-full resize-y bg-white p-4 font-mono text-xs leading-relaxed text-slate-800 outline-none md:text-[13px]"
+              placeholder="Začněte psát obsah e-mailu..."
+            />
+          )}
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 bg-indigo-50/50 px-3 py-2">
             <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400">
               Vložit proměnnou
@@ -542,7 +660,10 @@ Odeslání nelze vrátit zpět.`,
         </div>
         <p className="mt-2 ml-1 flex items-start gap-1.5 text-[11px] font-medium text-slate-500">
           <Info size={12} className="mt-0.5 shrink-0 text-indigo-400" />
-          Pole podporuje HTML. Proměnné <code className="mx-1 rounded bg-slate-100 px-1 font-mono text-[10px]">{"{{jmeno}}"}</code>
+          {editorMode === "visual"
+            ? "Pište jako ve Wordu – formátování se uloží jako HTML."
+            : "Pole podporuje HTML."}{" "}
+          Proměnné <code className="mx-1 rounded bg-slate-100 px-1 font-mono text-[10px]">{"{{jmeno}}"}</code>
           a <code className="mx-1 rounded bg-slate-100 px-1 font-mono text-[10px]">{"{{cele_jmeno}}"}</code> se při odeslání nahradí.
         </p>
       </div>
@@ -616,7 +737,7 @@ Odeslání nelze vrátit zpět.`,
         <div className="shrink-0 space-y-3 border-b border-slate-200 bg-slate-50 p-5">
           <div className="flex items-center gap-4 text-sm">
             <span className="w-12 shrink-0 font-bold text-slate-400">Od:</span>
-            <span className="truncate font-bold text-slate-800">Martin Dvořák (Aidvisora)</span>
+            <span className="truncate font-bold text-slate-800">{fromLabel}</span>
           </div>
           <div className="flex items-center gap-4 text-sm">
             <span className="w-12 shrink-0 font-bold text-slate-400">Komu:</span>
@@ -889,6 +1010,14 @@ Odeslání nelze vrátit zpět.`,
               nebo použijte předpřipravenou šablonu.
             </p>
           </div>
+        </div>
+
+        <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[12px] font-medium leading-relaxed text-amber-900">
+          <Info size={14} className="mt-0.5 shrink-0 text-amber-600" />
+          <span>
+            <strong className="font-black">MVP:</strong> Základní rozesílka je funkční (Resend,
+            personalizace, testovací odeslání). Sledování otevření a prokliků zatím není k dispozici.
+          </span>
         </div>
 
         {/* Desktop: template gallery always visible; mobile: only in editor */}

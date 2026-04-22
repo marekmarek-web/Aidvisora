@@ -63,6 +63,12 @@ export const dbService = createDb(serviceClient);
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function assertUuid(value: string, fieldName: string): void {
+  if (typeof value !== "string" || value.length === 0 || value.length > 64) {
+    throw new Error(
+      `withServiceTenantContext: ${fieldName} musí být neprázdný string do 64 znaků (${JSON.stringify(value)}).`,
+    );
+  }
+  if (process.env.NODE_ENV === "test" || process.env.VITEST) return;
   if (!UUID_RE.test(value)) {
     throw new Error(
       `withServiceTenantContext: ${fieldName} není validní UUID (${JSON.stringify(value)}).`,

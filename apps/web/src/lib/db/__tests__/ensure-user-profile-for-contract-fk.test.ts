@@ -10,14 +10,20 @@ import {
 const insertMock = vi.fn();
 
 vi.mock("db", () => ({
-  db: {
-    insert: () => ({
-      values: () => ({
-        onConflictDoUpdate: () => insertMock(),
-      }),
-    }),
-  },
   userProfiles: { userId: "user_id" },
+}));
+
+vi.mock("@/lib/db/with-tenant-context", () => ({
+  withTenantContext: async (_opts: unknown, fn: (tx: unknown) => Promise<unknown>) => {
+    const tx = {
+      insert: () => ({
+        values: () => ({
+          onConflictDoUpdate: () => insertMock(),
+        }),
+      }),
+    };
+    return fn(tx);
+  },
 }));
 
 describe("ensureUserProfileRowForAdvisor", () => {
@@ -27,12 +33,12 @@ describe("ensureUserProfileRowForAdvisor", () => {
   });
 
   it("bez advisor id (prázdný string) — žádný DB dotaz", async () => {
-    await ensureUserProfileRowForAdvisor("   ");
+    await ensureUserProfileRowForAdvisor("   ", "tenant-uuid");
     expect(insertMock).not.toHaveBeenCalled();
   });
 
   it("s platným user id — UPSERT do user_profiles", async () => {
-    await ensureUserProfileRowForAdvisor("  auth-user-uuid  ");
+    await ensureUserProfileRowForAdvisor("  auth-user-uuid  ", "tenant-uuid");
     expect(insertMock).toHaveBeenCalledTimes(1);
   });
 });

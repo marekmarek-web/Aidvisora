@@ -4,7 +4,9 @@
  * Connects to existing exports + export_artifacts schema.
  */
 
-import { db, exports as exportsTable, exportArtifacts, eq, and, desc } from "db";
+import { exports as exportsTable, exportArtifacts, eq, and, desc } from "db";
+
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 
 export type SubjectRequestType = "gdpr_export" | "gdpr_delete" | "gdpr_anonymize" | "consent_revoke";
 export type SubjectRequestStatus = "pending" | "processing" | "completed" | "failed" | "cancelled";
@@ -31,31 +33,35 @@ export type SubjectRequestRow = {
 export async function createSubjectRequest(
   params: CreateSubjectRequestParams
 ): Promise<SubjectRequestRow> {
-  const [row] = await db
-    .insert(exportsTable)
-    .values({
-      tenantId: params.tenantId,
-      contactId: params.contactId,
-      type: params.requestType,
-      requestedBy: params.requestedBy,
-      status: "pending",
-    })
-    .returning();
+  return withTenantContext({ tenantId: params.tenantId, userId: params.requestedBy }, async (tx) => {
+    const [row] = await tx
+      .insert(exportsTable)
+      .values({
+        tenantId: params.tenantId,
+        contactId: params.contactId,
+        type: params.requestType,
+        requestedBy: params.requestedBy,
+        status: "pending",
+      })
+      .returning();
 
-  return mapExportRow(row);
+    return mapExportRow(row);
+  });
 }
 
 export async function getSubjectRequest(
   tenantId: string,
   requestId: string
 ): Promise<SubjectRequestRow | null> {
-  const [row] = await db
-    .select()
-    .from(exportsTable)
-    .where(and(eq(exportsTable.tenantId, tenantId), eq(exportsTable.id, requestId)))
-    .limit(1);
+  return withTenantContext({ tenantId }, async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(exportsTable)
+      .where(and(eq(exportsTable.tenantId, tenantId), eq(exportsTable.id, requestId)))
+      .limit(1);
 
-  return row ? mapExportRow(row) : null;
+    return row ? mapExportRow(row) : null;
+  });
 }
 
 export async function listSubjectRequests(
@@ -70,14 +76,16 @@ export async function listSubjectRequests(
     conditions.push(eq(exportsTable.type, options.type));
   }
 
-  const rows = await db
-    .select()
-    .from(exportsTable)
-    .where(and(...conditions))
-    .orderBy(desc(exportsTable.createdAt))
-    .limit(options.limit ?? 50);
+  return withTenantContext({ tenantId }, async (tx) => {
+    const rows = await tx
+      .select()
+      .from(exportsTable)
+      .where(and(...conditions))
+      .orderBy(desc(exportsTable.createdAt))
+      .limit(options.limit ?? 50);
 
-  return rows.map(mapExportRow);
+    return rows.map(mapExportRow);
+  });
 }
 
 export type ExportResult = {
@@ -95,28 +103,26 @@ export async function processExportRequest(
   if (!request) throw new Error(`Subject request ${requestId} not found`);
   if (request.tenantId !== tenantId) throw new Error("Tenant isolation violation");
 
-  // Mark as processing
-  await db
-    .update(exportsTable)
-    .set({ status: "processing" })
-    .where(and(eq(exportsTable.tenantId, tenantId), eq(exportsTable.id, requestId)));
-
-  // Enumerate what would be exported (contact + documents + consents + audit entries)
   const exportedEntities = ["contact", "documents", "consents", "audit_log_entries", "payment_setups"];
-
-  // Create artifact record (path would be set by storage layer)
   const artifactPath = `exports/${tenantId}/${requestId}/gdpr-export.json`;
-  await db.insert(exportArtifacts).values({
-    exportId: requestId,
-    kind: "json",
-    storagePath: artifactPath,
-  });
 
-  // Mark as completed
-  await db
-    .update(exportsTable)
-    .set({ status: "completed", completedAt: new Date() })
-    .where(and(eq(exportsTable.tenantId, tenantId), eq(exportsTable.id, requestId)));
+  await withTenantContext({ tenantId }, async (tx) => {
+    await tx
+      .update(exportsTable)
+      .set({ status: "processing" })
+      .where(and(eq(exportsTable.tenantId, tenantId), eq(exportsTable.id, requestId)));
+
+    await tx.insert(exportArtifacts).values({
+      exportId: requestId,
+      kind: "json",
+      storagePath: artifactPath,
+    });
+
+    await tx
+      .update(exportsTable)
+      .set({ status: "completed", completedAt: new Date() })
+      .where(and(eq(exportsTable.tenantId, tenantId), eq(exportsTable.id, requestId)));
+  });
 
   return {
     requestId,
@@ -142,20 +148,21 @@ export async function processDeleteRequest(
   if (request.tenantId !== tenantId) throw new Error("Tenant isolation violation");
   if (!request.contactId) throw new Error("Delete request requires a contactId");
 
-  await db
-    .update(exportsTable)
-    .set({ status: "processing" })
-    .where(and(eq(exportsTable.tenantId, tenantId), eq(exportsTable.id, requestId)));
-
-  // Per data classification: deletable vs non-deletable entity types
   const deletableTypes = ["documents", "consents", "meeting_notes", "communication_drafts"];
-  const retainedTypes = ["audit_log_entries", "financial_payment_records"]; // legally required
+  const retainedTypes = ["audit_log_entries", "financial_payment_records"];
   const skippedLocked: string[] = [];
 
-  await db
-    .update(exportsTable)
-    .set({ status: "completed", completedAt: new Date() })
-    .where(and(eq(exportsTable.tenantId, tenantId), eq(exportsTable.id, requestId)));
+  await withTenantContext({ tenantId }, async (tx) => {
+    await tx
+      .update(exportsTable)
+      .set({ status: "processing" })
+      .where(and(eq(exportsTable.tenantId, tenantId), eq(exportsTable.id, requestId)));
+
+    await tx
+      .update(exportsTable)
+      .set({ status: "completed", completedAt: new Date() })
+      .where(and(eq(exportsTable.tenantId, tenantId), eq(exportsTable.id, requestId)));
+  });
 
   return {
     requestId,
@@ -175,13 +182,15 @@ export async function cancelSubjectRequest(
     throw new Error("Cannot cancel a completed request");
   }
 
-  const [row] = await db
-    .update(exportsTable)
-    .set({ status: "cancelled" })
-    .where(and(eq(exportsTable.tenantId, tenantId), eq(exportsTable.id, requestId)))
-    .returning();
+  return withTenantContext({ tenantId }, async (tx) => {
+    const [row] = await tx
+      .update(exportsTable)
+      .set({ status: "cancelled" })
+      .where(and(eq(exportsTable.tenantId, tenantId), eq(exportsTable.id, requestId)))
+      .returning();
 
-  return mapExportRow(row);
+    return mapExportRow(row);
+  });
 }
 
 function mapExportRow(row: typeof exportsTable.$inferSelect): SubjectRequestRow {

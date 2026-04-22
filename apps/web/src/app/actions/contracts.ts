@@ -466,7 +466,7 @@ export async function createContract(
     }
 
     const advisorUid = auth.userId.trim();
-    await ensureUserProfileRowForAdvisor(advisorUid);
+    await ensureUserProfileRowForAdvisor(advisorUid, auth.tenantId);
 
     const outcome = await withTenantContextFromAuth(auth, async (tx): Promise<CreateContractResult> => {
       let partnerName = normalized.partnerName?.trim() || null;

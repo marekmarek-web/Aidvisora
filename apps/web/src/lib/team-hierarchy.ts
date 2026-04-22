@@ -1,7 +1,8 @@
 import "server-only";
 
-import { db, memberships, roles, userProfiles, teamMembers } from "db";
+import { memberships, roles, userProfiles, teamMembers } from "db";
 import { and, eq, inArray, or, isNull } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import type { RoleName } from "@/lib/auth/permissions";
 import type { TeamOverviewScope, TeamHierarchyMember, TeamTreeNode } from "./team-hierarchy-types";
 import { getVisibleUserIdsFromMembers } from "./team-hierarchy-types";
@@ -34,7 +35,8 @@ export function externalMemberUserId(teamMemberId: string): string {
 export async function listTenantHierarchyMembers(tenantId: string): Promise<TeamHierarchyMember[]> {
   // F2 read adapter: team_members je source of truth. memberships join je kv\u016fli roleName
   // pro internal_user (external_manual nem\u00e1 role v RBAC \u2014 default "Advisor").
-  const rows = await db
+  const rows = await withTenantContext({ tenantId }, (tx) =>
+    tx
     .select({
       teamMemberId: teamMembers.id,
       authUserId: teamMembers.authUserId,
@@ -63,7 +65,8 @@ export async function listTenantHierarchyMembers(tenantId: string): Promise<Team
           inArray(roles.name, TEAM_ROLE_NAMES as unknown as string[])
         )
       )
-    );
+    ),
+  );
 
   const tmIdToUserId = new Map<string, string>();
   for (const r of rows) {

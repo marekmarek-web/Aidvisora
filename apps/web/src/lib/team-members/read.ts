@@ -9,7 +9,8 @@
 
 import "server-only";
 
-import { and, asc, desc, db, eq, inArray, teamMemberCareerLog, teamMemberManualPeriods, teamMembers } from "db";
+import { and, asc, desc, eq, inArray, teamMemberCareerLog, teamMemberManualPeriods, teamMembers } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 
 export type ManualPeriodRow = {
   id: string;
@@ -47,7 +48,8 @@ export async function listManualPeriodsForMembers(
   teamMemberIds: string[]
 ): Promise<ManualPeriodRow[]> {
   if (teamMemberIds.length === 0) return [];
-  const rows = await db
+  const rows = await withTenantContext({ tenantId }, async (tx) =>
+    tx
     .select({
       id: teamMemberManualPeriods.id,
       teamMemberId: teamMemberManualPeriods.teamMemberId,
@@ -73,7 +75,8 @@ export async function listManualPeriodsForMembers(
         inArray(teamMemberManualPeriods.teamMemberId, teamMemberIds)
       )
     )
-    .orderBy(desc(teamMemberManualPeriods.year), desc(teamMemberManualPeriods.periodIndex));
+    .orderBy(desc(teamMemberManualPeriods.year), desc(teamMemberManualPeriods.periodIndex))
+  );
 
   return rows.map((r) => ({
     id: r.id,
@@ -99,7 +102,8 @@ export async function listCareerLogForMember(
   tenantId: string,
   teamMemberId: string
 ): Promise<CareerLogRow[]> {
-  const rows = await db
+  const rows = await withTenantContext({ tenantId }, async (tx) =>
+    tx
     .select({
       id: teamMemberCareerLog.id,
       teamMemberId: teamMemberCareerLog.teamMemberId,
@@ -118,7 +122,8 @@ export async function listCareerLogForMember(
         eq(teamMemberCareerLog.teamMemberId, teamMemberId)
       )
     )
-    .orderBy(desc(teamMemberCareerLog.effectiveFrom));
+    .orderBy(desc(teamMemberCareerLog.effectiveFrom))
+  );
 
   return rows.map((r) => ({
     ...r,
@@ -130,11 +135,13 @@ export async function getTeamMemberByUserId(
   tenantId: string,
   authUserId: string
 ): Promise<{ id: string; parentMemberId: string | null } | null> {
-  const rows = await db
-    .select({ id: teamMembers.id, parentMemberId: teamMembers.parentMemberId })
-    .from(teamMembers)
-    .where(and(eq(teamMembers.tenantId, tenantId), eq(teamMembers.authUserId, authUserId)))
-    .limit(1);
+  const rows = await withTenantContext({ tenantId }, async (tx) =>
+    tx
+      .select({ id: teamMembers.id, parentMemberId: teamMembers.parentMemberId })
+      .from(teamMembers)
+      .where(and(eq(teamMembers.tenantId, tenantId), eq(teamMembers.authUserId, authUserId)))
+      .limit(1)
+  );
   return rows[0] ?? null;
 }
 
@@ -142,17 +149,19 @@ export async function getTeamMemberById(
   tenantId: string,
   teamMemberId: string
 ): Promise<{ id: string; authUserId: string | null; parentMemberId: string | null; memberKind: string; status: string } | null> {
-  const rows = await db
-    .select({
-      id: teamMembers.id,
-      authUserId: teamMembers.authUserId,
-      parentMemberId: teamMembers.parentMemberId,
-      memberKind: teamMembers.memberKind,
-      status: teamMembers.status,
-    })
-    .from(teamMembers)
-    .where(and(eq(teamMembers.tenantId, tenantId), eq(teamMembers.id, teamMemberId)))
-    .limit(1);
+  const rows = await withTenantContext({ tenantId }, async (tx) =>
+    tx
+      .select({
+        id: teamMembers.id,
+        authUserId: teamMembers.authUserId,
+        parentMemberId: teamMembers.parentMemberId,
+        memberKind: teamMembers.memberKind,
+        status: teamMembers.status,
+      })
+      .from(teamMembers)
+      .where(and(eq(teamMembers.tenantId, tenantId), eq(teamMembers.id, teamMemberId)))
+      .limit(1)
+  );
   return rows[0] ?? null;
 }
 
@@ -161,16 +170,17 @@ export async function listTeamMembersByIds(
   ids: string[]
 ): Promise<Array<{ id: string; authUserId: string | null; displayName: string | null; memberKind: string; status: string }>> {
   if (ids.length === 0) return [];
-  const rows = await db
-    .select({
-      id: teamMembers.id,
-      authUserId: teamMembers.authUserId,
-      displayName: teamMembers.displayName,
-      memberKind: teamMembers.memberKind,
-      status: teamMembers.status,
-    })
-    .from(teamMembers)
-    .where(and(eq(teamMembers.tenantId, tenantId), inArray(teamMembers.id, ids)))
-    .orderBy(asc(teamMembers.displayName));
-  return rows;
+  return withTenantContext({ tenantId }, async (tx) =>
+    tx
+      .select({
+        id: teamMembers.id,
+        authUserId: teamMembers.authUserId,
+        displayName: teamMembers.displayName,
+        memberKind: teamMembers.memberKind,
+        status: teamMembers.status,
+      })
+      .from(teamMembers)
+      .where(and(eq(teamMembers.tenantId, tenantId), inArray(teamMembers.id, ids)))
+      .orderBy(asc(teamMembers.displayName))
+  );
 }

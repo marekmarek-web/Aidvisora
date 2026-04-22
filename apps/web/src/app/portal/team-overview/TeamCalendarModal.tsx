@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { CalendarPlus, CheckSquare, X } from "lucide-react";
 import clsx from "clsx";
 import { createTeamEvent, createTeamTask } from "@/app/actions/team-events";

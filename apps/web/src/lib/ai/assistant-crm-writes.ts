@@ -6,7 +6,8 @@
  */
 
 import { createHash } from "crypto";
-import { db, opportunities, opportunityStages, tasks, contacts, eq, and, sql, asc } from "db";
+import { opportunities, opportunityStages, tasks, contacts, eq, and, sql, asc } from "db";
+import { withTenantContext, type TenantContextDb } from "@/lib/db/with-tenant-context";
 import { hasPermission, type RoleName } from "@/shared/rolePermissions";
 import { logAudit } from "@/lib/audit";
 import type { AssistantIntent } from "./assistant-intent";
@@ -44,8 +45,8 @@ function sha256Hex(s: string): string {
   return createHash("sha256").update(s, "utf8").digest("hex");
 }
 
-async function getFirstStageIdForTenant(tenantId: string): Promise<string | null> {
-  const rows = await db
+async function getFirstStageIdForTenant(tx: TenantContextDb, tenantId: string): Promise<string | null> {
+  const rows = await tx
     .select({ id: opportunityStages.id })
     .from(opportunityStages)
     .where(eq(opportunityStages.tenantId, tenantId))
@@ -55,10 +56,11 @@ async function getFirstStageIdForTenant(tenantId: string): Promise<string | null
 }
 
 async function findOpportunityByIdempotency(
+  tx: TenantContextDb,
   tenantId: string,
   idempotencyKey: string,
 ): Promise<{ id: string; customFields: Record<string, unknown> | null } | null> {
-  const rows = await db
+  const rows = await tx
     .select({
       id: opportunities.id,
       customFields: opportunities.customFields,
@@ -106,7 +108,8 @@ export async function executeMortgageDealAndFollowUpTask(
   const rate = intent.rateGuess ?? 4.99;
   const purpose = (intent.purpose ?? "").trim() || "koupě bytu + rekonstrukce";
 
-  const [contactRow] = await db
+  return withTenantContext({ tenantId, userId }, async (tx) => {
+  const [contactRow] = await tx
     .select({
       firstName: contacts.firstName,
       lastName: contacts.lastName,
@@ -144,7 +147,7 @@ export async function executeMortgageDealAndFollowUpTask(
   const idempotencyKey = sha256Hex(JSON.stringify(stablePayload));
   const payloadHash = sha256Hex(JSON.stringify({ ...stablePayload, idempotencyKey }));
 
-  const existing = await findOpportunityByIdempotency(tenantId, idempotencyKey);
+  const existing = await findOpportunityByIdempotency(tx, tenantId, idempotencyKey);
   if (existing?.customFields) {
     const ai = existing.customFields.aiAssistant as Record<string, unknown> | undefined;
     const taskId = typeof ai?.taskId === "string" ? ai.taskId : null;
@@ -161,7 +164,7 @@ export async function executeMortgageDealAndFollowUpTask(
     }
   }
 
-  const stageId = await getFirstStageIdForTenant(tenantId);
+  const stageId = await getFirstStageIdForTenant(tx, tenantId);
   if (!stageId) {
     return {
       ok: false,
@@ -189,7 +192,7 @@ export async function executeMortgageDealAndFollowUpTask(
   let taskId: string;
 
   try {
-    const [oppRow] = await db
+    const [oppRow] = await tx
       .insert(opportunities)
       .values({
         tenantId,
@@ -215,7 +218,7 @@ export async function executeMortgageDealAndFollowUpTask(
       `Termín follow-up: ${dueDate} 10:00 (Europe/Prague).`,
     ].join(" ");
 
-    const [taskRow] = await db
+    const [taskRow] = await tx
       .insert(tasks)
       .values({
         tenantId,
@@ -243,7 +246,7 @@ export async function executeMortgageDealAndFollowUpTask(
       },
     };
 
-    await db
+    await tx
       .update(opportunities)
       .set({
         customFields: mergedCustom,
@@ -277,6 +280,7 @@ export async function executeMortgageDealAndFollowUpTask(
     const raw = e instanceof Error ? e.message : String(e);
     return { ok: false, error: mapErrorForAdvisor(raw, null, "crm-writes"), idempotencyKey };
   }
+  });
 }
 
 

@@ -1,4 +1,3 @@
-import { db } from "db";
 import {
   contacts,
   companies,
@@ -9,6 +8,7 @@ import {
   contracts,
 } from "db";
 import { eq, and, sql, inArray } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import type { ExtractedContractSchema } from "./extraction-schemas";
 import type { ClientMatchCandidate, MatchConfidence } from "./review-queue";
 import type { DocumentReviewEnvelope } from "./document-review-types";
@@ -203,9 +203,10 @@ export async function findClientCandidates(
     institutionNorm,
   } = extractSignals(extracted);
 
+  return withTenantContext({ tenantId }, async (tx) => {
   // 1) personalId exact match – very strong
   if (personalIdNorm.length >= 9) {
-    const rows = await db
+    const rows = await tx
       .select({
         id: contacts.id,
         firstName: contacts.firstName,
@@ -239,7 +240,7 @@ export async function findClientCandidates(
 
   // 2) companyId (IČO) – match via companies + companyPersonLinks
   if (companyIdNorm.length >= 8 && byId.size === 0) {
-    const linkRows = await db
+    const linkRows = await tx
       .select({
         contactId: companyPersonLinks.contactId,
         firstName: contacts.firstName,
@@ -273,7 +274,7 @@ export async function findClientCandidates(
     }
   }
 
-  const allContacts = await db
+  const allContacts = await tx
     .select({
       id: contacts.id,
       firstName: contacts.firstName,
@@ -354,6 +355,7 @@ export async function findClientCandidates(
   }));
   result.sort((a, b) => b.score - a.score);
   return result.slice(0, 20);
+  });
 }
 
 /**
@@ -374,7 +376,8 @@ export async function findMatchedHouseholds(
   const top = clientCandidates.slice(0, 5);
   if (top.length === 0) return [];
   const contactIds = top.map((c) => c.clientId);
-  const rows = await db
+  return withTenantContext({ tenantId }, async (tx) => {
+  const rows = await tx
     .select({
       householdId: households.id,
       contactId: householdMembers.contactId,
@@ -399,6 +402,7 @@ export async function findMatchedHouseholds(
     }
   }
   return [...out.values()].sort((a, b) => b.score - a.score);
+  });
 }
 
 export async function findMatchedDeals(
@@ -408,14 +412,15 @@ export async function findMatchedDeals(
 ): Promise<Array<{ entityId: string; score: number; reason: string }>> {
   const topClient = clientCandidates[0];
   if (!topClient) return [];
-  const oppRows = await db
+  return withTenantContext({ tenantId }, async (tx) => {
+  const oppRows = await tx
     .select({ id: opportunities.id, title: opportunities.title })
     .from(opportunities)
     .where(and(eq(opportunities.tenantId, tenantId), eq(opportunities.contactId, topClient.clientId)))
     .limit(5);
   const contractRows =
     contractNumber && contractNumber.trim()
-      ? await db
+      ? await tx
           .select({ id: contracts.id, contractNumber: contracts.contractNumber })
           .from(contracts)
           .where(and(eq(contracts.tenantId, tenantId), eq(contracts.contractNumber, contractNumber.trim())))
@@ -431,6 +436,7 @@ export async function findMatchedDeals(
   ];
   mapped.sort((a, b) => b.score - a.score);
   return mapped;
+  });
 }
 
 export async function findMatchedCompanies(
@@ -439,8 +445,9 @@ export async function findMatchedCompanies(
 ): Promise<Array<{ entityId: string; score: number; reason: string }>> {
   const { companyIdNorm, employerNorm } = extractSignals(extracted);
   const out = new Map<string, { entityId: string; score: number; reason: string }>();
+  return withTenantContext({ tenantId }, async (tx) => {
   if (companyIdNorm) {
-    const rows = await db
+    const rows = await tx
       .select({ id: companies.id, name: companies.name })
       .from(companies)
       .where(
@@ -459,7 +466,7 @@ export async function findMatchedCompanies(
     }
   }
   if (employerNorm) {
-    const rows = await db
+    const rows = await tx
       .select({ id: companies.id, name: companies.name })
       .from(companies)
       .where(eq(companies.tenantId, tenantId))
@@ -478,6 +485,7 @@ export async function findMatchedCompanies(
     }
   }
   return [...out.values()].sort((a, b) => b.score - a.score);
+  });
 }
 
 export async function findMatchedExistingContracts(
@@ -492,8 +500,9 @@ export async function findMatchedExistingContracts(
       ""
   ).trim();
   const out: Array<{ entityId: string; score: number; reason: string }> = [];
-  if (possibleContractNumber) {
-    const rows = await db
+  if (!possibleContractNumber) return out;
+  return withTenantContext({ tenantId }, async (tx) => {
+    const rows = await tx
       .select({ id: contracts.id, contractNumber: contracts.contractNumber, contactId: contracts.contactId })
       .from(contracts)
       .where(and(eq(contracts.tenantId, tenantId), eq(contracts.contractNumber, possibleContractNumber)))
@@ -506,6 +515,6 @@ export async function findMatchedExistingContracts(
         reason: `Shoda čísla smlouvy ${row.contractNumber ?? possibleContractNumber}`,
       });
     }
-  }
-  return out.sort((a, b) => b.score - a.score);
+    return out.sort((a, b) => b.score - a.score);
+  });
 }

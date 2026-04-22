@@ -4,7 +4,9 @@
  * status transitions, and resolution tracking.
  */
 
-import { db, incidentLogs, eq, and, desc } from "db";
+import { incidentLogs, eq, and, desc } from "db";
+
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 
 export type IncidentSeverity = "low" | "medium" | "high" | "critical";
 export type IncidentStatus = "open" | "investigating" | "mitigated" | "resolved" | "closed";
@@ -46,30 +48,34 @@ export function isValidTransition(from: IncidentStatus, to: IncidentStatus): boo
 }
 
 export async function createIncident(params: CreateIncidentParams): Promise<IncidentRow> {
-  const [row] = await db
-    .insert(incidentLogs)
-    .values({
-      tenantId: params.tenantId,
-      title: params.title,
-      description: params.description ?? null,
-      severity: params.severity,
-      status: "open",
-      reportedBy: params.reportedBy,
-      meta: params.meta ?? {},
-    })
-    .returning();
+  return withTenantContext({ tenantId: params.tenantId, userId: params.reportedBy }, async (tx) => {
+    const [row] = await tx
+      .insert(incidentLogs)
+      .values({
+        tenantId: params.tenantId,
+        title: params.title,
+        description: params.description ?? null,
+        severity: params.severity,
+        status: "open",
+        reportedBy: params.reportedBy,
+        meta: params.meta ?? {},
+      })
+      .returning();
 
-  return mapRow(row);
+    return mapRow(row);
+  });
 }
 
 export async function getIncident(tenantId: string, incidentId: string): Promise<IncidentRow | null> {
-  const [row] = await db
-    .select()
-    .from(incidentLogs)
-    .where(and(eq(incidentLogs.tenantId, tenantId), eq(incidentLogs.id, incidentId)))
-    .limit(1);
+  return withTenantContext({ tenantId }, async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(incidentLogs)
+      .where(and(eq(incidentLogs.tenantId, tenantId), eq(incidentLogs.id, incidentId)))
+      .limit(1);
 
-  return row ? mapRow(row) : null;
+    return row ? mapRow(row) : null;
+  });
 }
 
 export async function updateIncidentStatus(
@@ -78,26 +84,33 @@ export async function updateIncidentStatus(
   newStatus: IncidentStatus,
   options?: { meta?: Record<string, unknown> }
 ): Promise<IncidentRow> {
-  const existing = await getIncident(tenantId, incidentId);
-  if (!existing) throw new Error(`Incident ${incidentId} not found`);
+  return withTenantContext({ tenantId }, async (tx) => {
+    const [existingRaw] = await tx
+      .select()
+      .from(incidentLogs)
+      .where(and(eq(incidentLogs.tenantId, tenantId), eq(incidentLogs.id, incidentId)))
+      .limit(1);
+    if (!existingRaw) throw new Error(`Incident ${incidentId} not found`);
+    const existing = mapRow(existingRaw);
 
-  if (!isValidTransition(existing.status, newStatus)) {
-    throw new Error(
-      `Invalid status transition: ${existing.status} -> ${newStatus} for incident ${incidentId}`
-    );
-  }
+    if (!isValidTransition(existing.status, newStatus)) {
+      throw new Error(
+        `Invalid status transition: ${existing.status} -> ${newStatus} for incident ${incidentId}`
+      );
+    }
 
-  const [row] = await db
-    .update(incidentLogs)
-    .set({
-      status: newStatus,
-      updatedAt: new Date(),
-      meta: options?.meta ? { ...existing.meta, ...options.meta } : existing.meta,
-    })
-    .where(and(eq(incidentLogs.tenantId, tenantId), eq(incidentLogs.id, incidentId)))
-    .returning();
+    const [row] = await tx
+      .update(incidentLogs)
+      .set({
+        status: newStatus,
+        updatedAt: new Date(),
+        meta: options?.meta ? { ...existing.meta, ...options.meta } : existing.meta,
+      })
+      .where(and(eq(incidentLogs.tenantId, tenantId), eq(incidentLogs.id, incidentId)))
+      .returning();
 
-  return mapRow(row);
+    return mapRow(row);
+  });
 }
 
 export async function resolveIncident(
@@ -105,25 +118,32 @@ export async function resolveIncident(
   incidentId: string,
   resolution?: string
 ): Promise<IncidentRow> {
-  const existing = await getIncident(tenantId, incidentId);
-  if (!existing) throw new Error(`Incident ${incidentId} not found`);
+  return withTenantContext({ tenantId }, async (tx) => {
+    const [existingRaw] = await tx
+      .select()
+      .from(incidentLogs)
+      .where(and(eq(incidentLogs.tenantId, tenantId), eq(incidentLogs.id, incidentId)))
+      .limit(1);
+    if (!existingRaw) throw new Error(`Incident ${incidentId} not found`);
+    const existing = mapRow(existingRaw);
 
-  if (!isValidTransition(existing.status, "resolved")) {
-    throw new Error(`Cannot resolve incident in status ${existing.status}`);
-  }
+    if (!isValidTransition(existing.status, "resolved")) {
+      throw new Error(`Cannot resolve incident in status ${existing.status}`);
+    }
 
-  const [row] = await db
-    .update(incidentLogs)
-    .set({
-      status: "resolved",
-      resolvedAt: new Date(),
-      updatedAt: new Date(),
-      meta: resolution ? { ...existing.meta, resolution } : existing.meta,
-    })
-    .where(and(eq(incidentLogs.tenantId, tenantId), eq(incidentLogs.id, incidentId)))
-    .returning();
+    const [row] = await tx
+      .update(incidentLogs)
+      .set({
+        status: "resolved",
+        resolvedAt: new Date(),
+        updatedAt: new Date(),
+        meta: resolution ? { ...existing.meta, resolution } : existing.meta,
+      })
+      .where(and(eq(incidentLogs.tenantId, tenantId), eq(incidentLogs.id, incidentId)))
+      .returning();
 
-  return mapRow(row);
+    return mapRow(row);
+  });
 }
 
 export async function listIncidents(
@@ -147,14 +167,16 @@ export async function listIncidents(
     }
   }
 
-  const rows = await db
-    .select()
-    .from(incidentLogs)
-    .where(and(...conditions))
-    .orderBy(desc(incidentLogs.reportedAt))
-    .limit(limit);
+  return withTenantContext({ tenantId }, async (tx) => {
+    const rows = await tx
+      .select()
+      .from(incidentLogs)
+      .where(and(...conditions))
+      .orderBy(desc(incidentLogs.reportedAt))
+      .limit(limit);
 
-  return rows.map(mapRow);
+    return rows.map(mapRow);
+  });
 }
 
 function mapRow(row: typeof incidentLogs.$inferSelect): IncidentRow {

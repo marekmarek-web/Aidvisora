@@ -1,6 +1,6 @@
-import { db } from "db";
 import { contacts } from "db";
 import { eq, and } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import { getContractReviewById } from "./review-queue-repository";
 import { listContractReviews } from "./review-queue-repository";
 import { getTasksDueAndOverdue } from "./dashboard-priority";
@@ -33,18 +33,20 @@ export async function getClientDetails(
   clientId: string,
   tenantId: string
 ): Promise<ClientDetailsResult> {
-  const [row] = await db
-    .select({
-      firstName: contacts.firstName,
-      lastName: contacts.lastName,
-      email: contacts.email,
-      phone: contacts.phone,
-    })
-    .from(contacts)
-    .where(
-      and(eq(contacts.id, clientId), eq(contacts.tenantId, tenantId))
-    )
-    .limit(1);
+  const [row] = await withTenantContext({ tenantId }, (tx) =>
+    tx
+      .select({
+        firstName: contacts.firstName,
+        lastName: contacts.lastName,
+        email: contacts.email,
+        phone: contacts.phone,
+      })
+      .from(contacts)
+      .where(
+        and(eq(contacts.id, clientId), eq(contacts.tenantId, tenantId))
+      )
+      .limit(1),
+  );
   if (!row) return { ok: false, error: "Kontakt nenalezen." };
   const name = [row.firstName, row.lastName].filter(Boolean).join(" ") || "Klient";
   return {

@@ -21,7 +21,6 @@
  */
 
 import { and, eq, sql } from "drizzle-orm";
-import { db } from "db";
 import {
   memberships,
   tasks,
@@ -32,6 +31,8 @@ import {
   userGoogleCalendarIntegrations,
   userDevices,
 } from "db";
+
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 
 export type OffboardingPreview = {
   tenantId: string;
@@ -48,10 +49,6 @@ export type OffboardingPreview = {
   eligibleSuccessors: Array<{ userId: string; displayName: string | null; email: string | null }>;
 };
 
-async function countWhere<T extends { length: number }>(result: T): Promise<number> {
-  return result.length;
-}
-
 /**
  * Spočítá, co všechno se při removu tohoto user_id musí přeřadit / odvolat.
  * Používá se v modalu "Opravdu odebrat?" pro vizualizaci dopadu.
@@ -60,65 +57,67 @@ export async function previewOffboarding(
   tenantId: string,
   userId: string,
 ): Promise<OffboardingPreview["counts"]> {
-  const [tasksRow] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(tasks)
-    .where(and(eq(tasks.tenantId, tenantId), eq(tasks.assignedTo, userId)));
+  return withTenantContext({ tenantId }, async (tx) => {
+    const [tasksRow] = await tx
+      .select({ count: sql<number>`count(*)::int` })
+      .from(tasks)
+      .where(and(eq(tasks.tenantId, tenantId), eq(tasks.assignedTo, userId)));
 
-  const [eventsRow] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(events)
-    .where(and(eq(events.tenantId, tenantId), eq(events.assignedTo, userId)));
+    const [eventsRow] = await tx
+      .select({ count: sql<number>`count(*)::int` })
+      .from(events)
+      .where(and(eq(events.tenantId, tenantId), eq(events.assignedTo, userId)));
 
-  const [oppsRow] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(opportunities)
-    .where(and(eq(opportunities.tenantId, tenantId), eq(opportunities.assignedTo, userId)));
+    const [oppsRow] = await tx
+      .select({ count: sql<number>`count(*)::int` })
+      .from(opportunities)
+      .where(and(eq(opportunities.tenantId, tenantId), eq(opportunities.assignedTo, userId)));
 
-  const driveRows = await db
-    .select({ id: userGoogleDriveIntegrations.userId })
-    .from(userGoogleDriveIntegrations)
-    .where(
-      and(
-        eq(userGoogleDriveIntegrations.tenantId, tenantId),
-        eq(userGoogleDriveIntegrations.userId, userId),
-      ),
-    );
+    const driveRows = await tx
+      .select({ id: userGoogleDriveIntegrations.userId })
+      .from(userGoogleDriveIntegrations)
+      .where(
+        and(
+          eq(userGoogleDriveIntegrations.tenantId, tenantId),
+          eq(userGoogleDriveIntegrations.userId, userId),
+        ),
+      );
 
-  const gmailRows = await db
-    .select({ id: userGoogleGmailIntegrations.userId })
-    .from(userGoogleGmailIntegrations)
-    .where(
-      and(
-        eq(userGoogleGmailIntegrations.tenantId, tenantId),
-        eq(userGoogleGmailIntegrations.userId, userId),
-      ),
-    );
+    const gmailRows = await tx
+      .select({ id: userGoogleGmailIntegrations.userId })
+      .from(userGoogleGmailIntegrations)
+      .where(
+        and(
+          eq(userGoogleGmailIntegrations.tenantId, tenantId),
+          eq(userGoogleGmailIntegrations.userId, userId),
+        ),
+      );
 
-  const calRows = await db
-    .select({ id: userGoogleCalendarIntegrations.userId })
-    .from(userGoogleCalendarIntegrations)
-    .where(
-      and(
-        eq(userGoogleCalendarIntegrations.tenantId, tenantId),
-        eq(userGoogleCalendarIntegrations.userId, userId),
-      ),
-    );
+    const calRows = await tx
+      .select({ id: userGoogleCalendarIntegrations.userId })
+      .from(userGoogleCalendarIntegrations)
+      .where(
+        and(
+          eq(userGoogleCalendarIntegrations.tenantId, tenantId),
+          eq(userGoogleCalendarIntegrations.userId, userId),
+        ),
+      );
 
-  const devicesRows = await db
-    .select({ id: userDevices.userId })
-    .from(userDevices)
-    .where(and(eq(userDevices.tenantId, tenantId), eq(userDevices.userId, userId)));
+    const devicesRows = await tx
+      .select({ id: userDevices.userId })
+      .from(userDevices)
+      .where(and(eq(userDevices.tenantId, tenantId), eq(userDevices.userId, userId)));
 
-  return {
-    tasksAssigned: tasksRow?.count ?? 0,
-    eventsAssigned: eventsRow?.count ?? 0,
-    opportunitiesAssigned: oppsRow?.count ?? 0,
-    googleDriveIntegrations: await countWhere(driveRows),
-    googleGmailIntegrations: await countWhere(gmailRows),
-    googleCalendarIntegrations: await countWhere(calRows),
-    pushDevices: await countWhere(devicesRows),
-  };
+    return {
+      tasksAssigned: tasksRow?.count ?? 0,
+      eventsAssigned: eventsRow?.count ?? 0,
+      opportunitiesAssigned: oppsRow?.count ?? 0,
+      googleDriveIntegrations: driveRows.length,
+      googleGmailIntegrations: gmailRows.length,
+      googleCalendarIntegrations: calRows.length,
+      pushDevices: devicesRows.length,
+    };
+  });
 }
 
 export type OffboardingResult = {
@@ -149,85 +148,85 @@ export async function executeOffboarding(
     throw new Error("newOwnerUserId must differ from departing user");
   }
 
-  // Verify successor is active member of the same tenant.
-  const [successor] = await db
-    .select({ userId: memberships.userId })
-    .from(memberships)
-    .where(and(eq(memberships.tenantId, tenantId), eq(memberships.userId, newOwnerUserId)))
-    .limit(1);
+  return withTenantContext({ tenantId }, async (tx) => {
+    const [successor] = await tx
+      .select({ userId: memberships.userId })
+      .from(memberships)
+      .where(and(eq(memberships.tenantId, tenantId), eq(memberships.userId, newOwnerUserId)))
+      .limit(1);
 
-  if (!successor) {
-    throw new Error("Successor is not a member of this tenant");
-  }
+    if (!successor) {
+      throw new Error("Successor is not a member of this tenant");
+    }
 
-  const tasksResult = await db
-    .update(tasks)
-    .set({ assignedTo: newOwnerUserId, updatedAt: new Date() })
-    .where(and(eq(tasks.tenantId, tenantId), eq(tasks.assignedTo, departingUserId)))
-    .returning({ id: tasks.id });
+    const tasksResult = await tx
+      .update(tasks)
+      .set({ assignedTo: newOwnerUserId, updatedAt: new Date() })
+      .where(and(eq(tasks.tenantId, tenantId), eq(tasks.assignedTo, departingUserId)))
+      .returning({ id: tasks.id });
 
-  const eventsResult = await db
-    .update(events)
-    .set({ assignedTo: newOwnerUserId, updatedAt: new Date() })
-    .where(and(eq(events.tenantId, tenantId), eq(events.assignedTo, departingUserId)))
-    .returning({ id: events.id });
+    const eventsResult = await tx
+      .update(events)
+      .set({ assignedTo: newOwnerUserId, updatedAt: new Date() })
+      .where(and(eq(events.tenantId, tenantId), eq(events.assignedTo, departingUserId)))
+      .returning({ id: events.id });
 
-  const oppsResult = await db
-    .update(opportunities)
-    .set({ assignedTo: newOwnerUserId, updatedAt: new Date() })
-    .where(
-      and(eq(opportunities.tenantId, tenantId), eq(opportunities.assignedTo, departingUserId)),
-    )
-    .returning({ id: opportunities.id });
+    const oppsResult = await tx
+      .update(opportunities)
+      .set({ assignedTo: newOwnerUserId, updatedAt: new Date() })
+      .where(
+        and(eq(opportunities.tenantId, tenantId), eq(opportunities.assignedTo, departingUserId)),
+      )
+      .returning({ id: opportunities.id });
 
-  // Revoke user-bound integrations (tokens stop being valid upon next fetch).
-  const driveDeleted = await db
-    .delete(userGoogleDriveIntegrations)
-    .where(
-      and(
-        eq(userGoogleDriveIntegrations.tenantId, tenantId),
-        eq(userGoogleDriveIntegrations.userId, departingUserId),
-      ),
-    )
-    .returning({ userId: userGoogleDriveIntegrations.userId });
+    const driveDeleted = await tx
+      .delete(userGoogleDriveIntegrations)
+      .where(
+        and(
+          eq(userGoogleDriveIntegrations.tenantId, tenantId),
+          eq(userGoogleDriveIntegrations.userId, departingUserId),
+        ),
+      )
+      .returning({ userId: userGoogleDriveIntegrations.userId });
 
-  const gmailDeleted = await db
-    .delete(userGoogleGmailIntegrations)
-    .where(
-      and(
-        eq(userGoogleGmailIntegrations.tenantId, tenantId),
-        eq(userGoogleGmailIntegrations.userId, departingUserId),
-      ),
-    )
-    .returning({ userId: userGoogleGmailIntegrations.userId });
+    const gmailDeleted = await tx
+      .delete(userGoogleGmailIntegrations)
+      .where(
+        and(
+          eq(userGoogleGmailIntegrations.tenantId, tenantId),
+          eq(userGoogleGmailIntegrations.userId, departingUserId),
+        ),
+      )
+      .returning({ userId: userGoogleGmailIntegrations.userId });
 
-  const calDeleted = await db
-    .delete(userGoogleCalendarIntegrations)
-    .where(
-      and(
-        eq(userGoogleCalendarIntegrations.tenantId, tenantId),
-        eq(userGoogleCalendarIntegrations.userId, departingUserId),
-      ),
-    )
-    .returning({ userId: userGoogleCalendarIntegrations.userId });
+    const calDeleted = await tx
+      .delete(userGoogleCalendarIntegrations)
+      .where(
+        and(
+          eq(userGoogleCalendarIntegrations.tenantId, tenantId),
+          eq(userGoogleCalendarIntegrations.userId, departingUserId),
+        ),
+      )
+      .returning({ userId: userGoogleCalendarIntegrations.userId });
 
-  const devicesDeleted = await db
-    .delete(userDevices)
-    .where(and(eq(userDevices.tenantId, tenantId), eq(userDevices.userId, departingUserId)))
-    .returning({ userId: userDevices.userId });
+    const devicesDeleted = await tx
+      .delete(userDevices)
+      .where(and(eq(userDevices.tenantId, tenantId), eq(userDevices.userId, departingUserId)))
+      .returning({ userId: userDevices.userId });
 
-  return {
-    ok: true,
-    reassigned: {
-      tasks: tasksResult.length,
-      events: eventsResult.length,
-      opportunities: oppsResult.length,
-    },
-    revoked: {
-      drive: driveDeleted.length,
-      gmail: gmailDeleted.length,
-      calendar: calDeleted.length,
-      devices: devicesDeleted.length,
-    },
-  };
+    return {
+      ok: true,
+      reassigned: {
+        tasks: tasksResult.length,
+        events: eventsResult.length,
+        opportunities: oppsResult.length,
+      },
+      revoked: {
+        drive: driveDeleted.length,
+        gmail: gmailDeleted.length,
+        calendar: calDeleted.length,
+        devices: devicesDeleted.length,
+      },
+    };
+  });
 }

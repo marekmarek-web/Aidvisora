@@ -2,6 +2,7 @@ import {
   listEmailCampaignsFull,
   getSegmentCounts,
 } from "@/app/actions/email-campaigns";
+import { getCachedSupabaseUser } from "@/lib/auth/require-auth";
 import { EmailCampaignsClient } from "./EmailCampaignsClient";
 
 export const dynamic = "force-dynamic";
@@ -31,5 +32,15 @@ export default async function EmailCampaignsPage() {
     );
   }
 
-  return <EmailCampaignsClient initialRows={rows} initialSegments={segments} />;
+  const user = await getCachedSupabaseUser();
+  const meta = (user?.user_metadata ?? {}) as Record<string, unknown>;
+  const fullName =
+    typeof meta.full_name === "string" && meta.full_name.trim()
+      ? (meta.full_name as string).trim()
+      : typeof meta.name === "string" && (meta.name as string).trim()
+        ? (meta.name as string).trim()
+        : null;
+  const fromName = fullName ?? user?.email ?? "";
+
+  return <EmailCampaignsClient initialRows={rows} initialSegments={segments} fromName={fromName} />;
 }

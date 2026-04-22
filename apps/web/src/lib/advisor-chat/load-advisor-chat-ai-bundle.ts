@@ -1,7 +1,6 @@
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { hasPermission } from "@/lib/auth/permissions";
 import {
-  db,
   messages,
   messageAttachments,
   contacts,
@@ -16,6 +15,7 @@ import {
   sql,
   inArray,
 } from "db";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { getChatContextPanelSnapshot, type ChatContextPanelSnapshot } from "@/app/actions/messages";
 import type { AdvisorChatAiBundle } from "./advisor-chat-ai-types";
 
@@ -39,67 +39,72 @@ export async function loadAdvisorChatAiBundle(
     ? Promise.resolve(options.crmSnapshot)
     : getChatContextPanelSnapshot(contactId);
 
-  const [snapshot, contactRow, msgDesc, taskRows, matRows, termRows] = await Promise.all([
+  const [snapshot, dbResults] = await Promise.all([
     snapshotPromise,
-    db
-      .select({
-        firstName: contacts.firstName,
-        lastName: contacts.lastName,
-        email: contacts.email,
-        lifecycleStage: contacts.lifecycleStage,
-        tags: contacts.tags,
-        leadSource: contacts.leadSource,
-        priority: contacts.priority,
-      })
-      .from(contacts)
-      .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, contactId)))
-      .limit(1),
-    db
-      .select({
-        id: messages.id,
-        senderType: messages.senderType,
-        body: messages.body,
-        createdAt: messages.createdAt,
-      })
-      .from(messages)
-      .where(and(eq(messages.tenantId, auth.tenantId), eq(messages.contactId, contactId)))
-      .orderBy(desc(messages.createdAt))
-      .limit(MAX_MESSAGES),
-    db
-      .select({ title: tasks.title, dueDate: tasks.dueDate })
-      .from(tasks)
-      .where(and(eq(tasks.tenantId, auth.tenantId), eq(tasks.contactId, contactId), isNull(tasks.completedAt)))
-      .orderBy(asc(tasks.dueDate))
-      .limit(12),
-    db
-      .select({
-        title: advisorMaterialRequests.title,
-        category: advisorMaterialRequests.category,
-      })
-      .from(advisorMaterialRequests)
-      .where(
-        and(
-          eq(advisorMaterialRequests.tenantId, auth.tenantId),
-          eq(advisorMaterialRequests.contactId, contactId),
-          sql`${advisorMaterialRequests.status} NOT IN ('done', 'closed')`,
-        ),
-      )
-      .orderBy(desc(advisorMaterialRequests.updatedAt))
-      .limit(8),
-    db
-      .select({
-        id: terminationRequests.id,
-        status: terminationRequests.status,
-        insurerName: terminationRequests.insurerName,
-        updatedAt: terminationRequests.updatedAt,
-      })
-      .from(terminationRequests)
-      .where(
-        and(eq(terminationRequests.tenantId, auth.tenantId), eq(terminationRequests.contactId, contactId)),
-      )
-      .orderBy(desc(terminationRequests.updatedAt))
-      .limit(6),
+    withTenantContextFromAuth(auth, (tx) =>
+      Promise.all([
+        tx
+          .select({
+            firstName: contacts.firstName,
+            lastName: contacts.lastName,
+            email: contacts.email,
+            lifecycleStage: contacts.lifecycleStage,
+            tags: contacts.tags,
+            leadSource: contacts.leadSource,
+            priority: contacts.priority,
+          })
+          .from(contacts)
+          .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, contactId)))
+          .limit(1),
+        tx
+          .select({
+            id: messages.id,
+            senderType: messages.senderType,
+            body: messages.body,
+            createdAt: messages.createdAt,
+          })
+          .from(messages)
+          .where(and(eq(messages.tenantId, auth.tenantId), eq(messages.contactId, contactId)))
+          .orderBy(desc(messages.createdAt))
+          .limit(MAX_MESSAGES),
+        tx
+          .select({ title: tasks.title, dueDate: tasks.dueDate })
+          .from(tasks)
+          .where(and(eq(tasks.tenantId, auth.tenantId), eq(tasks.contactId, contactId), isNull(tasks.completedAt)))
+          .orderBy(asc(tasks.dueDate))
+          .limit(12),
+        tx
+          .select({
+            title: advisorMaterialRequests.title,
+            category: advisorMaterialRequests.category,
+          })
+          .from(advisorMaterialRequests)
+          .where(
+            and(
+              eq(advisorMaterialRequests.tenantId, auth.tenantId),
+              eq(advisorMaterialRequests.contactId, contactId),
+              sql`${advisorMaterialRequests.status} NOT IN ('done', 'closed')`,
+            ),
+          )
+          .orderBy(desc(advisorMaterialRequests.updatedAt))
+          .limit(8),
+        tx
+          .select({
+            id: terminationRequests.id,
+            status: terminationRequests.status,
+            insurerName: terminationRequests.insurerName,
+            updatedAt: terminationRequests.updatedAt,
+          })
+          .from(terminationRequests)
+          .where(
+            and(eq(terminationRequests.tenantId, auth.tenantId), eq(terminationRequests.contactId, contactId)),
+          )
+          .orderBy(desc(terminationRequests.updatedAt))
+          .limit(6),
+      ]),
+    ),
   ]);
+  const [contactRow, msgDesc, taskRows, matRows, termRows] = dbResults;
 
   const c = contactRow[0];
   if (!c) return null;
@@ -109,13 +114,15 @@ export async function loadAdvisorChatAiBundle(
 
   const attachmentHints: { fileName: string; mimeType: string | null }[] = [];
   if (messageIds.length) {
-    const atts = await db
-      .select({
-        fileName: messageAttachments.fileName,
-        mimeType: messageAttachments.mimeType,
-      })
-      .from(messageAttachments)
-      .where(inArray(messageAttachments.messageId, messageIds));
+    const atts = await withTenantContextFromAuth(auth, (tx) =>
+      tx
+        .select({
+          fileName: messageAttachments.fileName,
+          mimeType: messageAttachments.mimeType,
+        })
+        .from(messageAttachments)
+        .where(inArray(messageAttachments.messageId, messageIds)),
+    );
     const seen = new Set<string>();
     for (const a of atts) {
       const key = `${a.fileName}|${a.mimeType ?? ""}`;

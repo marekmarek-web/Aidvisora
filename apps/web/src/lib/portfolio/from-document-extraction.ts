@@ -3,7 +3,6 @@
  * navrhne / aktualizuje řádek contracts (pending_review, neviditelné klientovi).
  */
 
-import { db } from "db";
 import {
   documents,
   documentExtractions,
@@ -12,6 +11,7 @@ import {
   eq,
   and,
 } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import { createAdminClient } from "@/lib/supabase/server";
 import { resolveSegmentFromType } from "@/lib/ai/draft-actions";
 import { computeDraftPremiums } from "@/lib/ai/contract-draft-premiums";
@@ -80,17 +80,19 @@ export async function syncPortfolioDraftFromProcessedDocument(
   if (!tenantId) {
     throw new Error("syncPortfolioDraftFromProcessedDocument: tenantId is required.");
   }
-  const [doc] = await db
-    .select({
-      id: documents.id,
-      tenantId: documents.tenantId,
-      contactId: documents.contactId,
-      extractJsonPath: documents.extractJsonPath,
-      name: documents.name,
-    })
-    .from(documents)
-    .where(and(eq(documents.tenantId, tenantId), eq(documents.id, documentId)))
-    .limit(1);
+  const [doc] = await withTenantContext({ tenantId }, async (tx) =>
+    tx
+      .select({
+        id: documents.id,
+        tenantId: documents.tenantId,
+        contactId: documents.contactId,
+        extractJsonPath: documents.extractJsonPath,
+        name: documents.name,
+      })
+      .from(documents)
+      .where(and(eq(documents.tenantId, tenantId), eq(documents.id, documentId)))
+      .limit(1)
+  );
 
   if (!doc) return { ok: false, reason: "not_found" };
   if (!doc.contactId) return { ok: false, reason: "no_contact" };
@@ -124,129 +126,131 @@ export async function syncPortfolioDraftFromProcessedDocument(
       ? String(Math.min(1, Math.max(0, normalized.confidence)))
       : null;
 
-  await db.delete(documentExtractions).where(eq(documentExtractions.documentId, documentId));
+  return withTenantContext({ tenantId, userId: options?.advisorUserId ?? null }, async (tx) => {
+    await tx.delete(documentExtractions).where(eq(documentExtractions.documentId, documentId));
 
-  const [exRow] = await db
-    .insert(documentExtractions)
-    .values({
-      documentId,
-      tenantId: doc.tenantId,
-      contactId: doc.contactId,
-      contractId: null,
-      status: "extracted",
-      extractedAt: new Date(),
-      errorMessage: null,
-      extractionTrace: {
-        documentType: primaryType,
-        segment,
-        source: "document_pipeline",
-      },
-    })
-    .returning({ id: documentExtractions.id });
-
-  const extractionId = exRow?.id;
-  if (!extractionId) return { ok: false, reason: "parse_failed", detail: "extraction_insert" };
-
-  const flat = flattenForFields(rawParsed as Record<string, unknown>);
-  if (flat.length > 0) {
-    await db.insert(documentExtractionFields).values(
-      flat.map((f) => ({
-        documentExtractionId: extractionId,
-        fieldKey: f.key.slice(0, 200),
-        value: f.value as unknown,
-        confidence: extractionConfidence,
-        source: "extraction" as const,
-      }))
-    );
-  }
-
-  const partnerName = normalized.institutionName?.trim() || null;
-  const productName = normalized.productName?.trim() || null;
-  const contractNumber = normalized.contractNumber?.trim() || null;
-  const startDate = normalized.effectiveDate?.trim() || null;
-  const docTypeLabel = getDocumentTypeLabel(primaryType as PrimaryDocumentType);
-  const noteParts = [productName, docTypeLabel].filter(Boolean);
-
-  const [existing] = await db
-    .select({ id: contracts.id })
-    .from(contracts)
-    .where(
-      and(
-        eq(contracts.tenantId, doc.tenantId),
-        eq(contracts.contactId, doc.contactId),
-        eq(contracts.sourceDocumentId, documentId)
-      )
-    )
-    .limit(1);
-
-  let contractId: string;
-  const attrs = buildPortfolioAttributesFromExtracted(rawParsed);
-
-  if (existing?.id) {
-    contractId = existing.id;
-    await db
-      .update(contracts)
-      .set({
-        segment,
-        type: segment,
-        partnerName,
-        productName,
-        contractNumber,
-        startDate,
-        premiumAmount: premiumAmount ?? null,
-        premiumAnnual: premiumAnnual ?? null,
-        note: noteParts.length ? noteParts.join(" · ") : null,
-        portfolioStatus: "pending_review",
-        visibleToClient: false,
-        sourceKind: "document",
-        sourceDocumentId: documentId,
-        extractionConfidence,
-        portfolioAttributes: attrs,
-        updatedAt: new Date(),
-      })
-      .where(eq(contracts.id, contractId));
-  } else {
-    const [inserted] = await db
-      .insert(contracts)
+    const [exRow] = await tx
+      .insert(documentExtractions)
       .values({
+        documentId,
         tenantId: doc.tenantId,
         contactId: doc.contactId,
-        advisorId: options?.advisorUserId ?? null,
-        segment,
-        type: segment,
-        partnerName,
-        productName,
-        contractNumber,
-        startDate,
-        anniversaryDate: null,
-        premiumAmount: premiumAmount ?? null,
-        premiumAnnual: premiumAnnual ?? null,
-        note: noteParts.length ? noteParts.join(" · ") : null,
-        visibleToClient: false,
-        portfolioStatus: "pending_review",
-        sourceKind: "document",
-        sourceDocumentId: documentId,
-        portfolioAttributes: attrs,
-        extractionConfidence,
+        contractId: null,
+        status: "extracted",
+        extractedAt: new Date(),
+        errorMessage: null,
+        extractionTrace: {
+          documentType: primaryType,
+          segment,
+          source: "document_pipeline",
+        },
       })
-      .returning({ id: contracts.id });
-    contractId = inserted?.id ?? "";
-    if (!contractId) return { ok: false, reason: "parse_failed", detail: "contract_insert" };
-  }
+      .returning({ id: documentExtractions.id });
 
-  await db
-    .update(documentExtractions)
-    .set({ contractId, updatedAt: new Date() })
-    .where(eq(documentExtractions.id, extractionId));
+    const extractionId = exRow?.id;
+    if (!extractionId) return { ok: false, reason: "parse_failed", detail: "extraction_insert" } as const;
 
-  await db
-    .update(documents)
-    .set({
-      contractId,
-      businessStatus: "pending_review",
-      updatedAt: new Date(),
-    })
-    .where(eq(documents.id, documentId));
+    const flat = flattenForFields(rawParsed as Record<string, unknown>);
+    if (flat.length > 0) {
+      await tx.insert(documentExtractionFields).values(
+        flat.map((f) => ({
+          documentExtractionId: extractionId,
+          fieldKey: f.key.slice(0, 200),
+          value: f.value as unknown,
+          confidence: extractionConfidence,
+          source: "extraction" as const,
+        }))
+      );
+    }
 
-  return { ok: true, contractId, extractionId };
+    const partnerName = normalized.institutionName?.trim() || null;
+    const productName = normalized.productName?.trim() || null;
+    const contractNumber = normalized.contractNumber?.trim() || null;
+    const startDate = normalized.effectiveDate?.trim() || null;
+    const docTypeLabel = getDocumentTypeLabel(primaryType as PrimaryDocumentType);
+    const noteParts = [productName, docTypeLabel].filter(Boolean);
+
+    const [existing] = await tx
+      .select({ id: contracts.id })
+      .from(contracts)
+      .where(
+        and(
+          eq(contracts.tenantId, doc.tenantId),
+          eq(contracts.contactId, doc.contactId),
+          eq(contracts.sourceDocumentId, documentId)
+        )
+      )
+      .limit(1);
+
+    let contractId: string;
+    const attrs = buildPortfolioAttributesFromExtracted(rawParsed);
+
+    if (existing?.id) {
+      contractId = existing.id;
+      await tx
+        .update(contracts)
+        .set({
+          segment,
+          type: segment,
+          partnerName,
+          productName,
+          contractNumber,
+          startDate,
+          premiumAmount: premiumAmount ?? null,
+          premiumAnnual: premiumAnnual ?? null,
+          note: noteParts.length ? noteParts.join(" · ") : null,
+          portfolioStatus: "pending_review",
+          visibleToClient: false,
+          sourceKind: "document",
+          sourceDocumentId: documentId,
+          extractionConfidence,
+          portfolioAttributes: attrs,
+          updatedAt: new Date(),
+        })
+        .where(eq(contracts.id, contractId));
+    } else {
+      const [inserted] = await tx
+        .insert(contracts)
+        .values({
+          tenantId: doc.tenantId,
+          contactId: doc.contactId,
+          advisorId: options?.advisorUserId ?? null,
+          segment,
+          type: segment,
+          partnerName,
+          productName,
+          contractNumber,
+          startDate,
+          anniversaryDate: null,
+          premiumAmount: premiumAmount ?? null,
+          premiumAnnual: premiumAnnual ?? null,
+          note: noteParts.length ? noteParts.join(" · ") : null,
+          visibleToClient: false,
+          portfolioStatus: "pending_review",
+          sourceKind: "document",
+          sourceDocumentId: documentId,
+          portfolioAttributes: attrs,
+          extractionConfidence,
+        })
+        .returning({ id: contracts.id });
+      contractId = inserted?.id ?? "";
+      if (!contractId) return { ok: false, reason: "parse_failed", detail: "contract_insert" } as const;
+    }
+
+    await tx
+      .update(documentExtractions)
+      .set({ contractId, updatedAt: new Date() })
+      .where(eq(documentExtractions.id, extractionId));
+
+    await tx
+      .update(documents)
+      .set({
+        contractId,
+        businessStatus: "pending_review",
+        updatedAt: new Date(),
+      })
+      .where(eq(documents.id, documentId));
+
+    return { ok: true, contractId, extractionId } as const;
+  });
 }

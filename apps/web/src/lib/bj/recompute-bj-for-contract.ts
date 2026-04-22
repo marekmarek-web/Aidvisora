@@ -11,10 +11,10 @@
  * `{ bjUnits, updated }` pro testy.
  */
 
-import { db } from "db";
 import { contracts } from "db";
 import { eq, and } from "db";
 import type { PortfolioAttributes } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import { computeContractBj } from "./compute-contract-bj";
 import type { ProductCategory, ProductSubtype } from "@/lib/ai/product-categories";
 
@@ -28,20 +28,22 @@ export async function recomputeBjForContract(params: {
   contractId: string;
 }): Promise<RecomputeBjResult> {
   try {
-    const [row] = await db
-      .select({
-        tenantId: contracts.tenantId,
-        partnerName: contracts.partnerName,
-        productName: contracts.productName,
-        premiumAmount: contracts.premiumAmount,
-        premiumAnnual: contracts.premiumAnnual,
-        portfolioAttributes: contracts.portfolioAttributes,
-        productCategory: contracts.productCategory,
-        productSubtype: contracts.productSubtype,
-      })
-      .from(contracts)
-      .where(and(eq(contracts.tenantId, params.tenantId), eq(contracts.id, params.contractId)))
-      .limit(1);
+    const [row] = await withTenantContext({ tenantId: params.tenantId }, (tx) =>
+      tx
+        .select({
+          tenantId: contracts.tenantId,
+          partnerName: contracts.partnerName,
+          productName: contracts.productName,
+          premiumAmount: contracts.premiumAmount,
+          premiumAnnual: contracts.premiumAnnual,
+          portfolioAttributes: contracts.portfolioAttributes,
+          productCategory: contracts.productCategory,
+          productSubtype: contracts.productSubtype,
+        })
+        .from(contracts)
+        .where(and(eq(contracts.tenantId, params.tenantId), eq(contracts.id, params.contractId)))
+        .limit(1),
+    );
 
     if (!row) return { bjUnits: null, updated: false };
 
@@ -72,14 +74,16 @@ export async function recomputeBjForContract(params: {
       },
     });
 
-    await db
-      .update(contracts)
-      .set({
-        bjUnits: bjUnits == null ? null : String(bjUnits),
-        bjCalculation: snapshot,
-        updatedAt: new Date(),
-      })
-      .where(and(eq(contracts.tenantId, params.tenantId), eq(contracts.id, params.contractId)));
+    await withTenantContext({ tenantId: params.tenantId }, (tx) =>
+      tx
+        .update(contracts)
+        .set({
+          bjUnits: bjUnits == null ? null : String(bjUnits),
+          bjCalculation: snapshot,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(contracts.tenantId, params.tenantId), eq(contracts.id, params.contractId))),
+    );
 
     return { bjUnits, updated: true };
   } catch (err) {

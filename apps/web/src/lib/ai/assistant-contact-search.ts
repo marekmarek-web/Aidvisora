@@ -2,7 +2,8 @@
  * Tenant-scoped contact search for the internal AI assistant (no server-action auth).
  */
 
-import { db, contacts, eq, and, or, isNull, sql, desc } from "db";
+import { contacts, eq, and, or, isNull, sql, desc } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import { maskPersonalId } from "./assistant-context-builder";
 import {
   escapeIlikeLiteral,
@@ -102,21 +103,23 @@ export async function searchContactsForAssistant(
   const matchClause =
     tokenConds.length === 1 ? tokenConds[0]! : and(...tokenConds);
 
-  const rows = await db
-    .select({
-      id: contacts.id,
-      firstName: contacts.firstName,
-      lastName: contacts.lastName,
-      email: contacts.email,
-      phone: contacts.phone,
-      city: contacts.city,
-      personalId: contacts.personalId,
-      updatedAt: contacts.updatedAt,
-    })
-    .from(contacts)
-    .where(and(eq(contacts.tenantId, tenantId), isNull(contacts.archivedAt), matchClause))
-    .orderBy(desc(contacts.updatedAt))
-    .limit(Math.min(Math.max(limit, 1), 25));
+  const rows = await withTenantContext({ tenantId }, (tx) =>
+    tx
+      .select({
+        id: contacts.id,
+        firstName: contacts.firstName,
+        lastName: contacts.lastName,
+        email: contacts.email,
+        phone: contacts.phone,
+        city: contacts.city,
+        personalId: contacts.personalId,
+        updatedAt: contacts.updatedAt,
+      })
+      .from(contacts)
+      .where(and(eq(contacts.tenantId, tenantId), isNull(contacts.archivedAt), matchClause))
+      .orderBy(desc(contacts.updatedAt))
+      .limit(Math.min(Math.max(limit, 1), 25)),
+  );
 
   return rows.map((r) => ({
     id: r.id,

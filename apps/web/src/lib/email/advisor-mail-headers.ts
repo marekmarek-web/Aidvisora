@@ -1,6 +1,7 @@
 import { resolveResendReplyTo } from "@/lib/email/resend-reply-to";
 import { createClient } from "@/lib/supabase/server";
-import { db, userProfiles, eq } from "db";
+import { userProfiles, eq } from "db";
+import { withAuthContext } from "@/lib/auth/with-auth-context";
 
 /**
  * Doména pro From (ověřená v Resend). Volitelně `RESEND_FROM_DOMAIN`, jinak z `RESEND_FROM_EMAIL`.
@@ -103,24 +104,26 @@ export async function loadAdvisorMailHeadersForCurrentUser(): Promise<AdvisorMai
     return { from: fallbackFrom, replyTo: fallbackReply };
   }
 
-  const [profile] = await db
-    .select({ fullName: userProfiles.fullName, email: userProfiles.email })
-    .from(userProfiles)
-    .where(eq(userProfiles.userId, user.id))
-    .limit(1);
+  return withAuthContext(async (auth, tx) => {
+    const [profile] = await tx
+      .select({ fullName: userProfiles.fullName, email: userProfiles.email })
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, auth.userId))
+      .limit(1);
 
-  const fullName = profile?.fullName ?? (user.user_metadata?.full_name as string | undefined) ?? null;
-  const replyTo = resolveAdvisorReplyTo(profile?.email, user.email);
+    const fullName = profile?.fullName ?? (user.user_metadata?.full_name as string | undefined) ?? null;
+    const replyTo = resolveAdvisorReplyTo(profile?.email, user.email);
 
-  const built = buildAdvisorFromAddress({
-    fullName,
-    userId: user.id,
-    authEmail: user.email,
-    domain: getResendFromDomain(),
+    const built = buildAdvisorFromAddress({
+      fullName,
+      userId: auth.userId,
+      authEmail: user.email,
+      domain: getResendFromDomain(),
+    });
+
+    return {
+      from: built ?? fallbackFrom,
+      replyTo,
+    };
   });
-
-  return {
-    from: built ?? fallbackFrom,
-    replyTo,
-  };
 }

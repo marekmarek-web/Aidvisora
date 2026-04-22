@@ -3,7 +3,6 @@
  * Caller must enforce auth and tenant; this module only runs tenant-scoped queries.
  */
 
-import { db } from "db";
 import {
   contacts,
   contracts,
@@ -14,6 +13,7 @@ import {
   financialAnalyses,
 } from "db";
 import { eq, and, isNull, desc, gte } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 
 export type ServiceInputContact = {
   id: string;
@@ -100,87 +100,89 @@ export async function getServiceInputData(
     analysisRows,
     taskRows,
     opportunityRows,
-  ] = await Promise.all([
-    db
-      .select({
-        id: contacts.id,
-        lastServiceDate: contacts.lastServiceDate,
-        nextServiceDue: contacts.nextServiceDue,
-        serviceCycleMonths: contacts.serviceCycleMonths,
-        createdAt: contacts.createdAt,
-      })
-      .from(contacts)
-      .where(and(eq(contacts.tenantId, tenantId), eq(contacts.id, contactId)))
-      .limit(1),
-    db
-      .select({
-        id: contracts.id,
-        segment: contracts.segment,
-        partnerName: contracts.partnerName,
-        startDate: contracts.startDate,
-        anniversaryDate: contracts.anniversaryDate,
-      })
-      .from(contracts)
-      .where(and(eq(contracts.tenantId, tenantId), eq(contracts.contactId, contactId))),
-    db
-      .select({ startAt: events.startAt })
-      .from(events)
-      .where(and(eq(events.tenantId, tenantId), eq(events.contactId, contactId)))
-      .orderBy(desc(events.startAt))
-      .limit(1),
-    db
-      .select({ meetingAt: meetingNotes.meetingAt })
-      .from(meetingNotes)
-      .where(and(eq(meetingNotes.tenantId, tenantId), eq(meetingNotes.contactId, contactId)))
-      .orderBy(desc(meetingNotes.meetingAt))
-      .limit(1),
-    db
-      .select({
-        id: financialAnalyses.id,
-        status: financialAnalyses.status,
-        updatedAt: financialAnalyses.updatedAt,
-      })
-      .from(financialAnalyses)
-      .where(
-        and(
-          eq(financialAnalyses.tenantId, tenantId),
-          eq(financialAnalyses.contactId, contactId)
+  ] = await withTenantContext({ tenantId }, (tx) =>
+    Promise.all([
+      tx
+        .select({
+          id: contacts.id,
+          lastServiceDate: contacts.lastServiceDate,
+          nextServiceDue: contacts.nextServiceDue,
+          serviceCycleMonths: contacts.serviceCycleMonths,
+          createdAt: contacts.createdAt,
+        })
+        .from(contacts)
+        .where(and(eq(contacts.tenantId, tenantId), eq(contacts.id, contactId)))
+        .limit(1),
+      tx
+        .select({
+          id: contracts.id,
+          segment: contracts.segment,
+          partnerName: contracts.partnerName,
+          startDate: contracts.startDate,
+          anniversaryDate: contracts.anniversaryDate,
+        })
+        .from(contracts)
+        .where(and(eq(contracts.tenantId, tenantId), eq(contracts.contactId, contactId))),
+      tx
+        .select({ startAt: events.startAt })
+        .from(events)
+        .where(and(eq(events.tenantId, tenantId), eq(events.contactId, contactId)))
+        .orderBy(desc(events.startAt))
+        .limit(1),
+      tx
+        .select({ meetingAt: meetingNotes.meetingAt })
+        .from(meetingNotes)
+        .where(and(eq(meetingNotes.tenantId, tenantId), eq(meetingNotes.contactId, contactId)))
+        .orderBy(desc(meetingNotes.meetingAt))
+        .limit(1),
+      tx
+        .select({
+          id: financialAnalyses.id,
+          status: financialAnalyses.status,
+          updatedAt: financialAnalyses.updatedAt,
+        })
+        .from(financialAnalyses)
+        .where(
+          and(
+            eq(financialAnalyses.tenantId, tenantId),
+            eq(financialAnalyses.contactId, contactId)
+          )
         )
-      )
-      .orderBy(desc(financialAnalyses.updatedAt)),
-    db
-      .select({
-        id: tasks.id,
-        title: tasks.title,
-        dueDate: tasks.dueDate,
-        completedAt: tasks.completedAt,
-      })
-      .from(tasks)
-      .where(
-        and(
-          eq(tasks.tenantId, tenantId),
-          eq(tasks.contactId, contactId),
-          isNull(tasks.completedAt)
+        .orderBy(desc(financialAnalyses.updatedAt)),
+      tx
+        .select({
+          id: tasks.id,
+          title: tasks.title,
+          dueDate: tasks.dueDate,
+          completedAt: tasks.completedAt,
+        })
+        .from(tasks)
+        .where(
+          and(
+            eq(tasks.tenantId, tenantId),
+            eq(tasks.contactId, contactId),
+            isNull(tasks.completedAt)
+          )
+        ),
+      tx
+        .select({
+          id: opportunities.id,
+          title: opportunities.title,
+          closedAt: opportunities.closedAt,
+          closedAs: opportunities.closedAs,
+        })
+        .from(opportunities)
+        .where(
+          and(
+            eq(opportunities.tenantId, tenantId),
+            eq(opportunities.contactId, contactId),
+            gte(opportunities.closedAt, postDealStart),
+            eq(opportunities.closedAs, "won")
+          )
         )
-      ),
-    db
-      .select({
-        id: opportunities.id,
-        title: opportunities.title,
-        closedAt: opportunities.closedAt,
-        closedAs: opportunities.closedAs,
-      })
-      .from(opportunities)
-      .where(
-        and(
-          eq(opportunities.tenantId, tenantId),
-          eq(opportunities.contactId, contactId),
-          gte(opportunities.closedAt, postDealStart),
-          eq(opportunities.closedAs, "won")
-        )
-      )
-      .orderBy(desc(opportunities.closedAt)),
-  ]);
+        .orderBy(desc(opportunities.closedAt)),
+    ]),
+  );
 
   const contact: ServiceInputContact | null = contactRows[0]
     ? {

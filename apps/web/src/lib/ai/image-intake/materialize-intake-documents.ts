@@ -4,7 +4,8 @@
  */
 
 import { randomUUID } from "crypto";
-import { db, documents } from "db";
+import { documents } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import { createAdminClient } from "@/lib/supabase/server";
 import { parseDataUrl } from "./normalize-intake-image-input";
 import type { NormalizedImageAsset } from "./types";
@@ -86,21 +87,23 @@ export async function materializeIntakeImagesAsDocuments(
         continue;
       }
       const displayName = (a.originalFilename?.trim() || `Podklad z dokladu ${idx + 1}`).slice(0, 500);
-      const [row] = await db
-        .insert(documents)
-        .values({
-          tenantId,
-          contactId: null,
-          name: displayName,
-          storagePath: objectPath,
-          mimeType: mime,
-          sizeBytes: buffer.length,
-          visibleToClient: false,
-          uploadSource: "web",
-          uploadedBy: userId,
-          sourceChannel: "ai_drawer",
-        })
-        .returning({ id: documents.id });
+      const [row] = await withTenantContext({ tenantId, userId }, (tx) =>
+        tx
+          .insert(documents)
+          .values({
+            tenantId,
+            contactId: null,
+            name: displayName,
+            storagePath: objectPath,
+            mimeType: mime,
+            sizeBytes: buffer.length,
+            visibleToClient: false,
+            uploadSource: "web",
+            uploadedBy: userId,
+            sourceChannel: "ai_drawer",
+          })
+          .returning({ id: documents.id }),
+      );
       if (row?.id) ids.push(row.id);
     } catch (e) {
       console.error("[materializeIntakeImagesAsDocuments] asset", a.assetId, e);

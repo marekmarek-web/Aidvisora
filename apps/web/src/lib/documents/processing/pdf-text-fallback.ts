@@ -10,8 +10,15 @@ import { installPdfJsNodePolyfills } from "./pdfjs-node-polyfills";
 const FIRST_PAGES = 30;
 /** Ignore tiny garbage strings (corrupt / empty PDF). */
 const MIN_TEXT_CHARS = 40;
-const PDF_FETCH_TIMEOUT_MS = 10_000;
-const PDF_PARSE_TIMEOUT_MS = 10_000;
+/**
+ * Timeouts raised 2026-04: 10s was too tight for 2–3 MB PDFs on Vercel cold starts (Supabase fetch +
+ * PDF.js polyfill boot). When the fallback timed out we persisted `preprocessMode: "adobe"` with
+ * empty markdown and the scan gate pushed the upload into `scan_pending_ocr`, even though the file
+ * had a perfectly usable native text layer. Local parse + fetch for a 2 MB PDF is ~5s; 25s gives
+ * comfortable margin on cold instances without approaching the function timeout.
+ */
+const PDF_FETCH_TIMEOUT_MS = 25_000;
+const PDF_PARSE_TIMEOUT_MS = 25_000;
 
 function buildTimeoutError(stage: "fetch" | "parse"): Error {
   return new Error(

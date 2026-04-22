@@ -1,8 +1,8 @@
 import "server-only";
 
-import { db } from "db";
 import { advisorPreferences } from "db";
 import { and, eq } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import { getDefaultQuickActionsConfig } from "@/lib/quick-actions";
 
 /**
@@ -13,13 +13,15 @@ export async function loadQuickActionsConfig(
   userId: string
 ): Promise<ReturnType<typeof getDefaultQuickActionsConfig>> {
   try {
-    const row = await db
-      .select({ quickActions: advisorPreferences.quickActions })
-      .from(advisorPreferences)
-      .where(
-        and(eq(advisorPreferences.tenantId, tenantId), eq(advisorPreferences.userId, userId))
-      )
-      .limit(1);
+    const row = await withTenantContext({ tenantId, userId }, (tx) =>
+      tx
+        .select({ quickActions: advisorPreferences.quickActions })
+        .from(advisorPreferences)
+        .where(
+          and(eq(advisorPreferences.tenantId, tenantId), eq(advisorPreferences.userId, userId))
+        )
+        .limit(1),
+    );
 
     const raw = row[0]?.quickActions;
     if (

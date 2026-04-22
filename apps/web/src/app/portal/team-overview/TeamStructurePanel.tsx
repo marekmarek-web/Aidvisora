@@ -32,7 +32,7 @@ function TreeBranch({
   newcomerUserIds?: Set<string>;
 }) {
   return (
-    <ul className={clsx("space-y-4", depth > 0 && "mt-4 pl-8")}>
+    <ul className={clsx("space-y-3", depth > 0 && "mt-4 pl-10 md:pl-12")}>
       {nodes.map((node) => {
         const below = countDescendants(node);
         const isSelf = node.userId === currentUserId;

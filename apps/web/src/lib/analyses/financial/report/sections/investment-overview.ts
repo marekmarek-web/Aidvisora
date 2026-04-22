@@ -50,8 +50,8 @@ export function renderInvestmentOverview(ctx: SectionCtx): string {
         <div class="ins-provider-cell">${logoHtml}</div>
         <div class="bold" style="margin-top:4px">${esc(name)}</div>
       </td>
-      <td class="muted inv-type-cell" style="white-space:nowrap;width:64px">${esc(typeLabel)}</td>
-      <td class="r" style="white-space:nowrap">${esc(amountLabel)}</td>
+      <td class="muted inv-type-cell" style="white-space:nowrap">${esc(typeLabel)}</td>
+      <td class="r" style="white-space:nowrap;padding-left:12px">${esc(amountLabel)}</td>
       <td class="r" style="white-space:nowrap">${esc(horizon)}</td>
       <td class="r num bold" style="white-space:nowrap">${fmtBigCzk(fv)}</td>
     </tr>`;
@@ -73,12 +73,12 @@ export function renderInvestmentOverview(ctx: SectionCtx): string {
 
     <div class="tbl-wrap">
       <div class="tbl-cap"><span class="tbl-cap-title">Investiční produkty</span></div>
-      <table class="dt" style="table-layout:fixed;width:100%">
+      <table class="dt" style="table-layout:fixed;width:100%;border-collapse:separate;border-spacing:0">
         <colgroup>
           <col />
-          <col style="width:64px" />
-          <col style="width:15%" />
-          <col style="width:80px" />
+          <col style="width:110px" />
+          <col style="width:18%" />
+          <col style="width:90px" />
           <col style="width:18%" />
         </colgroup>
         <thead><tr><th>Produkt / Fond</th><th style="white-space:nowrap">Typ</th><th class="r">Platba</th><th class="r">Horizont</th><th class="r">Odhad FV</th></tr></thead>

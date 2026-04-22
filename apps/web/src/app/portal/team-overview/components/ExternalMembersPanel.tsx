@@ -1,16 +1,16 @@
 "use client";
 
 /**
- * F4 \u2014 Admin UI pro extern\u00ed / manu\u00e1ln\u011b veden\u00e9 \u010dleny t\u00fdmu a jejich period snapshot.
+ * F4 — Admin UI pro externí / manuálně vedené členy týmu a jejich period snapshot.
  *
- * Minimalistick\u00fd, ale kompletn\u011b funk\u010dn\u00ed panel. Montuje se dovnit\u0159 TeamManagementPanel
- * v ot\u00e1\u010dce "Spr\u00e1va t\u00fdmu". Obsahuje:
- *   - Formul\u00e1\u0159 pro zalo\u017een\u00ed extern\u00edho \u010dlena (jm\u00e9no, email, parent, kari\u00e9ra).
- *   - Seznam existuj\u00edc\u00edch extern\u00edch \u010dlen\u016f se statusem.
- *   - Modal pro rychl\u00e9 vypln\u011bn\u00ed manual period snapshot (units/production/meetings).
+ * Minimalistický, ale kompletně funkční panel. Montuje se dovnitř TeamManagementPanel
+ * v otáčce "Správa týmu". Obsahuje:
+ *   - Formulář pro založení externího člena (jméno, email, parent, kariéra).
+ *   - Seznam existujících externích členů se statusem.
+ *   - Modal pro rychlé vyplnění manual period snapshot (units/production/meetings).
  *
- * Pozn\u00e1mka: seznam extern\u00edch \u010dlen\u016f \u010dte z props (server-side pre-fetch
- * p\u0159es getTeamOverviewPageSnapshot \u2014 m\u00e1me dostupn\u00e9 TeamHierarchyMember[]).
+ * Poznámka: seznam externích členů čte z props (server-side pre-fetch
+ * přes getTeamOverviewPageSnapshot — máme dostupné TeamHierarchyMember[]).
  */
 
 import { useState, useTransition } from "react";
@@ -40,7 +40,7 @@ export function ExternalMembersPanel({ roleName, members }: Props) {
   if (!canWrite) {
     return (
       <div className="rounded border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
-        Nem\u00e1te opr\u00e1vn\u011bn\u00ed spravovat extern\u00ed \u010dleny t\u00fdmu.
+        Nemáte oprávnění spravovat externí členy týmu.
       </div>
     );
   }
@@ -62,18 +62,21 @@ export function ExternalMembersPanel({ roleName, members }: Props) {
   return (
     <div className="space-y-4">
       <div className="rounded border border-slate-200 bg-white p-4">
-        <h4 className="mb-3 text-sm font-semibold text-slate-800">Extern\u00ed / manu\u00e1ln\u011b veden\u00fd \u010dlen</h4>
+        <h4 className="mb-1 text-sm font-semibold text-slate-800">Přidat externího člena týmu</h4>
+        <p className="mb-3 text-xs text-slate-500">
+          Členové, kteří nemají Aidvisora účet — například spolupracující poradci, jejichž data evidujete ručně.
+        </p>
         <form onSubmit={submitCreate} className="grid gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]">
           <input
             className="rounded border border-slate-300 px-2 py-1 text-sm"
-            placeholder="Jm\u00e9no *"
+            placeholder="Jméno *"
             value={form.displayName}
             onChange={(e) => setForm({ ...form, displayName: e.target.value })}
             required
           />
           <input
             className="rounded border border-slate-300 px-2 py-1 text-sm"
-            placeholder="Email (voliteln\u011b)"
+            placeholder="Email (volitelně)"
             type="email"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -83,7 +86,7 @@ export function ExternalMembersPanel({ roleName, members }: Props) {
             value={form.parentMemberId}
             onChange={(e) => setForm({ ...form, parentMemberId: e.target.value })}
           >
-            <option value="">\u2014 bez manager\u00e1 \u2014</option>
+            <option value="">— bez managera —</option>
             {potentialParents.map((p) => (
               <option key={p.teamMemberId!} value={p.teamMemberId!}>
                 {p.displayName ?? p.email ?? p.userId}
@@ -95,29 +98,29 @@ export function ExternalMembersPanel({ roleName, members }: Props) {
             disabled={pending}
             className="rounded bg-slate-900 px-3 py-1 text-sm text-white disabled:opacity-50"
           >
-            {pending ? "Ukl\u00e1d\u00e1m\u2026" : "P\u0159idat"}
+            {pending ? "Ukládám…" : "Přidat"}
           </button>
         </form>
         {err && <p className="mt-2 text-xs text-rose-600">{err}</p>}
         <p className="mt-2 text-xs text-slate-500">
-          Extern\u00ed \u010dlen nem\u00e1 Aidvisora \u00fa\u010det \u2014 data evidujete ru\u010dn\u011b. Pozd\u011bji je mo\u017en\u00e9 prop\u00e1rovat se skute\u010dn\u00fdm \u00fa\u010dtem.
+          Externí člen nemá Aidvisora účet — data evidujete ručně. Později je možné propárovat se skutečným účtem.
         </p>
       </div>
 
       <div className="rounded border border-slate-200 bg-white">
         <div className="border-b border-slate-100 px-4 py-2 text-sm font-semibold text-slate-800">
-          Extern\u00ed \u010dlenov\u00e9 ({externals.length})
+          Externí členové ({externals.length})
         </div>
         {externals.length === 0 ? (
-          <div className="px-4 py-6 text-sm text-slate-500">Zat\u00edm \u017e\u00e1dn\u00ed extern\u00ed \u010dlenov\u00e9.</div>
+          <div className="px-4 py-6 text-sm text-slate-500">Zatím žádní externí členové.</div>
         ) : (
           <ul className="divide-y divide-slate-100">
             {externals.map((m) => (
               <li key={m.userId} className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <div className="text-sm font-medium text-slate-800">{m.displayName ?? m.email ?? "(bez jm\u00e9na)"}</div>
+                  <div className="text-sm font-medium text-slate-800">{m.displayName ?? m.email ?? "(bez jména)"}</div>
                   <div className="text-xs text-slate-500">
-                    {m.roleName} \u00b7 {m.status} \u00b7 {m.careerProgram ?? "bez programu"}
+                    {m.roleName} · {m.status} · {m.careerProgram ?? "bez programu"}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -125,7 +128,7 @@ export function ExternalMembersPanel({ roleName, members }: Props) {
                     onClick={() => setOpenPeriodFor(m.teamMemberId)}
                     className="rounded border border-slate-300 px-2 py-1 text-xs hover:bg-slate-50"
                   >
-                    Zadat m\u011bs\u00edc
+                    Zadat měsíc
                   </button>
                   <button
                     onClick={() =>
@@ -191,9 +194,9 @@ function ManualPeriodModal({ teamMemberId, onClose }: { teamMemberId: string; on
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/40 p-4">
       <form onSubmit={submit} className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl">
-        <h3 className="mb-3 text-base font-semibold">Manu\u00e1ln\u00ed obdob\u00ed</h3>
+        <h3 className="mb-3 text-base font-semibold">Manuální období</h3>
         <div className="grid grid-cols-2 gap-2">
           <label className="text-xs">
             Rok
@@ -205,7 +208,7 @@ function ManualPeriodModal({ teamMemberId, onClose }: { teamMemberId: string; on
             />
           </label>
           <label className="text-xs">
-            M\u011bs\u00edc
+            Měsíc
             <input
               type="number"
               min={1}
@@ -226,7 +229,7 @@ function ManualPeriodModal({ teamMemberId, onClose }: { teamMemberId: string; on
             />
           </label>
           <label className="text-xs">
-            Produkce (K\u010d)
+            Produkce (Kč)
             <input
               type="number"
               step="0.01"
@@ -236,7 +239,7 @@ function ManualPeriodModal({ teamMemberId, onClose }: { teamMemberId: string; on
             />
           </label>
           <label className="text-xs">
-            Sch\u016fzky
+            Schůzky
             <input
               type="number"
               value={meetings}
@@ -266,7 +269,7 @@ function ManualPeriodModal({ teamMemberId, onClose }: { teamMemberId: string; on
           </select>
         </label>
         <label className="mt-2 block text-xs">
-          Pozn\u00e1mka (zdroj dat)
+          Poznámka (zdroj dat)
           <input
             value={note}
             onChange={(e) => setNote(e.target.value)}
@@ -276,14 +279,14 @@ function ManualPeriodModal({ teamMemberId, onClose }: { teamMemberId: string; on
         {err && <p className="mt-2 text-xs text-rose-600">{err}</p>}
         <div className="mt-4 flex justify-end gap-2">
           <button type="button" onClick={onClose} className="rounded border border-slate-300 px-3 py-1 text-sm">
-            Zru\u0161it
+            Zrušit
           </button>
           <button
             type="submit"
             disabled={pending}
             className="rounded bg-slate-900 px-3 py-1 text-sm text-white disabled:opacity-50"
           >
-            {pending ? "Ukl\u00e1d\u00e1m\u2026" : "Ulo\u017eit"}
+            {pending ? "Ukládám…" : "Uložit"}
           </button>
         </div>
       </form>

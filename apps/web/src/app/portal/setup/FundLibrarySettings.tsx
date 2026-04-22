@@ -149,7 +149,7 @@ export function FundLibrarySettings({ snapshot }: Props) {
         const keys = catalogKeys.filter((k) => tenantAllowed[k]);
         await saveTenantFundAllowlist(keys.length === 0 ? [] : keys);
       }
-      toast.showToast("Nastavení firmy uloženo.");
+      toast.showToast("Nastavení workspace uloženo.");
       router.refresh();
     } catch (e) {
       toast.showToast((e as Error).message ?? "Uložení se nezdařilo.");
@@ -216,7 +216,7 @@ export function FundLibrarySettings({ snapshot }: Props) {
             Knihovna fondů
           </h2>
           <p className="text-sm font-medium text-[color:var(--wp-text-secondary)]">
-            Nastavení pro Finanční analýzu — výběr fondů na úrovni firmy a vaše osobní pořadí.
+            Nastavení pro Finanční analýzu — výběr fondů pro celý workspace a vaše osobní pořadí.
           </p>
         </div>
         <CreateActionButton type="button" icon={PlusCircle} onClick={() => setRequestOpen(true)} className="shrink-0">
@@ -226,16 +226,16 @@ export function FundLibrarySettings({ snapshot }: Props) {
 
       {!snapshot.canEditTenantAllowlist && (
         <div className="rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/40 px-4 py-3 text-xs font-medium text-[color:var(--wp-text-secondary)]">
-          Katalog fondů pro celou firmu upravuje <strong>Admin</strong> nebo <strong>Director</strong>. Vy můžete nastavit jen svůj výběr a pořadí z povolených fondů.
+          Katalog fondů pro celý workspace upravuje <strong>Admin</strong> nebo <strong>Director</strong>. Vy můžete nastavit jen svůj výběr a pořadí z povolených fondů.
         </div>
       )}
 
       {snapshot.canEditTenantAllowlist && (
         <div className="bg-[color:var(--wp-surface-card)] rounded-[24px] border border-[color:var(--wp-surface-card-border)] shadow-sm overflow-hidden">
           <div className="px-6 sm:px-8 py-5 border-b border-[color:var(--wp-surface-card-border)]/50">
-            <h3 className="text-base font-black text-[color:var(--wp-text)]">Úroveň firmy</h3>
+            <h3 className="text-base font-black text-[color:var(--wp-text)]">Katalog fondů workspace</h3>
             <p className="text-xs font-medium text-[color:var(--wp-text-secondary)] mt-1">
-              Určete, které fondy z katalogu mohou poradci v tenantu používat. Výchozí stav = všechny povolené.
+              Vyberte, které fondy z katalogu mohou poradci z vašeho workspace používat. Ve výchozím stavu jsou povolené všechny.
             </p>
           </div>
           <div className="p-6 space-y-3 max-h-[280px] overflow-y-auto">
@@ -264,7 +264,7 @@ export function FundLibrarySettings({ snapshot }: Props) {
               className="px-5 py-2.5 rounded-xl bg-aidv-create text-white font-bold text-sm min-h-[44px] inline-flex items-center gap-2 disabled:opacity-50"
             >
               {savingTenant ? <Loader2 className="animate-spin" size={18} /> : null}
-              Uložit nastavení firmy
+              Uložit nastavení workspace
             </button>
           </div>
         </div>
@@ -388,7 +388,7 @@ export function FundLibrarySettings({ snapshot }: Props) {
         <ul className="divide-y divide-[color:var(--wp-surface-card-border)]/60">
           {snapshot.effectiveAllowedKeys.length === 0 ? (
             <li className="p-8 text-center text-sm text-[color:var(--wp-text-secondary)]">
-              Pro váš tenant nejsou povoleny žádné fondy. Kontaktujte správce firmy.
+              Pro váš workspace nejsou povoleny žádné fondy. Kontaktujte správce workspace.
             </li>
           ) : displayRows.length === 0 ? (
             <li className="p-8 text-center text-sm text-[color:var(--wp-text-secondary)]">Žádné fondy v tomto filtru.</li>

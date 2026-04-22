@@ -3,9 +3,9 @@
  * Reads from contract_upload_reviews without exposing raw document content.
  */
 
-import { db } from "db";
 import { contractUploadReviews } from "db";
-import { sql, eq, and, gte, isNotNull } from "db";
+import { eq, and, gte, isNotNull } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 
 export type QualitySummary = {
   totalDocuments: number;
@@ -40,16 +40,18 @@ export async function getQualitySummary(
     conditions.push(gte(contractUploadReviews.createdAt, since));
   }
 
-  const rows = await db
-    .select({
-      processingStatus: contractUploadReviews.processingStatus,
-      detectedDocumentType: contractUploadReviews.detectedDocumentType,
-      inputMode: contractUploadReviews.inputMode,
-      extractionTrace: contractUploadReviews.extractionTrace,
-      reasonsForReview: contractUploadReviews.reasonsForReview,
-    })
-    .from(contractUploadReviews)
-    .where(and(...conditions));
+  const rows = await withTenantContext({ tenantId }, (tx) =>
+    tx
+      .select({
+        processingStatus: contractUploadReviews.processingStatus,
+        detectedDocumentType: contractUploadReviews.detectedDocumentType,
+        inputMode: contractUploadReviews.inputMode,
+        extractionTrace: contractUploadReviews.extractionTrace,
+        reasonsForReview: contractUploadReviews.reasonsForReview,
+      })
+      .from(contractUploadReviews)
+      .where(and(...conditions)),
+  );
 
   let totalDocs = 0;
   let successCount = 0;
@@ -141,13 +143,15 @@ export async function getCorrectionSummary(
     conditions.push(gte(contractUploadReviews.createdAt, since));
   }
 
-  const rows = await db
-    .select({
-      correctedFields: contractUploadReviews.correctedFields,
-      detectedDocumentType: contractUploadReviews.detectedDocumentType,
-    })
-    .from(contractUploadReviews)
-    .where(and(...conditions));
+  const rows = await withTenantContext({ tenantId }, (tx) =>
+    tx
+      .select({
+        correctedFields: contractUploadReviews.correctedFields,
+        detectedDocumentType: contractUploadReviews.detectedDocumentType,
+      })
+      .from(contractUploadReviews)
+      .where(and(...conditions)),
+  );
 
   const fieldCounts: Record<string, number> = {};
   const byDocType: Record<string, number> = {};

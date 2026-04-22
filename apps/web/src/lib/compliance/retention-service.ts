@@ -4,7 +4,8 @@
  * for tenant-specific overrides, and manages retention locks (legal hold, audit).
  */
 
-import { db, processingPurposes, eq } from "db";
+import { processingPurposes, eq } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import { DATA_CLASS_DEFINITIONS, getDataClass, type DataClass } from "@/lib/security/data-classification";
 
 export type RetentionBasis = "regulatory" | "contractual" | "legitimate_interest" | "consent";
@@ -108,10 +109,12 @@ export async function getEffectiveRetention(
   const defaultPolicy = getEntityRetentionPolicy(entityType);
 
   // Look for tenant-specific processing purpose override
-  const purposes = await db
-    .select({ retentionMonths: processingPurposes.retentionMonths })
-    .from(processingPurposes)
-    .where(eq(processingPurposes.tenantId, tenantId));
+  const purposes = await withTenantContext({ tenantId }, (tx) =>
+    tx
+      .select({ retentionMonths: processingPurposes.retentionMonths })
+      .from(processingPurposes)
+      .where(eq(processingPurposes.tenantId, tenantId)),
+  );
 
   // Use the maximum tenant purpose retention, then clamp to at least the regulatory minimum
   const tenantMonths = purposes

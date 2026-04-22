@@ -3,15 +3,16 @@
  * Mirrors google-calendar-integration-service.ts pattern.
  */
 
-import { db, userGoogleGmailIntegrations } from "db";
+import { userGoogleGmailIntegrations } from "db";
 import { eq, and } from "db";
 import { encrypt, decrypt } from "./encrypt";
 import { GoogleInvalidGrantError, refreshGoogleAccessToken } from "./google-oauth";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 
 const LOG_PREFIX = "[google-gmail-integration]";
 function log(msg: string, meta?: Record<string, unknown>) {
   if (process.env.NODE_ENV !== "development") return;
-   
+
   console.log(`${LOG_PREFIX} ${msg}`, meta ? JSON.stringify(meta) : "");
 }
 function logError(msg: string, err?: unknown) {
@@ -46,17 +47,36 @@ export async function upsertGmailTokens(
     throw new Error("Token encryption failed");
   }
 
-  const existing = await db
-    .select({ id: userGoogleGmailIntegrations.id })
-    .from(userGoogleGmailIntegrations)
-    .where(and(
-      eq(userGoogleGmailIntegrations.tenantId, tenantId),
-      eq(userGoogleGmailIntegrations.userId, userId)
-    ))
-    .limit(1);
+  return withTenantContext({ tenantId, userId }, async (tx) => {
+    const existing = await tx
+      .select({ id: userGoogleGmailIntegrations.id })
+      .from(userGoogleGmailIntegrations)
+      .where(and(
+        eq(userGoogleGmailIntegrations.tenantId, tenantId),
+        eq(userGoogleGmailIntegrations.userId, userId)
+      ))
+      .limit(1);
 
-  if (existing.length > 0) {
-    await db.update(userGoogleGmailIntegrations).set({
+    if (existing.length > 0) {
+      await tx.update(userGoogleGmailIntegrations).set({
+        googleEmail: tokens.googleEmail ?? null,
+        accessToken: encryptedAccess,
+        refreshToken: encryptedRefresh,
+        tokenExpiry,
+        scope: tokens.scope ?? null,
+        isActive: true,
+        updatedAt: now,
+      }).where(and(
+        eq(userGoogleGmailIntegrations.tenantId, tenantId),
+        eq(userGoogleGmailIntegrations.userId, userId)
+      ));
+      log("Tokens updated", { userId: userId.slice(0, 8) });
+      return { created: false };
+    }
+
+    await tx.insert(userGoogleGmailIntegrations).values({
+      userId,
+      tenantId,
       googleEmail: tokens.googleEmail ?? null,
       accessToken: encryptedAccess,
       refreshToken: encryptedRefresh,
@@ -64,43 +84,28 @@ export async function upsertGmailTokens(
       scope: tokens.scope ?? null,
       isActive: true,
       updatedAt: now,
-    }).where(and(
-      eq(userGoogleGmailIntegrations.tenantId, tenantId),
-      eq(userGoogleGmailIntegrations.userId, userId)
-    ));
-    log("Tokens updated", { userId: userId.slice(0, 8) });
-    return { created: false };
-  }
-
-  await db.insert(userGoogleGmailIntegrations).values({
-    userId,
-    tenantId,
-    googleEmail: tokens.googleEmail ?? null,
-    accessToken: encryptedAccess,
-    refreshToken: encryptedRefresh,
-    tokenExpiry,
-    scope: tokens.scope ?? null,
-    isActive: true,
-    updatedAt: now,
+    });
+    log("Integration created", { userId: userId.slice(0, 8) });
+    return { created: true };
   });
-  log("Integration created", { userId: userId.slice(0, 8) });
-  return { created: true };
 }
 
 async function invalidateGmailAfterRevokedRefresh(
   userId: string,
   tenantId: string
 ): Promise<void> {
-  await db.update(userGoogleGmailIntegrations).set({
-    isActive: false,
-    accessToken: null,
-    refreshToken: null,
-    tokenExpiry: null,
-    updatedAt: new Date(),
-  }).where(and(
-    eq(userGoogleGmailIntegrations.tenantId, tenantId),
-    eq(userGoogleGmailIntegrations.userId, userId)
-  ));
+  await withTenantContext({ tenantId, userId }, async (tx) => {
+    await tx.update(userGoogleGmailIntegrations).set({
+      isActive: false,
+      accessToken: null,
+      refreshToken: null,
+      tokenExpiry: null,
+      updatedAt: new Date(),
+    }).where(and(
+      eq(userGoogleGmailIntegrations.tenantId, tenantId),
+      eq(userGoogleGmailIntegrations.userId, userId)
+    ));
+  });
 }
 
 const REFRESH_BEFORE_EXPIRY_MS = 5 * 60 * 1000;
@@ -109,19 +114,21 @@ export async function getValidGmailAccessToken(
   userId: string,
   tenantId: string
 ): Promise<string> {
-  const rows = await db
-    .select({
-      accessToken: userGoogleGmailIntegrations.accessToken,
-      refreshToken: userGoogleGmailIntegrations.refreshToken,
-      tokenExpiry: userGoogleGmailIntegrations.tokenExpiry,
-    })
-    .from(userGoogleGmailIntegrations)
-    .where(and(
-      eq(userGoogleGmailIntegrations.tenantId, tenantId),
-      eq(userGoogleGmailIntegrations.userId, userId),
-      eq(userGoogleGmailIntegrations.isActive, true)
-    ))
-    .limit(1);
+  const rows = await withTenantContext({ tenantId, userId }, async (tx) =>
+    tx
+      .select({
+        accessToken: userGoogleGmailIntegrations.accessToken,
+        refreshToken: userGoogleGmailIntegrations.refreshToken,
+        tokenExpiry: userGoogleGmailIntegrations.tokenExpiry,
+      })
+      .from(userGoogleGmailIntegrations)
+      .where(and(
+        eq(userGoogleGmailIntegrations.tenantId, tenantId),
+        eq(userGoogleGmailIntegrations.userId, userId),
+        eq(userGoogleGmailIntegrations.isActive, true)
+      ))
+      .limit(1)
+  );
 
   const row = rows[0];
   if (!row?.accessToken || !row?.refreshToken) {
@@ -168,14 +175,16 @@ export async function getValidGmailAccessToken(
       ? new Date(Date.now() + tokens.expires_in * 1000)
       : null;
     try {
-      await db.update(userGoogleGmailIntegrations).set({
-        accessToken: encrypt(tokens.access_token),
-        tokenExpiry: newExpiry,
-        updatedAt: new Date(),
-      }).where(and(
-        eq(userGoogleGmailIntegrations.tenantId, tenantId),
-        eq(userGoogleGmailIntegrations.userId, userId)
-      ));
+      await withTenantContext({ tenantId, userId }, async (tx) => {
+        await tx.update(userGoogleGmailIntegrations).set({
+          accessToken: encrypt(tokens.access_token),
+          tokenExpiry: newExpiry,
+          updatedAt: new Date(),
+        }).where(and(
+          eq(userGoogleGmailIntegrations.tenantId, tenantId),
+          eq(userGoogleGmailIntegrations.userId, userId)
+        ));
+      });
     } catch (e) {
       logError("Failed to save refreshed token", e);
     }
@@ -194,13 +203,15 @@ export async function getValidGmailAccessToken(
 }
 
 export async function disconnectGmail(userId: string, tenantId: string): Promise<void> {
-  await db.update(userGoogleGmailIntegrations).set({
-    isActive: false,
-    updatedAt: new Date(),
-  }).where(and(
-    eq(userGoogleGmailIntegrations.tenantId, tenantId),
-    eq(userGoogleGmailIntegrations.userId, userId)
-  ));
+  await withTenantContext({ tenantId, userId }, async (tx) => {
+    await tx.update(userGoogleGmailIntegrations).set({
+      isActive: false,
+      updatedAt: new Date(),
+    }).where(and(
+      eq(userGoogleGmailIntegrations.tenantId, tenantId),
+      eq(userGoogleGmailIntegrations.userId, userId)
+    ));
+  });
   log("Disconnected", { userId: userId.slice(0, 8) });
 }
 

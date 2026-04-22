@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { getProductionSummary, type PeriodType, type ProductionSummary } from "@/app/actions/production";
 import { SkeletonBlock } from "@/app/components/Skeleton";
+import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
 
 const PERIOD_OPTIONS: { value: PeriodType; label: string }[] = [
   { value: "month", label: "Měsíc" },
@@ -185,10 +186,10 @@ export function PortalProductionView() {
   }, [data]);
 
   return (
-    <div className="flex flex-col w-full" style={{ animation: "wp-fade-in 0.3s ease" }}>
-      <div className="wp-projects-section min-w-0 pb-20 md:pb-16">
+    <div className="min-h-screen bg-[color:var(--wp-main-scroll-bg)] text-[color:var(--wp-text)] pb-8 md:pb-12" style={{ animation: "wp-fade-in 0.3s ease" }}>
+      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 md:px-8 pt-6 md:pt-8">
         {/* --- Header: compact on mobile --- */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6" style={{ marginBottom: "var(--wp-space-6)" }}>
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 mb-6 md:mb-8">
           <div>
             <h1 className="text-xl md:text-3xl font-bold tracking-tight mb-1 md:mb-2" style={{ color: "var(--wp-text)" }}>
               Produkce
@@ -198,26 +199,18 @@ export function PortalProductionView() {
               <span style={{ color: "var(--wp-text)" }}>{data ? data.periodLabel : loading ? "Načítám…" : "—"}</span>
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2 md:gap-4">
-            <div
-              className="flex items-center rounded-[var(--wp-radius-sm)] p-1 border"
-              style={{ background: "var(--wp-bg)", borderColor: "var(--wp-border)" }}
-            >
+          <div className="flex flex-wrap items-center gap-2 md:gap-3">
+            <div className="flex items-center rounded-xl p-1 border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/60">
               {PERIOD_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
                   type="button"
                   onClick={() => setPeriod(opt.value)}
-                  className={`px-3 md:px-4 py-2 rounded-[var(--wp-radius-xs)] text-xs font-semibold uppercase tracking-wide transition-all min-h-[44px] ${
+                  className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition-all min-h-[40px] ${
                     period === opt.value
-                      ? "shadow-sm border"
-                      : "opacity-80 hover:opacity-100"
+                      ? "bg-[color:var(--wp-surface-card)] text-indigo-600 shadow-sm"
+                      : "text-[color:var(--wp-text-secondary)] hover:text-[color:var(--wp-text)]"
                   }`}
-                  style={
-                    period === opt.value
-                      ? { background: "var(--wp-bg-card)", borderColor: "var(--wp-border)", color: "var(--wp-accent, #4f46e5)" }
-                      : { color: "var(--wp-text-muted)" }
-                  }
                 >
                   {opt.label}
                 </button>
@@ -227,8 +220,7 @@ export function PortalProductionView() {
               <select
                 value={refDate ?? ""}
                 onChange={(e) => setRefDate(e.target.value || undefined)}
-                className="px-3 py-2 rounded-[var(--wp-radius-sm)] text-xs font-semibold border min-h-[44px] appearance-none cursor-pointer"
-                style={{ background: "var(--wp-bg-card)", borderColor: "var(--wp-border)", color: "var(--wp-text)" }}
+                className="px-3 py-2 rounded-xl text-xs font-bold border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text)] min-h-[44px] appearance-none cursor-pointer"
                 aria-label="Období"
               >
                 <option value="">Aktuální měsíc</option>
@@ -239,15 +231,15 @@ export function PortalProductionView() {
                 ))}
               </select>
             )}
-            <button
+            <CreateActionButton
               type="button"
               onClick={handleExport}
               disabled={!data || data.rows.length === 0}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-[var(--wp-radius-sm)] text-xs font-semibold uppercase tracking-wide border transition-all disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
-              style={{ background: "var(--wp-bg-card)", borderColor: "var(--wp-border)", color: "var(--wp-text)" }}
+              icon={Download}
+              className="px-5 py-2.5"
             >
-              <Download size={16} /> Export
-            </button>
+              Export
+            </CreateActionButton>
           </div>
         </div>
 

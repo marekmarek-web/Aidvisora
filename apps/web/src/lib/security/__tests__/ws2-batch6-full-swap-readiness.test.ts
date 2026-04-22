@@ -59,7 +59,13 @@ function* walk(dir: string): Generator<string> {
     const full = path.join(dir, entry);
     const stats = statSync(full);
     if (stats.isDirectory()) {
-      if (entry === "node_modules" || entry === ".next" || entry === "__tests__") continue;
+      if (
+        entry === "node_modules" ||
+        entry === ".next" ||
+        entry === "__tests__" ||
+        entry === "test-shims"
+      )
+        continue;
       yield* walk(full);
     } else if (
       stats.isFile() &&
@@ -126,9 +132,9 @@ const DB_WHITELIST_FILES = new Set<string>([
  * Target (cutover gate): všechny budgety = 0. Otevřený TODO `m4-lib-ai-secondary`.
  */
 const DB_RAW_BUDGET = {
-  "apps/web/src/app/actions": 25,
+  "apps/web/src/app/actions": 0,
   "apps/web/src/app/api": 0,
-  "apps/web/src/lib": 38,
+  "apps/web/src/lib": 0,
 };
 
 describe("WS-2 Batch 6 — raw db.* budget ratchet", () => {

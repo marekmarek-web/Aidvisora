@@ -42,6 +42,15 @@ function vitestEnvFromLocal(): Record<string, string> {
 export default defineConfig({
   resolve: {
     alias: {
+      "@/lib/db/with-tenant-context": path.resolve(
+        __dirname,
+        "./src/lib/test-shims/with-tenant-context.ts",
+      ),
+      "@/lib/auth/with-auth-context": path.resolve(
+        __dirname,
+        "./src/lib/test-shims/with-auth-context.ts",
+      ),
+      "@/lib/db/service-db": path.resolve(__dirname, "./src/lib/test-shims/service-db.ts"),
       "@": path.resolve(__dirname, "./src"),
       db: path.resolve(__dirname, "./src/lib/db.ts"),
       "server-only": path.resolve(__dirname, "./src/lib/test-shims/server-only.ts"),

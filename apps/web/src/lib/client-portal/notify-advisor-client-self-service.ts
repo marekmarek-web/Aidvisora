@@ -1,6 +1,7 @@
 import "server-only";
 
-import { db, contacts, eq, and } from "db";
+import { contacts, eq, and } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import { getTargetAdvisorUserIdForContact } from "@/app/actions/client-dashboard";
 import { emitNotification } from "@/lib/execution/notification-center";
 
@@ -8,11 +9,13 @@ export const ADVISOR_NOTIF_CLIENT_TREZOR_UPLOAD = "client_trezor_upload";
 export const ADVISOR_NOTIF_CLIENT_HOUSEHOLD_UPDATE = "client_household_update";
 
 async function getContactDisplayName(tenantId: string, contactId: string): Promise<string> {
-  const [c] = await db
-    .select({ firstName: contacts.firstName, lastName: contacts.lastName })
-    .from(contacts)
-    .where(and(eq(contacts.tenantId, tenantId), eq(contacts.id, contactId)))
-    .limit(1);
+  const [c] = await withTenantContext({ tenantId }, (tx) =>
+    tx
+      .select({ firstName: contacts.firstName, lastName: contacts.lastName })
+      .from(contacts)
+      .where(and(eq(contacts.tenantId, tenantId), eq(contacts.id, contactId)))
+      .limit(1),
+  );
   if (!c) return "Klient";
   return [c.firstName, c.lastName].filter(Boolean).join(" ").trim() || "Klient";
 }

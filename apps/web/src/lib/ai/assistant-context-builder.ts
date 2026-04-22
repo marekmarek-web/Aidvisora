@@ -429,13 +429,15 @@ export async function buildPaymentDetailContext(
 
   let paymentSetups: Array<Record<string, unknown>> = [];
   try {
-    const { db } = await import("db");
     const { clientPaymentSetups } = await import("db");
     const { eq, and } = await import("db");
-    paymentSetups = await db
-      .select()
-      .from(clientPaymentSetups)
-      .where(and(eq(clientPaymentSetups.tenantId, tenantId), eq(clientPaymentSetups.contactId, contactId)));
+    const { withTenantContext } = await import("@/lib/db/with-tenant-context");
+    paymentSetups = await withTenantContext({ tenantId }, (tx) =>
+      tx
+        .select()
+        .from(clientPaymentSetups)
+        .where(and(eq(clientPaymentSetups.tenantId, tenantId), eq(clientPaymentSetups.contactId, contactId))),
+    );
   } catch (err) {
     logContextLoaderFailure("client_detail.clientPaymentSetups", tenantId, err);
     warnings.push("Platební údaje nedostupné.");

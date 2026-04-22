@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import type {
   TeamOverviewKpis,
@@ -71,7 +71,7 @@ const PERIOD_OPTIONS: { value: TeamOverviewPeriod; label: string }[] = [
 ];
 
 const VIEW_TAB_ORDER = [
-  "Cockpit",
+  "Přehled týmu",
   "Lidé",
   "Kariéra",
   "Adaptace",
@@ -154,7 +154,7 @@ export function TeamOverviewView({
   );
   /** Cockpit / Lidé / Kariéra / Adaptace / Struktura / Správa týmu — podle mocku týmového přehledu. */
   type ActiveTab = (typeof VIEW_TAB_ORDER)[number];
-  const [activeView, setActiveView] = useState<ActiveTab>("Cockpit");
+  const [activeView, setActiveView] = useState<ActiveTab>("Přehled týmu");
 
   const [overviewModal, setOverviewModal] = useState<
     null | { type: "crm" | "progress" | "checkin"; userId: string }
@@ -212,7 +212,12 @@ export function TeamOverviewView({
     [syncTeamOverviewUrl]
   );
 
+  const didInitialRefreshRef = useRef(false);
   useEffect(() => {
+    if (!didInitialRefreshRef.current) {
+      didInitialRefreshRef.current = true;
+      return;
+    }
     refresh();
   }, [refresh]);
 

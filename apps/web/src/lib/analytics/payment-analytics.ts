@@ -3,6 +3,8 @@
  * Payment setup metrics and quality breakdown.
  */
 
+import { withTenantContext } from "@/lib/db/with-tenant-context";
+
 import type { TimeWindow } from "./analytics-scope";
 
 export type PaymentMetrics = {
@@ -36,25 +38,27 @@ export async function getPaymentMetrics(
   };
 
   try {
-    const { db, clientPaymentSetups, eq, and, gte, sql } = await import("db");
+    const { clientPaymentSetups, eq, and, gte, sql } = await import("db");
 
     const windowStart = window?.startDate ?? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-    const [stats] = await db.select({
-      total: sql<number>`count(*)::int`,
-      blocked: sql<number>`count(*) filter (where ${clientPaymentSetups.status} = 'review_required')::int`,
-      applied: sql<number>`count(*) filter (where ${clientPaymentSetups.status} = 'active')::int`,
-      awaiting: sql<number>`count(*) filter (where ${clientPaymentSetups.needsHumanReview} = true)::int`,
-    }).from(clientPaymentSetups)
-      .where(and(eq(clientPaymentSetups.tenantId, tenantId), gte(clientPaymentSetups.createdAt, windowStart)));
+    await withTenantContext({ tenantId }, async (tx) => {
+      const [stats] = await tx.select({
+        total: sql<number>`count(*)::int`,
+        blocked: sql<number>`count(*) filter (where ${clientPaymentSetups.status} = 'review_required')::int`,
+        applied: sql<number>`count(*) filter (where ${clientPaymentSetups.status} = 'active')::int`,
+        awaiting: sql<number>`count(*) filter (where ${clientPaymentSetups.needsHumanReview} = true)::int`,
+      }).from(clientPaymentSetups)
+        .where(and(eq(clientPaymentSetups.tenantId, tenantId), gte(clientPaymentSetups.createdAt, windowStart)));
 
-    if (stats) {
-      metrics.created = stats.total;
-      metrics.blocked = stats.blocked;
-      metrics.applied = stats.applied;
-      metrics.awaitingReview = stats.awaiting;
-      metrics.portalVisibilityRate = stats.total > 0 ? Math.round((stats.applied / stats.total) * 100) / 100 : 0;
-    }
+      if (stats) {
+        metrics.created = stats.total;
+        metrics.blocked = stats.blocked;
+        metrics.applied = stats.applied;
+        metrics.awaitingReview = stats.awaiting;
+        metrics.portalVisibilityRate = stats.total > 0 ? Math.round((stats.applied / stats.total) * 100) / 100 : 0;
+      }
+    });
   } catch { /* best-effort */ }
 
   return metrics;
@@ -73,22 +77,24 @@ export async function getPaymentQualityBreakdown(
   };
 
   try {
-    const { db, clientPaymentSetups, eq, and, gte, sql } = await import("db");
+    const { clientPaymentSetups, eq, and, gte, sql } = await import("db");
 
     const windowStart = window?.startDate ?? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-    const [stats] = await db.select({
-      missingIban: sql<number>`count(*) filter (where (coalesce(${clientPaymentSetups.iban}, '') = '' and coalesce(${clientPaymentSetups.accountNumber}, '') = ''))::int`,
-      missingVs: sql<number>`count(*) filter (where coalesce(${clientPaymentSetups.variableSymbol}, '') = '')::int`,
-      missingAmount: sql<number>`count(*) filter (where ${clientPaymentSetups.amount} is null)::int`,
-    }).from(clientPaymentSetups)
-      .where(and(eq(clientPaymentSetups.tenantId, tenantId), gte(clientPaymentSetups.createdAt, windowStart)));
+    await withTenantContext({ tenantId }, async (tx) => {
+      const [stats] = await tx.select({
+        missingIban: sql<number>`count(*) filter (where (coalesce(${clientPaymentSetups.iban}, '') = '' and coalesce(${clientPaymentSetups.accountNumber}, '') = ''))::int`,
+        missingVs: sql<number>`count(*) filter (where coalesce(${clientPaymentSetups.variableSymbol}, '') = '')::int`,
+        missingAmount: sql<number>`count(*) filter (where ${clientPaymentSetups.amount} is null)::int`,
+      }).from(clientPaymentSetups)
+        .where(and(eq(clientPaymentSetups.tenantId, tenantId), gte(clientPaymentSetups.createdAt, windowStart)));
 
-    if (stats) {
-      quality.missingIban = stats.missingIban;
-      quality.missingVs = stats.missingVs;
-      quality.missingAmount = stats.missingAmount;
-    }
+      if (stats) {
+        quality.missingIban = stats.missingIban;
+        quality.missingVs = stats.missingVs;
+        quality.missingAmount = stats.missingAmount;
+      }
+    });
   } catch { /* best-effort */ }
 
   return quality;

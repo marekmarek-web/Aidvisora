@@ -4,7 +4,8 @@
  */
 
 import { logAudit } from "@/lib/audit";
-import { db, auditLog, eq, and, desc, like } from "db";
+import { auditLog, eq, and, desc, like } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 
 export type ConfigChangeEntry = {
   id: string;
@@ -82,25 +83,27 @@ export async function getConfigChangeHistory(
 ): Promise<ConfigChangeEntry[]> {
   const actionPattern = domain ? `config:${domain}:update` : "config:%";
 
-  const rows = await db
-    .select({
-      id: auditLog.id,
-      tenantId: auditLog.tenantId,
-      userId: auditLog.userId,
-      action: auditLog.action,
-      entityId: auditLog.entityId,
-      meta: auditLog.meta,
-      createdAt: auditLog.createdAt,
-    })
-    .from(auditLog)
-    .where(
-      and(
-        eq(auditLog.tenantId, tenantId),
-        like(auditLog.action, actionPattern)
+  const rows = await withTenantContext({ tenantId }, (tx) =>
+    tx
+      .select({
+        id: auditLog.id,
+        tenantId: auditLog.tenantId,
+        userId: auditLog.userId,
+        action: auditLog.action,
+        entityId: auditLog.entityId,
+        meta: auditLog.meta,
+        createdAt: auditLog.createdAt,
+      })
+      .from(auditLog)
+      .where(
+        and(
+          eq(auditLog.tenantId, tenantId),
+          like(auditLog.action, actionPattern)
+        )
       )
-    )
-    .orderBy(desc(auditLog.createdAt))
-    .limit(limit);
+      .orderBy(desc(auditLog.createdAt))
+      .limit(limit),
+  );
 
   return rows.map((row) => {
     const meta = (row.meta ?? {}) as Record<string, unknown>;
@@ -123,25 +126,27 @@ export async function getPolicyChangeHistory(
   tenantId: string,
   limit = 50
 ): Promise<ConfigChangeEntry[]> {
-  const rows = await db
-    .select({
-      id: auditLog.id,
-      tenantId: auditLog.tenantId,
-      userId: auditLog.userId,
-      action: auditLog.action,
-      entityId: auditLog.entityId,
-      meta: auditLog.meta,
-      createdAt: auditLog.createdAt,
-    })
-    .from(auditLog)
-    .where(
-      and(
-        eq(auditLog.tenantId, tenantId),
-        like(auditLog.action, "policy:%")
+  const rows = await withTenantContext({ tenantId }, (tx) =>
+    tx
+      .select({
+        id: auditLog.id,
+        tenantId: auditLog.tenantId,
+        userId: auditLog.userId,
+        action: auditLog.action,
+        entityId: auditLog.entityId,
+        meta: auditLog.meta,
+        createdAt: auditLog.createdAt,
+      })
+      .from(auditLog)
+      .where(
+        and(
+          eq(auditLog.tenantId, tenantId),
+          like(auditLog.action, "policy:%")
+        )
       )
-    )
-    .orderBy(desc(auditLog.createdAt))
-    .limit(limit);
+      .orderBy(desc(auditLog.createdAt))
+      .limit(limit),
+  );
 
   return rows.map((row) => {
     const meta = (row.meta ?? {}) as Record<string, unknown>;

@@ -3,6 +3,8 @@
  * Backlog metrics, SLA compliance, and aging buckets.
  */
 
+import { withTenantContext } from "@/lib/db/with-tenant-context";
+
 import type { AnalyticsScope, TimeWindow } from "./analytics-scope";
 
 export type BacklogMetrics = {
@@ -41,32 +43,34 @@ export async function getBacklogMetrics(
   };
 
   try {
-    const { db, contractUploadReviews, reminders, escalationEvents, eq, and, sql } = await import("db");
+    const { contractUploadReviews, reminders, escalationEvents, eq, sql } = await import("db");
 
-    const [reviewStats] = await db.select({
-      pending: sql<number>`count(*) filter (where ${contractUploadReviews.processingStatus} in ('extracted','review_required'))::int`,
-      applyPending: sql<number>`count(*) filter (where ${contractUploadReviews.reviewStatus} = 'approved')::int`,
-      blocked: sql<number>`count(*) filter (where ${contractUploadReviews.reviewStatus} = 'rejected')::int`,
-    }).from(contractUploadReviews)
-      .where(eq(contractUploadReviews.tenantId, scope.tenantId));
+    await withTenantContext({ tenantId: scope.tenantId }, async (tx) => {
+      const [reviewStats] = await tx.select({
+        pending: sql<number>`count(*) filter (where ${contractUploadReviews.processingStatus} in ('extracted','review_required'))::int`,
+        applyPending: sql<number>`count(*) filter (where ${contractUploadReviews.reviewStatus} = 'approved')::int`,
+        blocked: sql<number>`count(*) filter (where ${contractUploadReviews.reviewStatus} = 'rejected')::int`,
+      }).from(contractUploadReviews)
+        .where(eq(contractUploadReviews.tenantId, scope.tenantId));
 
-    if (reviewStats) {
-      metrics.pendingReviewCount = reviewStats.pending;
-      metrics.pendingApplyCount = reviewStats.applyPending;
-      metrics.blockedCount = reviewStats.blocked;
-    }
+      if (reviewStats) {
+        metrics.pendingReviewCount = reviewStats.pending;
+        metrics.pendingApplyCount = reviewStats.applyPending;
+        metrics.blockedCount = reviewStats.blocked;
+      }
 
-    const [reminderCount] = await db.select({
-      count: sql<number>`count(*) filter (where ${reminders.status} = 'pending')::int`,
-    }).from(reminders)
-      .where(eq(reminders.tenantId, scope.tenantId));
-    metrics.unresolvedReminders = reminderCount?.count ?? 0;
+      const [reminderCount] = await tx.select({
+        count: sql<number>`count(*) filter (where ${reminders.status} = 'pending')::int`,
+      }).from(reminders)
+        .where(eq(reminders.tenantId, scope.tenantId));
+      metrics.unresolvedReminders = reminderCount?.count ?? 0;
 
-    const [escCount] = await db.select({
-      count: sql<number>`count(*) filter (where ${escalationEvents.status} = 'pending')::int`,
-    }).from(escalationEvents)
-      .where(eq(escalationEvents.tenantId, scope.tenantId));
-    metrics.unresolvedEscalations = escCount?.count ?? 0;
+      const [escCount] = await tx.select({
+        count: sql<number>`count(*) filter (where ${escalationEvents.status} = 'pending')::int`,
+      }).from(escalationEvents)
+        .where(eq(escalationEvents.tenantId, scope.tenantId));
+      metrics.unresolvedEscalations = escCount?.count ?? 0;
+    });
   } catch { /* best-effort */ }
 
   return metrics;
@@ -79,29 +83,31 @@ export async function getSLACompliance(
   const results: SLAComplianceMetrics[] = [];
 
   try {
-    const { db, escalationEvents, eq, and, gte, sql } = await import("db");
+    const { escalationEvents, eq, and, gte, sql } = await import("db");
 
     const windowStart = window?.startDate ?? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-    const rows = await db.select({
-      policyCode: escalationEvents.policyCode,
-      total: sql<number>`count(*)::int`,
-      resolved: sql<number>`count(*) filter (where ${escalationEvents.status} = 'resolved')::int`,
-      avgResolution: sql<number>`coalesce(avg(extract(epoch from (${escalationEvents.resolvedAt} - ${escalationEvents.createdAt})) / 3600) filter (where ${escalationEvents.status} = 'resolved'), 0)::float`,
-    }).from(escalationEvents)
-      .where(and(eq(escalationEvents.tenantId, tenantId), gte(escalationEvents.createdAt, windowStart)))
-      .groupBy(escalationEvents.policyCode);
+    await withTenantContext({ tenantId }, async (tx) => {
+      const rows = await tx.select({
+        policyCode: escalationEvents.policyCode,
+        total: sql<number>`count(*)::int`,
+        resolved: sql<number>`count(*) filter (where ${escalationEvents.status} = 'resolved')::int`,
+        avgResolution: sql<number>`coalesce(avg(extract(epoch from (${escalationEvents.resolvedAt} - ${escalationEvents.createdAt})) / 3600) filter (where ${escalationEvents.status} = 'resolved'), 0)::float`,
+      }).from(escalationEvents)
+        .where(and(eq(escalationEvents.tenantId, tenantId), gte(escalationEvents.createdAt, windowStart)))
+        .groupBy(escalationEvents.policyCode);
 
-    for (const row of rows) {
-      const breached = row.total - row.resolved;
-      results.push({
-        policyCode: row.policyCode as string,
-        totalItems: row.total,
-        breachedItems: breached,
-        breachRate: row.total > 0 ? Math.round((breached / row.total) * 100) / 100 : 0,
-        avgTimeToResolutionHours: Math.round(row.avgResolution * 10) / 10,
-      });
-    }
+      for (const row of rows) {
+        const breached = row.total - row.resolved;
+        results.push({
+          policyCode: row.policyCode as string,
+          totalItems: row.total,
+          breachedItems: breached,
+          breachRate: row.total > 0 ? Math.round((breached / row.total) * 100) / 100 : 0,
+          avgTimeToResolutionHours: Math.round(row.avgResolution * 10) / 10,
+        });
+      }
+    });
   } catch { /* best-effort */ }
 
   return results;
@@ -113,31 +119,33 @@ export async function getAgingBuckets(
   const buckets: AgingBucket[] = [];
 
   try {
-    const { db, contractUploadReviews, eq, and, or, inArray, sql } = await import("db");
+    const { contractUploadReviews, eq, and, or, inArray, sql } = await import("db");
 
-    const [reviewBucket] = await db.select({
-      h0_24: sql<number>`count(*) filter (where extract(epoch from (now() - ${contractUploadReviews.createdAt})) / 3600 < 24)::int`,
-      d1_3: sql<number>`count(*) filter (where extract(epoch from (now() - ${contractUploadReviews.createdAt})) / 3600 between 24 and 72)::int`,
-      d3_7: sql<number>`count(*) filter (where extract(epoch from (now() - ${contractUploadReviews.createdAt})) / 3600 between 72 and 168)::int`,
-      d7plus: sql<number>`count(*) filter (where extract(epoch from (now() - ${contractUploadReviews.createdAt})) / 3600 > 168)::int`,
-    }).from(contractUploadReviews)
-      .where(and(
-        eq(contractUploadReviews.tenantId, tenantId),
-        or(
-          inArray(contractUploadReviews.processingStatus, ["extracted", "review_required"]),
-          inArray(contractUploadReviews.reviewStatus, ["approved", "rejected"]),
-        ),
-      ));
+    await withTenantContext({ tenantId }, async (tx) => {
+      const [reviewBucket] = await tx.select({
+        h0_24: sql<number>`count(*) filter (where extract(epoch from (now() - ${contractUploadReviews.createdAt})) / 3600 < 24)::int`,
+        d1_3: sql<number>`count(*) filter (where extract(epoch from (now() - ${contractUploadReviews.createdAt})) / 3600 between 24 and 72)::int`,
+        d3_7: sql<number>`count(*) filter (where extract(epoch from (now() - ${contractUploadReviews.createdAt})) / 3600 between 72 and 168)::int`,
+        d7plus: sql<number>`count(*) filter (where extract(epoch from (now() - ${contractUploadReviews.createdAt})) / 3600 > 168)::int`,
+      }).from(contractUploadReviews)
+        .where(and(
+          eq(contractUploadReviews.tenantId, tenantId),
+          or(
+            inArray(contractUploadReviews.processingStatus, ["extracted", "review_required"]),
+            inArray(contractUploadReviews.reviewStatus, ["approved", "rejected"]),
+          ),
+        ));
 
-    if (reviewBucket) {
-      buckets.push({
-        entityType: "review",
-        bucket_0_24h: reviewBucket.h0_24,
-        bucket_1_3d: reviewBucket.d1_3,
-        bucket_3_7d: reviewBucket.d3_7,
-        bucket_7plus: reviewBucket.d7plus,
-      });
-    }
+      if (reviewBucket) {
+        buckets.push({
+          entityType: "review",
+          bucket_0_24h: reviewBucket.h0_24,
+          bucket_1_3d: reviewBucket.d1_3,
+          bucket_3_7d: reviewBucket.d3_7,
+          bucket_7plus: reviewBucket.d7plus,
+        });
+      }
+    });
   } catch { /* best-effort */ }
 
   return buckets;

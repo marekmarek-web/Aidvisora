@@ -4,7 +4,8 @@
  */
 
 import { logAudit } from "@/lib/audit";
-import { db, auditLog, eq, and, desc, like } from "db";
+import { auditLog, eq, and, desc, like } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import type { RoleName } from "@/lib/auth/permissions";
 
 export type DocumentAccessPurpose = "preview" | "download" | "export" | "processing" | "review";
@@ -120,26 +121,28 @@ export async function getDocumentAccessHistory(
   documentId?: string,
   limit = 50
 ): Promise<DocumentAccessHistoryEntry[]> {
-  const rows = await db
-    .select({
-      id: auditLog.id,
-      tenantId: auditLog.tenantId,
-      userId: auditLog.userId,
-      action: auditLog.action,
-      entityId: auditLog.entityId,
-      meta: auditLog.meta,
-      createdAt: auditLog.createdAt,
-    })
-    .from(auditLog)
-    .where(
-      and(
-        eq(auditLog.tenantId, tenantId),
-        like(auditLog.action, "document:access:%"),
-        ...(documentId ? [eq(auditLog.entityId as any, documentId)] : [])
+  const rows = await withTenantContext({ tenantId }, (tx) =>
+    tx
+      .select({
+        id: auditLog.id,
+        tenantId: auditLog.tenantId,
+        userId: auditLog.userId,
+        action: auditLog.action,
+        entityId: auditLog.entityId,
+        meta: auditLog.meta,
+        createdAt: auditLog.createdAt,
+      })
+      .from(auditLog)
+      .where(
+        and(
+          eq(auditLog.tenantId, tenantId),
+          like(auditLog.action, "document:access:%"),
+          ...(documentId ? [eq(auditLog.entityId as any, documentId)] : [])
+        )
       )
-    )
-    .orderBy(desc(auditLog.createdAt))
-    .limit(limit);
+      .orderBy(desc(auditLog.createdAt))
+      .limit(limit),
+  );
 
   return rows.map((row) => {
     const meta = (row.meta ?? {}) as Record<string, unknown>;

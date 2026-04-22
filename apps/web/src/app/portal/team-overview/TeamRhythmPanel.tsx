@@ -82,63 +82,63 @@ export function TeamRhythmPanel({
           )}
         </div>
         {canCreate && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2.5">
             <button
               type="button"
               onClick={() => onOpenTask({ title: "Follow-up — týmový přehled" })}
-              className="inline-flex h-10 items-center gap-1.5 rounded-[12px] border border-slate-200 bg-white px-3.5 text-[10px] font-extrabold uppercase tracking-[0.14em] text-slate-600 transition hover:bg-slate-50"
+              className="inline-flex min-h-[40px] items-center gap-2 rounded-[12px] border border-slate-200 bg-white px-4 text-[10px] font-extrabold uppercase tracking-[0.14em] text-slate-600 transition hover:bg-slate-50"
             >
-              <Plus className="h-3 w-3" aria-hidden />
+              <Plus className="h-3.5 w-3.5" aria-hidden />
               Úkol
             </button>
             <button
               type="button"
               onClick={() => onOpenEvent({ title: "Porada — rozvoj týmu" })}
-              className="inline-flex h-10 items-center gap-1.5 rounded-[12px] bg-teal-700 px-3.5 text-[10px] font-extrabold uppercase tracking-[0.14em] text-white transition hover:bg-teal-800"
+              className="inline-flex min-h-[40px] items-center gap-2 rounded-[12px] bg-teal-700 px-4 text-[10px] font-extrabold uppercase tracking-[0.14em] text-white transition hover:bg-teal-800"
             >
-              <Plus className="h-3 w-3" aria-hidden />
+              <Plus className="h-3.5 w-3.5" aria-hidden />
               Schůzka
             </button>
           </div>
         )}
       </div>
 
-      <div className="grid gap-4 p-5 lg:grid-cols-3">
+      <div className="grid gap-5 p-5 md:p-6 lg:grid-cols-3">
         {/* Statistiky */}
         <div className="space-y-3">
           <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-400">
             Tento týden / 14 dní
           </p>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="rounded-[14px] border border-slate-200/80 bg-white px-3 py-3">
-              <p className="text-[20px] font-black tabular-nums leading-none text-slate-950">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-[16px] border border-slate-200/80 bg-white px-4 py-4 min-h-[84px] flex flex-col justify-between">
+              <p className="text-[24px] font-black tabular-nums leading-none text-slate-950">
                 {computed.stats.adaptationCheckinsThisWeek}
               </p>
-              <p className="mt-1 text-[9px] font-extrabold uppercase tracking-[0.14em] text-slate-400">Adaptace</p>
+              <p className="mt-2 text-[9px] font-extrabold uppercase tracking-[0.14em] text-slate-400">Adaptace</p>
             </div>
-            <div className="rounded-[14px] border border-slate-200/80 bg-white px-3 py-3">
-              <p className="text-[20px] font-black tabular-nums leading-none text-slate-950">
+            <div className="rounded-[16px] border border-slate-200/80 bg-white px-4 py-4 min-h-[84px] flex flex-col justify-between">
+              <p className="text-[24px] font-black tabular-nums leading-none text-slate-950">
                 {computed.stats.oneOnOneTaggedThisWeek}
               </p>
-              <p className="mt-1 text-[9px] font-extrabold uppercase tracking-[0.14em] text-slate-400">1:1</p>
+              <p className="mt-2 text-[9px] font-extrabold uppercase tracking-[0.14em] text-slate-400">1:1</p>
             </div>
-            <div className="rounded-[14px] border border-slate-200/80 bg-white px-3 py-3">
-              <p className="text-[20px] font-black tabular-nums leading-none text-slate-950">
+            <div className="rounded-[16px] border border-slate-200/80 bg-white px-4 py-4 min-h-[84px] flex flex-col justify-between">
+              <p className="text-[24px] font-black tabular-nums leading-none text-slate-950">
                 {computed.stats.teamMeetingsThisWeek}
               </p>
-              <p className="mt-1 text-[9px] font-extrabold uppercase tracking-[0.14em] text-slate-400">Porady</p>
+              <p className="mt-2 text-[9px] font-extrabold uppercase tracking-[0.14em] text-slate-400">Porady</p>
             </div>
             <div
               className={
                 computed.stats.overdueTeamTasks > 0
-                  ? "rounded-[14px] border border-rose-200/60 bg-rose-50/40 px-3 py-3"
-                  : "rounded-[14px] border border-slate-200/80 bg-white px-3 py-3"
+                  ? "rounded-[16px] border border-rose-200/60 bg-rose-50/40 px-4 py-4 min-h-[84px] flex flex-col justify-between"
+                  : "rounded-[16px] border border-slate-200/80 bg-white px-4 py-4 min-h-[84px] flex flex-col justify-between"
               }
             >
-              <p className={`text-[20px] font-black tabular-nums leading-none ${computed.stats.overdueTeamTasks > 0 ? "text-rose-800" : "text-slate-950"}`}>
+              <p className={`text-[24px] font-black tabular-nums leading-none ${computed.stats.overdueTeamTasks > 0 ? "text-rose-800" : "text-slate-950"}`}>
                 {computed.stats.overdueTeamTasks}
               </p>
-              <p className={`mt-1 text-[9px] font-extrabold uppercase tracking-[0.14em] ${computed.stats.overdueTeamTasks > 0 ? "text-rose-600" : "text-slate-400"}`}>
+              <p className={`mt-2 text-[9px] font-extrabold uppercase tracking-[0.14em] ${computed.stats.overdueTeamTasks > 0 ? "text-rose-600" : "text-slate-400"}`}>
                 Po termínu
               </p>
             </div>

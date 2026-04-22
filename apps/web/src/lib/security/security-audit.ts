@@ -5,7 +5,8 @@
  */
 
 import { logAudit } from "@/lib/audit";
-import { db, auditLog, eq, and, desc, gte, like } from "db";
+import { auditLog, eq, and, desc, gte, like } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 
 export type SecurityEventType =
   | "auth_failure"
@@ -107,27 +108,29 @@ export async function getSecurityEvents(
 
   const actionPattern = eventType ? `security:${eventType}` : "security:%";
 
-  const rows = await db
-    .select({
-      id: auditLog.id,
-      tenantId: auditLog.tenantId,
-      userId: auditLog.userId,
-      action: auditLog.action,
-      entityType: auditLog.entityType,
-      entityId: auditLog.entityId,
-      meta: auditLog.meta,
-      createdAt: auditLog.createdAt,
-    })
-    .from(auditLog)
-    .where(
-      and(
-        eq(auditLog.tenantId, tenantId),
-        like(auditLog.action, actionPattern),
-        gte(auditLog.createdAt, since)
+  const rows = await withTenantContext({ tenantId }, (tx) =>
+    tx
+      .select({
+        id: auditLog.id,
+        tenantId: auditLog.tenantId,
+        userId: auditLog.userId,
+        action: auditLog.action,
+        entityType: auditLog.entityType,
+        entityId: auditLog.entityId,
+        meta: auditLog.meta,
+        createdAt: auditLog.createdAt,
+      })
+      .from(auditLog)
+      .where(
+        and(
+          eq(auditLog.tenantId, tenantId),
+          like(auditLog.action, actionPattern),
+          gte(auditLog.createdAt, since)
+        )
       )
-    )
-    .orderBy(desc(auditLog.createdAt))
-    .limit(limit);
+      .orderBy(desc(auditLog.createdAt))
+      .limit(limit),
+  );
 
   return rows.map((row) => {
     const meta = (row.meta ?? {}) as Record<string, unknown>;

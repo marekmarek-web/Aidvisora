@@ -1,4 +1,3 @@
-import { db } from "db";
 import {
   tasks,
   contacts,
@@ -8,6 +7,7 @@ import {
   contractUploadReviews,
 } from "db";
 import { eq, and, isNull, sql, asc, desc } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import type {
   UrgentItem,
   UrgentItemSeverity,
@@ -36,8 +36,9 @@ export async function computePriorityItems(tenantId: string): Promise<UrgentItem
   threeDaysAgo.setDate(threeDaysAgo.getDate() - PENDING_REVIEW_DAYS_OLD);
   const items: UrgentItem[] = [];
 
+  return withTenantContext({ tenantId }, async (tx) => {
   // Overdue tasks – high
-  const overdueRows = await db
+  const overdueRows = await tx
     .select({
       id: tasks.id,
       title: tasks.title,
@@ -74,7 +75,7 @@ export async function computePriorityItems(tenantId: string): Promise<UrgentItem
   }
 
   // Due today tasks – high
-  const dueTodayRows = await db
+  const dueTodayRows = await tx
     .select({
       id: tasks.id,
       title: tasks.title,
@@ -112,7 +113,7 @@ export async function computePriorityItems(tenantId: string): Promise<UrgentItem
   }
 
   // Pending contract reviews
-  const reviewRows = await db
+  const reviewRows = await tx
     .select({
       id: contractUploadReviews.id,
       fileName: contractUploadReviews.fileName,
@@ -150,7 +151,7 @@ export async function computePriorityItems(tenantId: string): Promise<UrgentItem
   }
 
   // Pipeline at risk
-  const atRiskRows = await db
+  const atRiskRows = await tx
     .select({
       id: opportunities.id,
       title: opportunities.title,
@@ -190,7 +191,7 @@ export async function computePriorityItems(tenantId: string): Promise<UrgentItem
   const in7 = new Date(today);
   in7.setDate(in7.getDate() + 7);
   const in7Str = in7.toISOString().slice(0, 10);
-  const serviceRows = await db
+  const serviceRows = await tx
     .select({
       id: contacts.id,
       firstName: contacts.firstName,
@@ -221,9 +222,9 @@ export async function computePriorityItems(tenantId: string): Promise<UrgentItem
     });
   }
 
-  // Sort by score desc, then take top N
   items.sort((a, b) => b.score - a.score);
   return items.slice(0, 25);
+  });
 }
 
 /** Tasks due today and overdue for dashboard summary. */
@@ -232,46 +233,48 @@ export async function getTasksDueAndOverdue(tenantId: string): Promise<{
   tasksDueToday: TaskDueItem[];
 }> {
   const todayStr = new Date().toISOString().slice(0, 10);
-  const [overdueRows, dueTodayRows] = await Promise.all([
-    db
-      .select({
-        id: tasks.id,
-        title: tasks.title,
-        dueDate: tasks.dueDate,
-        contactFirstName: contacts.firstName,
-        contactLastName: contacts.lastName,
-      })
-      .from(tasks)
-      .leftJoin(contacts, eq(tasks.contactId, contacts.id))
-      .where(
-        and(
-          eq(tasks.tenantId, tenantId),
-          isNull(tasks.completedAt),
-          sql`${tasks.dueDate}::date < ${todayStr}::date`
+  const [overdueRows, dueTodayRows] = await withTenantContext({ tenantId }, async (tx) =>
+    Promise.all([
+      tx
+        .select({
+          id: tasks.id,
+          title: tasks.title,
+          dueDate: tasks.dueDate,
+          contactFirstName: contacts.firstName,
+          contactLastName: contacts.lastName,
+        })
+        .from(tasks)
+        .leftJoin(contacts, eq(tasks.contactId, contacts.id))
+        .where(
+          and(
+            eq(tasks.tenantId, tenantId),
+            isNull(tasks.completedAt),
+            sql`${tasks.dueDate}::date < ${todayStr}::date`
+          )
         )
-      )
-      .orderBy(asc(tasks.dueDate))
-      .limit(20),
-    db
-      .select({
-        id: tasks.id,
-        title: tasks.title,
-        dueDate: tasks.dueDate,
-        contactFirstName: contacts.firstName,
-        contactLastName: contacts.lastName,
-      })
-      .from(tasks)
-      .leftJoin(contacts, eq(tasks.contactId, contacts.id))
-      .where(
-        and(
-          eq(tasks.tenantId, tenantId),
-          isNull(tasks.completedAt),
-          sql`${tasks.dueDate}::date = ${todayStr}::date`
+        .orderBy(asc(tasks.dueDate))
+        .limit(20),
+      tx
+        .select({
+          id: tasks.id,
+          title: tasks.title,
+          dueDate: tasks.dueDate,
+          contactFirstName: contacts.firstName,
+          contactLastName: contacts.lastName,
+        })
+        .from(tasks)
+        .leftJoin(contacts, eq(tasks.contactId, contacts.id))
+        .where(
+          and(
+            eq(tasks.tenantId, tenantId),
+            isNull(tasks.completedAt),
+            sql`${tasks.dueDate}::date = ${todayStr}::date`
+          )
         )
-      )
-      .orderBy(asc(tasks.dueDate))
-      .limit(20),
-  ]);
+        .orderBy(asc(tasks.dueDate))
+        .limit(20),
+    ])
+  );
   const mapRow = (r: (typeof overdueRows)[0]): TaskDueItem => ({
     id: r.id,
     title: r.title ?? "Úkol",
@@ -295,23 +298,25 @@ export async function getClientsNeedingAttention(
   const in7 = new Date();
   in7.setDate(in7.getDate() + 7);
   const in7Str = in7.toISOString().slice(0, 10);
-  const rows = await db
-    .select({
-      id: contacts.id,
-      firstName: contacts.firstName,
-      lastName: contacts.lastName,
-      nextServiceDue: contacts.nextServiceDue,
-    })
-    .from(contacts)
-    .where(
-      and(
-        eq(contacts.tenantId, tenantId),
-        sql`${contacts.nextServiceDue}::date >= ${todayStr}::date`,
-        sql`${contacts.nextServiceDue}::date <= ${in7Str}::date`
+  const rows = await withTenantContext({ tenantId }, async (tx) =>
+    tx
+      .select({
+        id: contacts.id,
+        firstName: contacts.firstName,
+        lastName: contacts.lastName,
+        nextServiceDue: contacts.nextServiceDue,
+      })
+      .from(contacts)
+      .where(
+        and(
+          eq(contacts.tenantId, tenantId),
+          sql`${contacts.nextServiceDue}::date >= ${todayStr}::date`,
+          sql`${contacts.nextServiceDue}::date <= ${in7Str}::date`
+        )
       )
-    )
-    .orderBy(asc(contacts.nextServiceDue))
-    .limit(10);
+      .orderBy(asc(contacts.nextServiceDue))
+      .limit(10)
+  );
   return rows.map((c) => ({
     id: c.id,
     name: [c.firstName, c.lastName].filter(Boolean).join(" ") || "Klient",
@@ -361,20 +366,22 @@ export function buildSuggestedActionsFromUrgent(
 export async function getBlockedPaymentSetups(tenantId: string): Promise<BlockedItem[]> {
   try {
     const { clientPaymentSetups } = await import("db");
-    const rows = await db
-      .select({
-        id: clientPaymentSetups.id,
-        productName: clientPaymentSetups.productName,
-        providerName: clientPaymentSetups.providerName,
-      })
-      .from(clientPaymentSetups)
-      .where(
-        and(
-          eq(clientPaymentSetups.tenantId, tenantId),
-          eq(clientPaymentSetups.needsHumanReview, true),
-        ),
-      )
-      .limit(20);
+    const rows = await withTenantContext({ tenantId }, async (tx) =>
+      tx
+        .select({
+          id: clientPaymentSetups.id,
+          productName: clientPaymentSetups.productName,
+          providerName: clientPaymentSetups.providerName,
+        })
+        .from(clientPaymentSetups)
+        .where(
+          and(
+            eq(clientPaymentSetups.tenantId, tenantId),
+            eq(clientPaymentSetups.needsHumanReview, true),
+          ),
+        )
+        .limit(20)
+    );
 
     return rows.map((r) => ({
       type: "payment" as const,
@@ -389,7 +396,8 @@ export async function getBlockedPaymentSetups(tenantId: string): Promise<Blocked
 }
 
 export async function getBlockedReviews(tenantId: string): Promise<BlockedItem[]> {
-  const reviews = await db
+  const reviews = await withTenantContext({ tenantId }, async (tx) =>
+    tx
     .select({
       id: contractUploadReviews.id,
       fileName: contractUploadReviews.fileName,
@@ -408,7 +416,8 @@ export async function getBlockedReviews(tenantId: string): Promise<BlockedItem[]
         eq(contractUploadReviews.reviewStatus, "pending"),
       ),
     )
-    .limit(30);
+    .limit(30)
+  );
 
   const blocked: BlockedItem[] = [];
   for (const r of reviews) {

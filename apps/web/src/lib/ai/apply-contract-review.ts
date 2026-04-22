@@ -938,7 +938,7 @@ export async function applyContractReview(
 
   // FK contracts.advisor_id / confirmed_by_user_id → user_profiles: same as manual createContract
   try {
-    await ensureUserProfileRowForAdvisor(userId);
+    await ensureUserProfileRowForAdvisor(userId, tenantId);
   } catch (ensureErr) {
     return {
       ok: false,

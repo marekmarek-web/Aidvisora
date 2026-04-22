@@ -8,7 +8,8 @@
  *   4. heuristic_fallback     — single-page, entire text
  */
 
-import { db, documents, eq, and } from "db";
+import { documents, eq, and } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import { createAdminClient } from "@/lib/supabase/server";
 import {
   parseAdobeStructuredData,
@@ -92,11 +93,13 @@ export async function fetchAdobeStructuredDataByStoragePath(
     throw new Error("fetchAdobeStructuredDataByStoragePath: tenantId is required.");
   }
   try {
-    const rows = await db
-      .select({ extractJsonPath: documents.extractJsonPath })
-      .from(documents)
-      .where(and(eq(documents.tenantId, tenantId), eq(documents.storagePath, storagePath)))
-      .limit(1);
+    const rows = await withTenantContext({ tenantId }, (tx) =>
+      tx
+        .select({ extractJsonPath: documents.extractJsonPath })
+        .from(documents)
+        .where(and(eq(documents.tenantId, tenantId), eq(documents.storagePath, storagePath)))
+        .limit(1),
+    );
 
     const extractJsonPath = rows[0]?.extractJsonPath;
     if (!extractJsonPath?.trim()) {
@@ -128,11 +131,13 @@ export async function fetchPageTextMapByStoragePath(
     throw new Error("fetchPageTextMapByStoragePath: tenantId is required.");
   }
   try {
-    const rows = await db
-      .select({ pageTextMap: documents.pageTextMap })
-      .from(documents)
-      .where(and(eq(documents.tenantId, tenantId), eq(documents.storagePath, storagePath)))
-      .limit(1);
+    const rows = await withTenantContext({ tenantId }, (tx) =>
+      tx
+        .select({ pageTextMap: documents.pageTextMap })
+        .from(documents)
+        .where(and(eq(documents.tenantId, tenantId), eq(documents.storagePath, storagePath)))
+        .limit(1),
+    );
 
     const row = rows[0];
     if (!row) {

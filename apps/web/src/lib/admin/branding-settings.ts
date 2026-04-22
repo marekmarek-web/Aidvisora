@@ -3,7 +3,8 @@
  * Tenant-level branding configuration resolved from tenant_settings.
  */
 
-import { db, tenantSettings, eq, and } from "db";
+import { tenantSettings, eq, and } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import type { BirthdayEmailTheme } from "@/lib/email/birthday/types";
 
 export type BrandingConfig = {
@@ -32,12 +33,14 @@ export const DEFAULT_BRANDING: BrandingConfig = {
 };
 
 export async function getEffectiveBranding(tenantId: string): Promise<BrandingConfig> {
-  const rows = await db
-    .select({ key: tenantSettings.key, value: tenantSettings.value })
-    .from(tenantSettings)
-    .where(
-      and(eq(tenantSettings.tenantId, tenantId), eq(tenantSettings.domain, "branding"))
-    );
+  const rows = await withTenantContext({ tenantId }, (tx) =>
+    tx
+      .select({ key: tenantSettings.key, value: tenantSettings.value })
+      .from(tenantSettings)
+      .where(
+        and(eq(tenantSettings.tenantId, tenantId), eq(tenantSettings.domain, "branding"))
+      ),
+  );
 
   if (rows.length === 0) return { ...DEFAULT_BRANDING };
 
@@ -60,31 +63,33 @@ export async function setBrandingField(
   updatedBy: string
 ): Promise<void> {
   const key = `branding.${field}`;
-  const existing = await db
-    .select({ id: tenantSettings.id, version: tenantSettings.version })
-    .from(tenantSettings)
-    .where(and(eq(tenantSettings.tenantId, tenantId), eq(tenantSettings.key, key)));
-
-  if (existing.length > 0) {
-    await db
-      .update(tenantSettings)
-      .set({
-        value: value as any,
-        updatedBy,
-        updatedAt: new Date(),
-        version: (existing[0]!.version ?? 0) + 1,
-      })
+  await withTenantContext({ tenantId, userId: updatedBy }, async (tx) => {
+    const existing = await tx
+      .select({ id: tenantSettings.id, version: tenantSettings.version })
+      .from(tenantSettings)
       .where(and(eq(tenantSettings.tenantId, tenantId), eq(tenantSettings.key, key)));
-  } else {
-    await db.insert(tenantSettings).values({
-      tenantId,
-      key,
-      value: value as any,
-      domain: "branding",
-      updatedBy,
-      version: 1,
-    });
-  }
+
+    if (existing.length > 0) {
+      await tx
+        .update(tenantSettings)
+        .set({
+          value: value as any,
+          updatedBy,
+          updatedAt: new Date(),
+          version: (existing[0]!.version ?? 0) + 1,
+        })
+        .where(and(eq(tenantSettings.tenantId, tenantId), eq(tenantSettings.key, key)));
+    } else {
+      await tx.insert(tenantSettings).values({
+        tenantId,
+        key,
+        value: value as any,
+        domain: "branding",
+        updatedBy,
+        version: 1,
+      });
+    }
+  });
 }
 
 export function mergeBranding(base: BrandingConfig, override: Partial<BrandingConfig>): BrandingConfig {

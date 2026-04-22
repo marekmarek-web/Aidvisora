@@ -1,6 +1,7 @@
 import "server-only";
 
-import { db, subscriptionUsageMonthly, eq, and, sql } from "db";
+import { subscriptionUsageMonthly, eq, and, sql } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import {
   PUBLIC_PLAN_ORDER,
   type EffectiveAccessContext,
@@ -115,30 +116,32 @@ export async function incrementSubscriptionUsageMonthly(params: {
     return;
   }
 
-  await db
-    .insert(subscriptionUsageMonthly)
-    .values({
-      tenantId: params.tenantId,
-      periodMonth,
-      assistantActionsUsed: a,
-      imageIntakesUsed: i,
-      aiReviewPagesUsed: p,
-      inputTokensUsed: inTok,
-      outputTokensUsed: outTok,
-      estimatedCost: String(cost),
-    })
-    .onConflictDoUpdate({
-      target: [subscriptionUsageMonthly.tenantId, subscriptionUsageMonthly.periodMonth],
-      set: {
-        assistantActionsUsed: sql`${subscriptionUsageMonthly.assistantActionsUsed} + ${a}`,
-        imageIntakesUsed: sql`${subscriptionUsageMonthly.imageIntakesUsed} + ${i}`,
-        aiReviewPagesUsed: sql`${subscriptionUsageMonthly.aiReviewPagesUsed} + ${p}`,
-        inputTokensUsed: sql`${subscriptionUsageMonthly.inputTokensUsed} + ${inTok}`,
-        outputTokensUsed: sql`${subscriptionUsageMonthly.outputTokensUsed} + ${outTok}`,
-        estimatedCost: sql`${subscriptionUsageMonthly.estimatedCost}::numeric + ${String(cost)}::numeric`,
-        updatedAt: new Date(),
-      },
-    });
+  await withTenantContext({ tenantId: params.tenantId }, (tx) =>
+    tx
+      .insert(subscriptionUsageMonthly)
+      .values({
+        tenantId: params.tenantId,
+        periodMonth,
+        assistantActionsUsed: a,
+        imageIntakesUsed: i,
+        aiReviewPagesUsed: p,
+        inputTokensUsed: inTok,
+        outputTokensUsed: outTok,
+        estimatedCost: String(cost),
+      })
+      .onConflictDoUpdate({
+        target: [subscriptionUsageMonthly.tenantId, subscriptionUsageMonthly.periodMonth],
+        set: {
+          assistantActionsUsed: sql`${subscriptionUsageMonthly.assistantActionsUsed} + ${a}`,
+          imageIntakesUsed: sql`${subscriptionUsageMonthly.imageIntakesUsed} + ${i}`,
+          aiReviewPagesUsed: sql`${subscriptionUsageMonthly.aiReviewPagesUsed} + ${p}`,
+          inputTokensUsed: sql`${subscriptionUsageMonthly.inputTokensUsed} + ${inTok}`,
+          outputTokensUsed: sql`${subscriptionUsageMonthly.outputTokensUsed} + ${outTok}`,
+          estimatedCost: sql`${subscriptionUsageMonthly.estimatedCost}::numeric + ${String(cost)}::numeric`,
+          updatedAt: new Date(),
+        },
+      }),
+  );
 }
 
 export async function recordAssistantUsage(params: {
@@ -208,16 +211,18 @@ export async function getCurrentUsageForWorkspace(params: {
 }): Promise<SubscriptionUsageMonthlySnapshot> {
   const at = params.at ?? new Date();
   const periodMonth = formatUtcPeriodMonth(at);
-  const [row] = await db
-    .select()
-    .from(subscriptionUsageMonthly)
-    .where(
-      and(
-        eq(subscriptionUsageMonthly.tenantId, params.tenantId),
-        eq(subscriptionUsageMonthly.periodMonth, periodMonth),
-      ),
-    )
-    .limit(1);
+  const [row] = await withTenantContext({ tenantId: params.tenantId }, (tx) =>
+    tx
+      .select()
+      .from(subscriptionUsageMonthly)
+      .where(
+        and(
+          eq(subscriptionUsageMonthly.tenantId, params.tenantId),
+          eq(subscriptionUsageMonthly.periodMonth, periodMonth),
+        ),
+      )
+      .limit(1),
+  );
 
   if (!row) {
     return {
