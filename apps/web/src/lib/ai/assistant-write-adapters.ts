@@ -5,7 +5,9 @@
 
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { hasPermission, type RoleName } from "@/shared/rolePermissions";
-import { db, contacts, documents, opportunities, opportunityStages, eq, and, asc, contractSegments, or } from "db";
+import type { SQL } from "drizzle-orm";
+import { contacts, documents, opportunities, opportunityStages, eq, and, asc, contractSegments, or } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import type { ExecutionStepResult } from "./assistant-domain-model";
 import type { ExecutionContext } from "./assistant-execution-engine";
 import { registerWriteAdapter } from "./assistant-execution-engine";
@@ -74,13 +76,15 @@ function requiresInputResult(error: string): ExecutionStepResult {
   return { ok: false, outcome: "requires_input", entityId: null, entityType: null, warnings: [], error, retryable: true };
 }
 
-async function firstPipelineStageId(tenantId: string): Promise<string | null> {
-  const rows = await db
-    .select({ id: opportunityStages.id })
-    .from(opportunityStages)
-    .where(eq(opportunityStages.tenantId, tenantId))
-    .orderBy(asc(opportunityStages.sortOrder))
-    .limit(1);
+async function firstPipelineStageId(tenantId: string, userId?: string): Promise<string | null> {
+  const rows = await withTenantContext({ tenantId, userId: userId ?? null }, async (tx) => {
+    return await tx
+      .select({ id: opportunityStages.id })
+      .from(opportunityStages)
+      .where(eq(opportunityStages.tenantId, tenantId))
+      .orderBy(asc(opportunityStages.sortOrder))
+      .limit(1);
+  });
   return rows[0]?.id ?? null;
 }
 
@@ -117,7 +121,7 @@ export function registerAssistantWriteAdapters(): void {
       if (!hasPermission(auth.roleName, "opportunities:write")) return errResult("Chybí oprávnění opportunities:write.");
       const contactId = strParam(params, "contactId");
       if (!contactId) return errResult("Chybí contactId.");
-      const stageId = strParam(params, "stageId") ?? (await firstPipelineStageId(ctx.tenantId));
+      const stageId = strParam(params, "stageId") ?? (await firstPipelineStageId(ctx.tenantId, ctx.userId));
       if (!stageId) return errResult("V workspace není žádný stupeň pipeline.");
       const domain = productDomainFromParams(params);
       const caseType = domain ? caseTypeForProductDomain(domain as never) : strParam(params, "caseType") ?? "jiné";
@@ -176,21 +180,26 @@ export function registerAssistantWriteAdapters(): void {
       const phoneNormalized = phoneRaw ? phoneRaw.replace(/\s|\.|-/g, "") : null;
       const personalIdRaw = strParam(params, "personalId");
       const personalIdNormalized = personalIdRaw ? personalIdRaw.replace(/\D/g, "") : null;
-      const dedupConditions = [];
+      const dedupConditions: SQL[] = [];
       if (emailRaw) dedupConditions.push(eq(contacts.email, emailRaw));
       if (phoneNormalized) dedupConditions.push(eq(contacts.phone, phoneNormalized));
       if (personalIdNormalized) dedupConditions.push(eq(contacts.personalId, personalIdNormalized));
       if (dedupConditions.length > 0) {
-        const existing = await db
-          .select({ id: contacts.id })
-          .from(contacts)
-          .where(
-            and(
-              eq(contacts.tenantId, ctx.tenantId),
-              dedupConditions.length === 1 ? dedupConditions[0]! : or(...dedupConditions),
-            ),
-          )
-          .limit(1);
+        const existing = await withTenantContext(
+          { tenantId: ctx.tenantId, userId: ctx.userId },
+          async (tx) => {
+            return await tx
+              .select({ id: contacts.id })
+              .from(contacts)
+              .where(
+                and(
+                  eq(contacts.tenantId, ctx.tenantId),
+                  dedupConditions.length === 1 ? dedupConditions[0]! : or(...dedupConditions),
+                ),
+              )
+              .limit(1);
+          },
+        );
         if (existing[0]) {
           return {
             ok: true,
@@ -290,7 +299,7 @@ export function registerAssistantWriteAdapters(): void {
         strParam(params, "noteContent") ??
         strParam(params, "taskTitle");
       if (!subject) return errResult("Chybí popis servisního požadavku (subject, description nebo noteContent).");
-      const stageId = strParam(params, "stageId") ?? (await firstPipelineStageId(ctx.tenantId));
+      const stageId = strParam(params, "stageId") ?? (await firstPipelineStageId(ctx.tenantId, ctx.userId));
       if (!stageId) return errResult("V workspace není žádný stupeň pipeline.");
       const domain = productDomainFromParams(params);
       const caseType = domain ? caseTypeForProductDomain(domain as never) : strParam(params, "caseType") ?? "servis";
@@ -317,8 +326,13 @@ export function registerAssistantWriteAdapters(): void {
         // Mark it as service_case=false? Safer: delete the freshly created record so
         // the advisor can retry cleanly.
         try {
-          await db.delete(opportunities).where(
-            and(eq(opportunities.id, id), eq(opportunities.tenantId, ctx.tenantId)),
+          await withTenantContext(
+            { tenantId: ctx.tenantId, userId: ctx.userId },
+            async (tx) => {
+              await tx.delete(opportunities).where(
+                and(eq(opportunities.id, id), eq(opportunities.tenantId, ctx.tenantId)),
+              );
+            },
           );
         } catch {
           /* best-effort compensation */
@@ -582,11 +596,16 @@ export function registerAssistantWriteAdapters(): void {
       const documentId = strParam(params, "documentId");
       const contactId = strParam(params, "contactId");
       if (!documentId || !contactId) return errResult("Chybí documentId nebo contactId.");
-      const rows = await db
-        .update(documents)
-        .set({ contactId, updatedAt: new Date() })
-        .where(and(eq(documents.tenantId, ctx.tenantId), eq(documents.id, documentId)))
-        .returning({ id: documents.id });
+      const rows = await withTenantContext(
+        { tenantId: ctx.tenantId, userId: ctx.userId },
+        async (tx) => {
+          return await tx
+            .update(documents)
+            .set({ contactId, updatedAt: new Date() })
+            .where(and(eq(documents.tenantId, ctx.tenantId), eq(documents.id, documentId)))
+            .returning({ id: documents.id });
+        },
+      );
       if (rows.length === 0) return errResult("Dokument nenalezen nebo nepatří do tohoto workspace.");
       return okResult(documentId, "document");
     } catch (e) {
@@ -601,24 +620,29 @@ export function registerAssistantWriteAdapters(): void {
       const opportunityId = strParam(params, "opportunityId");
       if (!documentId || !opportunityId) return errResult("Chybí documentId nebo opportunityId.");
       const contactId = strParam(params, "contactId");
-      const updatePayload: Record<string, unknown> = { opportunityId, updatedAt: new Date() };
-      if (contactId) {
-        updatePayload.contactId = contactId;
-      } else {
-        const oppRows = await db
-          .select({ contactId: opportunities.contactId })
-          .from(opportunities)
-          .where(and(eq(opportunities.id, opportunityId), eq(opportunities.tenantId, ctx.tenantId)))
-          .limit(1);
-        if (oppRows[0]?.contactId) {
-          updatePayload.contactId = oppRows[0].contactId;
-        }
-      }
-      const rows = await db
-        .update(documents)
-        .set(updatePayload)
-        .where(and(eq(documents.tenantId, ctx.tenantId), eq(documents.id, documentId)))
-        .returning({ id: documents.id });
+      const rows = await withTenantContext(
+        { tenantId: ctx.tenantId, userId: ctx.userId },
+        async (tx) => {
+          const updatePayload: Record<string, unknown> = { opportunityId, updatedAt: new Date() };
+          if (contactId) {
+            updatePayload.contactId = contactId;
+          } else {
+            const oppRows = await tx
+              .select({ contactId: opportunities.contactId })
+              .from(opportunities)
+              .where(and(eq(opportunities.id, opportunityId), eq(opportunities.tenantId, ctx.tenantId)))
+              .limit(1);
+            if (oppRows[0]?.contactId) {
+              updatePayload.contactId = oppRows[0].contactId;
+            }
+          }
+          return await tx
+            .update(documents)
+            .set(updatePayload)
+            .where(and(eq(documents.tenantId, ctx.tenantId), eq(documents.id, documentId)))
+            .returning({ id: documents.id });
+        },
+      );
       if (rows.length === 0) return errResult("Dokument nenalezen nebo nepatří do tohoto workspace.");
       return okResult(documentId, "document");
     } catch (e) {
@@ -632,11 +656,16 @@ export function registerAssistantWriteAdapters(): void {
       const documentId = strParam(params, "documentId");
       const documentType = strParam(params, "documentType") ?? strParam(params, "classification");
       if (!documentId || !documentType) return errResult("Chybí documentId nebo documentType.");
-      const rows = await db
-        .update(documents)
-        .set({ documentType, updatedAt: new Date() })
-        .where(and(eq(documents.tenantId, ctx.tenantId), eq(documents.id, documentId)))
-        .returning({ id: documents.id });
+      const rows = await withTenantContext(
+        { tenantId: ctx.tenantId, userId: ctx.userId },
+        async (tx) => {
+          return await tx
+            .update(documents)
+            .set({ documentType, updatedAt: new Date() })
+            .where(and(eq(documents.tenantId, ctx.tenantId), eq(documents.id, documentId)))
+            .returning({ id: documents.id });
+        },
+      );
       if (rows.length === 0) return errResult("Dokument nenalezen nebo nepatří do tohoto workspace.");
       return okResult(documentId, "document");
     } catch (e) {
@@ -649,15 +678,20 @@ export function registerAssistantWriteAdapters(): void {
       await assertDocumentWrite(ctx);
       const documentId = strParam(params, "documentId");
       if (!documentId) return errResult("Chybí documentId.");
-      const rows = await db
-        .update(documents)
-        .set({
-          businessStatus: "pending_review",
-          processingStatus: "review_required",
-          updatedAt: new Date(),
-        })
-        .where(and(eq(documents.tenantId, ctx.tenantId), eq(documents.id, documentId)))
-        .returning({ id: documents.id });
+      const rows = await withTenantContext(
+        { tenantId: ctx.tenantId, userId: ctx.userId },
+        async (tx) => {
+          return await tx
+            .update(documents)
+            .set({
+              businessStatus: "pending_review",
+              processingStatus: "review_required",
+              updatedAt: new Date(),
+            })
+            .where(and(eq(documents.tenantId, ctx.tenantId), eq(documents.id, documentId)))
+            .returning({ id: documents.id });
+        },
+      );
       if (rows.length === 0) return errResult("Dokument nenalezen nebo nepatří do tohoto workspace.");
       return okResult(documentId, "document", ["Stav nastaven na kontrolu — dokončete review v UI dokumentů."]);
     } catch (e) {
@@ -701,11 +735,17 @@ export function registerAssistantWriteAdapters(): void {
       if (!hasPermission(auth.roleName, "opportunities:write")) return errResult("Chybí oprávnění opportunities:write.");
       const opportunityId = strParam(params, "opportunityId");
       if (!opportunityId) return errResult("Chybí opportunityId (klientský požadavek = obchod).");
-      const [existing] = await db
-        .select({ customFields: opportunities.customFields, caseType: opportunities.caseType })
-        .from(opportunities)
-        .where(and(eq(opportunities.tenantId, ctx.tenantId), eq(opportunities.id, opportunityId)))
-        .limit(1);
+      const existing = await withTenantContext(
+        { tenantId: ctx.tenantId, userId: ctx.userId },
+        async (tx) => {
+          const [row] = await tx
+            .select({ customFields: opportunities.customFields, caseType: opportunities.caseType })
+            .from(opportunities)
+            .where(and(eq(opportunities.tenantId, ctx.tenantId), eq(opportunities.id, opportunityId)))
+            .limit(1);
+          return row ?? null;
+        },
+      );
       if (!existing) return errResult("Obchod nebyl nalezen.");
       const prev = (existing.customFields as Record<string, unknown> | null) ?? {};
       const isPortalRequest =

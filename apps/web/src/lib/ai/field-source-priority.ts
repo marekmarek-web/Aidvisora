@@ -702,6 +702,7 @@ function getDisplaySource(kind: SourceKind | undefined): string {
     attachment_block: "z přílohy",
     parties_record: "ze seznamu účastníků",
     pipeline_normalized: "odvozeno z kontextu",
+    page_image_fallback: "doplněno z obrázku stránky",
     unknown: "",
   };
   // Graceful fallback for source kinds added via SECTION_SOURCE_PRIORITY but not in SourceKind type

@@ -112,7 +112,9 @@ export const loadClientPortalSessionBundle = cache(async function loadClientPort
         .limit(1)
         .then((rows) => rows[0] ?? null),
     ),
-    getClientDashboardMetrics(contactId).catch(() => emptyQuickStats),
+    getClientDashboardMetrics(contactId)
+      .then((rows) => ({ ok: true as const, rows }))
+      .catch(() => ({ ok: false as const, rows: emptyQuickStats })),
     getClientRequests().catch(() => [] as ClientRequestItem[]),
     getClientPortfolioForContact(contactId).catch(() => [] as ContractRow[]),
     getDocumentsForClient(contactId).catch(() => [] as DocumentRow[]),
@@ -149,7 +151,8 @@ export const loadClientPortalSessionBundle = cache(async function loadClientPort
     fullName,
     contact: contactRows,
     advisor,
-    quickStats,
+    quickStats: quickStats.rows,
+    quickStatsLoadFailed: !quickStats.ok,
     requests,
     contracts,
     documents,

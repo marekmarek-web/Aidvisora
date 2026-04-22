@@ -1,9 +1,9 @@
-import { db } from "db";
 import { contractUploadReviews } from "db";
 import { contractReviewCorrections } from "db";
 import { eq, and, desc } from "db";
 import type { ContractProcessingStatus, ContractReviewStatus } from "db";
 import { logAudit } from "@/lib/audit";
+import { withServiceTenantContext } from "@/lib/db/service-db";
 
 export type ApplyResultPayload = {
   createdClientId?: string;
@@ -254,6 +254,10 @@ export type ExtractionTrace = {
     afterCoercionStatus?: string;
     exportViewModelGroups?: number;
   };
+  /** Field keys recovered via rasterized page re-extraction (AI_REVIEW_PAGE_IMAGE_FALLBACK). */
+  pageImageFallbackRecoveries?: string[];
+  /** Count of failed page-image fallback attempts. */
+  pageImageFallbackFailures?: number;
 };
 
 /** Validation warning item. */
@@ -363,53 +367,61 @@ export async function createContractReview(insert: {
     uploadedBy: insert.uploadedBy ?? null,
   };
 
-  let row: { id: string } | undefined;
-  try {
-    [row] = await db
-      .insert(contractUploadReviews)
-      .values(primaryValues)
-      .returning({ id: contractUploadReviews.id });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    const pgCode = (err as { code?: string })?.code;
+  const rowId = await withServiceTenantContext(
+    { tenantId: insert.tenantId, userId: insert.uploadedBy ?? null },
+    async (tx) => {
+      let row: { id: string } | undefined;
+      try {
+        [row] = await tx
+          .insert(contractUploadReviews)
+          .values(primaryValues)
+          .returning({ id: contractUploadReviews.id });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        const pgCode = (err as { code?: string })?.code;
 
-    // Backward-compatible fallback: some production DBs still miss newer optional columns.
-    // Retry with the minimal subset required by earliest migration.
-    const isMissingColumn =
-      pgCode === "42703" ||
-      message.includes("column") && message.includes("does not exist");
+        // Backward-compatible fallback: some production DBs still miss newer optional columns.
+        // Retry with the minimal subset required by earliest migration.
+        const isMissingColumn =
+          pgCode === "42703" ||
+          message.includes("column") && message.includes("does not exist");
 
-    if (!isMissingColumn) throw err;
+        if (!isMissingColumn) throw err;
 
-    [row] = await db
-      .insert(contractUploadReviews)
-      .values({
-        tenantId: insert.tenantId,
-        fileName: insert.fileName,
-        storagePath: insert.storagePath,
-        processingStatus: insert.processingStatus,
-      })
-      .returning({ id: contractUploadReviews.id });
-  }
-  if (!row?.id) throw new Error("Failed to create contract review row");
-  return row.id;
+        [row] = await tx
+          .insert(contractUploadReviews)
+          .values({
+            tenantId: insert.tenantId,
+            fileName: insert.fileName,
+            storagePath: insert.storagePath,
+            processingStatus: insert.processingStatus,
+          })
+          .returning({ id: contractUploadReviews.id });
+      }
+      return row?.id;
+    },
+  );
+  if (!rowId) throw new Error("Failed to create contract review row");
+  return rowId;
 }
 
 export async function getContractReviewById(
   id: string,
   tenantId: string
 ): Promise<ContractReviewRow | null> {
-  const [row] = await db
-    .select()
-    .from(contractUploadReviews)
-    .where(
-      and(
-        eq(contractUploadReviews.id, id),
-        eq(contractUploadReviews.tenantId, tenantId)
+  return await withServiceTenantContext({ tenantId }, async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(contractUploadReviews)
+      .where(
+        and(
+          eq(contractUploadReviews.id, id),
+          eq(contractUploadReviews.tenantId, tenantId)
+        )
       )
-    )
-    .limit(1);
-  return (row as ContractReviewRow) ?? null;
+      .limit(1);
+    return (row as ContractReviewRow) ?? null;
+  });
 }
 
 /**
@@ -420,24 +432,26 @@ export async function deleteContractReview(
   id: string,
   tenantId: string
 ): Promise<{ deleted: boolean; storagePath: string | null }> {
-  const [existing] = await db
-    .select({
-      id: contractUploadReviews.id,
-      storagePath: contractUploadReviews.storagePath,
-    })
-    .from(contractUploadReviews)
-    .where(and(eq(contractUploadReviews.id, id), eq(contractUploadReviews.tenantId, tenantId)))
-    .limit(1);
+  return await withServiceTenantContext({ tenantId }, async (tx) => {
+    const [existing] = await tx
+      .select({
+        id: contractUploadReviews.id,
+        storagePath: contractUploadReviews.storagePath,
+      })
+      .from(contractUploadReviews)
+      .where(and(eq(contractUploadReviews.id, id), eq(contractUploadReviews.tenantId, tenantId)))
+      .limit(1);
 
-  if (!existing) {
-    return { deleted: false, storagePath: null };
-  }
+    if (!existing) {
+      return { deleted: false, storagePath: null };
+    }
 
-  await db
-    .delete(contractUploadReviews)
-    .where(and(eq(contractUploadReviews.id, id), eq(contractUploadReviews.tenantId, tenantId)));
+    await tx
+      .delete(contractUploadReviews)
+      .where(and(eq(contractUploadReviews.id, id), eq(contractUploadReviews.tenantId, tenantId)));
 
-  return { deleted: true, storagePath: existing.storagePath };
+    return { deleted: true, storagePath: existing.storagePath };
+  });
 }
 
 /** Full list projection when DB has pipeline + phase-two columns. */
@@ -511,40 +525,42 @@ export async function listContractReviews(
       : eq(contractUploadReviews.tenantId, tenantId);
   const limit = options?.limit ?? 50;
 
-  try {
-    const rows = await db
-      .select(listReviewColumns)
-      .from(contractUploadReviews)
-      .where(conditions)
-      .orderBy(desc(contractUploadReviews.createdAt))
-      .limit(limit);
-    return rows as ContractReviewRow[];
-  } catch (err) {
-    if (!isPgMissingColumnError(err)) throw err;
-     
-    console.warn(
-      "[listContractReviews] falling back to legacy column set (run Supabase patches: document_review_redesign + document_review_phase_two)"
-    );
-    const rows = await db
-      .select(listReviewColumnsLegacy)
-      .from(contractUploadReviews)
-      .where(conditions)
-      .orderBy(desc(contractUploadReviews.createdAt))
-      .limit(limit);
-    return rows.map((r) => {
-      const base = r as ContractReviewRow;
-      return {
-        ...base,
-        processingStage: base.processingStage ?? null,
-        detectedDocumentSubtype: base.detectedDocumentSubtype ?? null,
-        lifecycleStatus: base.lifecycleStatus ?? null,
-        documentIntent: null,
-        sensitivityProfile: base.sensitivityProfile ?? null,
-        sectionSensitivity: null,
-        relationshipInference: null,
-      } as ContractReviewRow;
-    });
-  }
+  return await withServiceTenantContext({ tenantId }, async (tx) => {
+    try {
+      const rows = await tx
+        .select(listReviewColumns)
+        .from(contractUploadReviews)
+        .where(conditions)
+        .orderBy(desc(contractUploadReviews.createdAt))
+        .limit(limit);
+      return rows as ContractReviewRow[];
+    } catch (err) {
+      if (!isPgMissingColumnError(err)) throw err;
+
+      console.warn(
+        "[listContractReviews] falling back to legacy column set (run Supabase patches: document_review_redesign + document_review_phase_two)"
+      );
+      const rows = await tx
+        .select(listReviewColumnsLegacy)
+        .from(contractUploadReviews)
+        .where(conditions)
+        .orderBy(desc(contractUploadReviews.createdAt))
+        .limit(limit);
+      return rows.map((r) => {
+        const base = r as ContractReviewRow;
+        return {
+          ...base,
+          processingStage: base.processingStage ?? null,
+          detectedDocumentSubtype: base.detectedDocumentSubtype ?? null,
+          lifecycleStatus: base.lifecycleStatus ?? null,
+          documentIntent: null,
+          sensitivityProfile: base.sensitivityProfile ?? null,
+          sectionSensitivity: null,
+          relationshipInference: null,
+        } as ContractReviewRow;
+      });
+    }
+  });
 }
 
 export async function updateContractReview(
@@ -607,19 +623,24 @@ export async function updateContractReview(
 ): Promise<void> {
   const createNewClientConfirmed =
     update.createNewClientConfirmed === "true" ? ("true" as const) : null;
-  await db
-    .update(contractUploadReviews)
-    .set({
-      ...update,
-      createNewClientConfirmed,
-      updatedAt: new Date(),
-    })
-    .where(
-      and(
-        eq(contractUploadReviews.id, id),
-        eq(contractUploadReviews.tenantId, tenantId)
-      )
-    );
+  await withServiceTenantContext(
+    { tenantId, userId: update.reviewedBy ?? update.appliedBy ?? update.correctedBy ?? null },
+    async (tx) => {
+      await tx
+        .update(contractUploadReviews)
+        .set({
+          ...update,
+          createNewClientConfirmed,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(contractUploadReviews.id, id),
+            eq(contractUploadReviews.tenantId, tenantId)
+          )
+        );
+    },
+  );
 }
 
 /**
@@ -679,23 +700,28 @@ export async function saveContractCorrection(
     // comparison is best-effort
   }
 
-  await db
-    .insert(contractReviewCorrections)
-    .values({
-      tenantId,
-      contractReviewId: id,
-      correctedDocumentType: params.correctedDocumentType ?? null,
-      correctedLifecycleStatus: params.correctedLifecycleStatus ?? null,
-      correctedFieldValues: params.correctedPayload,
-      fieldMarkedNotApplicable: params.fieldMarkedNotApplicable ?? null,
-      linkedClientOverride: params.linkedClientOverride ?? null,
-      linkedDealOverride: params.linkedDealOverride ?? null,
-      confidenceOverride: params.confidenceOverride ?? null,
-      ignoredWarnings: params.ignoredWarnings ?? null,
-      correctedBy: params.correctedBy ?? null,
-      ...(comparisonDelta ? { comparisonDelta } : {}),
-    })
-    .catch(() => {});
+  await withServiceTenantContext(
+    { tenantId, userId: params.correctedBy ?? null },
+    async (tx) => {
+      await tx
+        .insert(contractReviewCorrections)
+        .values({
+          tenantId,
+          contractReviewId: id,
+          correctedDocumentType: params.correctedDocumentType ?? null,
+          correctedLifecycleStatus: params.correctedLifecycleStatus ?? null,
+          correctedFieldValues: params.correctedPayload,
+          fieldMarkedNotApplicable: params.fieldMarkedNotApplicable ?? null,
+          linkedClientOverride: params.linkedClientOverride ?? null,
+          linkedDealOverride: params.linkedDealOverride ?? null,
+          confidenceOverride: params.confidenceOverride ?? null,
+          ignoredWarnings: params.ignoredWarnings ?? null,
+          correctedBy: params.correctedBy ?? null,
+          ...(comparisonDelta ? { comparisonDelta } : {}),
+        })
+        .catch(() => {});
+    },
+  );
   await logAudit({
     tenantId,
     userId: params.correctedBy ?? null,

@@ -167,7 +167,7 @@ export async function getPaymentInstructionsForContact(contactId: string): Promi
     if (!contact) {
       return { contactFound: false, fromAi: [] as PaymentInstruction[], visibleContractRows: [] as Array<{
         id: string;
-        segment: string | null;
+        segment: string;
         partnerId: string | null;
         partnerName: string | null;
         productName: string | null;
@@ -286,7 +286,12 @@ export async function getPaymentInstructionsForContact(contactId: string): Promi
 
   for (const c of visibleContractRows) {
     try {
-      const acc = await getPaymentAccountForContract(auth.tenantId, c.partnerId, c.partnerName, c.segment);
+      const acc = await getPaymentAccountForContract(
+        auth.tenantId,
+        c.partnerId,
+        c.partnerName,
+        c.segment ?? "ZP",
+      );
       if (acc) {
         const legacyInstruction: PaymentInstruction = {
           segment: c.segment ?? "ZP",
