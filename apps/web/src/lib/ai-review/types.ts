@@ -60,6 +60,24 @@ export type ExtractedField = {
   applyPolicyLabel?: string;
   /** Whether field requires advisor confirmation before applying to CRM */
   requiresConfirmation?: boolean;
+  /**
+   * Short excerpt from the source document supporting the extracted value.
+   * Populated when the server envelope includes `evidenceSnippet` on the field.
+   * Rendered as a tooltip / expandable hint in the review panel.
+   */
+  evidenceSnippet?: string;
+  /**
+   * Machine-readable source kind (e.g. "policyholder_block", "payment_block",
+   * or "page_image_fallback" when the value was rescued via multimodal fallback).
+   * Passed through to the UI so it can render kind-specific badges.
+   */
+  sourceKind?: string;
+  /**
+   * Machine-readable evidence tier from the pipeline. `"recovered_from_image"`
+   * indicates the value came from page-image rescue and should be treated as
+   * advisor-review-mandatory regardless of confidence.
+   */
+  evidenceTier?: string;
 };
 
 export type ExtractedGroup = {

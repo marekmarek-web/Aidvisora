@@ -66,6 +66,7 @@ export function PaymentFromImageDraftPanel({ draft, contactId, saving, onConfirm
 
   const [useCatalog, setUseCatalog] = useState(true);
   const [pickerValue, setPickerValue] = useState<ProductPickerValue>({ partnerId: "", productId: "" });
+  const [shareWithClient, setShareWithClient] = useState(false);
 
   const set = <K extends keyof PaymentDraftEditState>(k: K, v: PaymentDraftEditState[K]) =>
     setFields((prev) => ({ ...prev, [k]: v }));
@@ -95,7 +96,7 @@ export function PaymentFromImageDraftPanel({ draft, contactId, saving, onConfirm
       amount: fields.amount.trim() || undefined,
       frequency: fields.frequency.trim() || undefined,
       firstPaymentDate: fields.firstPaymentDate.trim() || undefined,
-      visibleToClient: false,
+      visibleToClient: shareWithClient && !draft.needsHumanReview,
     };
     onConfirm(input);
   };
@@ -116,8 +117,7 @@ export function PaymentFromImageDraftPanel({ draft, contactId, saving, onConfirm
       <div className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2">
         <Info size={13} className="text-amber-600 mt-0.5 shrink-0" />
         <p className="text-[11px] text-amber-800 leading-snug">
-          Výstup je pouze informativní interní podklad pro poradce. Nejde o doporučení klientovi.
-          Instrukce bude viditelná jen vám — klientovi ji zpřístupníte ručně po ověření.
+          Výstup AI je podklad pro poradce. Před sdílením s klientem ověřte hodnoty.
         </p>
       </div>
 
@@ -311,6 +311,34 @@ export function PaymentFromImageDraftPanel({ draft, contactId, saving, onConfirm
           Doplňte povinná pole: {missingNow.join(", ")}
         </p>
       )}
+
+      <label
+        className={`flex items-start gap-2 rounded-xl border px-3 py-2 cursor-pointer select-none ${
+          draft.needsHumanReview
+            ? "border-slate-200 bg-slate-50 opacity-60 cursor-not-allowed"
+            : shareWithClient
+              ? "border-emerald-300 bg-emerald-50"
+              : "border-slate-200 bg-white hover:border-slate-300"
+        }`}
+      >
+        <input
+          type="checkbox"
+          className="mt-0.5 shrink-0"
+          checked={shareWithClient && !draft.needsHumanReview}
+          disabled={draft.needsHumanReview}
+          onChange={(e) => setShareWithClient(e.target.checked)}
+        />
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[11px] font-bold text-slate-800">
+            Sdílet s klientem v klientském portálu
+          </span>
+          <span className="text-[10px] text-slate-500 leading-snug">
+            {draft.needsHumanReview
+              ? "AI není dost jistá — nelze sdílet dokud hodnoty nepotvrdíte."
+              : "Ponechte vypnuté, dokud nejste s údaji spokojeni. Později lze přepnout u platby."}
+          </span>
+        </div>
+      </label>
 
       <div className="flex gap-2 pt-1">
         <button

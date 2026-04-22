@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Paperclip, Send } from "lucide-react";
+import { Paperclip, RefreshCw, Send } from "lucide-react";
 import {
   loadThreadMessages,
   loadThreadAttachmentsByContact,
@@ -23,20 +23,30 @@ export function ClientChatWrapper({ contactId }: ClientChatWrapperProps) {
   const [body, setBody] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [pollError, setPollError] = useState<string | null>(null);
+  const [isReloading, setIsReloading] = useState(false);
   const [isPending, startTransition] = useTransition();
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  async function loadMessages() {
+  async function loadMessages(options?: { manual?: boolean }) {
+    if (options?.manual) setIsReloading(true);
     try {
       const [msgRes, attRes] = await Promise.all([
         loadThreadMessages(contactId, { markRead: true }),
         loadThreadAttachmentsByContact(contactId),
       ]);
       if (msgRes.ok) setMessages(msgRes.messages);
+      else if (msgRes.error) throw new Error(msgRes.error);
       if (attRes.ok) setAttachmentsByMessage(attRes.byMessageId);
-    } catch {
-      /* stejné chování jako dříve — tiché selhání při poll */
+      setPollError(null);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Nelze obnovit zprávy.";
+      setPollError(msg);
+      // eslint-disable-next-line no-console
+      console.warn("[ClientChatWrapper] polling failed", e);
+    } finally {
+      if (options?.manual) setIsReloading(false);
     }
   }
 
@@ -94,14 +104,33 @@ export function ClientChatWrapper({ contactId }: ClientChatWrapperProps) {
 
   return (
     <div className="flex-1 overflow-y-auto p-8 space-y-6 bg-slate-50/30 client-hide-scrollbar">
-      <div className="flex justify-center mb-6">
-        <span className="px-3 py-1 bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest rounded-full">
-          Dnes
-        </span>
-      </div>
+      {messages.length > 0 && (
+        <div className="flex justify-center mb-6">
+          <span className="px-3 py-1 bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-widest rounded-full">
+            Dnes
+          </span>
+        </div>
+      )}
+
+      {pollError && (
+        <div
+          role="alert"
+          className="flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[13px] text-amber-800"
+        >
+          <span>Nelze obnovit zprávy — zobrazujeme poslední známý stav.</span>
+          <button
+            type="button"
+            onClick={() => void loadMessages({ manual: true })}
+            className="inline-flex items-center gap-1 rounded-lg border border-amber-300 bg-white px-2 py-1 text-xs font-bold text-amber-900 hover:bg-amber-100"
+          >
+            <RefreshCw size={12} className={isReloading ? "animate-spin" : ""} />
+            Zkusit znovu
+          </button>
+        </div>
+      )}
 
       <div className="space-y-4">
-        {messages.length === 0 && (
+        {messages.length === 0 && !pollError && (
           <p className="text-sm text-slate-500 text-center">Zatím žádné zprávy.</p>
         )}
 

@@ -1,6 +1,7 @@
 "use server";
 
 import { requireAuthInAction } from "@/lib/auth/require-auth";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { db } from "db";
 import { portalNotifications } from "db";
 import { eq, and, desc, isNull, sql } from "db";
@@ -25,26 +26,31 @@ export async function getPortalNotificationsForClient(): Promise<
   const auth = await requireAuthInAction();
   if (auth.roleName !== "Client" || !auth.contactId) return [];
 
-  const rows = await db
-    .select({
-      id: portalNotifications.id,
-      type: portalNotifications.type,
-      title: portalNotifications.title,
-      body: portalNotifications.body,
-      readAt: portalNotifications.readAt,
-      relatedEntityType: portalNotifications.relatedEntityType,
-      relatedEntityId: portalNotifications.relatedEntityId,
-      createdAt: portalNotifications.createdAt,
-    })
-    .from(portalNotifications)
-    .where(
-      and(
-        eq(portalNotifications.tenantId, auth.tenantId),
-        eq(portalNotifications.contactId, auth.contactId)
+  // B2.1: Přes `withTenantContextFromAuth` se nastaví Postgres session GUC
+  // (`app.current_tenant_id`, `app.current_user_id`), aby RLS politiky fungovaly
+  // i v případě, že aplikační role ztratí BYPASSRLS.
+  const rows = await withTenantContextFromAuth(auth, (tx) =>
+    tx
+      .select({
+        id: portalNotifications.id,
+        type: portalNotifications.type,
+        title: portalNotifications.title,
+        body: portalNotifications.body,
+        readAt: portalNotifications.readAt,
+        relatedEntityType: portalNotifications.relatedEntityType,
+        relatedEntityId: portalNotifications.relatedEntityId,
+        createdAt: portalNotifications.createdAt,
+      })
+      .from(portalNotifications)
+      .where(
+        and(
+          eq(portalNotifications.tenantId, auth.tenantId),
+          eq(portalNotifications.contactId, auth.contactId!)
+        )
       )
-    )
-    .orderBy(desc(portalNotifications.createdAt))
-    .limit(50);
+      .orderBy(desc(portalNotifications.createdAt))
+      .limit(50),
+  );
 
   return rows as PortalNotificationRow[];
 }
@@ -54,16 +60,18 @@ export async function getPortalNotificationsUnreadCount(): Promise<number> {
   const auth = await requireAuthInAction();
   if (auth.roleName !== "Client" || !auth.contactId) return 0;
 
-  const [result] = await db
-    .select({ cnt: sql<number>`count(*)` })
-    .from(portalNotifications)
-    .where(
-      and(
-        eq(portalNotifications.tenantId, auth.tenantId),
-        eq(portalNotifications.contactId, auth.contactId),
-        isNull(portalNotifications.readAt)
-      )
-    );
+  const [result] = await withTenantContextFromAuth(auth, (tx) =>
+    tx
+      .select({ cnt: sql<number>`count(*)` })
+      .from(portalNotifications)
+      .where(
+        and(
+          eq(portalNotifications.tenantId, auth.tenantId),
+          eq(portalNotifications.contactId, auth.contactId!),
+          isNull(portalNotifications.readAt)
+        )
+      ),
+  );
   return Number(result?.cnt ?? 0);
 }
 
@@ -74,16 +82,18 @@ export async function markPortalNotificationRead(
   const auth = await requireAuthInAction();
   if (auth.roleName !== "Client" || !auth.contactId) return;
 
-  await db
-    .update(portalNotifications)
-    .set({ readAt: new Date() })
-    .where(
-      and(
-        eq(portalNotifications.tenantId, auth.tenantId),
-        eq(portalNotifications.contactId, auth.contactId),
-        eq(portalNotifications.id, notificationId)
-      )
-    );
+  await withTenantContextFromAuth(auth, (tx) =>
+    tx
+      .update(portalNotifications)
+      .set({ readAt: new Date() })
+      .where(
+        and(
+          eq(portalNotifications.tenantId, auth.tenantId),
+          eq(portalNotifications.contactId, auth.contactId!),
+          eq(portalNotifications.id, notificationId)
+        )
+      ),
+  );
 }
 
 /** Vytvořit notifikaci pro kontakt (volá CRM při nové zprávě, novém dokumentu, změně stavu). */

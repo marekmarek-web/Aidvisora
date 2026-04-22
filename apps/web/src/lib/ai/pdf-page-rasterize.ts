@@ -28,7 +28,12 @@ type PdfJsRenderTask = {
 
 type PdfJsPageLike = {
   getViewport: (opts: { scale: number }) => PdfJsViewport;
-  render: (opts: { canvasContext: unknown; viewport: PdfJsViewport }) => PdfJsRenderTask;
+  /** Narrow call surface; real pdf.js `RenderParameters` also requires `canvas` (pass `null` with `canvasContext` on Node). */
+  render: (opts: {
+    canvas: HTMLCanvasElement | null;
+    canvasContext?: unknown;
+    viewport: PdfJsViewport;
+  }) => PdfJsRenderTask;
   cleanup: () => void;
 };
 
@@ -129,7 +134,7 @@ export async function rasterizePdfPageToDataUrl(
     const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
     const bytes = await fetchPdfBytes(fileUrl);
     const task = pdfjs.getDocument({ data: bytes, isEvalSupported: false });
-    doc = (await task.promise) as PdfJsDocumentLike;
+    doc = (await task.promise) as unknown as PdfJsDocumentLike;
 
     if (pageNumber > doc.numPages) {
       return null;
@@ -146,7 +151,7 @@ export async function rasterizePdfPageToDataUrl(
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, width, height);
 
-    await page.render({ canvasContext: ctx as unknown, viewport }).promise;
+    await page.render({ canvas: null, canvasContext: ctx as unknown, viewport }).promise;
     page.cleanup();
 
     const jpegBuffer = await canvas.encode("jpeg", quality);

@@ -56,39 +56,62 @@ export default async function ClientZoneLayout({
     serviceRequestsEnabled: portalSettingsResult?.settings?.["client_portal.allow_service_requests"] ?? true,
   };
 
-  let unreadNotificationsCount = 0;
-  let unreadMessagesCount = 0;
-  let activeProposalsCount = 0;
-  let contact: { firstName: string | null; lastName: string | null } | null = null;
-  let advisor: Awaited<ReturnType<typeof getAssignedAdvisorForClient>> = null;
-  try {
-    [unreadNotificationsCount, unreadMessagesCount, activeProposalsCount, contact, advisor] = await Promise.all([
-      getPortalNotificationsUnreadCount(),
-      // 5F: include unread messages in bell total
-      auth.contactId ? getUnreadAdvisorMessagesForClientCount().catch(() => 0) : Promise.resolve(0),
-      auth.contactId ? getActiveAdvisorProposalCountForClient().catch(() => 0) : Promise.resolve(0),
-      auth.contactId
-        ? withTenantContext({ tenantId: auth.tenantId, userId: auth.userId }, (tx) =>
-            tx
-              .select({
-                firstName: contacts.firstName,
-                lastName: contacts.lastName,
-              })
-              .from(contacts)
-              .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, auth.contactId!)))
-              .limit(1)
-              .then((rows) => rows[0] ?? null),
-          )
-        : Promise.resolve(null),
-      auth.contactId ? getAssignedAdvisorForClient(auth.contactId).catch(() => null) : Promise.resolve(null),
-    ]);
-  } catch {
-    unreadNotificationsCount = 0;
-    unreadMessagesCount = 0;
-    activeProposalsCount = 0;
-    contact = null;
-    advisor = null;
-  }
+  // B1.4: Každý fetch má vlastní catch → Sentry capture + nezhroutí se celý shell.
+  // Drží false pro „selhalo“, aby UI mohlo zobrazit warning místo falešné nuly.
+  let shellLoadFailed = false;
+  const logShellError = (scope: string, err: unknown) => {
+    shellLoadFailed = true;
+    try {
+      // Dynamic import se používá místo top-level importu, aby layout nespadl při změně API Sentry.
+      import("@sentry/nextjs").then((Sentry) => {
+        Sentry.captureException(err, { tags: { area: "client-portal-shell", scope } });
+      }).catch(() => {});
+    } catch {
+      // no-op
+    }
+    // eslint-disable-next-line no-console
+    console.error(`[client/layout] ${scope} failed`, err);
+  };
+  const [unreadNotificationsCount, unreadMessagesCount, activeProposalsCount, contact, advisor] = await Promise.all([
+    getPortalNotificationsUnreadCount().catch((e) => {
+      logShellError("getPortalNotificationsUnreadCount", e);
+      return 0;
+    }),
+    auth.contactId
+      ? getUnreadAdvisorMessagesForClientCount().catch((e) => {
+          logShellError("getUnreadAdvisorMessagesForClientCount", e);
+          return 0;
+        })
+      : Promise.resolve(0),
+    auth.contactId
+      ? getActiveAdvisorProposalCountForClient().catch((e) => {
+          logShellError("getActiveAdvisorProposalCountForClient", e);
+          return 0;
+        })
+      : Promise.resolve(0),
+    auth.contactId
+      ? withTenantContext({ tenantId: auth.tenantId, userId: auth.userId }, (tx) =>
+          tx
+            .select({
+              firstName: contacts.firstName,
+              lastName: contacts.lastName,
+            })
+            .from(contacts)
+            .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, auth.contactId!)))
+            .limit(1)
+            .then((rows) => rows[0] ?? null),
+        ).catch((e) => {
+          logShellError("loadContact", e);
+          return null as { firstName: string | null; lastName: string | null } | null;
+        })
+      : Promise.resolve(null as { firstName: string | null; lastName: string | null } | null),
+    auth.contactId
+      ? getAssignedAdvisorForClient(auth.contactId).catch((e) => {
+          logShellError("getAssignedAdvisorForClient", e);
+          return null;
+        })
+      : Promise.resolve(null),
+  ]);
 
   const fullName = contact
     ? `${contact.firstName} ${contact.lastName}`.trim()
@@ -105,6 +128,7 @@ export default async function ClientZoneLayout({
         fullName={fullName}
         advisor={advisor}
         portalFeatures={portalFeatures}
+        shellLoadFailed={shellLoadFailed}
       >
         {children}
       </ClientPortalShell>

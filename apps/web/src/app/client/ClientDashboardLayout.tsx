@@ -56,6 +56,10 @@ type ClientDashboardLayoutProps = {
   openRequests: ClientRequestItem[];
   contractsCount: number;
   paymentInstructionsCount: number;
+  /** True, pokud se platby nepodařilo načíst z backendu — zabrání falešnému „0 instrukcí“. */
+  paymentsLoadFailed?: boolean;
+  /** True, pokud dashboard metriky (AUM, měsíční splátky…) selhaly — zabrání falešným nulám. */
+  quickStatsLoadFailed?: boolean;
   documentsCount: number;
   latestNotification: {
     title: string;
@@ -67,6 +71,8 @@ type ClientDashboardLayoutProps = {
   financialSummary: ClientPortalFinancialSummary | null;
   advisorMaterialRequests: MaterialRequestListItem[];
   advisorProposals: ClientAdvisorProposal[];
+  /** B2.4: Když je tenant flag vypnutý, dashboard skryje CTA „Nový požadavek“ i modal. */
+  serviceRequestsEnabled?: boolean;
 };
 
 function formatMoney(value: number): string {
@@ -90,11 +96,14 @@ export function ClientDashboardLayout({
   openRequests,
   contractsCount,
   paymentInstructionsCount,
+  paymentsLoadFailed = false,
+  quickStatsLoadFailed = false,
   documentsCount,
   latestNotification,
   financialSummary,
   advisorMaterialRequests,
   advisorProposals,
+  serviceRequestsEnabled = true,
 }: ClientDashboardLayoutProps) {
   const [requestModalOpen, setRequestModalOpen] = useState(false);
 
@@ -112,13 +121,15 @@ export function ClientDashboardLayout({
             Vítejte ve svém osobním finančním portálu.
           </p>
         </div>
-        <button
-          onClick={() => setRequestModalOpen(true)}
-          className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-black shadow-lg shadow-emerald-500/20 transition-all active:scale-95 inline-flex items-center gap-2 min-h-[44px]"
-        >
-          <Plus size={18} />
-          Nový požadavek
-        </button>
+        {serviceRequestsEnabled && (
+          <button
+            onClick={() => setRequestModalOpen(true)}
+            className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-black shadow-lg shadow-emerald-500/20 transition-all active:scale-95 inline-flex items-center gap-2 min-h-[44px]"
+          >
+            <Plus size={18} />
+            Nový požadavek
+          </button>
+        )}
       </div>
 
       <AdvisorProposalsHighlightCard proposals={advisorProposals} />
@@ -261,6 +272,19 @@ export function ClientDashboardLayout({
         </div>
       )}
 
+      {quickStatsLoadFailed && (
+        <div
+          role="alert"
+          className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-[13px] text-amber-800 flex items-start gap-2"
+        >
+          <span aria-hidden className="mt-0.5">⚠️</span>
+          <div>
+            <strong className="font-bold">Statistiky portfolia se nepodařilo načíst.</strong>{" "}
+            Zobrazené částky nejsou k dispozici — zkuste stránku obnovit nebo se vraťte později.
+          </div>
+        </div>
+      )}
+
       {/* 5E: Quick stats link to portfolio detail */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Link href="/client/portfolio" className="group bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all">
@@ -274,7 +298,7 @@ export function ClientDashboardLayout({
             <ArrowRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
           <div className="text-3xl font-display font-black text-slate-900">
-            {formatMoney(quickStats.assetsUnderManagement)}
+            {quickStatsLoadFailed ? "—" : formatMoney(quickStats.assetsUnderManagement)}
           </div>
         </Link>
         <Link href="/client/portfolio" className="group bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all">
@@ -288,7 +312,7 @@ export function ClientDashboardLayout({
             <ArrowRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
           <div className="text-3xl font-display font-black text-slate-900">
-            {formatMoney(quickStats.monthlyInvestments)}
+            {quickStatsLoadFailed ? "—" : formatMoney(quickStats.monthlyInvestments)}
           </div>
         </Link>
         <Link href="/client/portfolio" className="group bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md hover:border-amber-200 transition-all">
@@ -302,10 +326,12 @@ export function ClientDashboardLayout({
             <ArrowRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
           <div className="text-3xl font-display font-black text-slate-900">
-            {formatMoney(quickStats.monthlyInsurancePremiums)}
+            {quickStatsLoadFailed ? "—" : formatMoney(quickStats.monthlyInsurancePremiums)}
           </div>
           <p className="text-xs text-slate-500 mt-2 font-medium">
-            Aktivních položek v přehledu: {quickStats.activeContractCount}
+            {quickStatsLoadFailed
+              ? "Aktivních položek v přehledu: —"
+              : `Aktivních položek v přehledu: ${quickStats.activeContractCount}`}
           </p>
         </Link>
       </div>
@@ -373,8 +399,12 @@ export function ClientDashboardLayout({
               href: "/client/payments",
               label: "Platby a QR",
               icon: CreditCard,
-              color: "text-emerald-600 bg-emerald-50",
-              value: `${paymentInstructionsCount} instrukcí`,
+              color: paymentsLoadFailed
+                ? "text-rose-600 bg-rose-50"
+                : "text-emerald-600 bg-emerald-50",
+              value: paymentsLoadFailed
+                ? "Nelze načíst — otevřít"
+                : `${paymentInstructionsCount} instrukcí`,
             },
             {
               href: "/client/documents",
@@ -435,10 +465,12 @@ export function ClientDashboardLayout({
       </div>
 
       {!isClientPortalAiDisabled() ? <AiSupportButton /> : null}
-      <NewRequestModal
-        open={requestModalOpen}
-        onClose={() => setRequestModalOpen(false)}
-      />
+      {serviceRequestsEnabled && (
+        <NewRequestModal
+          open={requestModalOpen}
+          onClose={() => setRequestModalOpen(false)}
+        />
+      )}
     </div>
   );
 }

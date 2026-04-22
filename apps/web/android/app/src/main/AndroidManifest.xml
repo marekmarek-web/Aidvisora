@@ -76,6 +76,17 @@
             android:grantUriPermissions="true">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
+
+        <!--
+            ML Kit Document Scanner (Capgo DocumentScanner plugin on Android) —
+            hint to Play services to pre-download the document scanner module
+            during install so the first native scan doesn't have to wait for it.
+            Safe no-op on devices without Google Play services (plugin falls back
+            to error which we handle in useScanCapture).
+        -->
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="docscanner" />
     </application>
 
     <!-- Permissions -->

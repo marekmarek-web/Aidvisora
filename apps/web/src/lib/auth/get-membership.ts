@@ -27,6 +27,9 @@ export type MembershipResult = {
 export async function getMembership(userId: string): Promise<MembershipResult | null> {
   const rows = await db.transaction(async (tx) => {
     await tx.execute(sql`select set_config('app.user_id', ${userId}, true)`);
+    // B2.3: Multi-tenant safeguard — načteme až 2 řádky, abychom detekovali stav
+    // „uživatel má více aktivních memberships". Vrátíme první (nejstarší joinedAt),
+    // ale zalogujeme warning — v Sentry to chceme vidět, než to prorazí RLS.
     return tx
       .select({
         membershipId: memberships.id,
@@ -43,10 +46,30 @@ export async function getMembership(userId: string): Promise<MembershipResult | 
       )
       .where(eq(memberships.userId, userId))
       .orderBy(asc(memberships.joinedAt))
-      .limit(1);
+      .limit(2);
   });
   const row = rows[0];
   if (!row) return null;
+  if (rows.length > 1) {
+    // eslint-disable-next-line no-console
+    console.warn("[getMembership] multi-membership user", {
+      userId,
+      chosenTenantId: row.tenantId,
+      otherTenantId: rows[1]?.tenantId,
+    });
+    try {
+      // Fire-and-forget Sentry capture — nesmí nic v auth flow blokovat.
+      void import("@sentry/nextjs").then((Sentry) => {
+        Sentry.captureMessage("multi_membership_user_detected", {
+          level: "warning",
+          tags: { area: "auth", type: "multi-membership" },
+          extra: { userId, chosenTenantId: row.tenantId, otherTenantId: rows[1]?.tenantId },
+        });
+      }).catch(() => {});
+    } catch {
+      // no-op
+    }
+  }
   return {
     membershipId: row.membershipId,
     tenantId: row.tenantId,

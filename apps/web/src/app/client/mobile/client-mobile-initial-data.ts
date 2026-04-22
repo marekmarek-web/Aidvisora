@@ -41,6 +41,8 @@ export type ClientMobileInitialData = {
   paymentInstructions: PaymentInstruction[];
   /** True when payment instructions failed to load — prevents false empty state on mobile. */
   paymentsLoadFailed: boolean;
+  /** True when dashboard metrics query failed — prevents silent zero KPI display on mobile. */
+  quickStatsLoadFailed: boolean;
   /** Stejné jako `getClientVisiblePortfolioDocumentNames` na webu portfolia. */
   visiblePortfolioSourceDocs: Record<string, { name: string }>;
   /** Stejný zdroj jako web (`listClientMaterialRequests`). */
@@ -84,6 +86,7 @@ export function toClientMobileInitialData(bundle: ClientPortalSessionBundle): Cl
     unreadMessagesCount: bundle.unreadMessagesCount,
     paymentInstructions: bundle.paymentInstructions,
     paymentsLoadFailed: bundle.paymentsLoadFailed,
+    quickStatsLoadFailed: bundle.quickStatsLoadFailed,
     visiblePortfolioSourceDocs: bundle.visiblePortfolioSourceDocs,
     advisorMaterialRequests: bundle.advisorMaterialRequests,
     financialSummaryRaw: bundle.financialSummaryRaw ?? null,

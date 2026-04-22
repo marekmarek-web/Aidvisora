@@ -10,13 +10,15 @@
  * is responsible for auth checks before invoking this helper).
  */
 
-import { db, opportunities, opportunityStages, contacts, auditLog, tenants, advisorNotifications } from "db";
+import { opportunities, opportunityStages, contacts, auditLog, tenants, advisorNotifications } from "db";
 import { eq, and, asc } from "db";
 import { logActivity } from "@/app/actions/activity";
 import { sendEmail, logNotification } from "@/lib/email/send-email";
 import { newPortalRequestAdvisorTemplate } from "@/lib/email/templates";
 import { caseTypeToLabel } from "@/lib/client-portal/case-type-labels";
 import { getTargetAdvisorUserIdForContact } from "@/app/actions/client-dashboard";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
+import { withServiceTenantContext } from "@/lib/db/service-db";
 
 export type AdvisorClientRequestInput = {
   tenantId: string;
@@ -43,39 +45,45 @@ export async function createAdvisorClientRequest(
 ): Promise<AdvisorClientRequestResult> {
   const { tenantId, userId, contactId, caseType, subject, description, advisorCreated } = input;
 
-  const [firstStage] = await db
-    .select({ id: opportunityStages.id })
-    .from(opportunityStages)
-    .where(eq(opportunityStages.tenantId, tenantId))
-    .orderBy(asc(opportunityStages.sortOrder))
-    .limit(1);
-
-  if (!firstStage) {
-    return { ok: false, error: "Žádný krok pipeline není k dispozici." };
-  }
-
   const subjectTrim = subject.trim();
   const descTrim = description?.trim() ?? "";
 
-  const [row] = await db
-    .insert(opportunities)
-    .values({
-      tenantId,
-      contactId,
-      title: subjectTrim || `Požadavek klienta: ${caseTypeToLabel(caseType)}`,
-      caseType: caseType.trim() || "jiné",
-      stageId: firstStage.id,
-      customFields: {
-        client_portal_request: true,
-        client_request_subject: subjectTrim || null,
-        client_description: descTrim || null,
-        ...(advisorCreated ? { advisor_created_request: true } : {}),
-      },
-    })
-    .returning({ id: opportunities.id });
+  const createResult = await withTenantContext({ tenantId, userId }, async (tx) => {
+    const [firstStage] = await tx
+      .select({ id: opportunityStages.id })
+      .from(opportunityStages)
+      .where(eq(opportunityStages.tenantId, tenantId))
+      .orderBy(asc(opportunityStages.sortOrder))
+      .limit(1);
 
-  const newId = row?.id;
-  if (!newId) return { ok: false, error: "Nepodařilo se vytvořit požadavek." };
+    if (!firstStage) {
+      return { ok: false as const, error: "Žádný krok pipeline není k dispozici." };
+    }
+
+    const [row] = await tx
+      .insert(opportunities)
+      .values({
+        tenantId,
+        contactId,
+        title: subjectTrim || `Požadavek klienta: ${caseTypeToLabel(caseType)}`,
+        caseType: caseType.trim() || "jiné",
+        stageId: firstStage.id,
+        customFields: {
+          client_portal_request: true,
+          client_request_subject: subjectTrim || null,
+          client_description: descTrim || null,
+          ...(advisorCreated ? { advisor_created_request: true } : {}),
+        },
+      })
+      .returning({ id: opportunities.id });
+
+    const id = row?.id;
+    if (!id) return { ok: false as const, error: "Nepodařilo se vytvořit požadavek." };
+    return { ok: true as const, id };
+  });
+
+  if (!createResult.ok) return createResult;
+  const newId = createResult.id;
 
   try {
     await logActivity("opportunity", newId, "create", {
@@ -88,13 +96,15 @@ export async function createAdvisorClientRequest(
   }
 
   try {
-    await db.insert(auditLog).values({
-      tenantId,
-      userId,
-      action: "advisor_client_request_create",
-      entityType: "opportunity",
-      entityId: newId,
-      meta: { contactId, caseType, advisorCreated: advisorCreated ?? false },
+    await withServiceTenantContext({ tenantId, userId }, async (tx) => {
+      await tx.insert(auditLog).values({
+        tenantId,
+        userId,
+        action: "advisor_client_request_create",
+        entityType: "opportunity",
+        entityId: newId,
+        meta: { contactId, caseType, advisorCreated: advisorCreated ?? false },
+      });
     });
   } catch {
     /* non-fatal */
@@ -132,21 +142,23 @@ async function notifyAdvisorOnNewRequest(params: {
   const { tenantId, contactId, opportunityId, caseType, subjectTrim, descTrim } = params;
   const caseTypeLabel = caseTypeToLabel(caseType);
 
-  const [c] = await db
-    .select({ firstName: contacts.firstName, lastName: contacts.lastName })
-    .from(contacts)
-    .where(and(eq(contacts.tenantId, tenantId), eq(contacts.id, contactId)))
-    .limit(1);
-  const displayName = c
-    ? [c.firstName, c.lastName].filter(Boolean).join(" ").trim() || "Klient"
-    : "Klient";
+  const { displayName, email } = await withServiceTenantContext({ tenantId }, async (tx) => {
+    const [c] = await tx
+      .select({ firstName: contacts.firstName, lastName: contacts.lastName })
+      .from(contacts)
+      .where(and(eq(contacts.tenantId, tenantId), eq(contacts.id, contactId)))
+      .limit(1);
+    const name = c
+      ? [c.firstName, c.lastName].filter(Boolean).join(" ").trim() || "Klient"
+      : "Klient";
 
-  const [tenant] = await db
-    .select({ notificationEmail: tenants.notificationEmail })
-    .from(tenants)
-    .where(eq(tenants.id, tenantId))
-    .limit(1);
-  const email = tenant?.notificationEmail?.trim();
+    const [tenant] = await tx
+      .select({ notificationEmail: tenants.notificationEmail })
+      .from(tenants)
+      .where(eq(tenants.id, tenantId))
+      .limit(1);
+    return { displayName: name, email: tenant?.notificationEmail?.trim() };
+  });
   const baseUrl =
     process.env.NEXT_PUBLIC_APP_URL?.trim() ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://www.aidvisora.cz");

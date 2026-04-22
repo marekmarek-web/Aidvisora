@@ -1055,6 +1055,11 @@ function flattenEnvelopeToGroups(
       const evidenceTier = (fObj as Record<string, unknown>).evidenceTier as EvidenceTier | undefined;
       const sourceKind = (fObj as Record<string, unknown>).sourceKind as SourceKind | undefined;
       const sourceLabel = (fObj as Record<string, unknown>).sourceLabel as string | undefined;
+      const evidenceSnippetRaw = (fObj as Record<string, unknown>).evidenceSnippet;
+      const evidenceSnippet =
+        typeof evidenceSnippetRaw === "string" && evidenceSnippetRaw.trim().length > 0
+          ? evidenceSnippetRaw.trim().slice(0, 380)
+          : undefined;
       const rawConf01 =
         typeof fObj.confidence === "number" && Number.isFinite(fObj.confidence)
           ? fObj.confidence
@@ -1174,6 +1179,9 @@ function flattenEnvelopeToGroups(
         applyPolicy: applyDecision.policy,
         applyPolicyLabel: applyDecision.label,
         requiresConfirmation: applyDecision.requiresConfirmation,
+        evidenceSnippet,
+        sourceKind: sourceKind || undefined,
+        evidenceTier: evidenceTier || undefined,
       }, fKey);
     }
   }

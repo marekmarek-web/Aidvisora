@@ -1,11 +1,24 @@
 import { formatPortalNotificationBody } from "@/lib/client-portal/format-portal-notification-body";
 import { loadClientPortalSessionBundle } from "@/lib/client-portal/client-portal-session-bundle";
 import { mapFinancialSummaryForClientDashboard } from "@/lib/client-portal/map-financial-summary-for-dashboard";
+import { getEffectiveTenantSettingsForWorkspaceResolved } from "@/lib/billing/effective-workspace";
+import { getCachedSupabaseUser } from "@/lib/auth/require-auth";
+import { requireClientZoneAuth } from "@/lib/auth/require-auth";
 import { ClientDashboardLayout } from "./ClientDashboardLayout";
 import { ClientWelcomeView } from "./ClientWelcomeView";
 
 export default async function ClientZonePage() {
   const bundle = await loadClientPortalSessionBundle();
+  // B2.4: Service requests flag musí respektovat i dashboard CTA, ne jen sidebar/requests page.
+  const auth = await requireClientZoneAuth();
+  const supabaseUser = await getCachedSupabaseUser().catch(() => null);
+  const portalSettingsResult = await getEffectiveTenantSettingsForWorkspaceResolved({
+    tenantId: auth.tenantId,
+    userId: auth.userId,
+    email: supabaseUser?.email ?? null,
+  }).catch(() => null);
+  const serviceRequestsEnabled =
+    portalSettingsResult?.settings?.["client_portal.allow_service_requests"] ?? true;
 
   const contact = bundle.contact ?? undefined;
   const isUnsubscribed = !!contact?.notificationUnsubscribedAt;
@@ -56,6 +69,8 @@ export default async function ClientZonePage() {
       openRequests={openRequests}
       contractsCount={contractsList.length}
       paymentInstructionsCount={paymentInstructions.length}
+      paymentsLoadFailed={bundle.paymentsLoadFailed}
+      quickStatsLoadFailed={bundle.quickStatsLoadFailed}
       documentsCount={documentsList.length}
       latestNotification={
         latestNotification
@@ -75,6 +90,7 @@ export default async function ClientZonePage() {
         (r) => r.status !== "done" && r.status !== "closed"
       )}
       advisorProposals={bundle.advisorProposals}
+      serviceRequestsEnabled={serviceRequestsEnabled}
     />
   );
 }

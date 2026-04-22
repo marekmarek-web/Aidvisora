@@ -3,6 +3,7 @@
  * Team-level summaries, member comparisons, and heatmap data.
  */
 
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import type { AnalyticsScope } from "./analytics-scope";
 
 export type TeamAnalyticsSummary = {
@@ -52,55 +53,57 @@ export async function getTeamAnalyticsSummary(
   };
 
   try {
-    const { db, contractUploadReviews, clientPaymentSetups, reminders, escalationEvents, auditLog, eq, and, inArray, sql } = await import("db");
+    const { contractUploadReviews, clientPaymentSetups, reminders, escalationEvents, auditLog, eq, and, inArray, sql } = await import("db");
 
-    const userFilter = scope.visibleUserIds.length > 0
-      ? inArray(contractUploadReviews.uploadedBy, scope.visibleUserIds)
-      : eq(contractUploadReviews.tenantId, scope.tenantId);
+    await withTenantContext({ tenantId: scope.tenantId, userId: scope.userId }, async (tx) => {
+      const userFilter = scope.visibleUserIds.length > 0
+        ? inArray(contractUploadReviews.uploadedBy, scope.visibleUserIds)
+        : eq(contractUploadReviews.tenantId, scope.tenantId);
 
-    const [reviewStats] = await db.select({
-      pending: sql<number>`count(*) filter (where ${contractUploadReviews.processingStatus} in ('extracted','review_required'))::int`,
-      blocked: sql<number>`count(*) filter (where ${contractUploadReviews.reviewStatus} = 'rejected')::int`,
-      applyBacklog: sql<number>`count(*) filter (where ${contractUploadReviews.reviewStatus} = 'approved')::int`,
-      avgAge: sql<number>`coalesce(avg(extract(epoch from (now() - ${contractUploadReviews.createdAt})) / 3600), 0)::float`,
-    }).from(contractUploadReviews)
-      .where(and(eq(contractUploadReviews.tenantId, scope.tenantId), userFilter));
+      const [reviewStats] = await tx.select({
+        pending: sql<number>`count(*) filter (where ${contractUploadReviews.processingStatus} in ('extracted','review_required'))::int`,
+        blocked: sql<number>`count(*) filter (where ${contractUploadReviews.reviewStatus} = 'rejected')::int`,
+        applyBacklog: sql<number>`count(*) filter (where ${contractUploadReviews.reviewStatus} = 'approved')::int`,
+        avgAge: sql<number>`coalesce(avg(extract(epoch from (now() - ${contractUploadReviews.createdAt})) / 3600), 0)::float`,
+      }).from(contractUploadReviews)
+        .where(and(eq(contractUploadReviews.tenantId, scope.tenantId), userFilter));
 
-    if (reviewStats) {
-      summary.totalPendingReviews = reviewStats.pending;
-      summary.totalBlockedItems = reviewStats.blocked;
-      summary.applyBacklog = reviewStats.applyBacklog;
-      summary.averageReviewAgeHours = Math.round(reviewStats.avgAge * 10) / 10;
-    }
+      if (reviewStats) {
+        summary.totalPendingReviews = reviewStats.pending;
+        summary.totalBlockedItems = reviewStats.blocked;
+        summary.applyBacklog = reviewStats.applyBacklog;
+        summary.averageReviewAgeHours = Math.round(reviewStats.avgAge * 10) / 10;
+      }
 
-    const [paymentCount] = await db.select({
-      count: sql<number>`count(*)::int`,
-    }).from(clientPaymentSetups)
-      .where(and(eq(clientPaymentSetups.tenantId, scope.tenantId), eq(clientPaymentSetups.needsHumanReview, true)));
-    summary.blockedPayments = paymentCount?.count ?? 0;
+      const [paymentCount] = await tx.select({
+        count: sql<number>`count(*)::int`,
+      }).from(clientPaymentSetups)
+        .where(and(eq(clientPaymentSetups.tenantId, scope.tenantId), eq(clientPaymentSetups.needsHumanReview, true)));
+      summary.blockedPayments = paymentCount?.count ?? 0;
 
-    const [reminderCount] = await db.select({
-      overdue: sql<number>`count(*) filter (where ${reminders.dueAt} < now() and ${reminders.status} = 'pending')::int`,
-    }).from(reminders)
-      .where(eq(reminders.tenantId, scope.tenantId));
-    summary.totalOverdueFollowUps = reminderCount?.overdue ?? 0;
+      const [reminderCount] = await tx.select({
+        overdue: sql<number>`count(*) filter (where ${reminders.dueAt} < now() and ${reminders.status} = 'pending')::int`,
+      }).from(reminders)
+        .where(eq(reminders.tenantId, scope.tenantId));
+      summary.totalOverdueFollowUps = reminderCount?.overdue ?? 0;
 
-    const [escCount] = await db.select({
-      count: sql<number>`count(*)::int`,
-    }).from(escalationEvents)
-      .where(and(eq(escalationEvents.tenantId, scope.tenantId), eq(escalationEvents.status, "pending")));
-    summary.unresolvedEscalations = escCount?.count ?? 0;
+      const [escCount] = await tx.select({
+        count: sql<number>`count(*)::int`,
+      }).from(escalationEvents)
+        .where(and(eq(escalationEvents.tenantId, scope.tenantId), eq(escalationEvents.status, "pending")));
+      summary.unresolvedEscalations = escCount?.count ?? 0;
 
-    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const [aiCount] = await db.select({
-      count: sql<number>`count(*)::int`,
-    }).from(auditLog)
-      .where(and(
-        eq(auditLog.tenantId, scope.tenantId),
-        sql`${auditLog.action} like 'assistant:%'`,
-        sql`${auditLog.createdAt} >= ${weekAgo}`,
-      ));
-    summary.aiUsageTotal = aiCount?.count ?? 0;
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const [aiCount] = await tx.select({
+        count: sql<number>`count(*)::int`,
+      }).from(auditLog)
+        .where(and(
+          eq(auditLog.tenantId, scope.tenantId),
+          sql`${auditLog.action} like 'assistant:%'`,
+          sql`${auditLog.createdAt} >= ${weekAgo}`,
+        ));
+      summary.aiUsageTotal = aiCount?.count ?? 0;
+    });
   } catch { /* best-effort */ }
 
   return summary;
@@ -112,22 +115,24 @@ export async function getTeamMemberComparison(
   const members: TeamMemberComparison[] = [];
 
   try {
-    const { db, contractUploadReviews, eq, and, inArray, sql } = await import("db");
+    const { contractUploadReviews, eq, and, inArray, sql } = await import("db");
 
     if (scope.visibleUserIds.length === 0) return members;
 
-    const stats = await db.select({
-      userId: contractUploadReviews.uploadedBy,
-      pending: sql<number>`count(*) filter (where ${contractUploadReviews.processingStatus} in ('extracted','review_required'))::int`,
-      avgAge: sql<number>`coalesce(avg(extract(epoch from (now() - ${contractUploadReviews.createdAt})) / 3600), 0)::float`,
-      total: sql<number>`count(*)::int`,
-      applied: sql<number>`count(*) filter (where ${contractUploadReviews.reviewStatus} = 'applied')::int`,
-    }).from(contractUploadReviews)
-      .where(and(
-        eq(contractUploadReviews.tenantId, scope.tenantId),
-        inArray(contractUploadReviews.uploadedBy, scope.visibleUserIds),
-      ))
-      .groupBy(contractUploadReviews.uploadedBy);
+    const stats = await withTenantContext({ tenantId: scope.tenantId, userId: scope.userId }, (tx) =>
+      tx.select({
+        userId: contractUploadReviews.uploadedBy,
+        pending: sql<number>`count(*) filter (where ${contractUploadReviews.processingStatus} in ('extracted','review_required'))::int`,
+        avgAge: sql<number>`coalesce(avg(extract(epoch from (now() - ${contractUploadReviews.createdAt})) / 3600), 0)::float`,
+        total: sql<number>`count(*)::int`,
+        applied: sql<number>`count(*) filter (where ${contractUploadReviews.reviewStatus} = 'applied')::int`,
+      }).from(contractUploadReviews)
+        .where(and(
+          eq(contractUploadReviews.tenantId, scope.tenantId),
+          inArray(contractUploadReviews.uploadedBy, scope.visibleUserIds),
+        ))
+        .groupBy(contractUploadReviews.uploadedBy),
+    );
 
     for (const s of stats) {
       if (!s.userId) continue;
@@ -153,23 +158,25 @@ export async function getTeamHeatmapData(
   const entries: HeatmapEntry[] = [];
 
   try {
-    const { db, contractUploadReviews, eq, and, or, inArray, sql } = await import("db");
+    const { contractUploadReviews, eq, and, or, inArray, sql } = await import("db");
 
     if (scope.visibleUserIds.length === 0) return entries;
 
-    const perUser = await db.select({
-      userId: contractUploadReviews.uploadedBy,
-      count: sql<number>`count(*)::int`,
-    }).from(contractUploadReviews)
-      .where(and(
-        eq(contractUploadReviews.tenantId, scope.tenantId),
-        inArray(contractUploadReviews.uploadedBy, scope.visibleUserIds),
-        or(
-          inArray(contractUploadReviews.processingStatus, ["extracted", "review_required"]),
-          eq(contractUploadReviews.reviewStatus, "rejected"),
-        ),
-      ))
-      .groupBy(contractUploadReviews.uploadedBy);
+    const perUser = await withTenantContext({ tenantId: scope.tenantId, userId: scope.userId }, (tx) =>
+      tx.select({
+        userId: contractUploadReviews.uploadedBy,
+        count: sql<number>`count(*)::int`,
+      }).from(contractUploadReviews)
+        .where(and(
+          eq(contractUploadReviews.tenantId, scope.tenantId),
+          inArray(contractUploadReviews.uploadedBy, scope.visibleUserIds),
+          or(
+            inArray(contractUploadReviews.processingStatus, ["extracted", "review_required"]),
+            eq(contractUploadReviews.reviewStatus, "rejected"),
+          ),
+        ))
+        .groupBy(contractUploadReviews.uploadedBy),
+    );
 
     for (const row of perUser) {
       if (!row.userId) continue;

@@ -12,6 +12,7 @@ import {
 } from "db";
 import { eq, and, or, isNull, isNotNull, ilike, sql } from "db";
 import * as Sentry from "@sentry/nextjs";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import type { ContractReviewRow } from "./review-queue-repository";
 import type { ApplyResultPayload } from "./review-queue-repository";
 import {
@@ -1071,7 +1072,7 @@ export async function applyContractReview(
   }> = [];
 
   try {
-    await db.transaction(async (tx) => {
+    await withTenantContext({ tenantId, userId }, async (tx) => {
       // F2-2 (H-17): concurrent-apply mutex.
       // Two parallel apply calls on the same review (e.g. advisor double-click
       // or browser tab duplication) would otherwise race through the draft
@@ -1261,6 +1262,17 @@ export async function applyContractReview(
       let hasAttachOnlyAction = false;
       let attachTargetContractId: string | null = null;
 
+      // B2.2: Snapshot přístupu klienta k portálu — používá se pro `visibleToClient`
+      // u smluv/dokumentů/platebních setupů. Když klient nemá aktivní portál
+      // (nebyl pozván / inconsistent stav), záznamy se ukládají jako skryté —
+      // jinak bychom po pozvánce zaplavili klientskou zónu zpětně vším, co bylo
+      // jen interní. `loadContactPortalAccessSnapshot` soft-fails na false (`NEVER_INVITED`).
+      const clientPortalActiveForApply: boolean = effectiveContactId
+        ? await loadContactPortalAccessSnapshot(tenantId, effectiveContactId)
+            .then((s) => s.hasActiveClientPortal)
+            .catch(() => false)
+        : false;
+
       for (const action of draftActions) {
         if (
           (action.type === "create_contract" ||
@@ -1403,7 +1415,7 @@ export async function applyContractReview(
                 note: preferExistingValue(existingRow?.note, nextNote),
                 advisorConfirmedAt: new Date(),
                 confirmedByUserId: userId,
-                visibleToClient: true,
+                visibleToClient: clientPortalActiveForApply,
                 portfolioStatus: "active",
                 portfolioAttributes: mergedAttrsForTitle,
                 extractionConfidence,
@@ -1457,7 +1469,7 @@ export async function applyContractReview(
                 premiumAmount: premiumAmountRaw,
                 premiumAnnual: premiumAnnualRaw,
                 note: nextNote,
-                visibleToClient: true,
+                visibleToClient: clientPortalActiveForApply,
                 portfolioStatus: "active",
                 sourceKind: "ai_review",
                 sourceContractReviewId: reviewId,
@@ -1681,9 +1693,10 @@ export async function applyContractReview(
             mimeType: row.mimeType ?? null,
             sizeBytes: row.sizeBytes ?? null,
             uploadedByUserId: userId,
-            // Apply = approved + publish → dokument je ihned viditelný klientovi.
-            // Publish-guard: kdyby byla review `rejected`, nedostali bychom se sem vůbec.
-            visibleToClient: true,
+            // Apply = approved + publish → dokument je viditelný klientovi,
+            // ale jen pokud má klient aktivní portál. Jinak zůstane skrytý a
+            // poradce ho může publikovat ručně (B2.2).
+            visibleToClient: clientPortalActiveForApply,
             tx: tx as unknown as typeof db,
           });
           resultPayload.linkedDocumentId = docLink.documentId;
@@ -1713,7 +1726,7 @@ export async function applyContractReview(
           mimeType: row.mimeType ?? null,
           sizeBytes: row.sizeBytes ?? null,
           uploadedByUserId: userId,
-          visibleToClient: true,
+          visibleToClient: clientPortalActiveForApply,
           tx: tx as unknown as typeof db,
         });
         resultPayload.linkedDocumentId = docLink.documentId;
@@ -1794,38 +1807,40 @@ export async function applyContractReview(
         : undefined,
     };
 
-    await db.insert(auditLog).values({
-      tenantId,
-      userId,
-      action: "apply_contract_review",
-      entityType: "contract_review",
-      entityId: reviewId,
-      meta: {
-        reviewId,
-        createdClientId: resultPayload.createdClientId ?? undefined,
-        linkedClientId: resultPayload.linkedClientId ?? undefined,
-        createdContractId: resultPayload.createdContractId ?? undefined,
-        createdPaymentSetupId: resultPayload.createdPaymentSetupId ?? undefined,
-        createdTaskId: resultPayload.createdTaskId ?? undefined,
-        // Fáze 9: enforcement summary v audit logu
-        policyEnforcementSummary: enforcementTrace.summary,
-        supportingDocumentGuard: enforcementTrace.supportingDocumentGuard,
-        // S2-PB1: attach-only apply trail (jinak neviditelná cesta přes attach handlers).
-        ...(attachAuditEntries.length > 0 ? { attachAuditEntries } : {}),
-        // H3 hardening: expose documentLinkWarning v audit logu, ať jde dohledat
-        // silent-fail pattern v attach-only flow bez bridging přes payload dump.
-        // Podchycené kódy:
-        //   - attach_only_missing_contact
-        //   - attach_only_missing_storage_path
-        //   - attach_only_link_not_persisted
-        //   - document_link_failed / document_link_exception (pre-existing)
-        ...(resultPayload.documentLinkWarning
-          ? { documentLinkWarning: resultPayload.documentLinkWarning }
-          : {}),
-        // Indicator, že attach-only flow proběhl (i když warning nenastal) — umožní
-        // filtrovat audit log podle "attach-only plans" v dashboardu bez heuristiky.
-        hasAttachOnlyAction: attachAuditEntries.length > 0 ? true : undefined,
-      },
+    await withTenantContext({ tenantId, userId }, async (tx) => {
+      await tx.insert(auditLog).values({
+        tenantId,
+        userId,
+        action: "apply_contract_review",
+        entityType: "contract_review",
+        entityId: reviewId,
+        meta: {
+          reviewId,
+          createdClientId: resultPayload.createdClientId ?? undefined,
+          linkedClientId: resultPayload.linkedClientId ?? undefined,
+          createdContractId: resultPayload.createdContractId ?? undefined,
+          createdPaymentSetupId: resultPayload.createdPaymentSetupId ?? undefined,
+          createdTaskId: resultPayload.createdTaskId ?? undefined,
+          // Fáze 9: enforcement summary v audit logu
+          policyEnforcementSummary: enforcementTrace.summary,
+          supportingDocumentGuard: enforcementTrace.supportingDocumentGuard,
+          // S2-PB1: attach-only apply trail (jinak neviditelná cesta přes attach handlers).
+          ...(attachAuditEntries.length > 0 ? { attachAuditEntries } : {}),
+          // H3 hardening: expose documentLinkWarning v audit logu, ať jde dohledat
+          // silent-fail pattern v attach-only flow bez bridging přes payload dump.
+          // Podchycené kódy:
+          //   - attach_only_missing_contact
+          //   - attach_only_missing_storage_path
+          //   - attach_only_link_not_persisted
+          //   - document_link_failed / document_link_exception (pre-existing)
+          ...(resultPayload.documentLinkWarning
+            ? { documentLinkWarning: resultPayload.documentLinkWarning }
+            : {}),
+          // Indicator, že attach-only flow proběhl (i když warning nenastal) — umožní
+          // filtrovat audit log podle "attach-only plans" v dashboardu bez heuristiky.
+          hasAttachOnlyAction: attachAuditEntries.length > 0 ? true : undefined,
+        },
+      });
     });
   } catch (err) {
     const formatted = formatContractAdvisorFkApplyError(err);

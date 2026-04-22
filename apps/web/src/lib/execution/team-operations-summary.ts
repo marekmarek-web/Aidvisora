@@ -3,7 +3,7 @@
  * Per-advisor operational metrics for manager view.
  */
 
-import { withTenantContext } from "@/lib/db/with-tenant-context";
+import { withServiceTenantContext } from "@/lib/db/service-db";
 
 export type AdvisorOperationalMetrics = {
   advisorId: string;
@@ -36,7 +36,7 @@ export async function getTeamOperationsSummary(
   try {
     const { contractUploadReviews, eq, sql } = await import("db");
 
-    const reviewStats = await withTenantContext({ tenantId }, async (tx) => {
+    const reviewStats = await withServiceTenantContext({ tenantId }, async (tx) => {
       return await tx
         .select({
           uploadedBy: contractUploadReviews.uploadedBy,
@@ -91,7 +91,7 @@ export async function reassignReview(
 ): Promise<boolean> {
   try {
     const { contractUploadReviews, eq, and } = await import("db");
-    await withTenantContext({ tenantId }, async (tx) => {
+    await withServiceTenantContext({ tenantId }, async (tx) => {
       await tx.update(contractUploadReviews).set({
         uploadedBy: toAdvisorId,
       }).where(and(
@@ -112,7 +112,7 @@ export async function reassignFollowUp(
 ): Promise<boolean> {
   try {
     const { tasks, eq, and } = await import("db");
-    await withTenantContext({ tenantId }, async (tx) => {
+    await withServiceTenantContext({ tenantId }, async (tx) => {
       await tx.update(tasks).set({
         assignedTo: toAdvisorId,
       }).where(and(

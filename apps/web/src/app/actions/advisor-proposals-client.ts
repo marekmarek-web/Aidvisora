@@ -20,6 +20,7 @@ import {
   type AdvisorProposalStatus,
 } from "db";
 import { requireAuthInAction } from "@/lib/auth/require-auth";
+import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { createClientPortalRequest } from "./client-portal-requests";
 
 export type ClientAdvisorProposal = {
@@ -60,32 +61,35 @@ export async function listClientAdvisorProposals(): Promise<ClientAdvisorProposa
   const auth = await requireAuthInAction();
   if (auth.roleName !== "Client" || !auth.contactId) return [];
 
-  const rows = await db
-    .select({
-      id: advisorProposals.id,
-      segment: advisorProposals.segment,
-      title: advisorProposals.title,
-      summary: advisorProposals.summary,
-      currentAnnualCost: advisorProposals.currentAnnualCost,
-      proposedAnnualCost: advisorProposals.proposedAnnualCost,
-      savingsAnnual: advisorProposals.savingsAnnual,
-      currency: advisorProposals.currency,
-      benefits: advisorProposals.benefits,
-      validUntil: advisorProposals.validUntil,
-      status: advisorProposals.status,
-      publishedAt: advisorProposals.publishedAt,
-      firstViewedAt: advisorProposals.firstViewedAt,
-      respondedAt: advisorProposals.respondedAt,
-      responseRequestId: advisorProposals.responseRequestId,
-    })
-    .from(advisorProposals)
-    .where(
-      and(
-        eq(advisorProposals.tenantId, auth.tenantId),
-        eq(advisorProposals.contactId, auth.contactId)
+  // B2.1: RLS-consistent — nastaví PG GUCs přes withTenantContextFromAuth.
+  const rows = await withTenantContextFromAuth(auth, (tx) =>
+    tx
+      .select({
+        id: advisorProposals.id,
+        segment: advisorProposals.segment,
+        title: advisorProposals.title,
+        summary: advisorProposals.summary,
+        currentAnnualCost: advisorProposals.currentAnnualCost,
+        proposedAnnualCost: advisorProposals.proposedAnnualCost,
+        savingsAnnual: advisorProposals.savingsAnnual,
+        currency: advisorProposals.currency,
+        benefits: advisorProposals.benefits,
+        validUntil: advisorProposals.validUntil,
+        status: advisorProposals.status,
+        publishedAt: advisorProposals.publishedAt,
+        firstViewedAt: advisorProposals.firstViewedAt,
+        respondedAt: advisorProposals.respondedAt,
+        responseRequestId: advisorProposals.responseRequestId,
+      })
+      .from(advisorProposals)
+      .where(
+        and(
+          eq(advisorProposals.tenantId, auth.tenantId),
+          eq(advisorProposals.contactId, auth.contactId!)
+        )
       )
-    )
-    .orderBy(desc(advisorProposals.publishedAt), desc(advisorProposals.createdAt));
+      .orderBy(desc(advisorProposals.publishedAt), desc(advisorProposals.createdAt)),
+  );
 
   return rows
     .filter((r) => ["published", "viewed", "accepted", "declined", "expired"].includes(r.status))
@@ -112,15 +116,17 @@ export async function listClientAdvisorProposals(): Promise<ClientAdvisorProposa
 export async function getActiveAdvisorProposalCountForClient(): Promise<number> {
   const auth = await requireAuthInAction();
   if (auth.roleName !== "Client" || !auth.contactId) return 0;
-  const rows = await db
-    .select({ status: advisorProposals.status })
-    .from(advisorProposals)
-    .where(
-      and(
-        eq(advisorProposals.tenantId, auth.tenantId),
-        eq(advisorProposals.contactId, auth.contactId)
-      )
-    );
+  const rows = await withTenantContextFromAuth(auth, (tx) =>
+    tx
+      .select({ status: advisorProposals.status })
+      .from(advisorProposals)
+      .where(
+        and(
+          eq(advisorProposals.tenantId, auth.tenantId),
+          eq(advisorProposals.contactId, auth.contactId!)
+        )
+      ),
+  );
   return rows.filter((r) => r.status === "published" || r.status === "viewed").length;
 }
 
@@ -132,28 +138,32 @@ export async function markAdvisorProposalViewed(
   if (auth.roleName !== "Client" || !auth.contactId) {
     return { success: false, error: "Forbidden" };
   }
-  const [row] = await db
-    .select({ id: advisorProposals.id, status: advisorProposals.status })
-    .from(advisorProposals)
-    .where(
-      and(
-        eq(advisorProposals.tenantId, auth.tenantId),
-        eq(advisorProposals.contactId, auth.contactId),
-        eq(advisorProposals.id, proposalId)
+  const [row] = await withTenantContextFromAuth(auth, (tx) =>
+    tx
+      .select({ id: advisorProposals.id, status: advisorProposals.status })
+      .from(advisorProposals)
+      .where(
+        and(
+          eq(advisorProposals.tenantId, auth.tenantId),
+          eq(advisorProposals.contactId, auth.contactId!),
+          eq(advisorProposals.id, proposalId)
+        )
       )
-    )
-    .limit(1);
+      .limit(1),
+  );
   if (!row) return { success: false, error: "Návrh nebyl nalezen." };
   if (row.status !== "published") return { success: true };
-  await db
-    .update(advisorProposals)
-    .set({ status: "viewed", firstViewedAt: new Date(), updatedAt: new Date() })
-    .where(
-      and(
-        eq(advisorProposals.tenantId, auth.tenantId),
-        eq(advisorProposals.id, proposalId)
-      )
-    );
+  await withTenantContextFromAuth(auth, (tx) =>
+    tx
+      .update(advisorProposals)
+      .set({ status: "viewed", firstViewedAt: new Date(), updatedAt: new Date() })
+      .where(
+        and(
+          eq(advisorProposals.tenantId, auth.tenantId),
+          eq(advisorProposals.id, proposalId)
+        )
+      ),
+  );
   try {
     revalidatePath("/client/navrhy");
     revalidatePath("/client");
@@ -210,17 +220,19 @@ export async function respondInterestedToAdvisorProposal(
     return { success: false, error: "Forbidden" };
   }
 
-  const [row] = await db
-    .select()
-    .from(advisorProposals)
-    .where(
-      and(
-        eq(advisorProposals.tenantId, auth.tenantId),
-        eq(advisorProposals.contactId, auth.contactId),
-        eq(advisorProposals.id, proposalId)
+  const [row] = await withTenantContextFromAuth(auth, (tx) =>
+    tx
+      .select()
+      .from(advisorProposals)
+      .where(
+        and(
+          eq(advisorProposals.tenantId, auth.tenantId),
+          eq(advisorProposals.contactId, auth.contactId!),
+          eq(advisorProposals.id, proposalId)
+        )
       )
-    )
-    .limit(1);
+      .limit(1),
+  );
   if (!row) return { success: false, error: "Návrh nebyl nalezen." };
   if (!["published", "viewed", "declined"].includes(row.status)) {
     return { success: false, error: "K tomuto návrhu už není možné zareagovat." };
@@ -251,20 +263,22 @@ export async function respondInterestedToAdvisorProposal(
   if (!created.success) return created;
 
   const now = new Date();
-  await db
-    .update(advisorProposals)
-    .set({
-      status: "accepted",
-      responseRequestId: created.id,
-      respondedAt: now,
-      updatedAt: now,
-    })
-    .where(
-      and(
-        eq(advisorProposals.tenantId, auth.tenantId),
-        eq(advisorProposals.id, proposalId)
-      )
-    );
+  await withTenantContextFromAuth(auth, (tx) =>
+    tx
+      .update(advisorProposals)
+      .set({
+        status: "accepted",
+        responseRequestId: created.id,
+        respondedAt: now,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(advisorProposals.tenantId, auth.tenantId),
+          eq(advisorProposals.id, proposalId)
+        )
+      ),
+  );
 
   try {
     revalidatePath("/client/navrhy");
@@ -285,32 +299,36 @@ export async function declineAdvisorProposal(
   if (auth.roleName !== "Client" || !auth.contactId) {
     return { success: false, error: "Forbidden" };
   }
-  const [row] = await db
-    .select({ status: advisorProposals.status })
-    .from(advisorProposals)
-    .where(
-      and(
-        eq(advisorProposals.tenantId, auth.tenantId),
-        eq(advisorProposals.contactId, auth.contactId),
-        eq(advisorProposals.id, proposalId)
+  const [row] = await withTenantContextFromAuth(auth, (tx) =>
+    tx
+      .select({ status: advisorProposals.status })
+      .from(advisorProposals)
+      .where(
+        and(
+          eq(advisorProposals.tenantId, auth.tenantId),
+          eq(advisorProposals.contactId, auth.contactId!),
+          eq(advisorProposals.id, proposalId)
+        )
       )
-    )
-    .limit(1);
+      .limit(1),
+  );
   if (!row) return { success: false, error: "Návrh nebyl nalezen." };
   if (!["published", "viewed"].includes(row.status)) {
     return { success: false, error: "Tento návrh už má stav, který nelze odmítnout." };
   }
 
   const now = new Date();
-  await db
-    .update(advisorProposals)
-    .set({ status: "declined", respondedAt: now, updatedAt: now })
-    .where(
-      and(
-        eq(advisorProposals.tenantId, auth.tenantId),
-        eq(advisorProposals.id, proposalId)
-      )
-    );
+  await withTenantContextFromAuth(auth, (tx) =>
+    tx
+      .update(advisorProposals)
+      .set({ status: "declined", respondedAt: now, updatedAt: now })
+      .where(
+        and(
+          eq(advisorProposals.tenantId, auth.tenantId),
+          eq(advisorProposals.id, proposalId)
+        )
+      ),
+  );
 
   try {
     revalidatePath("/client/navrhy");

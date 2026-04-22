@@ -29,9 +29,10 @@
  */
 
 import "server-only";
-import { db, aiGenerations, eq, and, desc } from "db";
+import { aiGenerations, eq, and, desc } from "db";
 import type { IntentChangeFinding, MergedThreadFact, IntentAssistCacheResult } from "./types";
 import { buildIntentAssistCacheKey, lookupIntentAssistCache, storeIntentAssistCache } from "./intent-assist-cache";
+import { withServiceTenantContext } from "@/lib/db/service-db";
 
 const ENTITY_TYPE = "image_intake_intent_assist_cache";
 const CACHE_TTL_MS = 30 * 60 * 1000; // Must match in-process cache TTL
@@ -47,18 +48,20 @@ type PersistedEntry = {
 
 async function loadFromDb(cacheKey: string, tenantId: string): Promise<IntentChangeFinding | null> {
   try {
-    const rows = await db
-      .select({ outputText: aiGenerations.outputText, createdAt: aiGenerations.createdAt })
-      .from(aiGenerations)
-      .where(
-        and(
-          eq(aiGenerations.tenantId, tenantId),
-          eq(aiGenerations.entityType, ENTITY_TYPE),
-          eq(aiGenerations.entityId, cacheKey),
-        ),
-      )
-      .orderBy(desc(aiGenerations.createdAt))
-      .limit(1);
+    const rows = await withServiceTenantContext({ tenantId }, async (tx) =>
+      tx
+        .select({ outputText: aiGenerations.outputText, createdAt: aiGenerations.createdAt })
+        .from(aiGenerations)
+        .where(
+          and(
+            eq(aiGenerations.tenantId, tenantId),
+            eq(aiGenerations.entityType, ENTITY_TYPE),
+            eq(aiGenerations.entityId, cacheKey),
+          ),
+        )
+        .orderBy(desc(aiGenerations.createdAt))
+        .limit(1),
+    );
 
     if (rows.length === 0 || !rows[0]?.outputText) return null;
 
@@ -88,28 +91,29 @@ async function persistToDb(
     const entry: PersistedEntry = { finding, cachedAt: Date.now() };
     const serialized = JSON.stringify(entry);
 
-    // Upsert: delete existing + insert
-    await db
-      .delete(aiGenerations)
-      .where(
-        and(
-          eq(aiGenerations.tenantId, tenantId),
-          eq(aiGenerations.entityType, ENTITY_TYPE),
-          eq(aiGenerations.entityId, cacheKey),
-        ),
-      );
+    await withServiceTenantContext({ tenantId, userId }, async (tx) => {
+      await tx
+        .delete(aiGenerations)
+        .where(
+          and(
+            eq(aiGenerations.tenantId, tenantId),
+            eq(aiGenerations.entityType, ENTITY_TYPE),
+            eq(aiGenerations.entityId, cacheKey),
+          ),
+        );
 
-    await db.insert(aiGenerations).values({
-      tenantId,
-      entityType: ENTITY_TYPE,
-      entityId: cacheKey,
-      promptType: "intent_assist_cache",
-      promptId: "intent_assist_v2",
-      promptVersion: "2",
-      generatedByUserId: userId,
-      outputText: serialized,
-      status: "success",
-      contextHash: `v2:${Date.now()}`,
+      await tx.insert(aiGenerations).values({
+        tenantId,
+        entityType: ENTITY_TYPE,
+        entityId: cacheKey,
+        promptType: "intent_assist_cache",
+        promptId: "intent_assist_v2",
+        promptVersion: "2",
+        generatedByUserId: userId,
+        outputText: serialized,
+        status: "success",
+        contextHash: `v2:${Date.now()}`,
+      });
     });
 
     return true;

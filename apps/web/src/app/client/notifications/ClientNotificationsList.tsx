@@ -13,7 +13,10 @@ import {
 import { markPortalNotificationRead } from "@/app/actions/portal-notifications";
 import type { PortalNotificationRow } from "@/app/actions/portal-notifications";
 import { formatPortalNotificationBody } from "@/lib/client-portal/format-portal-notification-body";
-import { getPortalNotificationDeepLink } from "@/lib/client-portal/portal-notification-routing";
+import {
+  getPortalNotificationDeepLink,
+  getPortalNotificationDeepLinkWithFallback,
+} from "@/lib/client-portal/portal-notification-routing";
 
 export function getNotificationRoute(n: { type: string; relatedEntityId?: string | null }): string | null {
   return getPortalNotificationDeepLink(n);
@@ -35,16 +38,29 @@ export function ClientNotificationsList({
 }) {
   const router = useRouter();
   const [items, setItems] = useState<PortalNotificationRow[]>(initialNotifications);
+  const [toast, setToast] = useState<string | null>(null);
 
   async function handleClick(item: PortalNotificationRow) {
     if (!item.readAt) {
-      await markPortalNotificationRead(item.id);
+      try {
+        await markPortalNotificationRead(item.id);
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn("[ClientNotificationsList] markRead failed", e);
+      }
       setItems((prev) =>
         prev.map((n) => (n.id === item.id ? { ...n, readAt: new Date() } : n))
       );
     }
-    const route = getNotificationRoute(item);
-    if (route) router.push(route);
+    // B1.7: vždy naviguj — u neznámých typů vede fallback na /client/notifications
+    // s toastem, místo tichého „nic se nestalo“ po kliku.
+    const { route, known } = getPortalNotificationDeepLinkWithFallback(item);
+    if (!known) {
+      setToast("Tato akce již není dostupná nebo má nový formát. Kontaktujte poradce.");
+      setTimeout(() => setToast(null), 4000);
+      return;
+    }
+    router.push(route);
   }
 
   if (items.length === 0) {
@@ -62,6 +78,15 @@ export function ClientNotificationsList({
   }
 
   return (
+    <>
+      {toast && (
+        <div
+          role="status"
+          className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
+        >
+          {toast}
+        </div>
+      )}
     <ul className="space-y-2">
       {items.map((n) => {
         const route = getNotificationRoute(n);
@@ -123,5 +148,6 @@ export function ClientNotificationsList({
         );
       })}
     </ul>
+    </>
   );
 }

@@ -1,6 +1,7 @@
 "use server";
 
 import { cache } from "react";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { withAuthContext, withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import type { TenantContextDb } from "@/lib/db/with-tenant-context";
@@ -832,6 +833,29 @@ export async function updateContract(
     try {
       await recomputeBjForContract({ tenantId: auth.tenantId, contractId: id });
     } catch {}
+    // B1.8: Invalidace RSC cache klientské zóny — bez tohoto klient po refreshi
+    // vidí stale smlouvy/portfolio. Paths + tag aby chytlo i bundle cache.
+    try {
+      revalidatePath("/client", "layout");
+      revalidatePath("/client/portfolio");
+      revalidatePath("/client/contracts");
+      revalidatePath("/client/payments");
+      revalidatePath("/client/documents");
+      // Najdeme contactId pro cílenou tag invalidaci (bez ní by byl tag bez efektu).
+      const [row] = await withTenantContextFromAuth(auth, (tx) =>
+        tx
+          .select({ contactId: contracts.contactId })
+          .from(contracts)
+          .where(and(eq(contracts.tenantId, auth.tenantId), eq(contracts.id, id)))
+          .limit(1),
+      );
+      if (row?.contactId) {
+        revalidateTag(`contact:${row.contactId}`, "default");
+      }
+    } catch (rev) {
+      // eslint-disable-next-line no-console
+      console.warn("[updateContract] revalidate failed", rev);
+    }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error("[updateContract]", { ...pgErrorMeta(e), message: msg, err: e });

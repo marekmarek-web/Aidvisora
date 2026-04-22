@@ -52,6 +52,8 @@ export type ClientPortalSessionBundle = {
   paymentInstructions: PaymentInstruction[];
   /** True when payment instructions failed to load — prevents false empty state in portal. */
   paymentsLoadFailed: boolean;
+  /** True when dashboard metrics query failed — prevents silent zero display on dashboard. */
+  quickStatsLoadFailed: boolean;
   advisorMaterialRequests: MaterialRequestListItem[];
   financialSummaryRaw: ClientFinancialSummaryView;
   /** Jen dokumenty zveřejněné klientovi — pro odkaz „související dokument“ v portfoliu (web + mobil). */

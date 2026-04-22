@@ -5,6 +5,8 @@ import { useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { Bell } from "lucide-react";
 
+// B2.10: Page titles pokrývají i návrhy/unsubscribe/requests/new a detail
+// pozadavky-poradce. Bez toho topbar spadne na generické „Klientská zóna“.
 const PAGE_TITLES: Record<string, string> = {
   "/client": "Můj přehled",
   "/client/portfolio": "Moje portfolio",
@@ -13,11 +15,14 @@ const PAGE_TITLES: Record<string, string> = {
   "/client/payments": "Platby a příkazy",
   "/client/calculators": "Kalkulačky",
   "/client/requests": "Moje požadavky",
+  "/client/requests/new": "Nový požadavek",
   "/client/messages": "Zprávy poradci",
   "/client/documents": "Trezor dokumentů",
   "/client/profile": "Můj profil",
   "/client/notifications": "Oznámení",
-  "/client/pozadavky-poradce": "Od poradce",
+  "/client/pozadavky-poradce": "Požadavky od poradce",
+  "/client/navrhy": "Návrhy od poradce",
+  "/client/unsubscribe": "Odběr oznámení",
 };
 
 type ClientPortalTopbarProps = {

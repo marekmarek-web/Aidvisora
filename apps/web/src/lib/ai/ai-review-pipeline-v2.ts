@@ -85,6 +85,11 @@ import {
   runCombinedClassifyAndExtract,
   type BundleSectionTexts,
 } from "./combined-extraction";
+import { runPageImageFallbackForMissingRequired } from "./page-image-fallback";
+import {
+  breadcrumbPageImageFallbackRecovery,
+  capturePageImageFallbackError,
+} from "@/lib/observability/scan-sentry";
 
 /**
  * Returns true when none of the required fields for this document type have a non-empty extracted value.
@@ -1813,6 +1818,49 @@ export async function runAiReviewV2Pipeline(
     }
   }
   trace.reviewDecisionDurationMs = Date.now() - rdStart;
+
+  // Page-image fallback: for required fields left empty / low-confidence by the primary
+  // text or input_file extraction pass, re-run the model against the rasterized source
+  // page and merge the rescued value back in with confidence capped at 0.7. Gated
+  // behind AI_REVIEW_PAGE_IMAGE_FALLBACK (default off for safe rollout).
+  const pageImageFallbackEnabled = process.env.AI_REVIEW_PAGE_IMAGE_FALLBACK === "true";
+  if (pageImageFallbackEnabled) {
+    try {
+      const fallbackResult = await runPageImageFallbackForMissingRequired({
+        envelope: validated.data,
+        documentType: resolvedDocumentType,
+        fileUrl,
+        mimeType,
+        enabled: true,
+      });
+      if (fallbackResult.recoveredFieldKeys.length > 0) {
+        trace.pageImageFallbackRecoveries = fallbackResult.recoveredFieldKeys;
+        allReasons.push("page_image_fallback_recovered");
+      }
+      if (fallbackResult.failedAttempts > 0) {
+        trace.pageImageFallbackFailures = fallbackResult.failedAttempts;
+      }
+      const attemptedCount =
+        fallbackResult.recoveredFieldKeys.length + fallbackResult.failedAttempts;
+      if (attemptedCount > 0) {
+        breadcrumbPageImageFallbackRecovery({
+          documentType: resolvedDocumentType,
+          recoveredFieldKeys: fallbackResult.recoveredFieldKeys,
+          failedAttempts: fallbackResult.failedAttempts,
+          attemptedCount,
+        });
+      }
+    } catch (e) {
+      trace.warnings = [
+        ...(trace.warnings ?? []),
+        `page_image_fallback_error:${e instanceof Error ? e.message : String(e)}`,
+      ];
+      capturePageImageFallbackError({
+        documentType: resolvedDocumentType,
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
+  }
 
   const finalized = finalizeContractPayload({
     data: validated.data,

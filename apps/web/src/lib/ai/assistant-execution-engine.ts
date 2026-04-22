@@ -4,7 +4,8 @@
  */
 
 import { randomUUID } from "crypto";
-import { db, executionActions, eq, and } from "db";
+import { executionActions, eq, and } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import type {
   CanonicalIntentType,
   ExecutionPlan,
@@ -73,25 +74,28 @@ async function checkIdempotency(
   tenantId: string,
   actionType: string,
   sourceId: string,
+  userId?: string,
 ): Promise<{ entityId: string; resultPayload: unknown } | null> {
   if (!executionActionsTableAvailable) return null;
   try {
-    const rows = await db
-      .select({
-        id: executionActions.id,
-        resultPayload: executionActions.resultPayload,
-        status: executionActions.status,
-      })
-      .from(executionActions)
-      .where(
-        and(
-          eq(executionActions.tenantId, tenantId),
-          eq(executionActions.actionType, actionType),
-          eq(executionActions.sourceId, sourceId),
-          eq(executionActions.status, "completed"),
-        ),
-      )
-      .limit(1);
+    const rows = await withTenantContext({ tenantId, userId: userId ?? null }, async (tx) => {
+      return await tx
+        .select({
+          id: executionActions.id,
+          resultPayload: executionActions.resultPayload,
+          status: executionActions.status,
+        })
+        .from(executionActions)
+        .where(
+          and(
+            eq(executionActions.tenantId, tenantId),
+            eq(executionActions.actionType, actionType),
+            eq(executionActions.sourceId, sourceId),
+            eq(executionActions.status, "completed"),
+          ),
+        )
+        .limit(1);
+    });
 
     if (rows[0]) {
       const payload = rows[0].resultPayload as Record<string, unknown> | null;
@@ -236,7 +240,9 @@ async function recordExecution(
   if (!executionActionsTableAvailable) return;
   try {
     const now = new Date();
-    await db.insert(executionActions).values(buildAssistantLedgerInsertRow(step, ctx, result, idempotencyKey, ledger, now));
+    await withTenantContext({ tenantId: ctx.tenantId, userId: ctx.userId }, async (tx) => {
+      await tx.insert(executionActions).values(buildAssistantLedgerInsertRow(step, ctx, result, idempotencyKey, ledger, now));
+    });
   } catch (err) {
     if (isRelationMissingError(err)) {
       console.error(
@@ -270,7 +276,7 @@ async function executeStep(
   // Fingerprint already hashes (action, business-relevant params) per action type.
   const fingerprint = computeStepFingerprint(step);
   const idempotencyKey = `assistant:${ctx.tenantId}:${step.action}:${fingerprint}`;
-  const existing = await checkIdempotency(ctx.tenantId, step.action, idempotencyKey);
+  const existing = await checkIdempotency(ctx.tenantId, step.action, idempotencyKey, ctx.userId);
   if (existing) {
     logAssistantTelemetry(AssistantTelemetryAction.IDEMPOTENT_HIT, {
       stepId: step.stepId,

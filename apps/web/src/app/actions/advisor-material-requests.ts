@@ -607,23 +607,33 @@ export async function respondClientMaterialRequest(
   }
 
   const { clientUploadDocument } = await import("./documents");
+  // B1.6: Atomický upload — jakékoli selhání (throw i res.success=false) přeruší smyčku
+  // a vrátí chybu dřív, než se request přepne na "answered". Klient tak nedostane
+  // false success, když se polovina příloh nenahrála.
   for (const file of files) {
     const fd = new FormData();
     fd.set("file", file);
     fd.set("name", file.name);
     try {
       const res = await clientUploadDocument(fd);
-      if (res.success && res.id) {
-        const uploadedId = res.id;
-        await withTenantContextFromAuth(auth, async (tx) => {
-          await tx.insert(advisorMaterialRequestDocuments).values({
-            tenantId: auth.tenantId,
-            requestId,
-            documentId: uploadedId,
-            attachmentRole: "client",
-          });
+      if (!res.success || !res.id) {
+        const reason = (res as { error?: string }).error || `Nahrání souboru "${file.name}" selhalo.`;
+        captureAttachmentLinkFailure({
+          tenantId: auth.tenantId,
+          requestId,
+          reason,
         });
+        return { ok: false, error: reason };
       }
+      const uploadedId = res.id;
+      await withTenantContextFromAuth(auth, async (tx) => {
+        await tx.insert(advisorMaterialRequestDocuments).values({
+          tenantId: auth.tenantId,
+          requestId,
+          documentId: uploadedId,
+          attachmentRole: "client",
+        });
+      });
     } catch (e) {
       captureAttachmentLinkFailure({
         tenantId: auth.tenantId,
@@ -631,7 +641,13 @@ export async function respondClientMaterialRequest(
         reason: e instanceof Error ? e.message : "Nahrání souboru selhalo.",
         error: e,
       });
-      return { ok: false, error: e instanceof Error ? e.message : "Nahrání souboru selhalo." };
+      return {
+        ok: false,
+        error:
+          e instanceof Error
+            ? `Nahrání "${file.name}" selhalo: ${e.message}`
+            : `Nahrání "${file.name}" selhalo.`,
+      };
     }
   }
 

@@ -3,6 +3,7 @@
  * AI assistant usage, use-case breakdown, and helpfulness metrics.
  */
 
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import type { TimeWindow } from "./analytics-scope";
 
 export type AssistantUsageMetrics = {
@@ -58,26 +59,28 @@ export async function getAssistantUsageMetrics(
   };
 
   try {
-    const { db, auditLog, eq, and, gte, sql } = await import("db");
+    const { auditLog, eq, and, gte, sql } = await import("db");
 
     const windowStart = window?.startDate ?? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-    const [stats] = await db.select({
-      uniqueUsers: sql<number>`count(distinct ${auditLog.userId})::int`,
-      sessions: sql<number>`count(*) filter (where ${auditLog.action} = ${EVENT_PATTERNS.opened})::int`,
-      queries: sql<number>`count(*) filter (where ${auditLog.action} = ${EVENT_PATTERNS.query})::int`,
-      toolsInvoked: sql<number>`count(*) filter (where ${auditLog.action} = ${EVENT_PATTERNS.tool_invoked})::int`,
-      actionsSuggested: sql<number>`count(*) filter (where ${auditLog.action} = ${EVENT_PATTERNS.action_suggested})::int`,
-      draftsCreated: sql<number>`count(*) filter (where ${auditLog.action} = ${EVENT_PATTERNS.draft_created})::int`,
-      draftsApproved: sql<number>`count(*) filter (where ${auditLog.action} = ${EVENT_PATTERNS.draft_approved})::int`,
-      draftsRejected: sql<number>`count(*) filter (where ${auditLog.action} = ${EVENT_PATTERNS.draft_rejected})::int`,
-      actionsApplied: sql<number>`count(*) filter (where ${auditLog.action} = ${EVENT_PATTERNS.action_applied})::int`,
-    }).from(auditLog)
-      .where(and(
-        eq(auditLog.tenantId, tenantId),
-        sql`${auditLog.action} like 'assistant:%'`,
-        gte(auditLog.createdAt, windowStart),
-      ));
+    const [stats] = await withTenantContext({ tenantId }, (tx) =>
+      tx.select({
+        uniqueUsers: sql<number>`count(distinct ${auditLog.userId})::int`,
+        sessions: sql<number>`count(*) filter (where ${auditLog.action} = ${EVENT_PATTERNS.opened})::int`,
+        queries: sql<number>`count(*) filter (where ${auditLog.action} = ${EVENT_PATTERNS.query})::int`,
+        toolsInvoked: sql<number>`count(*) filter (where ${auditLog.action} = ${EVENT_PATTERNS.tool_invoked})::int`,
+        actionsSuggested: sql<number>`count(*) filter (where ${auditLog.action} = ${EVENT_PATTERNS.action_suggested})::int`,
+        draftsCreated: sql<number>`count(*) filter (where ${auditLog.action} = ${EVENT_PATTERNS.draft_created})::int`,
+        draftsApproved: sql<number>`count(*) filter (where ${auditLog.action} = ${EVENT_PATTERNS.draft_approved})::int`,
+        draftsRejected: sql<number>`count(*) filter (where ${auditLog.action} = ${EVENT_PATTERNS.draft_rejected})::int`,
+        actionsApplied: sql<number>`count(*) filter (where ${auditLog.action} = ${EVENT_PATTERNS.action_applied})::int`,
+      }).from(auditLog)
+        .where(and(
+          eq(auditLog.tenantId, tenantId),
+          sql`${auditLog.action} like 'assistant:%'`,
+          gte(auditLog.createdAt, windowStart),
+        )),
+    );
 
     if (stats) {
       metrics.uniqueUsers = stats.uniqueUsers;
@@ -102,20 +105,22 @@ export async function getAssistantUseCaseBreakdown(
   const breakdown: AssistantUseCaseBreakdown[] = [];
 
   try {
-    const { db, auditLog, eq, and, gte, sql } = await import("db");
+    const { auditLog, eq, and, gte, sql } = await import("db");
 
     const windowStart = window?.startDate ?? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-    const rows = await db.select({
-      action: auditLog.action,
-      count: sql<number>`count(*)::int`,
-    }).from(auditLog)
-      .where(and(
-        eq(auditLog.tenantId, tenantId),
-        sql`${auditLog.action} like 'assistant:%'`,
-        gte(auditLog.createdAt, windowStart),
-      ))
-      .groupBy(auditLog.action);
+    const rows = await withTenantContext({ tenantId }, (tx) =>
+      tx.select({
+        action: auditLog.action,
+        count: sql<number>`count(*)::int`,
+      }).from(auditLog)
+        .where(and(
+          eq(auditLog.tenantId, tenantId),
+          sql`${auditLog.action} like 'assistant:%'`,
+          gte(auditLog.createdAt, windowStart),
+        ))
+        .groupBy(auditLog.action),
+    );
 
     const total = rows.reduce((sum, r) => sum + r.count, 0);
     for (const row of rows) {

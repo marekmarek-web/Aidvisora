@@ -93,3 +93,48 @@ Postup po `git pull`:
 2. Z `apps/web`: `pnpm cap:sync`.
 3. V Xcode: **File → Packages → Reset Package Caches**, pak **File → Packages → Resolve Package Versions**.
 4. Znovu **Product → Clean Build Folder** (`Shift + Cmd + K`) a build (`Cmd + B`).
+
+## 9. Scan smoke test (před každým TestFlight buildem)
+
+Po nainstalování nového buildu na iPhone (TestFlight Internal Testing) musí PROJÍT
+tenhle checklist, jinak build neposouváme do External / produkce:
+
+1. Přihlášení funguje (Face ID / heslo).
+2. Otevřít `/portal/scan` → tlačítko **„Skenovat dokument (systémový skener)"** je viditelné
+   (jen v nativním shellu, ne v Safari/PWA).
+3. Ťuknout na tlačítko → iOS požádá o přístup ke kameře → potvrdit.
+4. VisionKit scanner se otevře → naskenovat 1 stránku → **Uložit** → stránka se objeví jako scan.
+5. Naskenovat víc stran (2–3), ověřit pořadí + možnost rotace + smazání.
+6. **Zrušit** scan ("Storno" v horní liště VisionKit) → aplikace zůstane na `/portal/scan`, NEukazuje red error banner.
+7. V Nastavení iPhone → Aidvisora → Vypnout přístup ke kameře → vrátit se do appky, ťuknout na
+   skener → ukáže se žlutá hláška **"Aplikace nemá povolený přístup ke kameře…"**, ne obecný error.
+8. Dokončit sken (znovu povolit kameru) → **Pokračovat na upload** → PDF se vygeneruje → uploadne
+   do `/portal/scan/upload` → AI Review stránka se otevře s klasifikací + extrakcí.
+9. V AI Review panelu má aspoň část polí **ConfidencePill** (Vysoká / Střední / Nízká).
+10. Žádný crash, žádný hardstuck loading spinner déle než 30 s.
+
+Co zkontrolovat v **Console.app** (Mac připojený přes kabel) během smoke testu:
+
+- Žádné `Termination reason: VISIONKIT / ML-KIT`.
+- Žádné `PAC / provisioning profile mismatch` při spouštění skeneru.
+- `[page-image-fallback]` varování se objevuje POUZE pokud má env `AI_REVIEW_PAGE_IMAGE_FALLBACK=true`
+  a jen při reálně chybějících polích (default off → warning nikdy neuvidíš).
+
+## 10. TestFlight release checklist
+
+Před `Product → Archive`:
+
+- [ ] `git status` je čistý (commitnuto / pushnuto do main).
+- [ ] `pnpm -w lint` + `pnpm -w typecheck` projdou.
+- [ ] Bumpnutá verze v Xcode (**App** target → **General** → Version + Build).
+- [ ] `pnpm cap:sync` proběhl po posledních TS/TSX změnách.
+- [ ] `NSCameraUsageDescription` + `NSPhotoLibraryUsageDescription` v `Info.plist` mají aktuální český text.
+- [ ] `ITSAppUsesNonExemptEncryption=false` je v `Info.plist`.
+
+Po `Archive`:
+
+- [ ] Organizer → Validate App → bez warningu o missing usage descriptions.
+- [ ] Distribute App → App Store Connect → Upload.
+- [ ] App Store Connect → TestFlight → přidat build do **Internal Testing Group**.
+- [ ] Nainstalovat na iPhone → **Scan smoke test (§ 9)** musí projít.
+- [ ] Přidat **What to Test** poznámku (seznam opravených + nových tras, typicky scan + AI Review).

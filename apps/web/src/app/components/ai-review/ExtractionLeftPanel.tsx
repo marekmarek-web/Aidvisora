@@ -48,6 +48,7 @@ import { ReviewAttachClientDialog } from "./ReviewAttachClientDialog";
 import { PaymentManualFillCard } from "./PaymentManualFillCard";
 import { formatAiClassifierForAdvisor, humanizeReviewReasonLine } from "@/lib/ai-review/czech-labels";
 import { resolveEffectiveFieldStatus } from "@/lib/ai-review/field-visual-status";
+import { resolveConfidencePill } from "@/lib/ai-review/confidence-pill";
 import type {
   ExtractionDocument,
   ExtractedGroup,
@@ -1997,6 +1998,39 @@ function ExtractionDiagnosticsCard({ doc }: { doc: ExtractionDocument }) {
 
 /* ─── Extracted Field Row ───────────────────────────────────────── */
 
+/**
+ * Per-field confidence pill: "Vysoká" (≥85), "Střední" (50–84), "Nízká" (<50).
+ * Hidden when the field has no value — the "Chybí" tag already communicates that state.
+ * Uses `title` attribute so advisors can hover for the exact percentage without
+ * cluttering the row with numeric output by default.
+ */
+function ConfidencePill({
+  confidencePercent,
+  hasValue,
+}: {
+  confidencePercent: number;
+  hasValue: boolean;
+}) {
+  const info = resolveConfidencePill(confidencePercent, hasValue);
+  if (!info.label || info.level === null || info.clamped === null) return null;
+  const cls =
+    info.level === "vysoka"
+      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+      : info.level === "stredni"
+      ? "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
+      : "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300";
+  return (
+    <span
+      title={`Jistota AI: ${info.clamped} %`}
+      className={`inline-flex items-center text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-md leading-none ${cls}`}
+      data-testid="extracted-field-confidence-pill"
+      data-confidence-level={info.level}
+    >
+      {info.label}
+    </span>
+  );
+}
+
 function ExtractedFieldRow({
   field,
   isActive,
@@ -2138,6 +2172,18 @@ function ExtractedFieldRow({
             {field.displayStatus}
           </span>
         )}
+        <ConfidencePill
+          confidencePercent={field.confidence}
+          hasValue={!!field.value && field.value !== "—"}
+        />
+        {field.sourceKind === "page_image_fallback" && (
+          <span
+            title="Pole bylo doplněno opětovným přečtením stránky z obrázku — doporučujeme manuálně ověřit."
+            className="inline-flex items-center text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-md leading-none bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300"
+          >
+            ze snímku
+          </span>
+        )}
         {field.displaySource && field.displaySource.trim() && (
           <span className="text-[10px] text-[color:var(--wp-text-tertiary)] leading-none truncate max-w-[160px]">
             {field.displaySource}
@@ -2150,6 +2196,15 @@ function ExtractedFieldRow({
           <span className="text-[10px] text-[color:var(--wp-text-tertiary)]">· s. {field.page}</span>
         )}
       </div>
+
+      {field.evidenceSnippet && field.evidenceSnippet.trim().length > 0 && (
+        <div
+          className="mt-1 ml-1 text-[10px] leading-snug text-[color:var(--wp-text-tertiary)] italic line-clamp-2"
+          title={field.evidenceSnippet}
+        >
+          „{field.evidenceSnippet}"
+        </div>
+      )}
 
       {field.sourceType && field.sourceType !== "ai" ? (
         <div className="mt-0.5 ml-1 text-[10px] text-[color:var(--wp-text-tertiary)] flex items-center gap-2">

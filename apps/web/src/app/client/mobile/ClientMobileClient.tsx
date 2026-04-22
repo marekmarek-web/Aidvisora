@@ -51,6 +51,7 @@ import {
   type PortalNotificationRow,
 } from "@/app/actions/portal-notifications";
 import { formatPortalNotificationBody } from "@/lib/client-portal/format-portal-notification-body";
+import { getPortalNotificationDeepLinkWithFallback } from "@/lib/client-portal/portal-notification-routing";
 import { formatDisplayDateCs } from "@/lib/date/format-display-cs";
 import {
   aggregatePortfolioMetrics,
@@ -135,17 +136,12 @@ function materialRequestStatusTone(status: string): "success" | "warning" | "inf
   return "info";
 }
 
-function notificationRoute(n: { type: string; relatedEntityType: string | null; relatedEntityId: string | null }): string | null {
-  if (n.type === "new_message") return "/client/messages";
-  if (n.type === "new_document") return "/client/documents";
-  if (n.type === "advisor_material_request") {
-    return n.relatedEntityId
-      ? `/client/pozadavky-poradce/${n.relatedEntityId}`
-      : "/client/pozadavky-poradce";
-  }
-  if (n.type === "request_status_change") return "/client/requests";
-  if (n.type === "important_date") return "/client/portfolio";
-  return null;
+// B1.11: Routing pro mobil používá stejnou funkci jako desktop, aby se mapování
+// notifikací nerozbíhalo. `getPortalNotificationDeepLinkWithFallback` vrací vždy
+// cestu + `known` flag, takže neznámé typy vedou na /client/notifications místo
+// tichého dead clicku.
+function notificationRouteResolved(n: { type: string; relatedEntityType: string | null; relatedEntityId: string | null }) {
+  return getPortalNotificationDeepLinkWithFallback(n);
 }
 
 function notificationIcon(type: string) {
@@ -1262,12 +1258,14 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
                   ? "Požadavky"
                   : "Profil";
 
+  // B2.9: Sjednoceno s desktopem — žádné interní termíny typu „segmenty“
+  // nebo „evidence poradce“. Klient rozumí jen běžnému jazyku.
   const headerSubtitle = onNotificationsRoute
-    ? "Notifikační centrum"
+    ? "Vaše oznámení a novinky"
     : onPortfolioRoute
-      ? "Smlouvy a segmenty"
+      ? "Vaše smlouvy a investice"
       : onPaymentsRoute
-        ? "Údaje z evidence poradce"
+        ? "Platební údaje a QR kódy"
         : initialData.advisor?.fullName
           ? `Poradce: ${initialData.advisor.fullName}`
           : initialData.fullName;
@@ -1582,7 +1580,7 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
               <EmptyState title="Žádná oznámení" description="Nové zprávy, dokumenty a požadavky od poradce se zobrazí zde." />
             ) : (
               notifications.map((notification) => {
-                const route = notificationRoute(notification);
+                const { route } = notificationRouteResolved(notification);
                 const IconComponent = notificationIcon(notification.type);
                 const isUnread = !notification.readAt;
                 return (
@@ -1598,7 +1596,7 @@ export function ClientMobileClient({ initialData }: { initialData: ClientMobileI
                         );
                         setUnreadNotificationsCount((c) => Math.max(0, c - 1));
                       }
-                      if (route) router.push(route);
+                      router.push(route);
                     }}
                   >
                     <MobileCard className={`p-3.5 ${isUnread ? "border-indigo-200 bg-indigo-50/40" : ""}`}>

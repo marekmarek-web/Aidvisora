@@ -20,9 +20,10 @@
  */
 
 import "server-only";
-import { db, aiGenerations, eq, and, desc } from "db";
+import { aiGenerations, eq, and, desc } from "db";
 import type { CrossSessionThreadArtifact } from "./types";
 import { getImageIntakeConfig } from "./image-intake-config";
+import { withServiceTenantContext } from "@/lib/db/service-db";
 
 const ENTITY_TYPE = "image_intake_thread_artifact";
 
@@ -55,29 +56,29 @@ export async function persistArtifactsToDb(
     const stateVersion = `v1:${Date.now()}`;
     const serialized = JSON.stringify(artifacts.slice(0, config.crossSessionMaxArtifacts));
 
-    // Upsert pattern: delete existing + insert new
-    // Simple approach reusing existing db pattern (drizzle)
-    await db
-      .delete(aiGenerations)
-      .where(
-        and(
-          eq(aiGenerations.tenantId, tenantId),
-          eq(aiGenerations.entityType, ENTITY_TYPE),
-          eq(aiGenerations.entityId, entityId),
-        ),
-      );
+    await withServiceTenantContext({ tenantId, userId }, async (tx) => {
+      await tx
+        .delete(aiGenerations)
+        .where(
+          and(
+            eq(aiGenerations.tenantId, tenantId),
+            eq(aiGenerations.entityType, ENTITY_TYPE),
+            eq(aiGenerations.entityId, entityId),
+          ),
+        );
 
-    await db.insert(aiGenerations).values({
-      tenantId,
-      entityType: ENTITY_TYPE,
-      entityId,
-      promptType: "cross_session_thread_artifact",
-      promptId: "cross_session_v1",
-      promptVersion: "1",
-      generatedByUserId: userId,
-      outputText: serialized,
-      status: "success",
-      contextHash: stateVersion,
+      await tx.insert(aiGenerations).values({
+        tenantId,
+        entityType: ENTITY_TYPE,
+        entityId,
+        promptType: "cross_session_thread_artifact",
+        promptId: "cross_session_v1",
+        promptVersion: "1",
+        generatedByUserId: userId,
+        outputText: serialized,
+        status: "success",
+        contextHash: stateVersion,
+      });
     });
 
     return { persisted: true };
@@ -104,18 +105,20 @@ export async function loadArtifactsFromDb(
 
   try {
     const entityId = makeEntityId(tenantId, clientId);
-    const rows = await db
-      .select({ outputText: aiGenerations.outputText, createdAt: aiGenerations.createdAt })
-      .from(aiGenerations)
-      .where(
-        and(
-          eq(aiGenerations.tenantId, tenantId),
-          eq(aiGenerations.entityType, ENTITY_TYPE),
-          eq(aiGenerations.entityId, entityId),
-        ),
-      )
-      .orderBy(desc(aiGenerations.createdAt))
-      .limit(1);
+    const rows = await withServiceTenantContext({ tenantId }, async (tx) =>
+      tx
+        .select({ outputText: aiGenerations.outputText, createdAt: aiGenerations.createdAt })
+        .from(aiGenerations)
+        .where(
+          and(
+            eq(aiGenerations.tenantId, tenantId),
+            eq(aiGenerations.entityType, ENTITY_TYPE),
+            eq(aiGenerations.entityId, entityId),
+          ),
+        )
+        .orderBy(desc(aiGenerations.createdAt))
+        .limit(1),
+    );
 
     if (rows.length === 0 || !rows[0]?.outputText) return [];
 
@@ -139,15 +142,17 @@ export async function clearArtifactsFromDb(
 ): Promise<void> {
   try {
     const entityId = makeEntityId(tenantId, clientId);
-    await db
-      .delete(aiGenerations)
-      .where(
-        and(
-          eq(aiGenerations.tenantId, tenantId),
-          eq(aiGenerations.entityType, ENTITY_TYPE),
-          eq(aiGenerations.entityId, entityId),
-        ),
-      );
+    await withServiceTenantContext({ tenantId }, async (tx) => {
+      await tx
+        .delete(aiGenerations)
+        .where(
+          and(
+            eq(aiGenerations.tenantId, tenantId),
+            eq(aiGenerations.entityType, ENTITY_TYPE),
+            eq(aiGenerations.entityId, entityId),
+          ),
+        );
+    });
   } catch {
     // Non-throwing
   }

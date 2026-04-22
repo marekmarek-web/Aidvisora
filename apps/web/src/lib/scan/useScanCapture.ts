@@ -6,7 +6,24 @@ import { pickMultipleImagesFromGallery } from "@/lib/upload/webImagePick";
 import { buildPdfFromImages } from "./pdfBuilder";
 import { checkScanQuality, type ScanQualityResult, type ScanQualityIssue } from "./quality-checks";
 import { normalizeScanImageForPdf, rotateScanImageFile } from "./normalize-page";
-import { isNativeDocumentScannerUsable, scanDocumentsNative } from "./native-document-scan";
+import { isNativeDocumentScannerUsable, scanDocumentsNative, NativeScanError } from "./native-document-scan";
+import {
+  breadcrumbNativeScanAttempt,
+  breadcrumbNativeScanSuccess,
+  captureNativeScanError,
+  type ScanPlatform,
+} from "@/lib/observability/scan-sentry";
+import { Capacitor } from "@capacitor/core";
+
+function resolveScanPlatform(): ScanPlatform {
+  try {
+    const p = Capacitor.getPlatform();
+    if (p === "ios" || p === "android" || p === "web") return p;
+    return "unknown";
+  } catch {
+    return "unknown";
+  }
+}
 
 export type ScanCaptureResult = {
   ok: boolean;
@@ -264,13 +281,49 @@ export function useScanCapture() {
 
     setIsCapturing(true);
     setQualityWarnings([]);
+    const platform = resolveScanPlatform();
+    const startedAt = Date.now();
+    breadcrumbNativeScanAttempt({ tier: "native_capacitor", platform, maxPages: remaining });
     try {
-      const files = await scanDocumentsNative(remaining);
+      let files: File[];
+      try {
+        files = await scanDocumentsNative(remaining);
+      } catch (nativeErr) {
+        if (nativeErr instanceof NativeScanError) {
+          captureNativeScanError({
+            code: nativeErr.code,
+            platform,
+            tier: "native_capacitor",
+            message: nativeErr.message,
+          });
+          if (nativeErr.code === "cancelled") {
+            // User tapped Cancel — keep previously captured pages, clear error silently.
+            setError(null);
+            return { ok: false, error: nativeErr.message };
+          }
+          setError(nativeErr.message);
+          return { ok: false, error: nativeErr.message };
+        }
+        captureNativeScanError({
+          code: "unknown",
+          platform,
+          tier: "native_capacitor",
+          message: nativeErr instanceof Error ? nativeErr.message : String(nativeErr),
+        });
+        throw nativeErr;
+      }
       if (files.length === 0) {
-        const message = "Sken byl zrušen nebo neobsahuje stránky.";
-        setError(message);
+        // `cancelled` path now handled above — this branch means zero-page success.
+        const message = "Sken neobsahuje žádné stránky. Zkuste to znovu.";
+        setError(null);
         return { ok: false, error: message };
       }
+      breadcrumbNativeScanSuccess({
+        tier: "native_capacitor",
+        platform,
+        pageCount: files.length,
+        elapsedMs: Date.now() - startedAt,
+      });
 
       const newPages: ScanPage[] = [];
       let lastQuality: ScanQualityResult | undefined;

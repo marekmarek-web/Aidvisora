@@ -5,7 +5,7 @@
 
 import { validateExecution } from "./execution-guards";
 import type { ExecutionContext } from "./execution-service";
-import { withTenantContext } from "@/lib/db/with-tenant-context";
+import { withServiceTenantContext } from "@/lib/db/service-db";
 
 export type CalendarEventParams = {
   title: string;
@@ -95,7 +95,7 @@ export async function createFollowupEvent(
 
   try {
     const { events } = await import("db");
-    const insertedId = await withTenantContext(
+    const insertedId = await withServiceTenantContext(
       { tenantId: params.tenantId, userId: context.userId },
       async (tx) => {
         const [row] = await tx.insert(events).values({

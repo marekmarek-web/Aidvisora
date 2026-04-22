@@ -29,7 +29,7 @@ export function normalizeDomesticAccountAndBankCode(
   accountNumber: string,
   bankCode: string
 ): { accountNumber: string; bankCode: string } {
-  let acc = dedupeCzechAccountTrailingBankCode(accountNumber.trim());
+  const acc = dedupeCzechAccountTrailingBankCode(accountNumber.trim());
   const bc = bankCode.replace(/\s/g, "").trim();
   const embedded = acc.match(/^(.+)\/(\d{4})$/);
   if (embedded) {

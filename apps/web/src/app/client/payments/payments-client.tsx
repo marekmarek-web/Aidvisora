@@ -76,22 +76,50 @@ function categoryColors(cat: PaymentSegmentCategory): { icon: string; label: str
 }
 
 function CopyMiniButton({ text, label }: { text: string; label: string }) {
-  const [done, setDone] = useState(false);
+  const [state, setState] = useState<"idle" | "done" | "error">("idle");
+  // B2.6: clipboard může selhat na iOS Safari / private mode / bez gesture.
+  // Fallback — vybere text v dočasném <textarea> + zkusí `execCommand('copy')`.
+  // Když i to selže, zobrazíme „Nelze“ místo false success.
+  async function writeClipboard(value: string): Promise<boolean> {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+        return true;
+      }
+    } catch {
+      // fall through to execCommand fallback
+    }
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = value;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "absolute";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    } catch {
+      return false;
+    }
+  }
   return (
     <button
       type="button"
       onClick={async () => {
-        try {
-          await navigator.clipboard.writeText(text);
-          setDone(true);
-          setTimeout(() => setDone(false), 1600);
-        } catch {
-          /* ignore */
-        }
+        const ok = await writeClipboard(text);
+        setState(ok ? "done" : "error");
+        setTimeout(() => setState("idle"), ok ? 1600 : 2400);
       }}
-      className="shrink-0 min-h-[44px] min-w-[64px] rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:border-indigo-200 hover:text-indigo-700 transition-colors touch-manipulation"
+      className={`shrink-0 min-h-[44px] min-w-[64px] rounded-lg border px-2.5 text-xs font-black uppercase tracking-wider transition-colors touch-manipulation ${
+        state === "error"
+          ? "border-rose-200 bg-rose-50 text-rose-700"
+          : "border-slate-200 bg-white text-slate-600 hover:border-indigo-200 hover:text-indigo-700"
+      }`}
+      title={state === "error" ? "Prohlížeč nepovolil kopírování — označte hodnotu a zkopírujte ručně." : undefined}
     >
-      {done ? "Hotovo" : label}
+      {state === "done" ? "Hotovo" : state === "error" ? "Nelze" : label}
     </button>
   );
 }

@@ -341,7 +341,7 @@ export async function runAiReviewBatchLab(options: RunAiReviewBatchLabOptions): 
       const rel = path.relative(inputRoot, abs).split(path.sep).join("/");
       const basename = path.basename(abs);
       const fileUrl = pdfHttpUrl(server.baseUrl, rel);
-      let ruleBasedTextHint: string | null = await extractPdfTextHintFromDisk(abs);
+      const ruleBasedTextHint: string | null = await extractPdfTextHintFromDisk(abs);
 
       await new Promise((r) => setTimeout(r, delayMs));
 

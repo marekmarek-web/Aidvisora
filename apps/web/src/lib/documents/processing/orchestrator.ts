@@ -1,6 +1,7 @@
-import { db, documents, documentProcessingJobs, eq, and } from "db";
+import { documents, documentProcessingJobs, eq, and } from "db";
 import { createAdminClient } from "@/lib/supabase/server";
 import { createSignedStorageUrl } from "@/lib/storage/signed-url";
+import { withServiceTenantContext } from "@/lib/db/service-db";
 import { getProcessingProvider } from "./provider";
 import { decideProcessing } from "./heuristics";
 import { estimateOcrConfidenceFromText } from "@/lib/documents/adobe-service";
@@ -42,6 +43,7 @@ async function getSignedUrl(storagePath: string): Promise<string | null> {
 }
 
 async function updateDocumentStatus(
+  tenantId: string,
   documentId: string,
   update: Partial<{
     processingProvider: DocumentProcessingProvider;
@@ -66,7 +68,12 @@ async function updateDocumentStatus(
     sourceChannel: DocumentSourceChannel;
   }>
 ) {
-  await db.update(documents).set({ ...update, updatedAt: new Date() }).where(eq(documents.id, documentId));
+  await withServiceTenantContext({ tenantId }, async (tx) => {
+    await tx
+      .update(documents)
+      .set({ ...update, updatedAt: new Date() })
+      .where(and(eq(documents.id, documentId), eq(documents.tenantId, tenantId)));
+  });
 }
 
 async function createJob(params: {
@@ -77,22 +84,28 @@ async function createJob(params: {
   requestedBy: string | null;
   inputPath: string;
 }) {
-  const [job] = await db
-    .insert(documentProcessingJobs)
-    .values({
-      documentId: params.documentId,
-      tenantId: params.tenantId,
-      provider: params.provider as "adobe" | "disabled" | "none",
-      jobType: params.jobType as "ocr" | "markdown" | "extract",
-      status: "queued",
-      requestedBy: params.requestedBy,
-      inputPath: params.inputPath,
-    })
-    .returning({ id: documentProcessingJobs.id });
-  return job?.id ?? null;
+  return await withServiceTenantContext(
+    { tenantId: params.tenantId, userId: params.requestedBy ?? null },
+    async (tx) => {
+      const [job] = await tx
+        .insert(documentProcessingJobs)
+        .values({
+          documentId: params.documentId,
+          tenantId: params.tenantId,
+          provider: params.provider as "adobe" | "disabled" | "none",
+          jobType: params.jobType as "ocr" | "markdown" | "extract",
+          status: "queued",
+          requestedBy: params.requestedBy,
+          inputPath: params.inputPath,
+        })
+        .returning({ id: documentProcessingJobs.id });
+      return job?.id ?? null;
+    },
+  );
 }
 
 async function updateJob(
+  tenantId: string,
   jobId: string,
   update: Partial<{
     status: DocumentProcessingJobStatus;
@@ -104,10 +117,15 @@ async function updateJob(
     outputMetadata: Record<string, unknown>;
   }>
 ) {
-  await db
-    .update(documentProcessingJobs)
-    .set({ ...update, updatedAt: new Date() })
-    .where(eq(documentProcessingJobs.id, jobId));
+  await withServiceTenantContext({ tenantId }, async (tx) => {
+    await tx
+      .update(documentProcessingJobs)
+      .set({ ...update, updatedAt: new Date() })
+      .where(and(
+        eq(documentProcessingJobs.id, jobId),
+        eq(documentProcessingJobs.tenantId, tenantId),
+      ));
+  });
 }
 
 function resolveSourceChannel(uploadSource: string | null): DocumentSourceChannel {
@@ -192,10 +210,10 @@ export async function processDocument(
   const inputMode = resolveInputMode(doc, decision);
   const warnings: string[] = [];
 
-  await updateDocumentStatus(doc.id, { sourceChannel });
+  await updateDocumentStatus(doc.tenantId, doc.id, { sourceChannel });
 
   if (!decision.shouldProcess || !provider.isEnabled()) {
-    await updateDocumentStatus(doc.id, {
+    await updateDocumentStatus(doc.tenantId, doc.id, {
       processingStatus: "skipped",
       processingStage: "none",
       processingProvider: provider.name,
@@ -214,14 +232,14 @@ export async function processDocument(
   const fileUrl = await getSignedUrl(doc.storagePath);
   if (!fileUrl) {
     const error = "Failed to create signed URL for document";
-    await updateDocumentStatus(doc.id, {
+    await updateDocumentStatus(doc.tenantId, doc.id, {
       processingStatus: "failed",
       processingError: error,
     });
     return { success: false, processingStatus: "failed", processingStage: "none", aiInputSource: "none", error };
   }
 
-  await updateDocumentStatus(doc.id, {
+  await updateDocumentStatus(doc.tenantId, doc.id, {
     processingProvider: provider.name,
     processingStatus: "preprocessing_running",
     processingStage: "preprocessing",
@@ -259,7 +277,7 @@ export async function processDocument(
 
     if (decision.runOcr) {
       currentStage = "ocr";
-      await updateDocumentStatus(doc.id, { processingStage: "ocr" });
+      await updateDocumentStatus(doc.tenantId, doc.id, { processingStage: "ocr" });
 
       const jobId = await createJob({
         documentId: doc.id,
@@ -270,12 +288,12 @@ export async function processDocument(
         inputPath: doc.storagePath,
       });
 
-      if (jobId) await updateJob(jobId, { status: "processing", startedAt: new Date() });
+      if (jobId) await updateJob(doc.tenantId, jobId, { status: "processing", startedAt: new Date() });
 
       const ocrResult = await provider.runOcr(input);
 
       if (jobId) {
-        await updateJob(jobId, {
+        await updateJob(doc.tenantId, jobId, {
           status: ocrResult.success ? "completed" : "failed",
           finishedAt: new Date(),
           errorMessage: ocrResult.error ?? null,
@@ -296,7 +314,7 @@ export async function processDocument(
 
     if (decision.runMarkdown) {
       currentStage = "markdown";
-      await updateDocumentStatus(doc.id, { processingStage: "markdown" });
+      await updateDocumentStatus(doc.tenantId, doc.id, { processingStage: "markdown" });
 
       const jobId = await createJob({
         documentId: doc.id,
@@ -307,12 +325,12 @@ export async function processDocument(
         inputPath: ocrPdfPath ?? doc.storagePath,
       });
 
-      if (jobId) await updateJob(jobId, { status: "processing", startedAt: new Date() });
+      if (jobId) await updateJob(doc.tenantId, jobId, { status: "processing", startedAt: new Date() });
 
       const mdResult = await provider.runMarkdown(input);
 
       if (jobId) {
-        await updateJob(jobId, {
+        await updateJob(doc.tenantId, jobId, {
           status: mdResult.success ? "completed" : "failed",
           finishedAt: new Date(),
           errorMessage: mdResult.error ?? null,
@@ -343,14 +361,14 @@ export async function processDocument(
       }
     }
 
-    await updateDocumentStatus(doc.id, {
+    await updateDocumentStatus(doc.tenantId, doc.id, {
       processingStatus: "normalized",
       processingStage: "extract",
     });
 
     if (decision.runExtract) {
       currentStage = "extract";
-      await updateDocumentStatus(doc.id, { processingStage: "extract" });
+      await updateDocumentStatus(doc.tenantId, doc.id, { processingStage: "extract" });
 
       const jobId = await createJob({
         documentId: doc.id,
@@ -361,12 +379,12 @@ export async function processDocument(
         inputPath: ocrPdfPath ?? doc.storagePath,
       });
 
-      if (jobId) await updateJob(jobId, { status: "processing", startedAt: new Date() });
+      if (jobId) await updateJob(doc.tenantId, jobId, { status: "processing", startedAt: new Date() });
 
       const extractResult = await provider.runExtract(input);
 
       if (jobId) {
-        await updateJob(jobId, {
+        await updateJob(doc.tenantId, jobId, {
           status: extractResult.success ? "completed" : "failed",
           finishedAt: new Date(),
           errorMessage: extractResult.error ?? null,
@@ -393,7 +411,7 @@ export async function processDocument(
     const pageTextMap = buildPageTextMap(markdownContent, doc.pageCount);
 
     currentStage = "completed";
-    await updateDocumentStatus(doc.id, {
+    await updateDocumentStatus(doc.tenantId, doc.id, {
       processingStatus: "completed",
       processingStage: "completed",
       processingFinishedAt: new Date(),
@@ -426,7 +444,7 @@ export async function processDocument(
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : "Processing failed";
     warnings.push(errorMessage);
-    await updateDocumentStatus(doc.id, {
+    await updateDocumentStatus(doc.tenantId, doc.id, {
       processingStatus: "preprocessing_failed",
       processingStage: currentStage,
       processingFinishedAt: new Date(),
