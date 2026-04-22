@@ -38,6 +38,7 @@ import { useNativePlatform } from "@/lib/capacitor/useNativePlatform";
 import { useToast } from "@/app/components/Toast";
 import { useConfirm } from "@/app/components/ConfirmDialog";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
+import { PortalPageShell } from "@/app/components/layout/PortalPageShell";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import { BaseModal } from "@/app/components/BaseModal";
 import { PortalAdvisorMfaCard } from "@/app/components/auth/PortalAdvisorMfaCard";
@@ -863,10 +864,8 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
   const initials = [firstName, lastName].map((s) => s?.[0]).filter(Boolean).join("").toUpperCase() || "?";
 
   return (
-    <div className="min-h-screen bg-[color:var(--wp-main-scroll-bg)] pb-12 text-[color:var(--wp-text)] md:pb-20">
+    <PortalPageShell maxWidth="standard">
       <style>{`.hide-scrollbar::-webkit-scrollbar { display: none; } .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }`}</style>
-
-      <main className="max-w-[1200px] mx-auto px-4 sm:px-6 md:px-8 pt-6 md:pt-8 pb-8 md:pb-12">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <h1 className="text-2xl sm:text-3xl font-black text-[color:var(--wp-text)] tracking-tight">Nastavení účtu</h1>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
@@ -1991,8 +1990,6 @@ export function SetupView({ initial }: { initial: SetupInitial }) {
             </div>
           </div>
         </BaseModal>
-
-      </main>
-    </div>
+    </PortalPageShell>
   );
 }

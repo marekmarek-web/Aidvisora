@@ -17,6 +17,7 @@ import {
 import { getProductionSummary, type PeriodType, type ProductionSummary } from "@/app/actions/production";
 import { SkeletonBlock } from "@/app/components/Skeleton";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
+import { PortalPageShell } from "@/app/components/layout/PortalPageShell";
 
 const PERIOD_OPTIONS: { value: PeriodType; label: string }[] = [
   { value: "month", label: "Měsíc" },
@@ -186,8 +187,7 @@ export function PortalProductionView() {
   }, [data]);
 
   return (
-    <div className="min-h-screen bg-[color:var(--wp-main-scroll-bg)] text-[color:var(--wp-text)] pb-8 md:pb-12" style={{ animation: "wp-fade-in 0.3s ease" }}>
-      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 md:px-8 pt-6 md:pt-8">
+    <PortalPageShell maxWidth="standard" outerClassName="[animation:wp-fade-in_0.3s_ease]">
         {/* --- Header: compact on mobile --- */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6 mb-6 md:mb-8">
           <div>
@@ -618,7 +618,6 @@ export function PortalProductionView() {
             </div>
           </>
         )}
-      </div>
-    </div>
+    </PortalPageShell>
   );
 }

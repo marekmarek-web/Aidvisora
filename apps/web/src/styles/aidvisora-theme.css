@@ -195,6 +195,9 @@
   --wp-radius-xl: 30px;
   --wp-radius-2xl: 32px;
   --wp-pill-radius: 8px;
+  /* Sjednocené sémantické radiusy pro portál (viz DESIGN_SYSTEM.md): */
+  --wp-radius-card: 24px; /* běžné karty / panely */
+  --wp-radius-modal: 20px; /* modály, sheets */
 
   /* ── Shadow (DASHBOARD.txt search-wrapper shadow) ── */
   --wp-shadow: 0 2px 6px 0 rgba(136, 148, 171, 0.2), 0 24px 20px -24px rgba(71, 82, 107, 0.1);

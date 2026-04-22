@@ -37,6 +37,7 @@ import {
   type TabId,
 } from "./analyses-page-utils";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
+import { PortalPageShell } from "@/app/components/layout/PortalPageShell";
 import { useToast } from "@/app/components/Toast";
 import { useConfirm } from "@/app/components/ConfirmDialog";
 
@@ -142,7 +143,7 @@ export default function AnalysesPageClient({
   }
 
   return (
-    <div className="min-h-screen bg-[color:var(--wp-main-scroll-bg)] pb-20">
+    <PortalPageShell maxWidth="standard" innerClassName="hub-bg">
       {permanentDeleteTarget ? (
         <div
           className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 bg-black/50"
@@ -201,7 +202,7 @@ export default function AnalysesPageClient({
         }
       `}</style>
 
-      <main className="max-w-[1200px] mx-auto p-4 sm:p-6 md:p-8 hub-bg min-h-[calc(100vh-73px)]">
+      <div>
         {/* Hlavička stránky & akce */}
           <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-8 lg:mb-10">
           <div>
@@ -469,7 +470,7 @@ export default function AnalysesPageClient({
             })}
           </ul>
         )}
-      </main>
-    </div>
+      </div>
+    </PortalPageShell>
   );
 }

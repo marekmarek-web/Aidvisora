@@ -38,10 +38,20 @@ import {
 } from "@/app/shared/mobile-ui/primitives";
 import { useDeviceClass } from "@/lib/ui/useDeviceClass";
 import { useConfirm } from "@/app/components/ConfirmDialog";
+import { EditLabelsEditor } from "@/app/components/monday/EditLabelsEditor";
 
 function StatusPill({ value, labels }: { value: string; labels: StatusLabel[] }) {
   if (!value || value === "") return <span className="text-xs text-[color:var(--wp-text-tertiary)]">—</span>;
   const sl = getStatusById(labels, value);
+  if (!sl.label) {
+    return (
+      <span
+        className="inline-block h-2.5 w-2.5 rounded-full align-middle"
+        style={{ backgroundColor: sl.color }}
+        aria-label="Štítek bez názvu"
+      />
+    );
+  }
   return (
     <span
       className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full text-white truncate max-w-[80px]"
@@ -190,6 +200,7 @@ export function BoardMobileScreen() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
+  const [labelsEditorOpen, setLabelsEditorOpen] = useState(false);
 
   const [newItemName, setNewItemName] = useState("");
   const [newItemGroup, setNewItemGroup] = useState("");
@@ -482,7 +493,21 @@ export function BoardMobileScreen() {
 
             {/* Status cells */}
             <div className="space-y-3">
-              <p className="text-xs font-bold text-[color:var(--wp-text-secondary)] uppercase tracking-wider">Produkty</p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold text-[color:var(--wp-text-secondary)] uppercase tracking-wider">Produkty</p>
+                <button
+                  type="button"
+                  onClick={() => setLabelsEditorOpen(true)}
+                  className="text-[11px] font-bold text-indigo-600 active:opacity-70 min-h-[36px] px-2"
+                >
+                  Upravit štítky
+                </button>
+              </div>
+              {statusLabels.length === 0 && (
+                <p className="text-[11px] text-[color:var(--wp-text-tertiary)] leading-snug">
+                  Zatím nemáte žádné štítky. Přidejte je tlačítkem „Upravit štítky“ výše — nastavíte barvu a název (např. zelený = „hotovo“).
+                </p>
+              )}
               {statusCols.map((col: Column) => {
                 const val = String(selectedItem.cells[col.id] ?? "");
                 return (
@@ -495,7 +520,7 @@ export function BoardMobileScreen() {
                     >
                       <option value="">—</option>
                       {statusLabels.map((sl) => (
-                        <option key={sl.id} value={sl.id}>{sl.label}</option>
+                        <option key={sl.id} value={sl.id}>{sl.label || `Štítek (${sl.color})`}</option>
                       ))}
                     </select>
                   </div>
@@ -599,6 +624,8 @@ export function BoardMobileScreen() {
           </button>
         </div>
       </BottomSheet>
+
+      <EditLabelsEditor open={labelsEditorOpen} onClose={() => setLabelsEditorOpen(false)} />
     </div>
   );
 }

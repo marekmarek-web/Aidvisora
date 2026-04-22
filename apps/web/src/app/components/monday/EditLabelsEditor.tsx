@@ -85,7 +85,7 @@ export function EditLabelsEditor({ open, onClose }: EditLabelsEditorProps) {
     } else {
       const normalized = labels.map((label, idx) => ({
         id: label.id || `label_${idx}_${Date.now()}`,
-        label: label.label.trim() || `Štítek ${idx + 1}`,
+        label: label.label.trim(),
         color: label.color,
         countsTowardPotential: label.countsTowardPotential === true,
       }));

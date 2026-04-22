@@ -49,7 +49,7 @@ export function getStatusLabels(): StatusLabel[] {
       .map((item, idx) => {
         if (!item || typeof item !== "object") return null;
         const id = typeof item.id === "string" && item.id.trim() ? item.id.trim() : `label_${idx}`;
-        const label = typeof item.label === "string" && item.label.trim() ? item.label.trim() : `Štítek ${idx + 1}`;
+        const label = typeof item.label === "string" && item.label.trim() ? item.label.trim() : "";
         const color = typeof item.color === "string" && item.color.trim() ? item.color.trim() : "#579bfc";
         const rawPotential = (item as { countsTowardPotential?: unknown }).countsTowardPotential;
         const countsTowardPotential =
@@ -75,7 +75,7 @@ export function setStatusLabels(labels: StatusLabel[]): void {
     const sanitized = labels
       .map((label, idx) => ({
         id: label.id?.trim() || `label_${idx}`,
-        label: label.label?.trim() || `Štítek ${idx + 1}`,
+        label: label.label?.trim() || "",
         color: label.color?.trim() || "#579bfc",
         countsTowardPotential: label.countsTowardPotential === true,
       }))
@@ -125,19 +125,14 @@ function autoPaletteColor(id: string): string {
 
 /**
  * Čitelný humanizovaný popisek z raw id.
- *   "label_1776298128" → "Štítek #28128"
+ *   "label_1776298128" → ""           (id vytvořené timestampem — bez jména zobrazujeme jen barvu)
  *   "k-podpisu"        → "K podpisu"
  *   "rozdelano"        → "Rozdelano"
  */
 function humanizeLabelId(id: string): string {
-  const ts = id.match(/^label_(\d+)$/);
-  if (ts) {
-    const digits = ts[1]!;
-    const short = digits.slice(-5);
-    return `Štítek #${short}`;
-  }
+  if (/^label_\d+$/.test(id)) return "";
   const cleaned = id.replace(/[-_]+/g, " ").trim();
-  if (!cleaned) return "Štítek";
+  if (!cleaned) return "";
   return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
 }
 
