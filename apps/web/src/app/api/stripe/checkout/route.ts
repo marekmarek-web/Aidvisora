@@ -24,7 +24,8 @@ import {
 } from "@/lib/stripe/billing-audit";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { getKillSwitch } from "@/lib/ops/kill-switch";
-import { db, tenants, eq } from "db";
+import { tenants, eq } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import Stripe from "stripe";
 
 export const dynamic = "force-dynamic";
@@ -183,11 +184,15 @@ export async function POST(request: Request) {
   }
 
   try {
-    const [tenantRow] = await db
-      .select({ stripeCustomerId: tenants.stripeCustomerId })
-      .from(tenants)
-      .where(eq(tenants.id, m.tenantId))
-      .limit(1);
+    const [tenantRow] = await withTenantContext(
+      { tenantId: m.tenantId, userId: user.id },
+      (tx) =>
+        tx
+          .select({ stripeCustomerId: tenants.stripeCustomerId })
+          .from(tenants)
+          .where(eq(tenants.id, m.tenantId))
+          .limit(1),
+    );
     const stripeCustomerId = tenantRow?.stripeCustomerId ?? null;
 
     const appBase = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";

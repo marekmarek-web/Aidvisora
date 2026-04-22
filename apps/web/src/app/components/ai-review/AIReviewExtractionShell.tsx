@@ -1012,6 +1012,30 @@ export function AIReviewExtractionShell({
               </div>
             </div>
           </div>
+          {/* Hard-supporting document warning: advisor must know that approve+apply
+              WILL NOT create a contract/payment for consent/declaration/AML/payslip/etc.
+              Renders above extraction so it's the first thing seen when entering review. */}
+          {doc.isSupportingOnlyDocument && !doc.isApplied ? (
+            <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 md:px-6">
+              <div className="flex items-start gap-2 text-amber-950">
+                <AlertCircle size={18} className="mt-0.5 shrink-0 text-amber-600" />
+                <div className="text-sm leading-snug">
+                  <p className="font-bold">
+                    Tento dokument se uloží jako <em>podpůrný</em> — nevytvoří smlouvu ani platební instrukci
+                  </p>
+                  <p className="mt-1 text-xs text-amber-900 leading-relaxed">
+                    Klasifikace {doc.detectedPrimaryType ? <code className="rounded bg-amber-100 px-1 py-0.5 text-[11px] font-mono">{doc.detectedPrimaryType}</code> : "dokumentu"}
+                    {" "}je v množině <strong>hard-supporting</strong> typů (souhlasy, prohlášení, AML/FATCA,
+                    výplatní pásky, daňová přiznání, výpisy z účtu, lékařské dotazníky, doklady totožnosti).
+                    Schválením dojde jen k navázání dokumentu na klienta — žádná smlouva nebo platba nevznikne.
+                    Pokud má být tento dokument <strong>hlavní smlouva</strong>, upravte jeho typ nebo nahrajte
+                    správný soubor.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           {hasData ? (
             <ExtractionLeftPanel
               doc={doc}

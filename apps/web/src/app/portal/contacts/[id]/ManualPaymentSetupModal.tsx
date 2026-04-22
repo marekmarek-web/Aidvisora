@@ -1,13 +1,21 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { X, Plus, Loader2, Save } from "lucide-react";
+import { X, Plus, Loader2, Save, Info } from "lucide-react";
 import {
   createManualPaymentSetup,
   updateManualPaymentSetup,
   type ManualPaymentSetupInput,
 } from "@/app/actions/manual-payment-setup";
 import { getPartnersForTenant } from "@/app/actions/contracts";
+import {
+  getInstitutionDefaultAccount,
+  type InstitutionDefaultAccount,
+} from "@/app/actions/institution-payment-defaults";
+import {
+  renderInstitutionalAccountTemplate,
+  splitContractNumberAndPrefix,
+} from "@/lib/institutions/account-template";
 import { SEGMENT_LABELS } from "@/lib/db-constants";
 
 type PartnerOption = { id: string; name: string; segment: string };
@@ -24,6 +32,44 @@ const FREQUENCY_OPTIONS = [
   "Ročně",
   "Jednorázově",
 ];
+
+function humanizePaymentType(t: string | null): string {
+  switch (t) {
+    case "first":
+      return "1. pojistné";
+    case "extra":
+      return "mimořádné";
+    case "employer":
+      return "zaměstnavatelský příspěvek";
+    case "regular":
+      return "běžné";
+    default:
+      return t ?? "—";
+  }
+}
+
+function humanizeProductCode(code: string | null): string {
+  if (!code) return "—";
+  switch (code) {
+    case "active_horizont_invest":
+      return "Active / Horizont Invest";
+    case "classic_invest_czk":
+      return "Classic Invest (CZK)";
+    case "contract_10_digit":
+      return "10místné číslo smlouvy";
+    case "contract_8_digit":
+      return "8místné číslo smlouvy";
+    default:
+      return code;
+  }
+}
+
+function describeSpecificSymbolPlaceholder(template: string): string {
+  if (template.includes("{birthNumber}")) return "rodné číslo klienta";
+  if (template.includes("{ico}")) return "IČ zaměstnavatele";
+  if (template.includes("{yearMonth}")) return "RRRRMM období platby";
+  return "dle rámcové smlouvy";
+}
 
 type FormState = {
   providerName: string;
@@ -184,11 +230,58 @@ export function ManualPaymentSetupModal({
   });
   const [formError, setFormError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [institutionDefault, setInstitutionDefault] = useState<InstitutionDefaultAccount | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     void getPartnersForTenant().then(setPartners).catch(() => undefined);
   }, []);
+
+  // F5: Auto-předvyplnění institucionálních defaultů, když se změní provider/segment.
+  // Přepisuje pouze prázdná pole (respektujeme ruční zadání poradce).
+  useEffect(() => {
+    const provider = form.providerName.trim();
+    const segment = form.segment.trim();
+    if (!provider || !segment) {
+      setInstitutionDefault(null);
+      return;
+    }
+    let cancelled = false;
+    void getInstitutionDefaultAccount(provider, segment)
+      .then((def) => {
+        if (cancelled) return;
+        setInstitutionDefault(def);
+        if (!def) return;
+        setForm((f) => {
+          let next = f;
+          if (!next.accountNumber.trim()) {
+            if (!def.accountNumberTemplate && def.accountNumber) {
+              next = {
+                ...next,
+                accountNumber: def.bankCode
+                  ? `${def.accountNumber}/${def.bankCode}`
+                  : def.accountNumber,
+              };
+            }
+          }
+          if (!next.constantSymbol.trim() && def.constantSymbol) {
+            next = { ...next, constantSymbol: def.constantSymbol };
+          }
+          if (
+            !next.specificSymbol.trim() &&
+            def.specificSymbolTemplate &&
+            !def.specificSymbolTemplate.includes("{")
+          ) {
+            next = { ...next, specificSymbol: def.specificSymbolTemplate };
+          }
+          return next;
+        });
+      })
+      .catch(() => setInstitutionDefault(null));
+    return () => {
+      cancelled = true;
+    };
+  }, [form.providerName, form.segment]);
 
   // Zavření Escape
   useEffect(() => {
@@ -337,9 +430,44 @@ export function ManualPaymentSetupModal({
               <input
                 value={form.accountNumber}
                 onChange={(e) => setForm((f) => ({ ...f, accountNumber: e.target.value }))}
-                placeholder="123456789/0800"
+                placeholder={institutionDefault?.accountNumberTemplate ?? "123456789/0800"}
                 className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-800 font-mono placeholder:text-slate-400 placeholder:font-sans focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-300"
               />
+              {institutionDefault?.note && (
+                <p className="mt-1 flex items-start gap-1 text-[11px] text-slate-600">
+                  <Info size={12} className="mt-0.5 shrink-0 text-indigo-500" />
+                  <span>{institutionDefault.note}</span>
+                </p>
+              )}
+              {institutionDefault && institutionDefault.alternatives.length > 0 && (
+                <div className="mt-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5">
+                  <p className="text-[11px] font-semibold text-amber-800 mb-1">
+                    Pozor: u této instituce existují další účty podle typu platby nebo produktu
+                  </p>
+                  <ul className="space-y-0.5 text-[11px] text-amber-900 list-disc pl-4">
+                    {institutionDefault.alternatives.map((alt, idx) => {
+                      const parts: string[] = [];
+                      if (alt.paymentType && alt.paymentType !== "regular") {
+                        parts.push(`typ platby: ${humanizePaymentType(alt.paymentType)}`);
+                      }
+                      if (alt.productCode) parts.push(`produkt: ${humanizeProductCode(alt.productCode)}`);
+                      const label = parts.join(", ");
+                      const account = alt.accountNumberTemplate
+                        ? alt.accountNumberTemplate
+                        : alt.accountNumber && alt.bankCode
+                          ? `${alt.accountNumber}/${alt.bankCode}`
+                          : alt.accountNumber ?? "";
+                      return (
+                        <li key={idx}>
+                          {label ? <span className="font-semibold">{label}:</span> : null}{" "}
+                          <span className="font-mono">{account}</span>
+                          {alt.note ? <span className="text-amber-800"> — {alt.note}</span> : null}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
             </div>
 
             {/* IBAN */}
@@ -358,12 +486,16 @@ export function ManualPaymentSetupModal({
             {/* Variabilní symbol */}
             <div>
               <label className="block text-xs font-bold text-[color:var(--wp-text-secondary)] mb-1">
-                Variabilní symbol *
+                Variabilní symbol {institutionDefault?.variableSymbolRequired === false ? "" : "*"}
               </label>
               <input
                 value={form.variableSymbol}
                 onChange={(e) => setForm((f) => ({ ...f, variableSymbol: e.target.value }))}
-                placeholder="1234567890"
+                placeholder={
+                  institutionDefault?.variableSymbolRequired === false
+                    ? "(není potřeba – instituce VS nevyžaduje)"
+                    : "1234567890"
+                }
                 className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-800 font-mono placeholder:text-slate-400 placeholder:font-sans focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-300"
               />
             </div>
@@ -376,9 +508,14 @@ export function ManualPaymentSetupModal({
               <input
                 value={form.constantSymbol}
                 onChange={(e) => setForm((f) => ({ ...f, constantSymbol: e.target.value }))}
-                placeholder="0308"
+                placeholder={institutionDefault?.constantSymbol ?? "0308"}
                 className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-800 font-mono placeholder:text-slate-400 placeholder:font-sans focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-300"
               />
+              {institutionDefault?.constantSymbol && !form.constantSymbol.trim() && (
+                <p className="mt-1 text-[11px] text-slate-500">
+                  Doporučený KS pro tuto instituci: <span className="font-mono">{institutionDefault.constantSymbol}</span>
+                </p>
+              )}
             </div>
 
             {/* Specifický symbol */}
@@ -389,10 +526,27 @@ export function ManualPaymentSetupModal({
               <input
                 value={form.specificSymbol}
                 onChange={(e) => setForm((f) => ({ ...f, specificSymbol: e.target.value }))}
-                placeholder="volitelně"
+                placeholder={institutionDefault?.specificSymbolTemplate ?? "volitelně"}
                 className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-800 font-mono placeholder:text-slate-400 placeholder:font-sans focus:border-indigo-400 focus:outline-none focus:ring-1 focus:ring-indigo-300"
               />
+              {institutionDefault?.specificSymbolTemplate && !form.specificSymbol.trim() && (
+                <p className="mt-1 text-[11px] text-slate-500">
+                  {institutionDefault.specificSymbolTemplate.includes("{")
+                    ? `Vyplňte podle šablony ${institutionDefault.specificSymbolTemplate} (např. ${describeSpecificSymbolPlaceholder(institutionDefault.specificSymbolTemplate)}).`
+                    : `Doporučený SS pro tuto instituci: ${institutionDefault.specificSymbolTemplate}`}
+                </p>
+              )}
             </div>
+
+            {/* Symbol rules note (globální upozornění k VS/SS/KS) */}
+            {institutionDefault?.symbolRulesNote && (
+              <div className="sm:col-span-2">
+                <p className="flex items-start gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-[11px] text-indigo-900">
+                  <Info size={12} className="mt-0.5 shrink-0 text-indigo-500" />
+                  <span>{institutionDefault.symbolRulesNote}</span>
+                </p>
+              </div>
+            )}
 
             {/* Amount */}
             <div>

@@ -46,14 +46,14 @@ export function renderInvestmentOverview(ctx: SectionCtx): string {
     }
 
     return `<tr>
-      <td style="max-width:220px">
+      <td>
         <div class="ins-provider-cell">${logoHtml}</div>
-        <div class="bold" style="margin-top:4px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${esc(name)}</div>
+        <div class="bold" style="margin-top:4px">${esc(name)}</div>
       </td>
-      <td class="muted inv-type-cell" style="white-space:nowrap;width:80px">${esc(typeLabel)}</td>
-      <td class="r">${esc(amountLabel)}</td>
-      <td class="r">${esc(horizon)}</td>
-      <td class="r num bold">${fmtBigCzk(fv)}</td>
+      <td class="muted inv-type-cell" style="white-space:nowrap;width:64px">${esc(typeLabel)}</td>
+      <td class="r" style="white-space:nowrap">${esc(amountLabel)}</td>
+      <td class="r" style="white-space:nowrap">${esc(horizon)}</td>
+      <td class="r num bold" style="white-space:nowrap">${fmtBigCzk(fv)}</td>
     </tr>`;
   });
 
@@ -73,24 +73,25 @@ export function renderInvestmentOverview(ctx: SectionCtx): string {
 
     <div class="tbl-wrap">
       <div class="tbl-cap"><span class="tbl-cap-title">Investiční produkty</span></div>
-      <table class="dt">
-        <thead><tr><th style="max-width:220px">Produkt / Fond</th><th style="width:80px;white-space:nowrap">Typ</th><th class="r">Platba</th><th class="r">Horizont</th><th class="r">Odhad FV</th></tr></thead>
+      <table class="dt" style="table-layout:fixed;width:100%">
+        <colgroup>
+          <col />
+          <col style="width:64px" />
+          <col style="width:15%" />
+          <col style="width:80px" />
+          <col style="width:18%" />
+        </colgroup>
+        <thead><tr><th>Produkt / Fond</th><th style="white-space:nowrap">Typ</th><th class="r">Platba</th><th class="r">Horizont</th><th class="r">Odhad FV</th></tr></thead>
         <tbody>
           ${rows.join('\n')}
           <tr class="sum-row">
             <td colspan="2" class="bold">Celkem</td>
-            <td class="r num">${esc(totalAmountCells || '–')}</td>
+            <td class="r num" style="white-space:nowrap">${esc(totalAmountCells || '–')}</td>
             <td></td>
-            <td class="r num bold">${fmtBigCzk(totalFV)}</td>
+            <td class="r num bold" style="white-space:nowrap">${fmtBigCzk(totalFV)}</td>
           </tr>
         </tbody>
       </table>
-    </div>
-
-    <div class="callout info" style="margin-top:var(--s4,16px)">
-      <span class="callout-icon">ⓘ</span>
-      <div><strong>Interní podklad pro poradce</strong>
-      Odhad budoucí hodnoty je orientační projekce z modelačního scénáře průvodce analýzy. Vychází z předpokládaného průměrného ročního výnosu a nezohledňuje inflaci, daně ani poplatky. Minulá výkonnost není zárukou budoucích výnosů.</div>
     </div>
   </div>
 </section>`;

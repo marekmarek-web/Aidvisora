@@ -35,6 +35,10 @@ function isExcluded(partnerName) {
 
 function isTbd(name) {
   if (typeof name !== "string") return false;
+  // Escape-hatch "Vlastní produkt (zadejte název)" NENÍ TBD – je to plnohodnotný
+  // fallback pro volitelný vstup uživatele. Pouze explicitní TBD prefixy nebo
+  // legacy "(doplnit…)" varianty se pokládají za neúplný katalogový záznam.
+  if (name === "Vlastní produkt (zadejte název)") return false;
   return (
     name.startsWith("TBD") ||
     name.includes("TBD -") ||

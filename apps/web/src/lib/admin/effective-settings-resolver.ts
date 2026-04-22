@@ -3,7 +3,8 @@
  * Resolves active setting values for a tenant using hierarchy: tenant override > global default.
  */
 
-import { db, tenantSettings, eq, and } from "db";
+import { tenantSettings, eq, and } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import {
   getSettingDefinition,
   getSettingsForDomain,
@@ -23,10 +24,12 @@ export type EffectiveSetting = {
 };
 
 async function getTenantOverride(tenantId: string, key: string): Promise<unknown | undefined> {
-  const rows = await db
-    .select({ value: tenantSettings.value })
-    .from(tenantSettings)
-    .where(and(eq(tenantSettings.tenantId, tenantId), eq(tenantSettings.key, key)));
+  const rows = await withTenantContext({ tenantId }, (tx) =>
+    tx
+      .select({ value: tenantSettings.value })
+      .from(tenantSettings)
+      .where(and(eq(tenantSettings.tenantId, tenantId), eq(tenantSettings.key, key))),
+  );
   return rows.length > 0 ? rows[0].value : undefined;
 }
 
@@ -50,14 +53,16 @@ export async function resolveEffectiveSetting(tenantId: string, key: string): Pr
 export async function resolveEffectiveSettings(tenantId: string, domain?: SettingDomain): Promise<EffectiveSetting[]> {
   const defs: SettingDefinition[] = domain ? getSettingsForDomain(domain) : SETTINGS_REGISTRY;
 
-  const rows = await db
-    .select({ key: tenantSettings.key, value: tenantSettings.value })
-    .from(tenantSettings)
-    .where(
-      domain
-        ? and(eq(tenantSettings.tenantId, tenantId), eq(tenantSettings.domain, domain))
-        : eq(tenantSettings.tenantId, tenantId)
-    );
+  const rows = await withTenantContext({ tenantId }, (tx) =>
+    tx
+      .select({ key: tenantSettings.key, value: tenantSettings.value })
+      .from(tenantSettings)
+      .where(
+        domain
+          ? and(eq(tenantSettings.tenantId, tenantId), eq(tenantSettings.domain, domain))
+          : eq(tenantSettings.tenantId, tenantId),
+      ),
+  );
 
   const overridesMap = new Map(rows.map((r) => [r.key, r.value]));
 

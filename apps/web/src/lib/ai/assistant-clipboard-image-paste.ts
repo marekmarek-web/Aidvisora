@@ -52,13 +52,23 @@ export function extractImageFilesFromClipboardData(
   const max = opts?.max ?? DEFAULT_MAX_CLIPBOARD_IMAGES;
   const seen = new Set<string>();
   const all: File[] = [];
+  let overflowSeen = false;
 
-  const tryAdd = (f: File | null) => {
-    if (!f || !isImageFileLike(f)) return;
+  // M26/M27: cap during iteration so we never hold >max File blobs. Still use
+  // name+size+type for the fast pre-dedup; content-hash dedup runs later in
+  // readImageFilesAsPayloads where the bytes are actually read. This avoids
+  // holding a 32-image clipboard in memory for a component that only keeps 4.
+  const tryAdd = (f: File | null): boolean => {
+    if (all.length >= max) {
+      overflowSeen = true;
+      return false;
+    }
+    if (!f || !isImageFileLike(f)) return false;
     const key = `${f.name}:${f.size}:${f.type}`;
-    if (seen.has(key)) return;
+    if (seen.has(key)) return false;
     seen.add(key);
     all.push(f);
+    return true;
   };
 
   for (const item of Array.from(dataTransfer.items)) {
@@ -66,13 +76,14 @@ export function extractImageFilesFromClipboardData(
     const t = item.type || "";
     const f = item.getAsFile();
     if (!f) continue;
-    if (t.startsWith("image/") || isImageFileLike(f)) tryAdd(f);
+    if (t.startsWith("image/") || isImageFileLike(f)) {
+      tryAdd(f);
+    }
   }
 
   for (const f of Array.from(dataTransfer.files)) {
     tryAdd(f);
   }
 
-  const truncated = all.length > max;
-  return { files: all.slice(0, max), truncated };
+  return { files: all, truncated: overflowSeen };
 }

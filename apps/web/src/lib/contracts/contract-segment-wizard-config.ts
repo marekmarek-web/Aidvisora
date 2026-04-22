@@ -9,6 +9,7 @@ export const CONTRACT_SEGMENT_CODES = [
   "ZP",
   "MAJ",
   "ODP",
+  "ODP_ZAM",
   "AUTO_PR",
   "AUTO_HAV",
   "CEST",

@@ -136,6 +136,51 @@ describe("ContactOverviewKpi — jednorázová investice se nezobrazuje jako mě
     expect(k.annualInsurance).toBe(29_304);
   });
 
+  it("F4 double-guard: INV bez paymentType s premiumAmount=1M (lump-sum halucinace) → monthlyInvest=0", () => {
+    // Legacy smlouva – paymentType nikdy nezapsáno, label indikuje jednorázovost
+    // až po fallbacku v canonical-contract-read. Double-guard v contact-overview-kpi
+    // musí zachránit i smlouvy, které nemají ani label.
+    const rows: ContractRow[] = [
+      row({
+        segment: "INV",
+        type: "INV",
+        premiumAmount: "1000000",
+        premiumAnnual: null,
+        portfolioAttributes: {},
+      }),
+    ];
+    const k = computeContactOverviewKpiFromContracts(rows);
+    expect(k.monthlyInvest).toBe(0);
+  });
+
+  it("F4 double-guard: INV bez paymentType, ale premiumMonthly=3 000 (realistické) → započítává se", () => {
+    const rows: ContractRow[] = [
+      row({
+        segment: "INV",
+        type: "INV",
+        premiumAmount: "3000",
+        premiumAnnual: null,
+        portfolioAttributes: {},
+      }),
+    ];
+    const k = computeContactOverviewKpiFromContracts(rows);
+    expect(k.monthlyInvest).toBe(3_000);
+  });
+
+  it("F4 double-guard: INV bez paymentType, s premiumAnnual (znamená regular) → nečinnost guardu, započítá se", () => {
+    const rows: ContractRow[] = [
+      row({
+        segment: "INV",
+        type: "INV",
+        premiumAmount: "60000",
+        premiumAnnual: "60000",
+        portfolioAttributes: {},
+      }),
+    ];
+    const k = computeContactOverviewKpiFromContracts(rows);
+    expect(k.monthlyInvest).toBe(60_000);
+  });
+
   it("non-advisor sourceKind (např. client) se nezapočítá", () => {
     const rows: ContractRow[] = [
       row({

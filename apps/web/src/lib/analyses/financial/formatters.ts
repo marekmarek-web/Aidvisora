@@ -45,7 +45,7 @@ export function formatCurrencyDaily(value: number): string {
  */
 export function formatPercent(value: number, decimals = 1): string {
   const v = typeof value === 'number' ? value * 100 : 0;
-  return v.toFixed(decimals).replace('.', ',') + ' %';
+  return v.toFixed(decimals).replace('.', ',') + '\u00A0%';
 }
 
 /**
@@ -91,13 +91,13 @@ export function sanitizeForFilename(name: string): string {
 }
 
 export type FinancialAnalysisReportFilenameOptions = {
-  /** If true, append date as DDMMYYYY (CZ). Default false — title is only „Finanční analýza - Jméno“. */
+  /** If true, append date as DDMMYYYY (CZ). Default false — title is only „Finanční plán - Jméno“. */
   includeDate?: boolean;
 };
 
 /**
  * Title / filename stem for FA HTML export and PDF print dialog, e.g.
- * "Finanční analýza - Jan Novák". Optional: "… - 24032025" when includeDate is true.
+ * "Finanční plán - Jan Novák". Optional: "… - 24032025" when includeDate is true.
  */
 export function financialAnalysisReportTitle(
   clientName: string,
@@ -105,7 +105,7 @@ export function financialAnalysisReportTitle(
 ): string {
   const raw = (clientName || '').trim() || 'Klient';
   const sanitized = sanitizeForFilename(raw);
-  const base = `Finanční analýza - ${sanitized}`;
+  const base = `Finanční plán - ${sanitized}`;
   if (!options?.includeDate) return base;
   const d = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');

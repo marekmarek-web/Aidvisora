@@ -64,7 +64,8 @@ export async function consumeAssistantChatSse(
 /** POST na streamovaný chat; `init.body` musí být JSON string zprávy. */
 export async function postAssistantChatStreaming(
   init: RequestInit,
-  onDelta: (chunk: string) => void
+  onDelta: (chunk: string) => void,
+  signal?: AbortSignal,
 ): Promise<AssistantResponse> {
   if (typeof init.body === "string" && assistantImagePastePipelineDebugEnabled()) {
     try {
@@ -81,7 +82,7 @@ export async function postAssistantChatStreaming(
       /* ignore */
     }
   }
-  const res = await fetch("/api/ai/assistant/chat?stream=1", init);
+  const res = await fetch("/api/ai/assistant/chat?stream=1", { ...init, signal });
   return consumeAssistantChatSse(res, onDelta);
 }
 

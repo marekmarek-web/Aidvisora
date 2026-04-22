@@ -1,6 +1,6 @@
-import { db } from "db";
 import { clientContacts, clientInvitations, memberships, roles } from "db";
 import { eq, and, isNull, isNotNull } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 
 /**
  * Deterministic access verdict for a contact's client zone state.
@@ -98,48 +98,50 @@ export async function computeAccessVerdict(
   tenantId: string,
   contactId: string
 ): Promise<ComputedAccessVerdict> {
-  const [ccRows, invitationRows] = await Promise.all([
-    db
-      .select({ id: clientContacts.id, userId: clientContacts.userId })
-      .from(clientContacts)
-      .where(and(eq(clientContacts.tenantId, tenantId), eq(clientContacts.contactId, contactId)))
-      .limit(1),
-    db
-      .select({
-        acceptedAt: clientInvitations.acceptedAt,
-        revokedAt: clientInvitations.revokedAt,
-        expiresAt: clientInvitations.expiresAt,
-        passwordChangedAt: clientInvitations.passwordChangedAt,
-        token: clientInvitations.token,
-        email: clientInvitations.email,
-      })
-      .from(clientInvitations)
-      .where(and(eq(clientInvitations.tenantId, tenantId), eq(clientInvitations.contactId, contactId))),
-  ]);
+  return withTenantContext({ tenantId }, async (tx) => {
+    const [ccRows, invitationRows] = await Promise.all([
+      tx
+        .select({ id: clientContacts.id, userId: clientContacts.userId })
+        .from(clientContacts)
+        .where(and(eq(clientContacts.tenantId, tenantId), eq(clientContacts.contactId, contactId)))
+        .limit(1),
+      tx
+        .select({
+          acceptedAt: clientInvitations.acceptedAt,
+          revokedAt: clientInvitations.revokedAt,
+          expiresAt: clientInvitations.expiresAt,
+          passwordChangedAt: clientInvitations.passwordChangedAt,
+          token: clientInvitations.token,
+          email: clientInvitations.email,
+        })
+        .from(clientInvitations)
+        .where(and(eq(clientInvitations.tenantId, tenantId), eq(clientInvitations.contactId, contactId))),
+    ]);
 
-  const cc = ccRows[0] ?? null;
-  let hasClientMembership = false;
+    const cc = ccRows[0] ?? null;
+    let hasClientMembership = false;
 
-  if (cc?.userId) {
-    const membershipRows = await db
-      .select({ roleName: roles.name })
-      .from(memberships)
-      .innerJoin(roles, eq(memberships.roleId, roles.id))
-      .where(and(eq(memberships.userId, cc.userId), eq(memberships.tenantId, tenantId)))
-      .limit(1);
-    hasClientMembership = membershipRows[0]?.roleName === "Client";
-  }
+    if (cc?.userId) {
+      const membershipRows = await tx
+        .select({ roleName: roles.name })
+        .from(memberships)
+        .innerJoin(roles, eq(memberships.roleId, roles.id))
+        .where(and(eq(memberships.userId, cc.userId), eq(memberships.tenantId, tenantId)))
+        .limit(1);
+      hasClientMembership = membershipRows[0]?.roleName === "Client";
+    }
 
-  return computeAccessVerdictFromState({
-    hasClientContactRow: cc != null,
-    hasClientMembership,
-    invitations: invitationRows.map((r) => ({
-      acceptedAt: r.acceptedAt,
-      revokedAt: r.revokedAt,
-      expiresAt: r.expiresAt,
-      passwordChangedAt: r.passwordChangedAt,
-      token: r.token,
-      email: r.email,
-    })),
+    return computeAccessVerdictFromState({
+      hasClientContactRow: cc != null,
+      hasClientMembership,
+      invitations: invitationRows.map((r) => ({
+        acceptedAt: r.acceptedAt,
+        revokedAt: r.revokedAt,
+        expiresAt: r.expiresAt,
+        passwordChangedAt: r.passwordChangedAt,
+        token: r.token,
+        email: r.email,
+      })),
+    });
   });
 }

@@ -50,6 +50,7 @@ import {
   verifyTenantConsistency,
 } from "./assistant-context-safety";
 import { mapErrorForAdvisor } from "./assistant-error-mapping";
+import { canPerformAssistantAction } from "./assistant-permissions";
 import { getPlaybookGuidanceLines } from "./playbooks";
 import { AssistantTelemetryAction, logAssistantTelemetry } from "./assistant-telemetry";
 import { tryRatingLookupReply } from "./ratings/toplists";
@@ -438,7 +439,12 @@ export async function routeAssistantMessage(
     paymentContactId: session.activePaymentContactId,
   };
 
-  if (intentWantsCrmWrites(intent)) {
+  // H5: legacy mortgage CRM-write fast-path. Same safety concern as the canonical
+  // bundle below — gate behind an explicit opt-in flag.
+  if (
+    process.env.ASSISTANT_MORTGAGE_BUNDLE_FAST_PATH === "1" &&
+    intentWantsCrmWrites(intent)
+  ) {
     const resolved = await resolveContactForAssistantWrites(session, intent, tenantId);
     if ("error" in resolved) {
       return {
@@ -603,10 +609,17 @@ export async function routeAssistantMessage(
     session.lastSuggestedActions = fallbackActions;
     session.lastWarnings = ["Služba AI dočasně nedostupná."];
 
+    // M21: previous copy said "vyberte akci níže" but shipped suggestedActions
+    // empty; either surface the real fallback actions we just computed, or
+    // drop the "below" language entirely when we have nothing concrete to
+    // offer.
+    const hasFallback = fallbackActions.length > 0;
     return {
-      message: "Odpověď není k dispozici. Zkuste to později nebo vyberte akci níže.",
+      message: hasFallback
+        ? "Odpověď není k dispozici. Zkuste to později, nebo vyberte jednu z prioritních akcí níže."
+        : "Odpověď není k dispozici. Zkuste to za chvíli znovu.",
       referencedEntities: [],
-      suggestedActions: [],
+      suggestedActions: hasFallback ? fallbackActions : [],
       warnings: ["Služba AI dočasně nedostupná."],
       confidence: 0,
       sourcesSummary: [],
@@ -648,7 +661,12 @@ export type AssistantConfirmationPayload = {
 export async function handleAssistantAwaitingConfirmation(
   session: AssistantSession,
   body: AssistantConfirmationPayload,
-  ctx: { tenantId: string; userId: string; roleName: RoleName },
+  // L10: added optional `ipAddress` so the caller (API route) can thread it
+  // down into `executePlan` → `ExecutionContext.ipAddress`, which in turn is
+  // read by the audit row as `requestContext.ipAddress`. Previously the
+  // ExecutionContext type accepted `ipAddress` but no call site propagated
+  // it, so audit logs were missing network context.
+  ctx: { tenantId: string; userId: string; roleName: RoleName; ipAddress?: string },
 ): Promise<AssistantResponse | null> {
   const plan = session.lastExecutionPlan;
   if (!plan || plan.status !== "awaiting_confirmation") return null;
@@ -681,11 +699,20 @@ export async function handleAssistantAwaitingConfirmation(
     };
   }
 
-  if (
-    plan.contactId &&
-    session.lockedClientId &&
-    plan.contactId !== session.lockedClientId
-  ) {
+  // M29: revalidate plan↔client before executing. Block when either side
+  // carries a client id and they disagree — including the case where the
+  // session was re-locked to a different client between "plan built" and
+  // "confirm submitted". The previous check only fired when BOTH values were
+  // set, which let stale plans slip through after a UI contact switch.
+  const hasPlanClient = typeof plan.contactId === "string" && plan.contactId.length > 0;
+  const hasSessionClient =
+    typeof session.lockedClientId === "string" && session.lockedClientId.length > 0;
+  const sessionAndPlanClientDisagree =
+    (hasPlanClient && hasSessionClient && plan.contactId !== session.lockedClientId) ||
+    // A plan built against a specific client, executed after the session lock
+    // was cleared (user typed "přepni klienta" or navigated away) must not run.
+    (hasPlanClient && !hasSessionClient && session.pendingClientDisambiguation === true);
+  if (sessionAndPlanClientDisagree) {
     logAssistantTelemetry(AssistantTelemetryAction.CONTEXT_SAFETY_BLOCKED, {
       planId: plan.planId,
       reason: "plan_client_mismatch",
@@ -697,6 +724,28 @@ export async function handleAssistantAwaitingConfirmation(
       referencedEntities: [],
       suggestedActions: [],
       warnings: ["Nesoulad klienta mezi plánem a aktuálním kontextem."],
+      confidence: 0.3,
+      sourcesSummary: [],
+      sessionId: session.sessionId,
+    };
+  }
+
+  // H1/M29: re-run tenant consistency guard right before executing. This protects
+  // against a confirm-submit that landed on a different server instance / session
+  // restore, and against a mutated plan.tenantId vs session.tenantId.
+  const tenantSafety = verifyTenantConsistency(session, plan);
+  if (!tenantSafety.safe) {
+    logAssistantTelemetry(AssistantTelemetryAction.CONTEXT_SAFETY_BLOCKED, {
+      planId: plan.planId,
+      reason: tenantSafety.blockedReason ?? "tenant_mismatch",
+    });
+    session.lastExecutionPlan = undefined;
+    return {
+      message:
+        "Plán se vztahoval k jinému pracovnímu prostoru než aktuální relace. Z bezpečnostních důvodů byl zrušen.",
+      referencedEntities: [],
+      suggestedActions: [],
+      warnings: tenantSafety.warnings,
       confidence: 0.3,
       sourcesSummary: [],
       sessionId: session.sessionId,
@@ -746,16 +795,86 @@ export async function handleAssistantAwaitingConfirmation(
     };
   }
 
-  // Apply inline param overrides from the advisor UI before running the plan
+  // Apply inline param overrides from the advisor UI before running the plan.
+  //
+  // L11: overrides are per-action allowlisted. Anything outside the list is
+  // dropped silently with telemetry so a malicious or buggy UI cannot patch
+  // critical params (like `contactId`, `tenantId`, amount signs, entity ids)
+  // via inline edits at confirm time.
   if (body.stepParamOverrides && Object.keys(body.stepParamOverrides).length > 0) {
+    const INLINE_OVERRIDE_ALLOWLIST: Record<string, ReadonlyArray<string>> = {
+      createTask: ["title", "dueAt", "dueDate", "note", "priority"],
+      createMeetingNote: ["note", "content", "title"],
+      createInternalNote: ["note", "content"],
+      createServiceCase: ["title", "description", "note", "dueAt"],
+      createOpportunity: ["title", "note", "expectedCloseAt", "valueCzk", "stage"],
+      updateTask: ["title", "dueAt", "dueDate", "note", "priority", "status"],
+      sendClientMessage: ["subject", "body"],
+      savePaymentSetup: [
+        "providerName",
+        "accountNumber",
+        "iban",
+        "variableSymbol",
+        "constantSymbol",
+        "specificSymbol",
+        "monthlyAmountCzk",
+        "firstPaymentDate",
+      ],
+      createClientPortalNotification: ["title", "body"],
+      upsertContactCoverage: ["status", "note"],
+    };
+    let overrideDropped = 0;
     prepared = {
       ...prepared,
       steps: prepared.steps.map((step) => {
         const overrides = body.stepParamOverrides![step.stepId];
         if (!overrides) return step;
-        return { ...step, params: { ...step.params, ...overrides } };
+        const allowed = INLINE_OVERRIDE_ALLOWLIST[step.actionType];
+        if (!allowed) {
+          overrideDropped += Object.keys(overrides).length;
+          return step;
+        }
+        const safe: Record<string, string> = {};
+        for (const [k, v] of Object.entries(overrides)) {
+          if (allowed.includes(k)) {
+            safe[k] = v;
+          } else {
+            overrideDropped++;
+          }
+        }
+        if (Object.keys(safe).length === 0) return step;
+        return { ...step, params: { ...step.params, ...safe } };
       }),
     };
+    if (overrideDropped > 0) {
+      logAssistantTelemetry(AssistantTelemetryAction.CONTEXT_SAFETY_BLOCKED, {
+        planId: prepared.planId,
+        reason: "step_param_override_dropped",
+        overrideDropped,
+      });
+    }
+  }
+
+  // H10: role-based gate at confirm-time. Viewers/Clients cannot execute writes
+  // even if a plan was previously built.
+  if (prepared.steps.some((s) => !s.isReadOnly)) {
+    const perm = canPerformAssistantAction(ctx.roleName, "create_draft");
+    if (!perm.allowed) {
+      logAssistantTelemetry(AssistantTelemetryAction.CONTEXT_SAFETY_BLOCKED, {
+        planId: prepared.planId,
+        reason: "permission_denied_execute",
+      });
+      return {
+        message:
+          "Vaše role nemá oprávnění provést tyto akce. Požádejte manažera nebo administrátora.",
+        referencedEntities: [],
+        suggestedActions: [],
+        warnings: [perm.reason ?? "permission_denied"],
+        confidence: 0.2,
+        sourcesSummary: [],
+        sessionId: session.sessionId,
+      };
+    }
   }
 
   session._confirmationInProgress = true;
@@ -768,6 +887,7 @@ export async function handleAssistantAwaitingConfirmation(
       userId: ctx.userId,
       sessionId: session.sessionId,
       roleName: ctx.roleName,
+      ipAddress: ctx.ipAddress,
     });
     session.lastExecutionPlan = executed;
     const verified = buildVerifiedResult("Akce provedeny.", executed);
@@ -888,7 +1008,7 @@ async function respondPostUploadReviewBootstrap(
   return {
     message:
       "Níže vyberte kroky a potvrďte je tlačítkem „Potvrdit a provést“ (po schválení se zapíší do CRM a propojí dokument).",
-    referencedEntities: [{ type: "contract_review", id: reviewId, label: clientLabel }],
+    referencedEntities: [{ type: "review", id: reviewId, label: clientLabel }],
     suggestedActions: [],
     warnings: [...resolution.warnings, ...ctxSafety.warnings],
     confidence: 0.9,
@@ -1040,7 +1160,13 @@ export async function routeAssistantMessageCanonical(
     warningCount: resolution.warnings.length,
   });
 
-  if (shouldUseMortgageVerifiedBundle(canonicalIntent)) {
+  // H5: mortgage verified bundle used to write directly without going through the
+  // normal plan + confirmation UI, which is unsafe. Gate behind an explicit
+  // opt-in flag so the default is "route through confirmation" (the generic
+  // plan/execute path below).
+  const mortgageBundleFastPathEnabled =
+    process.env.ASSISTANT_MORTGAGE_BUNDLE_FAST_PATH === "1";
+  if (mortgageBundleFastPathEnabled && shouldUseMortgageVerifiedBundle(canonicalIntent)) {
     if (resolution.client?.ambiguous) {
       session.pendingClientDisambiguation = true;
       const altLines = resolution.client.alternatives.map((a, i) => `${i + 1}. ${a.label}`).join("\n");
@@ -1198,6 +1324,29 @@ export async function routeAssistantMessageCanonical(
       sessionId: session.sessionId,
     };
   }
+
+  // H10: gate any plan that would perform writes behind role-based permissions.
+  // Viewers (and Clients) can chat/read but must not trigger drafts or writes.
+  if (plan.steps.some((s) => !s.isReadOnly)) {
+    const perm = canPerformAssistantAction(roleName, "create_draft");
+    if (!perm.allowed) {
+      logAssistantTelemetry(AssistantTelemetryAction.CONTEXT_SAFETY_BLOCKED, {
+        planId: plan.planId,
+        reason: "permission_denied_create_draft",
+      });
+      return {
+        message:
+          "Vaše role nemá oprávnění spouštět akce asistenta. Požádejte manažera nebo administrátora o potvrzení.",
+        referencedEntities: [],
+        suggestedActions: [],
+        warnings: [perm.reason ?? "permission_denied"],
+        confidence: 0.2,
+        sourcesSummary: [],
+        sessionId: session.sessionId,
+      };
+    }
+  }
+
   if (
     ctxSafety.requiresConfirmation &&
     plan.status !== "awaiting_confirmation" &&

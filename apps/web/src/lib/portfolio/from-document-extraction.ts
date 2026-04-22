@@ -110,7 +110,13 @@ export async function syncPortfolioDraftFromProcessedDocument(
   if (!normalized) return { ok: false, reason: "skipped_empty", detail: "no_contract_fields" };
 
   const primaryType = String(normalized.documentType ?? "life_insurance_contract");
+  // S2-N1: resolveSegmentFromType může vrátit null (neznámý typ bez hintů).
+  // Portfolio draft vyžaduje segment jako PK do taxonomy — skipneme draft
+  // místo tichého fallbacku na MAJ, které zkreslovalo portfolio metriky.
   const segment = resolveSegmentFromType(primaryType);
+  if (!segment) {
+    return { ok: false, reason: "skipped_empty", detail: "unknown_segment" };
+  }
   const { premiumAmount, premiumAnnual } = computeDraftPremiums(segment, normalized);
 
   const extractionConfidence =

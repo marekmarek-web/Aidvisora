@@ -106,7 +106,7 @@ export async function createPortalNotification(params: {
    * Pass `0` to force insert even when a duplicate unread exists.
    */
   dedupWindowMinutes?: number;
-}): Promise<void> {
+}): Promise<{ id: string | null; deduped: boolean }> {
   /**
    * Dokončení / uzavření požadavku na podklady: starší nepřečtené řádky pro stejnou entitu
    * by jinak blokovaly insert (dedup) nebo by se u klienta hromadily jako duplicitní „co řešit“.
@@ -149,19 +149,23 @@ export async function createPortalNotification(params: {
       .limit(1);
     if (existing && existing.id) {
       // Recent unread notification for same entity already exists — skip
-      return;
+      return { id: existing.id, deduped: true };
     }
   }
 
-  await db.insert(portalNotifications).values({
-    tenantId: params.tenantId,
-    contactId: params.contactId,
-    type: params.type,
-    title: params.title,
-    body: params.body ?? null,
-    relatedEntityType: params.relatedEntityType ?? null,
-    relatedEntityId: params.relatedEntityId ?? null,
-  });
+  const inserted = await db
+    .insert(portalNotifications)
+    .values({
+      tenantId: params.tenantId,
+      contactId: params.contactId,
+      type: params.type,
+      title: params.title,
+      body: params.body ?? null,
+      relatedEntityType: params.relatedEntityType ?? null,
+      relatedEntityId: params.relatedEntityId ?? null,
+    })
+    .returning({ id: portalNotifications.id });
+  const insertedId = inserted[0]?.id ?? null;
 
   try {
     await sendPushForPortalNotification({
@@ -181,4 +185,6 @@ export async function createPortalNotification(params: {
       error: e,
     });
   }
+
+  return { id: insertedId, deduped: false };
 }

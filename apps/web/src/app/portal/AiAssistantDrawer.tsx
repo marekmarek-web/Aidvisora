@@ -158,6 +158,7 @@ type ChatMessage =
       suggestedNextSteps?: string[];
       suggestedNextStepItems?: AssistantResponse["suggestedNextStepItems"];
       hasPartialFailure?: boolean;
+      referencedEntities?: AssistantResponse["referencedEntities"];
     };
 
 function historyDtoToChatMessages(dtos: AdvisorAssistantHistoryMessageDto[]): ChatMessage[] {
@@ -175,10 +176,17 @@ function historyDtoToChatMessages(dtos: AdvisorAssistantHistoryMessageDto[]): Ch
       role: "assistant",
       content: d.content,
       stableKey: d.stableKey,
-      suggestedActions: [],
+      suggestedActions: (d.suggestedActions ?? []) as SuggestedAction[],
       warnings: d.warnings,
       executionState: d.executionState ?? undefined,
       contextState: d.contextState ?? undefined,
+      ...(d.referencedEntities ? { referencedEntities: d.referencedEntities } : {}),
+      ...(d.stepOutcomes ? { stepOutcomes: d.stepOutcomes } : {}),
+      ...(d.suggestedNextSteps ? { suggestedNextSteps: d.suggestedNextSteps } : {}),
+      ...(d.suggestedNextStepItems
+        ? { suggestedNextStepItems: d.suggestedNextStepItems as AssistantResponse["suggestedNextStepItems"] }
+        : {}),
+      ...(d.hasPartialFailure !== undefined ? { hasPartialFailure: d.hasPartialFailure } : {}),
     };
   });
 }
@@ -202,6 +210,65 @@ function getHref(action: SuggestedAction): string | null {
     return "/portal/tasks";
   }
   return null;
+}
+
+/** Přemapuje typ z referencedEntity na URL v portalu (C5/C6/H8). */
+function referencedEntityHref(entity: { type: string; id: string }): string | null {
+  switch (entity.type) {
+    case "review":
+    case "contract_review":
+    case "ai_review":
+      return `/portal/contracts/review/${entity.id}`;
+    case "task":
+    case "createTask":
+    case "createFollowUp":
+    case "createReminder":
+      return `/portal/tasks`;
+    case "client":
+    case "contact":
+    case "createContact":
+    case "updateContact":
+      return `/portal/contacts/${entity.id}`;
+    case "opportunity":
+    case "createOpportunity":
+    case "updateOpportunity":
+    case "createServiceCase":
+    case "createClientRequest":
+      return `/portal/pipeline/${entity.id}`;
+    default:
+      return null;
+  }
+}
+
+function referencedEntityChipLabel(entity: { type: string; label?: string }): string {
+  if (typeof entity.label === "string" && entity.label.trim()) {
+    const s = entity.label.trim();
+    return s.length > 28 ? s.slice(0, 26) + "…" : s;
+  }
+  switch (entity.type) {
+    case "review":
+    case "contract_review":
+    case "ai_review":
+      return "Otevřít AI smlouvu";
+    case "task":
+    case "createTask":
+    case "createFollowUp":
+    case "createReminder":
+      return "Otevřít úkoly";
+    case "client":
+    case "contact":
+    case "createContact":
+    case "updateContact":
+      return "Otevřít klienta";
+    case "opportunity":
+    case "createOpportunity":
+    case "updateOpportunity":
+    case "createServiceCase":
+    case "createClientRequest":
+      return "Otevřít obchod";
+    default:
+      return "Otevřít";
+  }
 }
 
 function formatUploadSuccessMessage(detail: {
@@ -262,6 +329,10 @@ export function AiAssistantDrawer() {
   const [chatLoading, setChatLoading] = useState(false);
   /** Drží panel s „Potvrdit“ viditelný během API volání (6J). */
   const [confirmExecuteBusy, setConfirmExecuteBusy] = useState(false);
+  /** M19: dedicated busy flag for the cancel-plan path. Previous logic
+   * reused `chatLoading && confirmExecuteBusy` which had a short window where
+   * both were false, allowing double-click. */
+  const [cancelBusy, setCancelBusy] = useState(false);
   const [uploadPhase, setUploadPhase] = useState<UploadPhase>("idle");
   const [uploadError, setUploadError] = useState<string | null>(null);
   /** Po nahrání smlouvy — posílá se v activeContext.reviewId, aby server zahrnul AI review do chatu. */
@@ -273,6 +344,8 @@ export function AiAssistantDrawer() {
   const inputRef = useRef<HTMLInputElement>(null);
   /** Zabrání dvojitému odeslání před tím, než React znovu vyrenderuje s chatLoading. */
   const chatSubmitLockRef = useRef(false);
+  /** M1/M2: AbortController for in-flight chat + upload requests. */
+  const chatAbortRef = useRef<AbortController | null>(null);
   const uploadZoneRef = useRef<HTMLDivElement>(null);
 
   const [importContactsStep, setImportContactsStep] = useState<"idle" | "mapping" | "preview" | "done">("idle");
@@ -361,8 +434,20 @@ export function AiAssistantDrawer() {
   }, [open, setOpen]);
 
   useEffect(() => {
-    if (open && chatEndRef.current) {
-      chatEndRef.current.scrollIntoView({ behavior: "smooth" });
+    // M20: smart scroll — only auto-scroll when the user is already near the
+    // bottom. If they scrolled up to re-read a prior message, new chunks must
+    // not yank them back down. Threshold (px) is small to feel natural on
+    // slow streaming replies.
+    if (!open) return;
+    const endEl = chatEndRef.current;
+    if (!endEl) return;
+    const scroller = endEl.parentElement as HTMLElement | null;
+    const AUTO_SCROLL_NEAR_BOTTOM_PX = 96;
+    const nearBottom = scroller
+      ? scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < AUTO_SCROLL_NEAR_BOTTOM_PX
+      : true;
+    if (nearBottom) {
+      endEl.scrollIntoView({ behavior: "smooth" });
     }
   }, [open, messages]);
 
@@ -478,13 +563,35 @@ export function AiAssistantDrawer() {
     prevRouteContactIdRef.current = routeContactId;
     if (prev == null || routeContactId == null) return;
     if (prev !== routeContactId) {
+      // M1: abort any in-flight chat/upload so a late response cannot write into the new thread.
+      try {
+        chatAbortRef.current?.abort();
+      } catch {
+        /* ignore */
+      }
+      chatAbortRef.current = null;
       setMessages([]);
       setPendingImageAssets([]);
       setAssistantSessionId(undefined);
       setActiveReviewId(null);
+      setChatLoading(false);
+      setConfirmExecuteBusy(false);
+      chatSubmitLockRef.current = false;
       try { sessionStorage.removeItem(AI_ASSISTANT_API_SESSION_KEY); } catch { /* ignore */ }
     }
   }, [routeContactId]);
+
+  // M2: abort in-flight chat on unmount so state writes do not happen after teardown.
+  useEffect(() => {
+    return () => {
+      try {
+        chatAbortRef.current?.abort();
+      } catch {
+        /* ignore */
+      }
+      chatAbortRef.current = null;
+    };
+  }, []);
 
   const sendChatMessage = useCallback(
     async (rawMsg: string, imageAssets?: ImageAssetPayload[]) => {
@@ -511,6 +618,10 @@ export function AiAssistantDrawer() {
       ]);
       setChatLoading(true);
       queueMicrotask(() => inputRef.current?.focus());
+      // M1/M2: start a fresh AbortController; any later unmount/contact-switch aborts this.
+      try { chatAbortRef.current?.abort(); } catch { /* ignore */ }
+      const abort = new AbortController();
+      chatAbortRef.current = abort;
       try {
         const complete = await postAssistantChatStreaming(
           {
@@ -528,6 +639,7 @@ export function AiAssistantDrawer() {
             ),
           },
           (chunk) => {
+            if (abort.signal.aborted) return;
             setMessages((prev) => {
               const next = [...prev];
               const last = next[next.length - 1];
@@ -540,7 +652,9 @@ export function AiAssistantDrawer() {
               return next;
             });
           },
+          abort.signal,
         );
+        if (abort.signal.aborted) return;
         if (complete.sessionId) {
           setAssistantSessionId(complete.sessionId);
           try {
@@ -564,18 +678,26 @@ export function AiAssistantDrawer() {
               suggestedNextSteps: complete.suggestedNextSteps ?? undefined,
               suggestedNextStepItems: complete.suggestedNextStepItems ?? undefined,
               hasPartialFailure: complete.hasPartialFailure ?? undefined,
+              referencedEntities: complete.referencedEntities ?? undefined,
             };
           }
           return next;
         });
         setPendingImageAssets([]);
       } catch (e) {
+        if (abort.signal.aborted) {
+          // M1/M2: silently discard; we already dropped the optimistic messages via contact-switch/unmount.
+          return;
+        }
         const detail = e instanceof Error ? e.message : "";
         toast.showToast(detail || "Odeslání zprávy selhalo.", "error");
         setMessages((prev) => prev.slice(0, -2));
         setInput(msg);
         if (hasImages) setPendingImageAssets(imageAssets ?? []);
       } finally {
+        if (chatAbortRef.current === abort) {
+          chatAbortRef.current = null;
+        }
         setChatLoading(false);
         chatSubmitLockRef.current = false;
       }
@@ -605,6 +727,9 @@ export function AiAssistantDrawer() {
       { role: "assistant", content: "", suggestedActions: [], warnings: [] },
     ]);
     setChatLoading(true);
+    try { chatAbortRef.current?.abort(); } catch { /* ignore */ }
+    const abort = new AbortController();
+    chatAbortRef.current = abort;
     try {
       const stepParamOverrides = pid && inlineValuesByPlanId[pid] ? inlineValuesByPlanId[pid] : undefined;
 
@@ -625,6 +750,7 @@ export function AiAssistantDrawer() {
           ),
         },
         (chunk) => {
+          if (abort.signal.aborted) return;
           setMessages((prev) => {
             const next = [...prev];
             const tail = next[next.length - 1];
@@ -634,7 +760,9 @@ export function AiAssistantDrawer() {
             return next;
           });
         },
+        abort.signal,
       );
+      if (abort.signal.aborted) return;
       if (complete.sessionId) {
         setAssistantSessionId(complete.sessionId);
         try {
@@ -656,6 +784,7 @@ export function AiAssistantDrawer() {
             suggestedNextSteps: complete.suggestedNextSteps ?? undefined,
             suggestedNextStepItems: complete.suggestedNextStepItems ?? undefined,
             hasPartialFailure: complete.hasPartialFailure ?? undefined,
+            referencedEntities: complete.referencedEntities ?? undefined,
           };
         }
         return next;
@@ -667,28 +796,36 @@ export function AiAssistantDrawer() {
         });
       }
     } catch (e) {
+      if (abort.signal.aborted) return;
       const detail = e instanceof Error ? e.message : "";
       toast.showToast(detail || "Potvrzení plánu selhalo.", "error");
       setMessages((prev) => prev.slice(0, -1));
     } finally {
+      if (chatAbortRef.current === abort) {
+        chatAbortRef.current = null;
+      }
       setChatLoading(false);
       setConfirmExecuteBusy(false);
       chatSubmitLockRef.current = false;
     }
-  }, [chatLoading, messages, routeContactId, routeOpportunityId, activeReviewId, stepSelectionByPlanId, toast]);
+  }, [chatLoading, messages, routeContactId, routeOpportunityId, activeReviewId, stepSelectionByPlanId, inlineValuesByPlanId, toast]);
 
   const submitCancelPlan = useCallback(async () => {
-    if (chatLoading || chatSubmitLockRef.current) return;
+    if (chatLoading || chatSubmitLockRef.current || cancelBusy) return;
     const last = messages[messages.length - 1];
     const pid = last?.role === "assistant" ? last.executionState?.planId : undefined;
     if (last?.role !== "assistant" || last.executionState?.status !== "awaiting_confirmation") return;
 
     chatSubmitLockRef.current = true;
+    setCancelBusy(true);
     setMessages((prev) => [
       ...prev,
       { role: "assistant", content: "", suggestedActions: [], warnings: [] },
     ]);
     setChatLoading(true);
+    try { chatAbortRef.current?.abort(); } catch { /* ignore */ }
+    const abort = new AbortController();
+    chatAbortRef.current = abort;
     try {
       const complete = await postAssistantChatStreaming(
         {
@@ -705,6 +842,7 @@ export function AiAssistantDrawer() {
           ),
         },
         (chunk) => {
+          if (abort.signal.aborted) return;
           setMessages((prev) => {
             const next = [...prev];
             const tail = next[next.length - 1];
@@ -714,7 +852,9 @@ export function AiAssistantDrawer() {
             return next;
           });
         },
+        abort.signal,
       );
+      if (abort.signal.aborted) return;
       if (complete.sessionId) {
         setAssistantSessionId(complete.sessionId);
         try {
@@ -736,6 +876,7 @@ export function AiAssistantDrawer() {
             suggestedNextSteps: complete.suggestedNextSteps ?? undefined,
             suggestedNextStepItems: complete.suggestedNextStepItems ?? undefined,
             hasPartialFailure: complete.hasPartialFailure ?? undefined,
+            referencedEntities: complete.referencedEntities ?? undefined,
           };
         }
         return next;
@@ -747,14 +888,19 @@ export function AiAssistantDrawer() {
         });
       }
     } catch (e) {
+      if (abort.signal.aborted) return;
       const detail = e instanceof Error ? e.message : "";
       toast.showToast(detail || "Zrušení plánu selhalo.", "error");
       setMessages((prev) => prev.slice(0, -1));
     } finally {
+      if (chatAbortRef.current === abort) {
+        chatAbortRef.current = null;
+      }
       setChatLoading(false);
+      setCancelBusy(false);
       chatSubmitLockRef.current = false;
     }
-  }, [chatLoading, messages, routeContactId, routeOpportunityId, activeReviewId, toast]);
+  }, [chatLoading, cancelBusy, messages, routeContactId, routeOpportunityId, activeReviewId, toast]);
 
   const handleSendChat = () => {
     const msg = input.trim();
@@ -888,7 +1034,7 @@ export function AiAssistantDrawer() {
     }
   };
 
-  const handleAction = (action: SuggestedAction, reviewId?: string) => {
+  const handleAction = (action: SuggestedAction) => {
     const href = getHref(action);
     if (href) {
       setOpen(false);
@@ -903,10 +1049,9 @@ export function AiAssistantDrawer() {
       setOpen(false);
       router.push("/portal/tasks");
     }
-    if (reviewId) {
-      setOpen(false);
-      router.push(`/portal/contracts/review/${reviewId}`);
-    }
+    // L2: the legacy `reviewId` branch was unreachable (no call site ever
+    // passed one). Use `handleOpenReview` directly from the open_review code
+    // path instead.
   };
 
   const handleOpenReview = (reviewId: string) => {
@@ -1000,7 +1145,8 @@ export function AiAssistantDrawer() {
             clientMatchCandidates: [],
           },
         ]);
-        setActiveReviewId(reviewId);
+        // M14: processing did not succeed — do NOT set activeReviewId so the
+        // drawer doesn't treat this half-baked review as the live context.
         setUploadPhase("idle");
         return;
       }
@@ -1017,18 +1163,31 @@ export function AiAssistantDrawer() {
             clientMatchCandidates: [],
           },
         ]);
-        setActiveReviewId(reviewId);
+        // M14: without a usable detail we cannot confirm processing succeeded;
+        // leave activeReviewId unset.
         setUploadPhase("idle");
         return;
       }
       const summary = formatUploadSuccessMessage(detail);
-      setActiveReviewId(reviewId);
+      // M14: only treat the review as "the active one" when processing actually
+      // succeeded. A failed / in-progress review should not become the locked
+      // context for subsequent turns in the drawer.
+      const detailStatus =
+        typeof (detail as { processingStatus?: unknown }).processingStatus === "string"
+          ? (detail as { processingStatus?: string }).processingStatus
+          : procJson.processingStatus;
+      if (detailStatus === "success") {
+        setActiveReviewId(reviewId);
+      }
 
       let bootstrapTail =
         "Návrh kroků se nepodařilo načíst — použijte tlačítko „Otevřít review“ níže.";
       let execState: AssistantResponse["executionState"] = null;
       let ctxState: AssistantResponse["contextState"] = null;
       let bootWarnings: string[] | undefined;
+      try { chatAbortRef.current?.abort(); } catch { /* ignore */ }
+      const bootstrapAbort = new AbortController();
+      chatAbortRef.current = bootstrapAbort;
       try {
         const complete = await postAssistantChatStreaming(
           {
@@ -1045,7 +1204,9 @@ export function AiAssistantDrawer() {
             ),
           },
           () => {},
+          bootstrapAbort.signal,
         );
+        if (bootstrapAbort.signal.aborted) return;
         if (complete.sessionId) {
           setAssistantSessionId(complete.sessionId);
           try {
@@ -1060,7 +1221,12 @@ export function AiAssistantDrawer() {
         bootWarnings = complete.warnings;
       } catch {
         /* keep bootstrapTail fallback */
+      } finally {
+        if (chatAbortRef.current === bootstrapAbort) {
+          chatAbortRef.current = null;
+        }
       }
+      if (bootstrapAbort.signal.aborted) return;
 
       const content = [summary, bootstrapTail].filter(Boolean).join("\n\n");
       setMessages((prev) => [
@@ -1259,7 +1425,7 @@ export function AiAssistantDrawer() {
         setPaymentFromImagePhase("draft");
         return;
       }
-      toast.showToast("Platební instrukce vytvořena. Viditelná v detailu klienta.", "success");
+      toast.showToast("Platební instrukce uložena pro poradce. Klient ji zatím nevidí — pokud ji chcete zveřejnit, otevřete detail klienta.", "success");
       setPaymentFromImagePhase("idle");
       setPaymentFromImageDraft(null);
       void queryClient.invalidateQueries({ queryKey: queryKeys.contacts.all });
@@ -1795,6 +1961,25 @@ export function AiAssistantDrawer() {
                       ))}
                     </div>
                   )}
+                  {m.role === "assistant" && (m.referencedEntities?.length ?? 0) > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {m.referencedEntities!.map((ent, j) => {
+                        const href = referencedEntityHref(ent);
+                        if (!href) return null;
+                        return (
+                          <button
+                            key={j}
+                            type="button"
+                            onClick={() => router.push(href)}
+                            className="text-xs px-3 py-1.5 rounded-xl bg-[color:var(--wp-surface-muted)] border border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] font-bold hover:bg-[color:var(--wp-surface-card)] transition-colors"
+                            title={ent.label ?? ""}
+                          >
+                            {referencedEntityChipLabel(ent)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                   {m.role === "assistant" &&
                     ((m.suggestedNextStepItems?.length ?? 0) > 0 || (m.suggestedNextSteps?.length ?? 0) > 0) && (
                       <SuggestedNextStepsChips
@@ -1828,16 +2013,51 @@ export function AiAssistantDrawer() {
                           </button>
                         ) : null;
                       })()}
-                      {(m.draftActions ?? []).map((d, j) => (
-                        <button
-                          key={j}
-                          type="button"
-                          onClick={() => handleOpenReview(m.reviewId!)}
-                          className="text-xs px-3 py-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] font-bold hover:bg-[color:var(--wp-surface-muted)] transition-colors"
-                        >
-                          {d.label.length > 24 ? d.label.slice(0, 22) + "…" : d.label}
-                        </button>
-                      ))}
+                      {(m.draftActions ?? []).map((d, j) => {
+                        // L3: every draftAction used to route to the same
+                        // review page regardless of label. That made labels
+                        // like "Připravit email" or "Vytvořit úkol" a lie.
+                        // Dispatch per draft action type; fall back to review
+                        // detail only when the label really is about opening
+                        // the review and we have an id.
+                        const reviewId = m.reviewId;
+                        const label = d.label.length > 24 ? d.label.slice(0, 22) + "…" : d.label;
+                        const onClick = () => {
+                          switch (d.type) {
+                            case "draft_email": {
+                              const clientId =
+                                typeof d.payload?.clientId === "string"
+                                  ? (d.payload.clientId as string)
+                                  : undefined;
+                              if (clientId) {
+                                handleDraftEmail(clientId);
+                                return;
+                              }
+                              break;
+                            }
+                            case "create_task":
+                              setOpen(false);
+                              router.push("/portal/tasks");
+                              return;
+                            case "open_review":
+                            case "approve_review":
+                            case "reject_review":
+                            default:
+                              break;
+                          }
+                          if (reviewId) handleOpenReview(reviewId);
+                        };
+                        return (
+                          <button
+                            key={j}
+                            type="button"
+                            onClick={onClick}
+                            className="text-xs px-3 py-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] font-bold hover:bg-[color:var(--wp-surface-muted)] transition-colors"
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -1881,7 +2101,7 @@ export function AiAssistantDrawer() {
                   <button
                     type="button"
                     onClick={() => void submitCancelPlan()}
-                    disabled={chatLoading && confirmExecuteBusy}
+                    disabled={chatLoading || cancelBusy}
                     className="min-h-[44px] px-4 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] text-sm font-bold text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-card)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     aria-label="Zrušit plán akcí"
                   >

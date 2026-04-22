@@ -1,5 +1,6 @@
 import type { SectionCtx } from '../types';
-import { nextSection, fmtCzk, fmtMonthly, fmtBigCzk, fmtPct } from '../helpers';
+import { nextSection, fmtMonthly, fmtBigCzk, fmtPct } from '../helpers';
+import { investmentFv } from '../../calculations';
 
 export function renderGoals(ctx: SectionCtx): string {
   const { data } = ctx;
@@ -10,21 +11,18 @@ export function renderGoals(ctx: SectionCtx): string {
     (inv) => inv.amount > 0,
   );
 
+  const conservativeMode = data.strategy?.conservativeMode ?? false;
+
   const totalMonthlyInvestment = investments
     .filter((inv) => inv.type === 'monthly')
     .reduce((s, i) => s + i.amount, 0);
 
   const totalGoalTarget = goals.reduce((s, g) => s + (g.computed?.fvTarget ?? 0), 0);
 
-  const totalPortfolioFV = investments.reduce((s, inv) => {
-    const rate = inv.annualRate ?? 0.08;
-    const months = (inv.years ?? 20) * 12;
-    if (inv.type === 'monthly' || inv.type === 'pension') {
-      const r = rate / 12;
-      return s + inv.amount * ((Math.pow(1 + r, months) - 1) / r);
-    }
-    return s + inv.amount * Math.pow(1 + rate, inv.years ?? 20);
-  }, 0);
+  const totalPortfolioFV = investments.reduce(
+    (s, inv) => s + investmentFv(inv, conservativeMode),
+    0,
+  );
 
   const coveragePct = totalGoalTarget > 0 ? Math.min(100, (totalPortfolioFV / totalGoalTarget) * 100) : 0;
 
@@ -69,9 +67,9 @@ export function renderGoals(ctx: SectionCtx): string {
 
     ${goals.some((g) => g.name?.toLowerCase().includes('rent')) ? `
     <div class="formula-box">
-      <div class="formula-title">Výpočet — pravidlo 4 %</div>
-      <div class="formula-expr">Renta = Úspory × 4 %</div>
-      <div class="formula-desc">Předpokládá se, že roční výběr 4 % z celkového majetku umožní financovat životní styl po dobu 25+ let bez vyčerpání kapitálu. Zohledňuje průměrnou inflaci 3 % a výnos portfolia 7 %.</div>
+      <div class="formula-title">Jak se počítá renta</div>
+      <div class="formula-expr">Renta za rok = Naspořená částka × 4 %</div>
+      <div class="formula-desc">Pravidlo vychází z předpokladu, že pokud si každý rok vezmete z investic 4 % hodnoty, majetek vydrží pokrývat vaše výdaje 25 let i déle. Počítá se s tím, že inflace bude v průměru kolem 3 % ročně a portfolio poroste kolem 7 % ročně.</div>
     </div>` : ''}
 
     ${totalMonthlyInvestment > 0 ? `

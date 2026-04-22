@@ -51,7 +51,7 @@ export type PortfolioUiGroup =
 
 const INVESTMENT_SEGMENTS = new Set(["INV", "DIP", "DPS"]);
 const LOAN_SEGMENTS = new Set(["HYPO", "UVER"]);
-const PROPERTY_SEGMENTS = new Set(["MAJ", "ODP"]);
+const PROPERTY_SEGMENTS = new Set(["MAJ", "ODP", "ODP_ZAM"]);
 const VEHICLE_SEGMENTS = new Set(["AUTO_PR", "AUTO_HAV"]);
 /** Risk / life – adult-oriented; child-specific rows use portfolio_attributes.subcategory === "child_coverage". */
 const LIFE_RISK_SEGMENTS = new Set(["ZP"]);

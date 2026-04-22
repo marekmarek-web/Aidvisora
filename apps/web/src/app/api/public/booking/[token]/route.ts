@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { sql } from "drizzle-orm";
-import { db, events, userProfiles, eq } from "db";
+import { events, userProfiles, eq } from "db";
 import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { getClientIp, rateLimitByKey } from "@/lib/rate-limit-ip";
 import { addDaysPragueYmd, formatYmdInPrague, pragueWallToUtcMs } from "@/lib/public-booking/prague-time";
@@ -252,11 +252,18 @@ export async function POST(request: Request, ctx: { params: Promise<{ token: str
     throw e;
   }
 
-  const [advisorProfile] = await db
-    .select({ email: userProfiles.email })
-    .from(userProfiles)
-    .where(eq(userProfiles.userId, resolved.userId))
-    .limit(1);
+  // userProfiles je tenant-agnostický bootstrap (RLS pouští čtení přes
+  // `app.user_id = user_id`), takže po cutoveru musí běžet v `withTenantContextFromAuth`,
+  // kam prolijeme tenant+user z rozřešeného tokenu.
+  const [advisorProfile] = await withTenantContextFromAuth(
+    { tenantId: resolved.tenantId, userId: resolved.userId },
+    (tx) =>
+      tx
+        .select({ email: userProfiles.email })
+        .from(userProfiles)
+        .where(eq(userProfiles.userId, resolved.userId))
+        .limit(1),
+  );
 
   await sendPublicBookingNotifications({
     clientEmail: email,

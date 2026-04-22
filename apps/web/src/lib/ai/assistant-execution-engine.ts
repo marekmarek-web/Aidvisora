@@ -15,6 +15,7 @@ import type {
   VerifiedAssistantResult,
 } from "./assistant-domain-model";
 import { logAudit } from "../audit";
+import { logAssistantEvent } from "./assistant-audit";
 import { AssistantTelemetryAction, logAssistantTelemetry } from "./assistant-telemetry";
 import { computeStepFingerprint, checkRecentFingerprint, recordFingerprint } from "./assistant-action-fingerprint";
 import { sanitizeStepErrorForDisplay, mapErrorForAdvisor } from "./assistant-error-mapping";
@@ -143,7 +144,10 @@ export function buildAssistantLedgerInsertRow(
     id: idempotencyKey,
     tenantId: ctx.tenantId,
     sourceType: "assistant",
-    sourceId: `${ctx.sessionId}:${step.stepId}`,
+    // C2: sourceId must match the idempotency key so cross-plan retries of the
+    // same business write hit the existing row. Previous value
+    // `${sessionId}:${stepId}` was ephemeral.
+    sourceId: idempotencyKey,
     actionType: step.action,
     executionMode: "assistant_confirmed",
     status: result.ok ? "completed" : "failed",
@@ -260,8 +264,13 @@ async function executeStep(
     return { ok: false, outcome: "failed", entityId: null, entityType: null, warnings: [], error: "Tato akce není momentálně dostupná." };
   }
 
-  const idempotencyKey = `${ctx.sessionId}:${step.stepId}`;
-  const existing = await checkIdempotency(ctx.tenantId, step.action, `${ctx.sessionId}:${step.stepId}`);
+  // C2: Idempotency key must be a stable function of (tenant, action, business payload),
+  // not the ephemeral (sessionId, stepId). Re-plans produce fresh stepIds but the same
+  // logical write — we want the ledger to recognize that and return the existing row.
+  // Fingerprint already hashes (action, business-relevant params) per action type.
+  const fingerprint = computeStepFingerprint(step);
+  const idempotencyKey = `assistant:${ctx.tenantId}:${step.action}:${fingerprint}`;
+  const existing = await checkIdempotency(ctx.tenantId, step.action, idempotencyKey);
   if (existing) {
     logAssistantTelemetry(AssistantTelemetryAction.IDEMPOTENT_HIT, {
       stepId: step.stepId,
@@ -270,7 +279,6 @@ async function executeStep(
     return idempotentHitResultFromLedgerPayload(existing, step.action);
   }
 
-  const fingerprint = computeStepFingerprint(step);
   const fpCheck = checkRecentFingerprint(ctx.sessionId, fingerprint);
   if (fpCheck.isDuplicate) {
     logAssistantTelemetry(AssistantTelemetryAction.DUPLICATE_DETECTED, {
@@ -279,11 +287,23 @@ async function executeStep(
       fingerprint,
       existingActionId: fpCheck.existingActionId,
     });
+    // M5: the value stored in the in-memory fingerprint map can be either a real
+    // row id or the previous step's idempotency key (when the adapter returned
+    // no entityId). Returning a non-row id as `entityId` confuses the UI, which
+    // then tries to deep-link into a non-existent record. Only propagate a value
+    // that is clearly a row id (not a key we synthesized).
+    const looksLikeIdempotencyKey = (v: string | null | undefined): boolean =>
+      typeof v === "string" && v.startsWith("assistant:");
+    const safeEntityId = looksLikeIdempotencyKey(fpCheck.existingActionId)
+      ? null
+      : fpCheck.existingActionId ?? null;
     return {
       ok: true,
       outcome: "duplicate_hit",
-      entityId: fpCheck.existingActionId,
-      entityType: step.action,
+      entityId: safeEntityId,
+      // M5: do not claim a typed entity when we don't actually have a row to
+      // link to — `null` forces the UI to fall back to plain text.
+      entityType: safeEntityId ? step.action : null,
       warnings: ["Duplicitní akce detekována — přeskočeno."],
       error: null,
     };
@@ -291,7 +311,26 @@ async function executeStep(
 
   const ledgerSnapshot = { plan: planLedger, fingerprint };
 
+  // H11: assign a stable per-step action id so every log line (tool_invoked /
+  // action_applied / persistence failure) can be cross-correlated with the
+  // ledger row and the Sentry capture.
+  const assistantActionId = idempotencyKey;
+
   try {
+    logAssistantEvent({
+      eventType: "tool_invoked",
+      tenantId: ctx.tenantId,
+      userId: ctx.userId,
+      sessionId: ctx.sessionId,
+      toolName: step.action,
+      actionType: step.action,
+      metadata: {
+        assistantActionId,
+        planId: planLedger.planId,
+        intentType: planLedger.intentType,
+        stepId: step.stepId,
+      },
+    });
     const adapterResult = await adapter(step.params, ctx);
     const result: ExecutionStepResult = {
       ...adapterResult,
@@ -313,10 +352,28 @@ async function executeStep(
           planId: planLedger.planId,
           intentType: planLedger.intentType,
           fingerprint,
+          assistantActionId,
           contractVersion: ASSISTANT_WRITE_CONTRACT_VERSION,
           params: step.params,
         },
         requestContext: ctx.ipAddress ? { ipAddress: ctx.ipAddress } : undefined,
+      });
+      logAssistantEvent({
+        eventType: "action_applied",
+        tenantId: ctx.tenantId,
+        userId: ctx.userId,
+        sessionId: ctx.sessionId,
+        toolName: step.action,
+        actionType: step.action,
+        entityType: result.entityType ?? step.action,
+        entityId: result.entityId ?? undefined,
+        metadata: {
+          assistantActionId,
+          planId: planLedger.planId,
+          intentType: planLedger.intentType,
+          stepId: step.stepId,
+          outcome: result.outcome,
+        },
       });
     }
 
@@ -333,22 +390,48 @@ async function executeStep(
       error: userError,
     };
     await recordExecution(step, ctx, failResult, idempotencyKey, ledgerSnapshot).catch(() => {});
+    logAssistantEvent({
+      eventType: "action_applied",
+      tenantId: ctx.tenantId,
+      userId: ctx.userId,
+      sessionId: ctx.sessionId,
+      toolName: step.action,
+      actionType: step.action,
+      metadata: {
+        assistantActionId,
+        planId: planLedger.planId,
+        intentType: planLedger.intentType,
+        stepId: step.stepId,
+        outcome: "failed",
+        error: userError,
+      },
+    });
     return failResult;
   }
 }
 
-function resolveDependencies(steps: ExecutionStep[]): ExecutionStep[][] {
+export type DependencyResolutionResult =
+  | { ok: true; waves: ExecutionStep[][] }
+  | { ok: false; reason: "cycle_or_unresolvable"; stuckStepIds: string[] };
+
+export function resolveDependenciesSafe(steps: ExecutionStep[]): DependencyResolutionResult {
   const resolved = new Set<string>();
   const remaining = [...steps];
   const waves: ExecutionStep[][] = [];
+  const stepIds = new Set(steps.map((s) => s.stepId));
 
   while (remaining.length > 0) {
     const wave = remaining.filter((s) =>
-      s.dependsOn.every((dep) => resolved.has(dep)),
+      s.dependsOn.every((dep) => resolved.has(dep) || !stepIds.has(dep)),
     );
     if (wave.length === 0) {
-      waves.push(remaining);
-      break;
+      // C3: detected cycle or unresolvable dependency. Do NOT silently run
+      // remaining steps in parallel — fail closed and report stuck step ids.
+      return {
+        ok: false,
+        reason: "cycle_or_unresolvable",
+        stuckStepIds: remaining.map((s) => s.stepId),
+      };
     }
     waves.push(wave);
     for (const s of wave) {
@@ -358,7 +441,13 @@ function resolveDependencies(steps: ExecutionStep[]): ExecutionStep[][] {
     }
   }
 
-  return waves;
+  return { ok: true, waves };
+}
+
+/** @deprecated use {@link resolveDependenciesSafe}. Kept for backward compatibility. */
+function resolveDependencies(steps: ExecutionStep[]): ExecutionStep[][] {
+  const r = resolveDependenciesSafe(steps);
+  return r.ok ? r.waves : [steps];
 }
 
 let writeAdaptersLoad: Promise<void> | null = null;
@@ -392,10 +481,44 @@ export async function executePlan(
     productDomain: plan.productDomain,
   };
 
-  const waves = resolveDependencies(confirmedSteps);
+  const dependencyResolution = resolveDependenciesSafe(confirmedSteps);
   const updatedSteps = [...plan.steps];
   let anyFailed = false;
   const failedOrSkippedStepIds = new Set<string>();
+
+  if (!dependencyResolution.ok) {
+    // C3: refuse to execute an unresolvable plan. Mark stuck steps as failed so the
+    // UI surfaces a concrete outcome instead of a silent parallel run.
+    logAssistantTelemetry(AssistantTelemetryAction.RUN_ERROR, {
+      code: "plan_dependency_cycle",
+      planId: plan.planId,
+      stuckStepIds: dependencyResolution.stuckStepIds.slice(0, 16),
+    });
+    const stuck = new Set(dependencyResolution.stuckStepIds);
+    for (let i = 0; i < updatedSteps.length; i++) {
+      const s = updatedSteps[i]!;
+      if (!stuck.has(s.stepId)) continue;
+      updatedSteps[i] = {
+        ...s,
+        status: "failed",
+        result: {
+          ok: false,
+          outcome: "failed",
+          entityId: null,
+          entityType: null,
+          warnings: [],
+          error:
+            "Plán obsahuje cyklickou nebo neřešitelnou závislost — akci nelze bezpečně provést. Zkuste plán vygenerovat znovu.",
+        },
+      };
+    }
+    return {
+      ...plan,
+      steps: updatedSteps,
+      status: "partial_failure",
+    };
+  }
+  const waves = dependencyResolution.waves;
 
   for (const wave of waves) {
     await Promise.all(
@@ -546,7 +669,19 @@ export function buildVerifiedResult(
     }
   }
 
-  const allSucceeded = plan ? plan.steps.every(s => s.status === "succeeded") : true;
+  // M4: derive "allSucceeded" from the outcome semantics, not just step.status.
+  // idempotent_hit is a success from the advisor's POV (the entity exists); skipped
+  // steps that were deselected by the user are not failures either.
+  const SUCCESS_OUTCOMES = new Set(["succeeded", "idempotent_hit"]);
+  const USER_DESELECTED_ERROR = "Krok nebyl vybrán k provedení.";
+  const allSucceeded = plan
+    ? stepOutcomes.length > 0 &&
+      stepOutcomes.every(
+        (o) =>
+          SUCCESS_OUTCOMES.has(o.status) ||
+          (o.status === "skipped" && o.error === USER_DESELECTED_ERROR),
+      )
+    : true;
   const hasPartialFailure = plan?.status === "partial_failure";
 
   const summaryMessage = buildExecutionSummaryMessage(message, plan, stepOutcomes);

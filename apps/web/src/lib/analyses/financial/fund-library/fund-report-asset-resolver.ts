@@ -66,11 +66,13 @@ export function normalizeFundAssetsFromSeed(row: {
   logo?: string;
   heroImage?: string;
   galleryImages?: string[];
+  galleryType?: "photo" | "logo";
 }): FundAssetPack {
   return {
     logoPath: resolveLogoPath(row.logo),
     heroPath: resolveHeroPath(row.heroImage),
     galleryPaths: resolveGalleryPaths(row.galleryImages),
+    galleryType: row.galleryType ?? "photo",
   };
 }
 

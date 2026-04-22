@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "crypto";
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { createResponseSafe, logOpenAICall } from "@/lib/openai";
 import { getClientRequests } from "@/app/actions/client-portal-requests";
@@ -11,25 +12,33 @@ import { createClient } from "@/lib/supabase/server";
 import { assertCapability } from "@/lib/billing/plan-access-guards";
 import { assertQuotaAvailable } from "@/lib/billing/subscription-usage";
 import { nextResponseFromPlanOrQuotaError } from "@/lib/billing/plan-access-http";
+import { captureAssistantApiError } from "@/lib/observability/assistant-sentry";
+import { logAudit } from "@/lib/audit";
+import { mapErrorForAdvisor } from "@/lib/ai/assistant-error-mapping";
 
 export const dynamic = "force-dynamic";
 
 function buildClientContextSummary(params: {
-  requestsCount: number;
-  unreadMessages: number;
-  unreadNotifications: number;
-  documentCount: number;
+  requestsCount: number | null;
+  unreadMessages: number | null;
+  unreadNotifications: number | null;
+  documentCount: number | null;
 }) {
+  // M17: `null` encodes "this source of truth failed to load" — do NOT emit
+  // "0" to the model, it would treat a loader failure as a factual zero count.
+  const fmt = (v: number | null) => (v == null ? "neznámo" : String(v));
   return [
-    `Požadavky: ${params.requestsCount}`,
-    `Nepřečtené zprávy od poradce: ${params.unreadMessages}`,
-    `Nepřečtené notifikace: ${params.unreadNotifications}`,
-    `Dokumenty: ${params.documentCount}`,
+    `Požadavky: ${fmt(params.requestsCount)}`,
+    `Nepřečtené zprávy od poradce: ${fmt(params.unreadMessages)}`,
+    `Nepřečtené notifikace: ${fmt(params.unreadNotifications)}`,
+    `Dokumenty: ${fmt(params.documentCount)}`,
   ].join("\n");
 }
 
 export async function POST(request: Request) {
   const start = Date.now();
+  const traceId = randomUUID();
+  const assistantRunId = randomUUID();
   try {
     if (process.env.NEXT_PUBLIC_DISABLE_CLIENT_PORTAL_AI === "true") {
       return NextResponse.json({ error: "Tato funkce je vypnutá." }, { status: 403 });
@@ -86,18 +95,49 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Chybí zpráva." }, { status: 400 });
     }
 
+    let partialContextFailure = false;
+    const loaderFailures: Record<string, boolean> = {
+      requests: false,
+      notifications: false,
+      unreadMessages: false,
+      documents: false,
+    };
     const [requests, notifications, unreadMessages, documents] = await Promise.all([
-      getClientRequests().catch(() => []),
-      getPortalNotificationsForClient().catch(() => []),
-      getUnreadAdvisorMessagesForClientCount().catch(() => 0),
-      getDocumentsForClient(auth.contactId).catch(() => []),
+      getClientRequests().catch((e) => {
+        partialContextFailure = true;
+        loaderFailures.requests = true;
+        console.error("[client-assistant] getClientRequests failed", e);
+        return [];
+      }),
+      getPortalNotificationsForClient().catch((e) => {
+        partialContextFailure = true;
+        loaderFailures.notifications = true;
+        console.error("[client-assistant] getPortalNotificationsForClient failed", e);
+        return [];
+      }),
+      getUnreadAdvisorMessagesForClientCount().catch((e) => {
+        partialContextFailure = true;
+        loaderFailures.unreadMessages = true;
+        console.error("[client-assistant] getUnreadAdvisorMessagesForClientCount failed", e);
+        return 0;
+      }),
+      getDocumentsForClient(auth.contactId).catch((e) => {
+        partialContextFailure = true;
+        loaderFailures.documents = true;
+        console.error("[client-assistant] getDocumentsForClient failed", e);
+        return [];
+      }),
     ]);
 
+    // M17: when a loader failed, surface `null` so the summary text reads
+    // "neznámo" instead of a false "0".
     const context = buildClientContextSummary({
-      requestsCount: requests.length,
-      unreadMessages,
-      unreadNotifications: notifications.filter((n) => !n.readAt).length,
-      documentCount: documents.length,
+      requestsCount: loaderFailures.requests ? null : requests.length,
+      unreadMessages: loaderFailures.unreadMessages ? null : unreadMessages,
+      unreadNotifications: loaderFailures.notifications
+        ? null
+        : notifications.filter((n) => !n.readAt).length,
+      documentCount: loaderFailures.documents ? null : documents.length,
     });
 
     const fullPrompt = `${CLIENT_PORTAL_AI_SYSTEM_PROMPT_CS}\n\nStav v portálu (jen počty, bez rad):\n${context}\n\nDotaz uživatele: ${message}\n\nOdpověď (pouze nápověda k aplikaci, bez finančního poradenství):`;
@@ -135,13 +175,41 @@ export async function POST(request: Request) {
       success: true,
     });
 
+    await logAudit({
+      userId: auth.userId,
+      tenantId: auth.tenantId,
+      action: "client_assistant.chat",
+      entityType: "assistant_message",
+      meta: {
+        traceId,
+        assistantRunId,
+        partialContextFailure,
+        messageLen: message.length,
+      },
+    }).catch((e) => {
+      console.error("[client-assistant] logAudit failed", e);
+    });
+
+    const warnings: string[] = [];
+    if (partialContextFailure) {
+      warnings.push(
+        "Některé údaje v portálu se teď nepodařilo načíst — odpověď nemusí být přesná.",
+      );
+    }
+
     return NextResponse.json({
       message: ai.text.slice(0, 2000),
       suggestions: baseSuggestions,
-      warnings: [],
+      warnings,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "AI požadavek selhal.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    captureAssistantApiError(err, {
+      traceId,
+      assistantRunId,
+      channel: "client_portal",
+    });
+    const rawMessage = err instanceof Error ? err.message : "AI požadavek selhal.";
+    const safeMessage = mapErrorForAdvisor(rawMessage, null, "client-assistant/chat");
+    return NextResponse.json({ error: safeMessage }, { status: 500 });
   }
 }

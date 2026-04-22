@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   AlertCircle,
@@ -113,6 +113,7 @@ import {
 } from "@/lib/advisor-material-requests/display";
 import { isClientPortalAiDisabled } from "@/lib/client-portal/feature-flags";
 import { useDeviceClass } from "@/lib/ui/useDeviceClass";
+import { useMobilePortalDocumentViewportLock } from "@/lib/ui/useMobilePortalDocumentViewportLock";
 import type { ClientMobileInitialData } from "./client-mobile-initial-data";
 import {
   ADVISOR_PROPOSAL_SEGMENT_LABELS,
@@ -903,15 +904,7 @@ function PortfolioScreen({
 
 export function ClientMobileClient({ initialData }: { initialData: ClientMobileInitialData }) {
   const deviceClass = useDeviceClass();
-
-  useLayoutEffect(() => {
-    if (deviceClass === "desktop") {
-      document.documentElement.classList.remove("aidv-mobile-portal-viewport-lock");
-      return;
-    }
-    document.documentElement.classList.add("aidv-mobile-portal-viewport-lock");
-    return () => document.documentElement.classList.remove("aidv-mobile-portal-viewport-lock");
-  }, [deviceClass]);
+  useMobilePortalDocumentViewportLock();
 
   const router = useRouter();
   const pathname = usePathname();

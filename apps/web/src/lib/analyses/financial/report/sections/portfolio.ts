@@ -3,6 +3,18 @@ import { nextSection, fmtCzk, fmtMonthly, fmtPct, colorForIndex, renderDonutSVG,
 import { getStrategyProfileLabel } from '../../formatters';
 import type { InvestmentEntry } from '../../types';
 
+/**
+ * Srovnává pravidelné a jednorázové investice ve stejné jednotce: celkový objem
+ * skutečně vložených peněz za zvolený horizont. Bez toho by např. 5 500 Kč/měs.
+ * na 25 let a 1 000 000 Kč jednorázově daly totálně zkreslený donut (1 M by mělo
+ * ~99 % koláče místo ~38 %).
+ */
+function totalInvestedOverHorizon(inv: InvestmentEntry): number {
+  const yrs = inv.years ?? 20;
+  if (inv.type === 'lump') return inv.amount;
+  return inv.amount * 12 * yrs;
+}
+
 export function renderPortfolio(ctx: SectionCtx): string {
   const { data, theme } = ctx;
   const num = nextSection(ctx.sectionCounter);
@@ -12,10 +24,15 @@ export function renderPortfolio(ctx: SectionCtx): string {
   );
 
   const totalAmount = investments.reduce((s: number, i: InvestmentEntry) => s + i.amount, 0);
+  const totalInvestedAll = investments.reduce(
+    (s: number, i: InvestmentEntry) => s + totalInvestedOverHorizon(i),
+    0,
+  );
 
   const items = investments.map((inv: InvestmentEntry, idx: number) => {
     const name = getProductDisplayName(inv.productKey);
-    const weight = totalAmount > 0 ? (inv.amount / totalAmount) * 100 : 0;
+    const invested = totalInvestedOverHorizon(inv);
+    const weight = totalInvestedAll > 0 ? (invested / totalInvestedAll) * 100 : 0;
     return { inv, name, weight, color: colorForIndex(idx, theme), manager: '' };
   });
 
@@ -64,17 +81,18 @@ export function renderPortfolio(ctx: SectionCtx): string {
     </div>
 
     <div class="chart-wrap">
-      <div class="chart-title"><span>Alokace portfolia</span><span class="chart-title-right">${investments.length} produktů</span></div>
+      <div class="chart-title"><span>Rozložení investic</span><span class="chart-title-right">${investments.length} produktů</span></div>
       <div class="alloc-section">
         ${donut}
         <div class="alloc-legend">${legend}</div>
       </div>
+      <p style="font-size:0.75rem;color:var(--wp-text-tertiary,#94a3b8);margin:8px 0 0 0;line-height:1.4">Podíl jednotlivých produktů je spočítán podle celkové částky, kterou do nich v horizontu plánu vložíte (jednorázové vklady i pravidelné dohromady).</p>
     </div>
 
     <div class="callout info">
-      <span class="callout-icon">📊</span>
+      <span class="callout-icon">ⓘ</span>
       <div><strong>Investiční profil: ${esc(profile)}</strong>
-      Tato stránka popisuje <strong>modelační scénář</strong> z průvodce analýzy (ne automaticky totéž jako evidence skutečných smluv v CRM). Odhad budoucí hodnoty jednotlivých řádků vychází ze stejného výpočetního modelu jako shrnutí analýzy.</div>
+      Návrh portfolia vychází z průvodce analýzou a zvolené strategie. Částky a odhady jsou orientační – skutečný výnos se bude lišit podle vývoje trhů.</div>
     </div>
   </div>
 </section>`;

@@ -69,6 +69,7 @@ export function mapBatchSeedRowToBaseFund(
       logo: row.logo,
       heroImage: row.heroImage,
       galleryImages: row.galleryImages,
+      galleryType: row.galleryType,
     }),
     assetTodo: row.assetTodo,
     notes: row.notes,

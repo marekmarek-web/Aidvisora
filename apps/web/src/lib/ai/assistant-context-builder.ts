@@ -9,6 +9,23 @@ import type { ContractReviewRow } from "./review-queue-repository";
 import { evaluateApplyReadiness, type ApplyGateResult } from "./quality-gates";
 import { buildPipelineInsightsFromReviewRow } from "./pipeline-review-insights";
 import type { UrgentItem } from "./dashboard-types";
+import { logAssistantTelemetry, AssistantTelemetryAction } from "./assistant-telemetry";
+
+// M16: surface silent context degradations as structured telemetry instead of
+// swallowing them. Each loader that can partially fail now logs with a stable
+// `source` tag so ops can see when client/review/publishHints enrichment
+// silently returns nothing.
+function logContextLoaderFailure(source: string, tenantId: string, err: unknown): void {
+  try {
+    logAssistantTelemetry(AssistantTelemetryAction.CONTEXT_LOADER_FAILED, {
+      source,
+      tenantId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  } catch {
+    /* telemetry is best-effort */
+  }
+}
 
 export type ContextSourceReference = {
   sourceType: "review" | "client" | "payment" | "task" | "priority" | "pipeline";
@@ -177,16 +194,20 @@ export async function buildClientDetailContext(
       warnings.push("Detailní kontext klienta nedostupný.");
     }
     refs.push({ sourceType: "client", sourceId: contactId, freshness: "live", visibilityScope: "tenant" });
-  } catch {
+  } catch (err) {
+    logContextLoaderFailure("client_detail.getClientAiContext", tenantId, err);
     facts.push({ key: "clientName", value: clientName, category: "profile" });
-    warnings.push("Detailní kontext klienta nedostupný.");
+    warnings.push("Detailní kontext klienta nedostupný (loader selhal).");
   }
 
   let clientReviews: ContractReviewRow[] = [];
   try {
     clientReviews = (await listContractReviews(tenantId, { limit: 10 }))
       .filter((r) => r.matchedClientId === contactId);
-  } catch { /* best-effort */ }
+  } catch (err) {
+    logContextLoaderFailure("client_detail.listContractReviews", tenantId, err);
+    warnings.push("Seznam review klienta dočasně nedostupný.");
+  }
 
   if (clientReviews.length > 0) {
     facts.push({ key: "reviewsForClient", value: clientReviews.length, category: "reviews" });
@@ -256,7 +277,10 @@ export async function buildReviewDetailContext(
       });
     }
     warnings.push(...gate.warnings);
-  } catch { /* best-effort */ }
+  } catch (err) {
+    logContextLoaderFailure("review_detail.evaluateApplyReadiness", tenantId, err);
+    warnings.push("Kvalitativní gate nelze vyhodnotit — zkontrolujte review.");
+  }
 
   const insights = buildPipelineInsightsFromReviewRow(row);
   if (insights.extractionRoute) {
@@ -362,8 +386,11 @@ export async function buildReviewDetailContext(
         warnings.push("Dokument obsahuje zdravotní dotazník — sekce je citlivá a nesmí být přenášena jako část smlouvy.");
       }
     }
-  } catch {
-    // Phase 2+3 enrichment is best-effort; never block the context response
+  } catch (err) {
+    // Phase 2+3 enrichment is best-effort; never block the context response,
+    // but M16: surface the failure as telemetry so we can detect payload
+    // regressions.
+    logContextLoaderFailure("review_detail.extracted_payload_enrichment", tenantId, err);
   }
 
   refs.push({ sourceType: "review", sourceId: reviewId, freshness: "live", visibilityScope: "tenant" });
@@ -409,7 +436,8 @@ export async function buildPaymentDetailContext(
       .select()
       .from(clientPaymentSetups)
       .where(and(eq(clientPaymentSetups.tenantId, tenantId), eq(clientPaymentSetups.contactId, contactId)));
-  } catch {
+  } catch (err) {
+    logContextLoaderFailure("client_detail.clientPaymentSetups", tenantId, err);
     warnings.push("Platební údaje nedostupné.");
   }
 

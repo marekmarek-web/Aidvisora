@@ -460,7 +460,11 @@ export default function ContractReviewDetailPage() {
       if (!ready) return;
       const result = await applyContractReviewDrafts(id, options);
       if (result.ok) {
-        toast.showToast("Údaje propsány do Aidvisory.", "success");
+        if (result.warning) {
+          toast.showToast(result.warning.message, "error");
+        } else {
+          toast.showToast("Údaje propsány do Aidvisory.", "success");
+        }
         load();
       } else {
         toast.showToast(result.error ?? "Chyba", "error");
@@ -489,7 +493,11 @@ export default function ContractReviewDetailPage() {
           overrideReason: options?.overrideReason,
         });
         if (result.ok) {
-          toast.showToast("Kontrola schválena a údaje propsány do Aidvisory.", "success");
+          if ("warning" in result && result.warning) {
+            toast.showToast(result.warning.message, "error");
+          } else {
+            toast.showToast("Kontrola schválena a údaje propsány do Aidvisory.", "success");
+          }
           load();
         } else {
           toast.showToast(result.error ?? "Chyba", "error");

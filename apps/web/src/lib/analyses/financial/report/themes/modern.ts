@@ -72,6 +72,7 @@ body{font-family:var(--ff-data);background:var(--surface-2);color:var(--ink-2);l
 .main .page-inner{max-width:880px;margin-left:auto;margin-right:auto;box-sizing:border-box;width:100%}
 .page.hero .hero-logo-img,.page.company-hero .hero-logo-img{filter:brightness(0) invert(1)}
 .print-only{display:none!important}
+.fa-print-only{display:none}
 .fa-interactive-only{display:block}
 .fa-interactive-note{font-size:12px;color:var(--ink-4);margin-top:14px}
 .fa-proj-controls{margin:20px 0;padding:16px 20px;background:var(--surface-2);border:1px solid var(--surface-3);border-radius:var(--r3)}
@@ -213,7 +214,7 @@ table.dt td.num{font-size:14px;font-family:var(--ff-ui);font-weight:700}
 .bar-row-name{font-size:12px;color:var(--ink-3);flex:0 0 140px}
 .bar-track{flex:1;height:4px;background:var(--surface-3);border-radius:99px;overflow:hidden}
 .bar-fill{height:100%;border-radius:99px}
-.bar-pct{font-family:var(--ff-ui);font-size:12px;font-weight:700;color:var(--ink-2);flex:0 0 40px;text-align:right}
+.bar-pct{font-family:var(--ff-ui);font-size:12px;font-weight:700;color:var(--ink-2);flex:0 0 56px;text-align:right;white-space:nowrap}
 .check-list{list-style:none;display:flex;flex-direction:column;gap:9px}
 .check-list li{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:var(--ink-3);line-height:1.6}
 .check-list li::before{content:'';width:16px;height:16px;flex-shrink:0;margin-top:2px;background:var(--pos-bg);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2 6l3 3 5-5' stroke='%2316a34a' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center;border-radius:50%}
@@ -306,6 +307,8 @@ table.dt td.num{font-size:14px;font-family:var(--ff-ui);font-weight:700}
 .ins-provider-logo{width:56px;height:40px;object-fit:contain;flex-shrink:0}
 .ins-provider-fallback{font-size:11px;font-weight:600;color:var(--ink-3)}
 .sum-row td{border-top:2px solid var(--brand);padding-top:8px;font-weight:700}
+.sum-row{page-break-inside:avoid;break-inside:avoid}
+table.dt tbody tr.total{page-break-inside:avoid;break-inside:avoid}
 
 /* SIGNATURES */
 .sig-area{display:grid;grid-template-columns:1fr 1fr;gap:60px;margin-top:60px;padding-top:32px}
@@ -338,6 +341,7 @@ table.dt td.num{font-size:14px;font-family:var(--ff-ui);font-weight:700}
 @media print{
   .print-only.print-advisor-footer{display:block!important;position:fixed;bottom:0;left:0;right:0;padding:5mm 8mm;font-size:8pt;color:#444;border-top:1px solid #ccc;background:#fff;z-index:99999;text-align:center;box-sizing:border-box}
   .fa-interactive-only,.fa-interactive-note,.fa-backtest-controls,.fa-backtest-chart-wrap{display:none!important}
+  .fa-print-only{display:inline!important}
   .sidebar{display:none!important}
   .main{margin-left:0!important}
   .page{min-height:auto;page-break-after:always;break-after:page;page-break-inside:auto;break-inside:auto;overflow:visible;background:#fff!important}
@@ -394,9 +398,9 @@ table.dt td.num{font-size:14px;font-family:var(--ff-ui);font-weight:700}
   .product-desc{font-size:10px;line-height:1.4;margin-bottom:8px;padding-bottom:8px;max-height:5.8em;-webkit-line-clamp:4}
   .product-hero-image{max-height:90px}
   .product-gallery{gap:6px;margin-bottom:10px}
-  .product-gallery-image{height:58px}
+  .product-gallery-image{max-height:58px;height:auto;width:auto;max-width:100%;object-fit:contain}
   .product-gallery-logos .product-gallery-item{padding:6px}
-  .product-gallery-logos .product-gallery-image{height:40px}
+  .product-gallery-logos .product-gallery-image{max-height:48px;height:auto;width:auto;max-width:100%;object-fit:contain}
   .ins-provider-logo{width:44px;height:32px}
   .stat-cell{padding:7px 8px}
   .stat-lbl{font-size:7.5px}
@@ -405,7 +409,7 @@ table.dt td.num{font-size:14px;font-family:var(--ff-ui);font-weight:700}
   .bar-section-title{font-size:8px;margin-bottom:4px}
   .bar-row{gap:7px;margin-bottom:4px}
   .bar-row-name{flex:0 0 98px;font-size:9px}
-  .bar-pct{font-size:9px;flex-basis:30px}
+  .bar-pct{font-size:9px;flex-basis:42px;white-space:nowrap}
   .check-list{gap:4px}
   .check-list li{font-size:9px;line-height:1.35}
   .chart-wrap{padding:8px}

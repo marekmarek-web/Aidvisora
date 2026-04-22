@@ -19,14 +19,22 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 vi.mock("db", () => ({
-  db: {
-    select: (...args: unknown[]) => selectMock(...args),
-  },
   memberships: "memberships",
   roles: "roles",
   clientContacts: "clientContacts",
   and: vi.fn((...args: unknown[]) => args),
   eq: vi.fn(),
+}));
+
+// withTenantContext/withUserContext pouští dotazy přes vlastní tx; pro unit test
+// předáme mock tx, který má pouze `select` (stejný tvar jako v původním testu).
+vi.mock("@/lib/db/with-tenant-context", () => ({
+  withTenantContext: vi.fn(async (_opts: unknown, fn: (tx: unknown) => unknown) =>
+    fn({ select: (...args: unknown[]) => selectMock(...args) }),
+  ),
+  withUserContext: vi.fn(async (_userId: string, fn: (tx: unknown) => unknown) =>
+    fn({ select: (...args: unknown[]) => selectMock(...args) }),
+  ),
 }));
 
 import { provisionClientInviteAccount } from "@/lib/auth/client-invite-account";

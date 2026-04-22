@@ -149,12 +149,12 @@ export function renderProductDetails(ctx: SectionCtx): string {
         ${detail.galleryImages && detail.galleryImages.length > 0 ? renderGallery(detail.galleryImages, detail.galleryType === "logo") : ""}
         ${
           detail.officialPerformanceSummary
-            ? `<div class="bar-section" style="margin-bottom:1rem"><div class="bar-section-title">Oficiální výkonnost (ze zdroje)</div><p style="font-size:0.8125rem;line-height:1.5;color:var(--wp-text-secondary,#64748b);white-space:pre-line;margin:0">${esc(filterPerformanceSummary(detail.officialPerformanceSummary))}</p></div>`
+            ? `<div class="bar-section" style="margin-bottom:1rem"><div class="bar-section-title">Oficiální výkonnost (ze zdroje)</div><p style="font-size:0.8125rem;line-height:1.5;color:var(--wp-text-secondary,#64748b);white-space:pre-line;margin:0 0 0.5rem 0">${esc(filterPerformanceSummary(detail.officialPerformanceSummary))}</p><p style="font-size:0.6875rem;line-height:1.4;color:var(--wp-text-tertiary,#94a3b8);margin:0;font-style:italic">Minulá výkonnost není zárukou budoucích výnosů. Hodnota investice může kolísat.</p></div>`
             : ""
         }
         ${
           detail.factsheetUrl
-            ? `<p style="font-size:0.8125rem;margin:0 0 0.75rem 0"><a href="${esc(detail.factsheetUrl)}" rel="noopener noreferrer" target="_blank">Otevřít factsheet</a>${detail.factsheetAsOf ? ` <span style="color:var(--wp-text-secondary)">(k ${esc(isoDatesToCzech(detail.factsheetAsOf))})</span>` : ""}</p>`
+            ? `<p style="font-size:0.8125rem;margin:0 0 0.75rem 0"><a href="${esc(detail.factsheetUrl)}" rel="noopener noreferrer" target="_blank">Otevřít factsheet</a>${detail.factsheetAsOf ? ` <span style="color:var(--wp-text-secondary)">(k ${esc(isoDatesToCzech(detail.factsheetAsOf))})</span>` : ""}<span class="fa-print-only" style="color:var(--wp-text-tertiary,#94a3b8);margin-left:0.5rem">${esc(detail.factsheetUrl)}</span></p>`
             : ""
         }
         ${detail.verifiedAt ? `<p style="font-size:0.75rem;color:var(--wp-text-tertiary,#94a3b8);margin:0 0 0.75rem 0">Ověření v katalogu: ${esc(isoDatesToCzech(detail.verifiedAt))}</p>` : ""}

@@ -2,7 +2,7 @@
 
 import * as Sentry from "@sentry/nextjs";
 import dynamic from "next/dynamic";
-import { useEffect, useLayoutEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -72,6 +72,7 @@ import {
 import { notifyRouteForWebview, notifyWebviewReady } from "@/app/shared/mobile-ui/webview-bridge";
 import { openIntegrationConnect } from "@/lib/native/open-integration-connect";
 import { useDeviceClass } from "@/lib/ui/useDeviceClass";
+import { useMobilePortalDocumentViewportLock } from "@/lib/ui/useMobilePortalDocumentViewportLock";
 import { DashboardScreen } from "./screens/DashboardScreen";
 import { TasksScreen } from "./screens/TasksScreen";
 import { ContactsScreen } from "./screens/ContactsScreen";
@@ -350,15 +351,8 @@ export function MobilePortalClient({
   const searchParams = useSearchParams();
   const deviceClass = useDeviceClass();
   const { toast, showToast, dismissToast } = useToast();
+  useMobilePortalDocumentViewportLock();
 
-  useLayoutEffect(() => {
-    if (deviceClass === "desktop") {
-      document.documentElement.classList.remove("aidv-mobile-portal-viewport-lock");
-      return;
-    }
-    document.documentElement.classList.add("aidv-mobile-portal-viewport-lock");
-    return () => document.documentElement.classList.remove("aidv-mobile-portal-viewport-lock");
-  }, [deviceClass]);
   const [tab, setTab] = useState<TabId>(() => pathnameToBottomTab(pathname));
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [globalSearchOpen, setGlobalSearchOpen] = useState(false);

@@ -131,7 +131,9 @@ export async function uploadAssetContent(
 export async function submitOcrJob(token: string, assetId: string): Promise<string> {
   const config = getProcessingConfig();
   const origin = serviceOrigin();
-  const ocrLang = config.adobeOcrLang?.trim() || "en-US";
+  // S2-O1: default přepnut na `cs-CZ` (Aidvisora = CZ-only produkt); diakritiky
+  // přes en-US OCR skládaly úřední smlouvy na dokumenty s desítkami překlepů.
+  const ocrLang = config.adobeOcrLang?.trim() || "cs-CZ";
 
   const response = await fetch(`${origin}/operation/ocr`, {
     method: "POST",

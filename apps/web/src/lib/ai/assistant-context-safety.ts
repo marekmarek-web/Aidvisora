@@ -59,7 +59,19 @@ export function verifyWriteContextSafety(
     plan.steps.length > 0 &&
     plan.steps.every((s) => s.isReadOnly || REVIEW_ACTIONS.has(s.action));
 
-  if (!resolvedContactId && plan.steps.some((s) => !s.isReadOnly) && !reviewOnlyPlan) {
+  // H2: plans that only create contacts don't need a pre-resolved client — the
+  // contact IS the client being created. Allow this through so the advisor can
+  // capture a lead without first being on a contact detail page.
+  const contactCreationOnlyPlan =
+    plan.steps.length > 0 &&
+    plan.steps.every((s) => s.isReadOnly || s.action === "createContact");
+
+  if (
+    !resolvedContactId &&
+    plan.steps.some((s) => !s.isReadOnly) &&
+    !reviewOnlyPlan &&
+    !contactCreationOnlyPlan
+  ) {
     blocked = "NO_CLIENT_FOR_WRITE";
     warnings.push("Chybí klient pro zápis. Otevřete kartu kontaktu nebo upřesněte jméno.");
   }

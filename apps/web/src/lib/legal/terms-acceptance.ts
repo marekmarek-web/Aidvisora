@@ -1,6 +1,7 @@
 import "server-only";
-import { db } from "@/lib/db-client";
 import { userTermsAcceptance } from "db";
+import { withTenantContext, withUserContext } from "@/lib/db/with-tenant-context";
+import { db } from "@/lib/db-client";
 import {
   LEGAL_DOCUMENT_VERSION,
   type LegalAcceptanceContext,
@@ -84,18 +85,38 @@ export async function recordTermsAcceptance(input: RecordTermsAcceptanceInput): 
     throw new Error("recordTermsAcceptance: either userId or contactId must be provided");
   }
   const reqMeta = readRequestMeta(input.request);
+  const row = {
+    userId: input.userId ?? null,
+    contactId: input.contactId ?? null,
+    tenantId: input.tenantId ?? null,
+    context: input.context,
+    version: input.version ?? LEGAL_DOCUMENT_VERSION,
+    documents: input.documents,
+    userAgent: input.userAgent ?? reqMeta.userAgent,
+    ipAddress: input.ipAddress ?? reqMeta.ip,
+    locale: input.locale ?? reqMeta.locale,
+  } satisfies Record<string, unknown>;
+
+  // Runtime po cutoveru: `user_terms_acceptance` má append-only RLS. Policy WITH
+  // CHECK vyžaduje, aby `app.user_id` odpovídal `user_id` (pokud je), respektive
+  // `app.tenant_id` odpovídal `tenant_id`. Používáme `withTenantContext`, pokud
+  // máme tenant, jinak `withUserContext`. Register-context (ještě bez workspace)
+  // projde přes `app.user_id`.
   try {
-    await db.insert(userTermsAcceptance).values({
-      userId: input.userId ?? null,
-      contactId: input.contactId ?? null,
-      tenantId: input.tenantId ?? null,
-      context: input.context,
-      version: input.version ?? LEGAL_DOCUMENT_VERSION,
-      documents: input.documents,
-      userAgent: input.userAgent ?? reqMeta.userAgent,
-      ipAddress: input.ipAddress ?? reqMeta.ip,
-      locale: input.locale ?? reqMeta.locale,
-    });
+    if (input.tenantId) {
+      await withTenantContext(
+        { tenantId: input.tenantId, userId: input.userId ?? null },
+        (tx) => tx.insert(userTermsAcceptance).values(row as never),
+      );
+    } else if (input.userId) {
+      await withUserContext(input.userId, (tx) =>
+        tx.insert(userTermsAcceptance).values(row as never),
+      );
+    } else {
+      // Legacy cesta — kontakt bez tenantu a bez userId (public booking).
+      // Policy pro tento scénář je řešena v migraci rls-m8-bootstrap-provision-and-gaps.sql.
+      await db.insert(userTermsAcceptance).values(row as never);
+    }
   } catch (err) {
     // Logování se nesmí zlomit o auth flow — ale je kritické pro GDPR DD.
     console.error("[terms-acceptance] insert failed", {
@@ -115,16 +136,25 @@ export async function findLatestAcceptance(params: {
   contactId?: string | null;
   minVersion?: string;
 }) {
-  const rows = await db.query.userTermsAcceptance.findMany({
-    where: (t, ops) => {
-      const conds = [];
-      if (params.userId) conds.push(ops.eq(t.userId, params.userId));
-      if (params.contactId) conds.push(ops.eq(t.contactId, params.contactId));
-      if (params.minVersion) conds.push(ops.gte(t.version, params.minVersion));
-      return ops.and(...conds);
-    },
-    orderBy: (t, { desc }) => [desc(t.acceptedAt)],
-    limit: 1,
-  });
+  const fetch = (client: typeof db) =>
+    client.query.userTermsAcceptance.findMany({
+      where: (t, ops) => {
+        const conds = [];
+        if (params.userId) conds.push(ops.eq(t.userId, params.userId));
+        if (params.contactId) conds.push(ops.eq(t.contactId, params.contactId));
+        if (params.minVersion) conds.push(ops.gte(t.version, params.minVersion));
+        return ops.and(...conds);
+      },
+      orderBy: (t, { desc }) => [desc(t.acceptedAt)],
+      limit: 1,
+    });
+
+  // Čtení je idempotentní a hodí se i před vytvořením workspace (re-prompt
+  // modalů). Když máme userId, nastavíme `app.user_id` pro bootstrap policy.
+  if (params.userId) {
+    const rows = await withUserContext(params.userId, (tx) => fetch(tx as typeof db));
+    return rows[0] ?? null;
+  }
+  const rows = await fetch(db);
   return rows[0] ?? null;
 }

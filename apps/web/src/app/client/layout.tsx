@@ -7,7 +7,8 @@ import { getUnreadAdvisorMessagesForClientCount } from "@/app/actions/messages";
 import { getActiveAdvisorProposalCountForClient } from "@/app/actions/advisor-proposals-client";
 import { isMobileUiV1EnabledForRequest } from "@/app/shared/mobile-ui/feature-flag";
 import { getEffectiveTenantSettingsForWorkspaceResolved } from "@/lib/billing/effective-workspace";
-import { db, contacts, and, eq } from "db";
+import { contacts, and, eq } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import { ClientPortalShell } from "./ClientPortalShell";
 import { ClientMobileApp } from "./mobile/ClientMobileApp";
 import { MaintenanceBanner } from "@/app/components/MaintenanceBanner";
@@ -67,15 +68,17 @@ export default async function ClientZoneLayout({
       auth.contactId ? getUnreadAdvisorMessagesForClientCount().catch(() => 0) : Promise.resolve(0),
       auth.contactId ? getActiveAdvisorProposalCountForClient().catch(() => 0) : Promise.resolve(0),
       auth.contactId
-        ? db
-            .select({
-              firstName: contacts.firstName,
-              lastName: contacts.lastName,
-            })
-            .from(contacts)
-            .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, auth.contactId)))
-            .limit(1)
-            .then((rows) => rows[0] ?? null)
+        ? withTenantContext({ tenantId: auth.tenantId, userId: auth.userId }, (tx) =>
+            tx
+              .select({
+                firstName: contacts.firstName,
+                lastName: contacts.lastName,
+              })
+              .from(contacts)
+              .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, auth.contactId!)))
+              .limit(1)
+              .then((rows) => rows[0] ?? null),
+          )
         : Promise.resolve(null),
       auth.contactId ? getAssignedAdvisorForClient(auth.contactId).catch(() => null) : Promise.resolve(null),
     ]);

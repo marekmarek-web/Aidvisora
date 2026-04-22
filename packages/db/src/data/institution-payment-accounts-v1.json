@@ -1,0 +1,310 @@
+{
+  "version": 3,
+  "generatedAt": "2026-04-22",
+  "description": "Institucionální defaultní platební účty pro auto-předvyplnění v ManualPaymentSetupModal. Obsahuje pouze veřejně ověřené a aktuální záznamy z oficiálních platebních pokynů institucí.",
+  "rules": {
+    "keys": "Každý řádek je identifikován tuplem (partner, segment, paymentType, productCode). `paymentType` rozlišuje 'regular' (běžné pojistné/příspěvek), 'first' (1. pojistné u autopojištění), 'extra' (mimořádný příspěvek účastníka), 'employer' (individuální zaměstnavatelský příspěvek), 'employer_bulk' (hromadná zaměstnavatelská platba). `productCode` rozlišuje produktové varianty, kde se účty liší (Conseq Active/Horizont vs Classic Invest; NN životní podle formátu čísla smlouvy).",
+    "accountNumberTemplate": "Když je vyplněn `accountNumberTemplate`, číslo účtu se renderuje dynamicky ze šablony s placeholdery: {contractNumber}, {contractPrefix}, {bankCode}. Použito u Consequ.",
+    "symbols": "`constantSymbol` je statický KS (např. '558' pro Conseq účastníka, '3552' pro Conseq zaměstnavatele, '3558' pro ČSOB PS). `specificSymbolTemplate` může být literál ('99') nebo placeholder ({birthNumber}, {ico}, {yearMonth}). `symbolRulesNote` je textový popis pro tooltip v UI, pokud je logika složitější.",
+    "variableSymbolRequired": "Když `false`, UI nepovažuje VS za povinný a serverová validace jeho absenci akceptuje. Default `true`.",
+    "fallback": "Pokud neexistuje ověřený default, instituce v seedu není. Modal nechá pole prázdná a poradce musí čísla doplnit ručně dle platebních pokynů klienta.",
+    "disclaimer": "Čísla účtů jsou orientační defaulty z veřejných zdrojů. Tenant by si měl v nastavení platebních účtů ověřit, zda mu instituce aktuálně nemění sběrné účty, čísla pro pobočky nebo formát VS. Platební pokyny konkrétního klienta mají přednost před tímto seedem."
+  },
+  "bankCodeDictionary": {
+    "0100": "Komerční banka",
+    "0300": "ČSOB",
+    "0800": "Česká spořitelna",
+    "2010": "Fio banka",
+    "2700": "UniCredit Bank",
+    "3500": "ING Bank",
+    "5500": "Raiffeisenbank"
+  },
+  "excluded": {
+    "note": "Následující instituce byly z defaultního seedu záměrně vyřazeny — nepodařilo se najít jednoznačný, aktuální a ověřitelný veřejný zdroj pro univerzální sběrný účet.",
+    "institutions": [
+      {
+        "partner": "Generali Česká pojišťovna",
+        "reason": "Generali vede klienty přes platební workflow / klientskou zónu, univerzální veřejný sběrný účet neexistuje. Pro zákonné pojištění odpovědnosti zaměstnavatele existuje zvláštní účet (90034-17433-021/0100), ale jiné produkty mají různé účty."
+      }
+    ]
+  },
+  "accounts": [
+    {
+      "partner": "Allianz pojišťovna",
+      "segments": ["ZP"],
+      "paymentType": "regular",
+      "accountNumber": "2700",
+      "bank": "UniCredit Bank",
+      "bankCode": "2700",
+      "variableSymbolRequired": true,
+      "notes": "Allianz životní pojištění — běžné pojistné. VS = číslo pojistné smlouvy."
+    },
+    {
+      "partner": "Allianz pojišťovna",
+      "segments": ["MAJ", "ODP", "CEST", "FIRMA_POJ", "AUTO_PR", "AUTO_HAV"],
+      "paymentType": "regular",
+      "accountNumber": "2727",
+      "bank": "UniCredit Bank",
+      "bankCode": "2700",
+      "variableSymbolRequired": true,
+      "notes": "Allianz neživotní pojištění — majetek, odpovědnost, cestovní, podnikatelské pojištění a auto (BĚŽNÉ pojistné). VS = číslo smlouvy."
+    },
+    {
+      "partner": "Allianz pojišťovna",
+      "segments": ["AUTO_PR", "AUTO_HAV"],
+      "paymentType": "first",
+      "accountNumber": "20001-38138021",
+      "bank": "Komerční banka",
+      "bankCode": "0100",
+      "variableSymbolRequired": true,
+      "notes": "Allianz autopojištění — POUZE 1. pojistné. Pro běžné pojistné 2727/2700."
+    },
+    {
+      "partner": "Allianz penzijní společnost",
+      "segments": ["DPS"],
+      "paymentType": "regular",
+      "accountNumber": "3033",
+      "bank": "UniCredit Bank",
+      "bankCode": "2700",
+      "variableSymbolRequired": true,
+      "symbolRulesNote": "Allianz penze rozlišuje účastníka a zaměstnavatele přes konstantní symbol — ověřte u klienta, zda je plátce klient sám nebo zaměstnavatel, a použijte odpovídající KS z rámcové smlouvy.",
+      "notes": "Allianz PS (DPS) — VS = číslo smlouvy."
+    },
+
+    {
+      "partner": "Kooperativa",
+      "segments": ["ZP", "MAJ", "AUTO_PR", "AUTO_HAV", "CEST", "ODP", "FIRMA_POJ"],
+      "paymentType": "regular",
+      "accountNumber": "2226222",
+      "bank": "Česká spořitelna",
+      "bankCode": "0800",
+      "variableSymbolRequired": true,
+      "notes": "Kooperativa — běžné pojistné. VS = číslo pojistné smlouvy. Pro zákonné pojištění odpovědnosti zaměstnavatele (ODP_ZAM) existuje zvláštní účet."
+    },
+    {
+      "partner": "Kooperativa",
+      "segments": ["ODP_ZAM"],
+      "paymentType": "regular",
+      "accountNumber": "40002-50404011",
+      "bank": "Komerční banka",
+      "bankCode": "0100",
+      "variableSymbolRequired": true,
+      "notes": "Kooperativa — zákonné pojištění odpovědnosti zaměstnavatele (vyhláška 125/1993 Sb.). VS = IČO plátce."
+    },
+
+    {
+      "partner": "NN Penzijní společnost",
+      "segments": ["DPS"],
+      "paymentType": "regular",
+      "accountNumber": "5005004433",
+      "bank": "Česká spořitelna",
+      "bankCode": "0800",
+      "variableSymbolRequired": true,
+      "symbolRulesNote": "NN PS používá SS a KS podle typu platby a smluvního vztahu — řiďte se rámcovou smlouvou / platebními pokyny NN.",
+      "notes": "NN PS — VS = číslo smlouvy (případně rodné číslo v určeném formátu)."
+    },
+    {
+      "partner": "UNIQA Penzijní společnost",
+      "segments": ["DPS"],
+      "paymentType": "regular",
+      "accountNumber": "222333222",
+      "bank": "UniCredit Bank",
+      "bankCode": "2700",
+      "variableSymbolRequired": true,
+      "notes": "UNIQA PS (bývalá AXA) — VS = číslo smlouvy."
+    },
+    {
+      "partner": "ČSOB Penzijní společnost",
+      "segments": ["DPS"],
+      "paymentType": "regular",
+      "accountNumber": "2106990187",
+      "bank": "UniCredit Bank",
+      "bankCode": "2700",
+      "variableSymbolRequired": true,
+      "constantSymbol": "3558",
+      "specificSymbolTemplate": "{birthNumber}",
+      "notes": "ČSOB PS — VS = číslo smlouvy, SS = rodné číslo, KS = 3558."
+    },
+    {
+      "partner": "KB Penzijní společnost",
+      "segments": ["DPS"],
+      "paymentType": "regular",
+      "accountNumber": "300300232",
+      "bank": "Česká spořitelna",
+      "bankCode": "0800",
+      "variableSymbolRequired": true,
+      "notes": "KB PS — VS = číslo smlouvy."
+    },
+
+    {
+      "partner": "ČPP",
+      "segments": ["ZP", "MAJ", "AUTO_PR", "AUTO_HAV", "CEST", "ODP", "ODP_ZAM", "FIRMA_POJ"],
+      "paymentType": "regular",
+      "accountNumber": "700135002",
+      "bank": "Česká spořitelna",
+      "bankCode": "0800",
+      "variableSymbolRequired": true,
+      "notes": "ČPP (VIG) — univerzální účet pro BĚŽNÉ pojistné. VS = číslo smlouvy. Pro mimořádné pojistné 700485002/0800."
+    },
+    {
+      "partner": "ČPP",
+      "segments": ["ZP", "MAJ", "AUTO_PR", "AUTO_HAV", "CEST", "ODP", "ODP_ZAM", "FIRMA_POJ"],
+      "paymentType": "extra",
+      "accountNumber": "700485002",
+      "bank": "Česká spořitelna",
+      "bankCode": "0800",
+      "variableSymbolRequired": true,
+      "notes": "ČPP — účet pro MIMOŘÁDNÉ pojistné. VS = číslo smlouvy."
+    },
+
+    {
+      "partner": "ČSOB pojišťovna",
+      "segments": ["ZP"],
+      "paymentType": "regular",
+      "accountNumber": "130450683",
+      "bank": "ČSOB",
+      "bankCode": "0300",
+      "variableSymbolRequired": true,
+      "notes": "ČSOB pojišťovna — životní pojištění. VS = číslo smlouvy."
+    },
+    {
+      "partner": "ČSOB pojišťovna",
+      "segments": ["MAJ", "AUTO_PR", "AUTO_HAV", "CEST", "ODP", "ODP_ZAM"],
+      "paymentType": "regular",
+      "accountNumber": "187078376",
+      "bank": "ČSOB",
+      "bankCode": "0300",
+      "variableSymbolRequired": true,
+      "notes": "ČSOB pojišťovna — neživotní retail (majetek, auto, cestovní, odpovědnost občana/zaměstnance). VS = číslo smlouvy."
+    },
+    {
+      "partner": "ČSOB pojišťovna",
+      "segments": ["FIRMA_POJ"],
+      "paymentType": "regular",
+      "accountNumber": "180135112",
+      "bank": "ČSOB",
+      "bankCode": "0300",
+      "variableSymbolRequired": true,
+      "notes": "ČSOB pojišťovna — podnikatelská rizika (firma). VS = číslo smlouvy. Pro flotily 157411676/0300."
+    },
+
+    {
+      "partner": "Direct",
+      "segments": ["ZP", "MAJ", "AUTO_PR", "AUTO_HAV", "ODP", "CEST", "FIRMA_POJ"],
+      "paymentType": "regular",
+      "accountNumber": "123-1562900267",
+      "bank": "Komerční banka",
+      "bankCode": "0100",
+      "variableSymbolRequired": true,
+      "notes": "Direct pojišťovna — FALLBACK. Direct výslovně uvádí, že klient má platit podle konkrétních pokynů v pojistné smlouvě (alternativně se uvádí účet 2330257/0100). Tento řádek slouží jen jako předvyplnění, vždy ho porovnejte s platebními pokyny klienta."
+    },
+
+    {
+      "partner": "Pillow",
+      "segments": ["MAJ", "ODP"],
+      "paymentType": "regular",
+      "accountNumber": "501401304",
+      "bank": "Fio banka",
+      "bankCode": "2010",
+      "variableSymbolRequired": true,
+      "notes": "Pillow pojišťovna — jeden VS pro všechny smlouvy jednoho klienta (klientské ID z portálu Pillow)."
+    },
+
+    {
+      "partner": "Conseq",
+      "segments": ["INV"],
+      "paymentType": "regular",
+      "productCode": "active_horizont_invest",
+      "accountNumberTemplate": "666777-{contractNumber}/2700",
+      "bank": "UniCredit Bank",
+      "bankCode": "2700",
+      "variableSymbolRequired": false,
+      "notes": "Conseq Active Invest / Horizont Invest — účet má tvar 666777-{číslo smlouvy}/2700. VS se neuvádí, identifikuje se číslem účtu."
+    },
+    {
+      "partner": "Conseq",
+      "segments": ["INV"],
+      "paymentType": "regular",
+      "productCode": "classic_invest_czk",
+      "accountNumber": "6850057",
+      "bank": "UniCredit Bank",
+      "bankCode": "2700",
+      "variableSymbolRequired": true,
+      "notes": "Conseq Classic Invest (CZK) — standardní sběrný účet. VS = číslo smlouvy."
+    },
+
+    {
+      "partner": "Conseq Penzijní společnost",
+      "segments": ["DPS"],
+      "paymentType": "regular",
+      "accountNumberTemplate": "662266-{contractNumber}/2700",
+      "bank": "UniCredit Bank",
+      "bankCode": "2700",
+      "variableSymbolRequired": true,
+      "constantSymbol": "558",
+      "notes": "Conseq DPS — sdružená platba účastníka. Předčíslí 662266, číslo účtu = číslo smlouvy. VS = číslo smlouvy, KS = 558, SS se neuvádí."
+    },
+    {
+      "partner": "Conseq Penzijní společnost",
+      "segments": ["DPS"],
+      "paymentType": "extra",
+      "accountNumber": "100010652",
+      "bank": "Česká spořitelna",
+      "bankCode": "0800",
+      "variableSymbolRequired": true,
+      "constantSymbol": "558",
+      "specificSymbolTemplate": "99",
+      "notes": "Conseq DPS — MIMOŘÁDNÝ příspěvek účastníka. VS = číslo smlouvy, SS = 99, KS = 558."
+    },
+    {
+      "partner": "Conseq Penzijní společnost",
+      "segments": ["DPS"],
+      "paymentType": "employer",
+      "accountNumber": "100010652",
+      "bank": "Česká spořitelna",
+      "bankCode": "0800",
+      "variableSymbolRequired": true,
+      "constantSymbol": "3552",
+      "specificSymbolTemplate": "{ico}",
+      "symbolRulesNote": "Individuální zaměstnavatelský příspěvek. Pro HROMADNOU platbu zaměstnavatele má místo toho VS = IČ zaměstnavatele a SS = RRRRMM období platby — v takovém případě zadejte ručně.",
+      "notes": "Conseq DPS — INDIVIDUÁLNÍ zaměstnavatelský příspěvek. VS = číslo smlouvy, SS = IČ zaměstnavatele, KS = 3552."
+    },
+
+    {
+      "partner": "Conseq",
+      "segments": ["DIP"],
+      "paymentType": "employer",
+      "accountNumber": "1388083926",
+      "bank": "UniCredit Bank",
+      "bankCode": "2700",
+      "variableSymbolRequired": true,
+      "specificSymbolTemplate": "{ico}",
+      "notes": "Conseq DIP — zaměstnavatelské příspěvky. VS = číslo podkladové smlouvy, SS = IČ zaměstnavatele."
+    },
+
+    {
+      "partner": "NN",
+      "segments": ["ZP"],
+      "paymentType": "regular",
+      "productCode": "contract_10_digit",
+      "accountNumber": "1000588419",
+      "bank": "ING Bank",
+      "bankCode": "3500",
+      "variableSymbolRequired": true,
+      "symbolRulesNote": "Platí pro smlouvy s 10místným číslem. Pokud má klient 8místné číslo smlouvy, použijte variantu 'contract_8_digit' (účet 1010101010/3500 + specifická VS logika).",
+      "notes": "NN životní pojišťovna — smlouvy s 10místným číslem smlouvy. VS = číslo smlouvy. Zdroj: https://www.nn.cz/poradna/pojistovna/platby.html"
+    },
+    {
+      "partner": "NN",
+      "segments": ["ZP"],
+      "paymentType": "regular",
+      "productCode": "contract_8_digit",
+      "accountNumber": "1010101010",
+      "bank": "ING Bank",
+      "bankCode": "3500",
+      "variableSymbolRequired": true,
+      "symbolRulesNote": "Starší 8místné smlouvy NN mohou mít odlišnou logiku VS (např. rodné číslo nebo vlastní identifikátor v platebních pokynech). Ověřte podle pokynu v pojistné smlouvě klienta.",
+      "notes": "NN životní pojišťovna — smlouvy s 8místným číslem smlouvy. VS = číslo smlouvy (u starších smluv může být jiná logika). Zdroj: https://www.nn.cz/poradna/pojistovna/platby.html"
+    }
+  ]
+}

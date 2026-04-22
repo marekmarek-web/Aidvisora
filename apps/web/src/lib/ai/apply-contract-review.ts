@@ -1062,6 +1062,14 @@ export async function applyContractReview(
   let contractEnforcementResult: ReturnType<typeof enforceContractPayload> | undefined;
   let paymentEnforcementResult: ReturnType<typeof enforcePaymentPayload> | undefined;
 
+  // S2-PB1: attach-only audit trail (declared outside the tx closure so the
+  // post-transaction audit-log insert níže je může zaznamenat).
+  const attachAuditEntries: Array<{
+    actionType: string;
+    clientId?: string;
+    contractId?: string;
+  }> = [];
+
   try {
     await db.transaction(async (tx) => {
       // F2-2 (H-17): concurrent-apply mutex.
@@ -1243,6 +1251,15 @@ export async function applyContractReview(
           resultPayload.createdContractId = id;
         }
       };
+
+      // S2-PB1: attach-only actions tracking. Previously attach_to_existing_client
+      // / attach_to_existing_contract / mark_as_supporting_document were emitted
+      // by the LLM but NEVER handled here → silent no-op, document orphaned,
+      // "Uloženo" toast shown to advisor. Now we track intent and explicitly
+      // fall through to document-link in the post-loop block.
+      // (attachAuditEntries je declared výš kvůli audit logu po transakci.)
+      let hasAttachOnlyAction = false;
+      let attachTargetContractId: string | null = null;
 
       for (const action of draftActions) {
         if (
@@ -1559,6 +1576,44 @@ export async function applyContractReview(
             resultPayload.createdPaymentSetupId = paymentSetupResult.createdPaymentSetupId;
           }
         } else if (
+          action.type === "attach_to_existing_client" ||
+          action.type === "link_to_client"
+        ) {
+          // S2-PB1: attach-only flow. Advisor/LLM rozhodl, že dokument se
+          // má pouze navázat na klienta (bez nové smlouvy). effectiveContactId
+          // už je resolvnutý z row.matchedClientId výš (L1029), tady pouze
+          // zaznamenáme intent do auditu a necháme post-loop blok zavolat
+          // applyDocumentLinkInTx s contractId=null.
+          hasAttachOnlyAction = true;
+          const clientId = (action.payload as Record<string, unknown> | undefined)?.clientId as
+            | string
+            | undefined;
+          attachAuditEntries.push({
+            actionType: action.type,
+            ...(clientId ? { clientId } : {}),
+          });
+        } else if (action.type === "attach_to_existing_contract") {
+          // S2-PB1: attach dokumentu k existující smlouvě (např. dodatek,
+          // AML/FATCA příloha). Nevytváříme novou smlouvu, ale váže
+          // dokument na konkrétní contract row.
+          hasAttachOnlyAction = true;
+          const contractId = (action.payload as Record<string, unknown> | undefined)?.contractId as
+            | string
+            | undefined;
+          if (contractId && !attachTargetContractId) {
+            attachTargetContractId = contractId;
+          }
+          attachAuditEntries.push({
+            actionType: action.type,
+            ...(contractId ? { contractId } : {}),
+          });
+        } else if (action.type === "mark_as_supporting_document") {
+          // S2-PB1: explicit supporting-doc intent (souhlas, prohlášení,
+          // daňové přiznání, výplatní páska, …). Dokument se zapíše jen
+          // jako attachment klienta bez smlouvy/platby.
+          hasAttachOnlyAction = true;
+          attachAuditEntries.push({ actionType: action.type });
+        } else if (
           action.type === "draft_email" ||
           action.type === "create_followup_email_draft" ||
           action.type === "create_notification"
@@ -1637,6 +1692,36 @@ export async function applyContractReview(
             docLink.visibilityTurnedOn;
         }
       }
+
+      // S2-PB1: attach-only fallback. Pokud advisor/LLM zvolili attach_to_existing_*
+      // / mark_as_supporting_document (bez create_contract), tohle je jediný
+      // point, kdy se dokument reálně přilepí ke klientovi/smlouvě. Předchozí
+      // kód to tiše ignoroval → "Uloženo" toast + orphaned dokument.
+      if (
+        effectiveContactId &&
+        createdContractIds.length === 0 &&
+        hasAttachOnlyAction &&
+        row.storagePath
+      ) {
+        const docLink = await applyDocumentLinkInTx({
+          tenantId,
+          contactId: effectiveContactId,
+          contractId: attachTargetContractId,
+          reviewId,
+          storagePath: row.storagePath,
+          fileName: row.fileName ?? "dokument.pdf",
+          mimeType: row.mimeType ?? null,
+          sizeBytes: row.sizeBytes ?? null,
+          uploadedByUserId: userId,
+          visibleToClient: true,
+          tx: tx as unknown as typeof db,
+        });
+        resultPayload.linkedDocumentId = docLink.documentId;
+        (resultPayload as Record<string, unknown>).__docLinkWasInsert = docLink.wasInsert;
+        (resultPayload as Record<string, unknown>).__docLinkVisibilityOn =
+          docLink.visibilityTurnedOn;
+        resultPayload.linkedClientId = effectiveContactId;
+      }
     });
 
     // Slice 2: Propagate pending conflict fields into resultPayload
@@ -1704,6 +1789,8 @@ export async function applyContractReview(
         // Fáze 9: enforcement summary v audit logu
         policyEnforcementSummary: enforcementTrace.summary,
         supportingDocumentGuard: enforcementTrace.supportingDocumentGuard,
+        // S2-PB1: attach-only apply trail (jinak neviditelná cesta přes attach handlers).
+        ...(attachAuditEntries.length > 0 ? { attachAuditEntries } : {}),
       },
     });
   } catch (err) {

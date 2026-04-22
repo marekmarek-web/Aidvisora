@@ -160,7 +160,24 @@ export type CreateResponseSuccess = { ok: true; text: string };
 export type CreateResponseError = { ok: false; error: string; code?: string };
 export type CreateResponseResult = CreateResponseSuccess | CreateResponseError;
 
-/** Server-only logging. Never log API key or full document content. */
+/**
+ * Server-only logging. Never log API key or full document content.
+ *
+ * L12 retention/PII policy (confirmed 2026-04):
+ * - Only fires in `NODE_ENV === "development"` AND when
+ *   `isAiReviewPipelineDebug()` is true. In production this function is a
+ *   no-op and never touches any log sink.
+ * - Payload is strictly non-PII: endpoint name, model id, latency, boolean
+ *   success, and an error string which is sanitized upstream. No prompt text,
+ *   no response body, no client/contact identifiers, no API keys.
+ * - Target is `console.log` only — no structured audit row, no Sentry,
+ *   no Langfuse. In dev Next.js streams stdout to the terminal; nothing is
+ *   persisted to our DB or observability vendors.
+ *
+ * If you extend this function, keep those invariants — or move the richer
+ * payload to `logAuditAction` where tenant/user scoping and retention are
+ * enforced.
+ */
 export function logOpenAICall(params: {
   endpoint: string;
   model: string;

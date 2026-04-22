@@ -127,17 +127,17 @@ export const BATCH_B_SEED_ROWS: readonly BatchASeedRow[] = [
     ticker: null,
     riskSRI: 2,
     goal:
-      "Cílem fondu je prostřednictvím investic do nemovitostních aktiv dosahovat dlouhodobě stabilních výnosů na úrovni vývoje realitního trhu při zachování rozumné míry rizika.",
+      "Fond chce dlouhodobě stabilně zhodnocovat peníze investovat do nemovitostí s přiměřeným rizikem.",
     strategy:
-      "Fond investuje zejména do kvalitních komerčních nemovitostí, využívá dlouhodobé nájemní smlouvy s inflačními doložkami a diverzifikuje podle typu nemovitosti, lokality i nájemců.",
+      "Investuje především do kvalitních kancelářských a obchodních budov. Využívá dlouhé nájemní smlouvy s navyšováním o inflaci a rozkládá riziko mezi různé typy nemovitostí, lokality a nájemce.",
     description:
-      "Retailový realitní fond zaměřený na kanceláře, retail a logistiku ve střední Evropě. Silnou stránkou je rozsáhlé portfolio aktiv, dlouhodobé nájmy a relativně nízké riziko ve srovnání s akciovými fondy.",
+      "Nemovitostní fond pro běžné investory, zaměřený na kanceláře, obchody a sklady ve střední Evropě. Výhodou je velké portfolio budov, dlouhé nájmy a nižší kolísání hodnoty než u akciových fondů.",
     suitable:
-      "Pro spíše konzervativní investory, kteří chtějí podíl na výnosech z komerčních nemovitostí bez nutnosti kupovat a spravovat vlastní nemovitost.",
+      "Pro opatrnější investory, kteří chtějí využít výnosů z komerčních nemovitostí bez toho, aby museli sami nemovitost kupovat a spravovat.",
     horizon: "5+ let",
-    liquidity: "Otevřený fond; odkup možný, ale podkladová aktiva jsou méně likvidní než ETF či peněžní fondy.",
+    liquidity: "Peníze lze vybrat, ale výběr nemusí být okamžitý – fond drží nemovitosti, které nelze prodat tak rychle jako akcie nebo peníze na spořicím účtu.",
     risks:
-      "Riziko kolísání cen nemovitostí, úvěrové a protistranové riziko, měnové riziko a zejména riziko nižší likvidity realitních aktiv při odkupu.",
+      "Ceny nemovitostí mohou klesat, fond používá úvěry, je tu měnové riziko a peníze nelze vybrat okamžitě, protože prodej nemovitostí trvá.",
     minInvestment: "od 100 Kč",
     planningRate: 5,
     officialPerformance: {
@@ -353,7 +353,7 @@ export const BATCH_B_SEED_ROWS: readonly BatchASeedRow[] = [
     },
     benefits: [
       "Jednoduchá cesta k růstovým akciovým trhům od malých částek.",
-      "Denní obchodování a retailový přístup bez nutnosti kupovat jednotlivé akcie.",
+      "Dostupný i pro běžné investory – obchoduje se každý den a není potřeba kupovat jednotlivé akcie.",
       "Vhodné jako růstová složka dlouhodobého portfolia nebo DIP řešení.",
     ],
     parameters: {

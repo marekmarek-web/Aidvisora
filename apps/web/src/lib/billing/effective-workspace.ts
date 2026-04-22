@@ -1,6 +1,6 @@
 import "server-only";
 
-import { db, tenantSettings, eq, and, inArray } from "db";
+import { tenantSettings, eq, and, inArray } from "db";
 import {
   ALL_PLAN_SYNCED_SETTING_KEYS,
   type EffectiveAccessContext,
@@ -11,6 +11,7 @@ import {
   mergeTenantBooleanOverrides,
 } from "@/lib/billing/plan-capability-settings";
 import { resolveEffectiveAccessContext } from "@/lib/billing/resolve-effective-access";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 
 export type { EffectiveAccessContext } from "@/lib/billing/plan-catalog";
 
@@ -29,10 +30,12 @@ async function loadPlanSyncedBooleanOverrides(
   tenantId: string,
 ): Promise<Partial<Record<PlanSyncedTenantSettingKey, boolean>>> {
   const keys = ALL_PLAN_SYNCED_SETTING_KEYS as unknown as string[];
-  const rows = await db
-    .select({ key: tenantSettings.key, value: tenantSettings.value })
-    .from(tenantSettings)
-    .where(and(eq(tenantSettings.tenantId, tenantId), inArray(tenantSettings.key, keys)));
+  const rows = await withTenantContext({ tenantId }, (tx) =>
+    tx
+      .select({ key: tenantSettings.key, value: tenantSettings.value })
+      .from(tenantSettings)
+      .where(and(eq(tenantSettings.tenantId, tenantId), inArray(tenantSettings.key, keys))),
+  );
 
   const out: Partial<Record<PlanSyncedTenantSettingKey, boolean>> = {};
   for (const r of rows) {

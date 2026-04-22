@@ -419,6 +419,10 @@ export function resolveContractSegmentFromUserText(text: string): string | null 
   for (const [slang, seg] of Object.entries(SLANG_TO_CONTRACT_SEGMENT)) {
     if (lower.includes(slang)) return seg;
   }
+  // Employee-liability (ODP_ZAM) must be checked BEFORE generic odpovednost → ODP fallback.
+  if (/zaměstnanec|zamestnanec|zaměstnaneck|zamestnaneck|pracovní\s*odpovědnos|pracovni\s*odpovednos/i.test(text)) {
+    return "ODP_ZAM";
+  }
   if (/\bhavarijní|havarijni|\bhav\b|kasko/i.test(text)) return "AUTO_HAV";
   if (/\bpovinné\s*ručení|povinne\s*ruceni|\bpov\b|povko|čtvrtá\s+silnice/i.test(text)) return "AUTO_PR";
 

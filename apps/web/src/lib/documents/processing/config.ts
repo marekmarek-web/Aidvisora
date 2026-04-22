@@ -7,7 +7,13 @@ export type ProcessingConfig = {
   adobeClientId: string | null;
   adobeClientSecret: string | null;
   adobeRegion: string;
-  /** OCR language tag (Adobe-supported); default en-US. Override e.g. cs-CZ if your account supports it. */
+  /**
+   * OCR language tag (Adobe-supported). S2-O1: default přepnut z `en-US` na
+   * `cs-CZ` — Aidvisora je CZ-only produkt a české diakritiky (ú, ů, ž, č, š, …)
+   * byly v en-US OCR systematicky zmršené (→ chybné klasifikace, např.
+   * "Komisionářská" → "Komisionarska"/"Komisionaiska" → pipeline nenajde keyword).
+   * Přepsat přes env `ADOBE_OCR_LANG=en-US` pro non-CZ tenanty.
+   */
   adobeOcrLang: string;
 };
 
@@ -31,7 +37,7 @@ export function getProcessingConfig(): ProcessingConfig {
     adobeClientId: id?.trim() || null,
     adobeClientSecret: secret?.trim() || null,
     adobeRegion: process.env.ADOBE_PDF_SERVICES_REGION?.trim() || "ew1",
-    adobeOcrLang: process.env.ADOBE_OCR_LANG?.trim() || "en-US",
+    adobeOcrLang: process.env.ADOBE_OCR_LANG?.trim() || "cs-CZ",
   };
 
   return _cached;

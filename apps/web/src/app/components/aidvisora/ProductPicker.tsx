@@ -1,11 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { getPartnersForTenant, getProductsForPartner } from "@/app/actions/contracts";
 import type { ProductOption } from "@/app/actions/contracts";
 import { segmentLabel } from "@/app/lib/segment-labels";
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
 import { Building, Package } from "lucide-react";
+
+/**
+ * Escape-hatch produkt „Vlastní produkt (zadejte název)" je plnohodnotný fallback,
+ * který se zobrazuje u každého partnera. Pokud ho poradce vybere, ukáže se inline
+ * input a zadaný název se propíše do `productName`, zatímco `productId` zůstává
+ * na katalogový placeholder (tenant-free řádek). Díky tomu se smlouva uloží
+ * s reálným textem produktu, ale zároveň je zachován audit trail (poradce
+ * explicitně zvolil custom).
+ */
+const CUSTOM_PRODUCT_PLACEHOLDER_NAME = "Vlastní produkt (zadejte název)";
 
 export type ProductPickerValue = {
   partnerId: string;
@@ -33,6 +43,7 @@ export function ProductPicker({
   const [products, setProducts] = useState<ProductOption[]>([]);
   const [loadingPartners, setLoadingPartners] = useState(true);
   const [loadingProducts, setLoadingProducts] = useState(false);
+  const [customProductName, setCustomProductName] = useState("");
 
   useEffect(() => {
     getPartnersForTenant()
@@ -66,10 +77,15 @@ export function ProductPicker({
   const handleProductChange = (productId: string) => {
     const product = products.find((p) => p.id === productId);
     const partner = partners.find((p) => p.id === value.partnerId);
+    const isCustom = product?.name === CUSTOM_PRODUCT_PLACEHOLDER_NAME;
+    if (!isCustom) setCustomProductName("");
     onChange({
       ...value,
       productId,
-      productName: product?.name,
+      // U escape-hatche držíme prázdné productName, dokud uživatel nezadá vlastní
+      // text v inline inputu (viz níže). Tím se na serveru rozpozná, že má vzniknout
+      // custom produkt pod daným partnerem.
+      productName: isCustom ? "" : product?.name,
       partnerName: partner?.name ?? value.partnerName,
     });
     if (onActivityLog && product) {
@@ -79,6 +95,21 @@ export function ProductPicker({
       });
     }
   };
+
+  const handleCustomNameChange = (name: string) => {
+    setCustomProductName(name);
+    const partner = partners.find((p) => p.id === value.partnerId);
+    onChange({
+      ...value,
+      productName: name.trim() ? name.trim() : "",
+      partnerName: partner?.name ?? value.partnerName,
+    });
+  };
+
+  const isCustomSelected = useMemo(() => {
+    const selected = products.find((p) => p.id === value.productId);
+    return selected?.name === CUSTOM_PRODUCT_PLACEHOLDER_NAME;
+  }, [products, value.productId]);
 
   const byCategory = products.reduce<Record<string, ProductOption[]>>((acc, p) => {
     const cat = p.category || "";
@@ -160,6 +191,23 @@ export function ProductPicker({
             >
               doplnit
             </span>
+          )}
+          {isCustomSelected && (
+            <div className="mt-2">
+              <label className="block text-monday-text-muted text-[11px] font-medium mb-1">
+                Název vlastního produktu
+              </label>
+              <input
+                type="text"
+                value={customProductName}
+                onChange={(e) => handleCustomNameChange(e.target.value)}
+                placeholder="např. Allianz Max – varianta 2024"
+                className="w-full px-2 py-1 text-[13px] border border-monday-border rounded bg-white focus:outline-none focus:ring-1 focus:ring-monday-primary"
+              />
+              <p className="text-[11px] text-slate-500 mt-1">
+                Vlastní název se uloží ke smlouvě i do nabídky partnera pro příští výběr.
+              </p>
+            </div>
           )}
         </div>
       )}

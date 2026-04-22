@@ -5,7 +5,7 @@
 
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { hasPermission, type RoleName } from "@/shared/rolePermissions";
-import { db, documents, opportunities, opportunityStages, eq, and, asc, contractSegments } from "db";
+import { db, contacts, documents, opportunities, opportunityStages, eq, and, asc, contractSegments, or } from "db";
 import type { ExecutionStepResult } from "./assistant-domain-model";
 import type { ExecutionContext } from "./assistant-execution-engine";
 import { registerWriteAdapter } from "./assistant-execution-engine";
@@ -113,7 +113,8 @@ async function assertDocumentWrite(ctx: ExecutionContext) {
 export function registerAssistantWriteAdapters(): void {
   registerWriteAdapter("createOpportunity", async (params, ctx) => {
     try {
-      await assertCtx(ctx);
+      const auth = await assertCtx(ctx);
+      if (!hasPermission(auth.roleName, "opportunities:write")) return errResult("Chybí oprávnění opportunities:write.");
       const contactId = strParam(params, "contactId");
       if (!contactId) return errResult("Chybí contactId.");
       const stageId = strParam(params, "stageId") ?? (await firstPipelineStageId(ctx.tenantId));
@@ -165,6 +166,45 @@ export function registerAssistantWriteAdapters(): void {
       if (!firstName || !lastName) {
         return errResult("Chybí jméno nebo příjmení — doplňte je v náhledu kroků.");
       }
+
+      // H3: duplicate detection on (email | phone | personalId) within the tenant.
+      // If any matches, return the existing row as an idempotent hit so the planner
+      // and multi_action chain attach children to the pre-existing contact instead
+      // of creating a second copy.
+      const emailRaw = strParam(params, "email")?.toLowerCase() ?? null;
+      const phoneRaw = strParam(params, "phone");
+      const phoneNormalized = phoneRaw ? phoneRaw.replace(/\s|\.|-/g, "") : null;
+      const personalIdRaw = strParam(params, "personalId");
+      const personalIdNormalized = personalIdRaw ? personalIdRaw.replace(/\D/g, "") : null;
+      const dedupConditions = [];
+      if (emailRaw) dedupConditions.push(eq(contacts.email, emailRaw));
+      if (phoneNormalized) dedupConditions.push(eq(contacts.phone, phoneNormalized));
+      if (personalIdNormalized) dedupConditions.push(eq(contacts.personalId, personalIdNormalized));
+      if (dedupConditions.length > 0) {
+        const existing = await db
+          .select({ id: contacts.id })
+          .from(contacts)
+          .where(
+            and(
+              eq(contacts.tenantId, ctx.tenantId),
+              dedupConditions.length === 1 ? dedupConditions[0]! : or(...dedupConditions),
+            ),
+          )
+          .limit(1);
+        if (existing[0]) {
+          return {
+            ok: true,
+            outcome: "idempotent_hit",
+            entityId: existing[0].id,
+            entityType: "contact",
+            warnings: [
+              "Kontakt se shodnou e-mailovou adresou / telefonem / rodným číslem už v pracovním prostoru existuje — použila jsem stávající záznam.",
+            ],
+            error: null,
+          };
+        }
+      }
+
       const tagsRaw = params.tags;
       const tags =
         Array.isArray(tagsRaw) && tagsRaw.length > 0 && tagsRaw.every((t) => typeof t === "string")
@@ -240,7 +280,8 @@ export function registerAssistantWriteAdapters(): void {
    */
   registerWriteAdapter("createServiceCase", async (params, ctx) => {
     try {
-      await assertCtx(ctx);
+      const auth = await assertCtx(ctx);
+      if (!hasPermission(auth.roleName, "opportunities:write")) return errResult("Chybí oprávnění opportunities:write.");
       const contactId = strParam(params, "contactId");
       if (!contactId) return errResult("Chybí contactId.");
       const subject =
@@ -262,14 +303,30 @@ export function registerAssistantWriteAdapters(): void {
         expectedCloseDate: strParam(params, "expectedCloseDate"),
       });
       if (!id) return errResult("Servisní případ se nepodařilo vytvořit.");
-      await updateOpportunityAction(id, {
-        customFields: {
-          service_case: true,
-          service_case_subject: subject,
-          service_case_description: strParam(params, "description") ?? null,
-          advisor_created_service_case: true,
-        },
-      });
+      try {
+        await updateOpportunityAction(id, {
+          customFields: {
+            service_case: true,
+            service_case_subject: subject,
+            service_case_description: strParam(params, "description") ?? null,
+            advisor_created_service_case: true,
+          },
+        });
+      } catch (patchErr) {
+        // H6: compensate — a service-case without the marker is just a stray deal.
+        // Mark it as service_case=false? Safer: delete the freshly created record so
+        // the advisor can retry cleanly.
+        try {
+          await db.delete(opportunities).where(
+            and(eq(opportunities.id, id), eq(opportunities.tenantId, ctx.tenantId)),
+          );
+        } catch {
+          /* best-effort compensation */
+        }
+        return errResult(
+          `Servisní případ selhal při zápisu servisního označení. Doporučuji zkusit znovu. (${patchErr instanceof Error ? patchErr.message : "patch_failed"})`,
+        );
+      }
       return okResult(id, "opportunity", ["Vytvořen servisní případ (obchod v pipeline se servisním označením)."]);
     } catch (e) {
       return safeErr(e, "createServiceCase");
@@ -278,7 +335,8 @@ export function registerAssistantWriteAdapters(): void {
 
   registerWriteAdapter("updateOpportunity", async (params, ctx) => {
     try {
-      await assertCtx(ctx);
+      const auth = await assertCtx(ctx);
+      if (!hasPermission(auth.roleName, "opportunities:write")) return errResult("Chybí oprávnění opportunities:write.");
       const opportunityId = strParam(params, "opportunityId");
       if (!opportunityId) return errResult("Chybí opportunityId.");
       const patch: Parameters<typeof updateOpportunityAction>[1] = {};
@@ -325,7 +383,8 @@ export function registerAssistantWriteAdapters(): void {
 
   registerWriteAdapter("createTask", async (params, ctx) => {
     try {
-      await assertCtx(ctx);
+      const auth = await assertCtx(ctx);
+      if (!hasPermission(auth.roleName, "tasks:write")) return errResult("Chybí oprávnění tasks:write.");
       const contactId = strParam(params, "contactId");
       if (!contactId) return errResult("Chybí contactId.");
       const title = canonicalTaskTitle({
@@ -354,16 +413,29 @@ export function registerAssistantWriteAdapters(): void {
 
   registerWriteAdapter("updateTask", async (params, ctx) => {
     try {
-      await assertCtx(ctx);
+      const auth = await assertCtx(ctx);
+      if (!hasPermission(auth.roleName, "tasks:write")) return errResult("Chybí oprávnění tasks:write.");
       const taskId = strParam(params, "taskId");
       if (!taskId) return errResult("Chybí taskId.");
-      await updateTaskAction(taskId, {
+      // M9: only patch contactId when explicitly provided AND valid. Passing
+      // `undefined` would (legitimately) be ignored by the action, but passing
+      // a stale/null value from the model would silently reassign the task
+      // to a different client or strip its contact binding.
+      const patch: Parameters<typeof updateTaskAction>[1] = {
         title: strParam(params, "title"),
         description: strParam(params, "description"),
-        contactId: strParam(params, "contactId"),
         dueDate: strParam(params, "dueDate") ?? strParam(params, "resolvedDate"),
         opportunityId: strParam(params, "opportunityId"),
-      });
+      };
+      if (params.contactId !== undefined) {
+        const newContactId = strParam(params, "contactId");
+        if (newContactId) {
+          patch.contactId = newContactId;
+        }
+        // If contactId was provided but falsy, intentionally DROP it from the
+        // patch so the existing value on the task row is preserved.
+      }
+      await updateTaskAction(taskId, patch);
       return okResult(taskId, "task");
     } catch (e) {
       return safeErr(e, "updateTask");
@@ -372,7 +444,8 @@ export function registerAssistantWriteAdapters(): void {
 
   registerWriteAdapter("createFollowUp", async (params, ctx) => {
     try {
-      await assertCtx(ctx);
+      const auth = await assertCtx(ctx);
+      if (!hasPermission(auth.roleName, "tasks:write")) return errResult("Chybí oprávnění tasks:write.");
       const contactId = strParam(params, "contactId");
       if (!contactId) return errResult("Chybí contactId.");
       const title = canonicalTaskTitle({
@@ -400,7 +473,8 @@ export function registerAssistantWriteAdapters(): void {
 
   registerWriteAdapter("scheduleCalendarEvent", async (params, ctx) => {
     try {
-      await assertCtx(ctx);
+      const auth = await assertCtx(ctx);
+      if (!hasPermission(auth.roleName, "events:write")) return errResult("Chybí oprávnění events:write.");
       const contactId = strParam(params, "contactId");
       if (!contactId) return errResult("Chybí contactId.");
       const startAt = strParam(params, "startAt") ?? strParam(params, "resolvedDate");
@@ -434,11 +508,16 @@ export function registerAssistantWriteAdapters(): void {
       const auth = await assertCtx(ctx);
       if (!hasPermission(auth.roleName, "meeting_notes:write")) return errResult("Chybí oprávnění meeting_notes:write.");
       const contactId = strParam(params, "contactId");
+      // M8: a meeting note without a contact becomes an orphan that advisors
+      // cannot find later and cannot be published to the client. Reject early.
+      if (!contactId) {
+        return errResult("Zápis musí být přiřazen ke kontaktu. Otevřete kartu klienta nebo upřesněte jméno ve zprávě.");
+      }
       const bodyText = strParam(params, "noteContent") ?? "";
       const domain = strParam(params, "noteDomain") ?? "obecne";
       const meetingAt = strParam(params, "meetingAt") ?? new Date().toISOString();
       const id = await createMeetingNoteAction({
-        contactId: contactId ?? null,
+        contactId,
         meetingAt,
         domain,
         content: bodyText ? { obsah: bodyText } : { obsah: "" },
@@ -478,8 +557,13 @@ export function registerAssistantWriteAdapters(): void {
       const auth = await assertCtx(ctx);
       if (!hasPermission(auth.roleName, "meeting_notes:write")) return errResult("Chybí oprávnění meeting_notes:write.");
       const contactId = strParam(params, "contactId");
+      // M8: internal note without a contact cannot be retrieved from a contact
+      // timeline — the advisor would silently lose it. Require contactId.
+      if (!contactId) {
+        return errResult("Interní poznámka musí být přiřazena ke kontaktu. Otevřete kartu klienta nebo upřesněte jméno.");
+      }
       const id = await createMeetingNoteAction({
-        contactId: contactId ?? null,
+        contactId,
         meetingAt: strParam(params, "meetingAt") ?? new Date().toISOString(),
         domain: "interni",
         content: { obsah: strParam(params, "noteContent") ?? "" },
@@ -584,6 +668,7 @@ export function registerAssistantWriteAdapters(): void {
   registerWriteAdapter("createClientRequest", async (params, ctx) => {
     try {
       const auth = await assertCtx(ctx);
+      if (!hasPermission(auth.roleName, "opportunities:write")) return errResult("Chybí oprávnění opportunities:write.");
       const contactId = strParam(params, "contactId");
       if (!contactId) return errResult("Chybí contactId.");
       const domain = productDomainFromParams(params);
@@ -612,7 +697,8 @@ export function registerAssistantWriteAdapters(): void {
 
   registerWriteAdapter("updateClientRequest", async (params, ctx) => {
     try {
-      await assertCtx(ctx);
+      const auth = await assertCtx(ctx);
+      if (!hasPermission(auth.roleName, "opportunities:write")) return errResult("Chybí oprávnění opportunities:write.");
       const opportunityId = strParam(params, "opportunityId");
       if (!opportunityId) return errResult("Chybí opportunityId (klientský požadavek = obchod).");
       const [existing] = await db
@@ -644,7 +730,8 @@ export function registerAssistantWriteAdapters(): void {
 
   registerWriteAdapter("createMaterialRequest", async (params, ctx) => {
     try {
-      await assertCtx(ctx);
+      const auth = await assertCtx(ctx);
+      if (!hasPermission(auth.roleName, "documents:write")) return errResult("Chybí oprávnění documents:write.");
       const contactId = strParam(params, "contactId");
       if (!contactId) return errResult("Chybí contactId.");
       const domain = productDomainFromParams(params);
@@ -698,7 +785,8 @@ export function registerAssistantWriteAdapters(): void {
 
   registerWriteAdapter("createReminder", async (params, ctx) => {
     try {
-      await assertCtx(ctx);
+      const auth = await assertCtx(ctx);
+      if (!hasPermission(auth.roleName, "tasks:write")) return errResult("Chybí oprávnění tasks:write.");
       const contactId = strParam(params, "contactId");
       if (!contactId) return errResult("Chybí contactId.");
       const title = canonicalTaskTitle({
@@ -787,7 +875,8 @@ export function registerAssistantWriteAdapters(): void {
 
   registerWriteAdapter("approveAiContractReview", async (params, ctx) => {
     try {
-      await assertCtx(ctx);
+      const auth = await assertCtx(ctx);
+      if (!hasPermission(auth.roleName, "ai_review:use")) return errResult("Chybí oprávnění ai_review:use.");
       const reviewId = strParam(params, "reviewId");
       if (!reviewId) return errResult("Chybí reviewId (AI kontrola smlouvy).");
       const res = await approveContractReview(reviewId);
@@ -800,7 +889,8 @@ export function registerAssistantWriteAdapters(): void {
 
   registerWriteAdapter("applyAiContractReviewToCrm", async (params, ctx) => {
     try {
-      await assertCtx(ctx);
+      const auth = await assertCtx(ctx);
+      if (!hasPermission(auth.roleName, "ai_review:use")) return errResult("Chybí oprávnění ai_review:use.");
       const reviewId = strParam(params, "reviewId");
       if (!reviewId) return errResult("Chybí reviewId.");
       const res = await applyContractReviewDrafts(reviewId);
@@ -813,7 +903,8 @@ export function registerAssistantWriteAdapters(): void {
 
   registerWriteAdapter("linkAiContractReviewToDocuments", async (params, ctx) => {
     try {
-      await assertCtx(ctx);
+      const auth = await assertCtx(ctx);
+      if (!hasPermission(auth.roleName, "ai_review:use")) return errResult("Chybí oprávnění ai_review:use.");
       const reviewId = strParam(params, "reviewId");
       if (!reviewId) return errResult("Chybí reviewId.");
       const visible = params.visibleToClient === true;
@@ -828,7 +919,8 @@ export function registerAssistantWriteAdapters(): void {
 
   registerWriteAdapter("setDocumentVisibleToClient", async (params, ctx) => {
     try {
-      await assertCtx(ctx);
+      const auth = await assertCtx(ctx);
+      if (!hasPermission(auth.roleName, "documents:write")) return errResult("Chybí oprávnění documents:write.");
       const documentId = strParam(params, "documentId");
       if (!documentId) return errResult("Chybí documentId.");
       const hide = params.visibleToClient === false || strParam(params, "visibleToClient") === "false";
@@ -841,7 +933,8 @@ export function registerAssistantWriteAdapters(): void {
 
   registerWriteAdapter("linkDocumentToMaterialRequest", async (params, ctx) => {
     try {
-      await assertCtx(ctx);
+      const auth = await assertCtx(ctx);
+      if (!hasPermission(auth.roleName, "documents:write")) return errResult("Chybí oprávnění documents:write.");
       const requestId = strParam(params, "materialRequestId");
       const documentId = strParam(params, "documentId");
       if (!requestId || !documentId) return errResult("Chybí materialRequestId nebo documentId.");
@@ -879,7 +972,7 @@ export function registerAssistantWriteAdapters(): void {
             | "important_date"
             | "advisor_material_request")
         : "new_message";
-      await createPortalNotification({
+      const inserted = await createPortalNotification({
         tenantId,
         contactId,
         type,
@@ -888,7 +981,18 @@ export function registerAssistantWriteAdapters(): void {
         relatedEntityType: strParam(params, "relatedEntityType") ?? null,
         relatedEntityId: strParam(params, "relatedEntityId") ?? null,
       });
-      return okResult(contactId, "portal_notification");
+      // M6: return the real portal_notification row id so the UI can deep-link
+      // into it. Fall back to contactId only if the DB did not return an id
+      // (older callers / deduped rows).
+      const notificationId = inserted?.id ?? null;
+      if (notificationId) {
+        return okResult(notificationId, "portal_notification");
+      }
+      return okResult(contactId, "portal_notification", [
+        inserted?.deduped
+          ? "Upozornění už existovalo, nové nebylo vytvořeno."
+          : "ID notifikace není dostupné — odkaz na detail může chybět.",
+      ]);
     } catch (e) {
       return safeErr(e, "createClientPortalNotification");
     }
@@ -967,7 +1071,15 @@ export function registerAssistantWriteAdapters(): void {
         linkedOpportunityId: strParam(params, "linkedOpportunityId") ?? null,
       });
       if (!res.ok) return errResult(res.message);
-      return okResult(itemKey, "coverage_item", []);
+      // M7: return the real contact_coverage row id when available so the UI
+      // can link to the coverage row, not just the item key slug.
+      const coverageRowId = res.id;
+      if (coverageRowId) {
+        return okResult(coverageRowId, "coverage_item", []);
+      }
+      return okResult(itemKey, "coverage_item", [
+        "ID řádku pokrytí není dostupné — odkaz na detail může chybět.",
+      ]);
     } catch (e) {
       return safeErr(e, "upsertContactCoverage");
     }
@@ -999,6 +1111,8 @@ export function registerAssistantWriteAdapters(): void {
       const amount = strParam(params, "amount");
       const frequency = strParam(params, "frequency");
       const firstPaymentDate = strParam(params, "firstPaymentDate") ?? strParam(params, "due_date");
+      const constantSymbol = strParam(params, "constantSymbol") ?? strParam(params, "constant_symbol");
+      const specificSymbol = strParam(params, "specificSymbol") ?? strParam(params, "specific_symbol");
 
       const res = await createManualPaymentSetup({
         contactId,
@@ -1007,6 +1121,8 @@ export function registerAssistantWriteAdapters(): void {
         accountNumber,
         iban: iban || undefined,
         variableSymbol,
+        constantSymbol: constantSymbol || undefined,
+        specificSymbol: specificSymbol || undefined,
         amount: amount || undefined,
         frequency: frequency || undefined,
         firstPaymentDate: firstPaymentDate || undefined,

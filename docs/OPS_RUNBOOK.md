@@ -216,7 +216,8 @@ V repu je manuální setup podle [sentry-for-ai `sentry-nextjs-sdk/SKILL.md`](ht
 | `ADOBE_PDF_SERVICES_CLIENT_ID` | ❌ | Client ID (povinné když provider=adobe). Alias: `PDF_SERVICES_CLIENT_ID` (Adobe ukázky). |
 | `ADOBE_PDF_SERVICES_CLIENT_SECRET` | ❌ | Client secret. Alias: `PDF_SERVICES_CLIENT_SECRET`. |
 | `ADOBE_PDF_SERVICES_REGION` | ❌ | `ew1` = host `pdf-services-ew1.adobe.io` (EU), `ue1` = `pdf-services-ue1.adobe.io`, jinak výchozí `pdf-services.adobe.io`. Výchozí v aplikaci: `ew1`. |
-| `ADOBE_OCR_LANG` | ❌ | Jazyk pro OCR (např. `en-US`). Výchozí `en-US`; `cs-CZ` jen pokud Adobe API přijme. |
+| `ADOBE_OCR_LANG` | ❌ | Jazyk pro OCR. Výchozí `cs-CZ` (Aidvisora = CZ-only); přepnout na `en-US` jen pro non-CZ tenanty. S2-O1: en-US OCR mrvil české diakritiky → chybné klasifikace smluv. |
+| `AI_REVIEW_SCAN_VISION_FALLBACK` | ❌ | Batch 2: když scan-PDF má příliš slabý OCR text (gate by vrátil stub), místo stubu se PDF pošle do OpenAI Responses API jako `input_file` — model sám provede per-page rendering + vision extraction. Confidence je capnutá na 0.55 → vždy `review_required`. Default `false`; zapnout po ověření v testovacích datech. |
 
 **Extract PDF** vrací ZIP (`structuredData.json` + přílohy). Aplikace ukládá ZIP i vyextrahovaný JSON do bucketu `documents`.
 

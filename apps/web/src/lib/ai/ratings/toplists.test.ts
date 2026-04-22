@@ -22,6 +22,16 @@ describe("toplists seed lookup", () => {
     expect(resolveContractSegmentFromUserText("havarijní u Kooperativy")).toBe("AUTO_HAV");
   });
 
+  it("resolveContractSegmentFromUserText detects employee-liability as ODP_ZAM (not ODP)", () => {
+    expect(resolveContractSegmentFromUserText("zaměstnanecká odpovědnost u Kooperativy")).toBe("ODP_ZAM");
+    expect(resolveContractSegmentFromUserText("pojištění odpovědnosti zaměstnance")).toBe("ODP_ZAM");
+    expect(resolveContractSegmentFromUserText("pracovní odpovědnost")).toBe("ODP_ZAM");
+    // diacriticless variant musí také sednout
+    expect(resolveContractSegmentFromUserText("zamestnanecka odpovednost")).toBe("ODP_ZAM");
+    // Zatímco občanská odpovědnost zůstane ODP (nepadne do ODP_ZAM větve)
+    expect(resolveContractSegmentFromUserText("občanská odpovědnost")).toBe("ODP");
+  });
+
   it("getTopPartnersForSegment returns ordered rows for ZP and skips excluded Slavia", () => {
     const rows = getTopPartnersForSegment("ZP", 10);
     expect(rows.length).toBeGreaterThan(0);

@@ -9,9 +9,22 @@ export function fmtCzk(n: number): string { return formatCzk(n); }
 export function fmtMonthly(n: number): string { return formatCurrencyMonthly(n); }
 export function fmtDaily(n: number): string { return formatCurrencyDaily(n); }
 
-/** Format a value that is already in percent form (e.g. 69 -> "69 %"). */
+/** Format a value that is already in percent form (e.g. 69 -> "69\u00A0%"). Uses a non-breaking space
+ * so that the number and `%` never split across lines, even in narrow report columns. */
 export function fmtPct(n: number, d = 1): string {
-  return n.toFixed(d).replace('.', ',') + ' %';
+  return n.toFixed(d).replace('.', ',') + '\u00A0%';
+}
+
+/**
+ * Kompaktní formát pro osy grafů — zvolí nejvhodnější jednotku, aby popisky neskončily jako
+ * „0 mil." u krátkých horizontů nebo „2 345,1 mil. Kč" u dlouhých (kde by se text ořízl mimo canvas).
+ */
+export function fmtAxisCzk(n: number): string {
+  const abs = Math.abs(n);
+  if (abs >= 1_000_000_000) return `${(n / 1_000_000_000).toLocaleString('cs-CZ', { maximumFractionDigits: 1 })}\u00A0mld.`;
+  if (abs >= 1_000_000) return `${Math.round(n / 1_000_000).toLocaleString('cs-CZ')}\u00A0mil.`;
+  if (abs >= 1_000) return `${Math.round(n / 1_000).toLocaleString('cs-CZ')}\u00A0tis.`;
+  return Math.round(n).toLocaleString('cs-CZ');
 }
 
 export function fmtNum(n: number): string {
@@ -82,7 +95,7 @@ export function renderProjectionSVG(
   theme: 'elegant' | 'modern',
 ): string {
   const w = 820, h = 220;
-  const padL = 52, padR = 10, padT = 10, padB = 42;
+  const padL = 68, padR = 10, padT = 10, padB = 42;
   const chartW = w - padL - padR;
   const chartH = h - padT - padB;
 
@@ -110,7 +123,7 @@ export function renderProjectionSVG(
     const y = padT + (i / gridLines) * chartH;
     gridSvg += `<line x1="${padL}" y1="${y}" x2="${w - padR}" y2="${y}" stroke="#e5e7eb" stroke-width="1"/>`;
     const labelVal = totalFV - (i / gridLines) * totalFV;
-    const lbl = labelVal === 0 ? '0' : `${Math.round(labelVal / 1_000_000)} mil.`;
+    const lbl = labelVal === 0 ? '0' : fmtAxisCzk(labelVal);
     gridSvg += `<text x="${padL - 6}" y="${y + 4}" fill="#8c959f" font-size="9.5" text-anchor="end" font-weight="600">${lbl}</text>`;
   }
 

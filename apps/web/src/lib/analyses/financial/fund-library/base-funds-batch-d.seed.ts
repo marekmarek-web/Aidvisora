@@ -20,18 +20,18 @@ export const BATCH_D_SEED_ROWS: readonly BatchASeedRow[] = [
     ticker: null,
     riskSRI: null,
     goal:
-      "Fond se zaměřuje na investice do stávajících komerčních nemovitostí ve střední Evropě a usiluje o dlouhodobý stabilní výnos s nižší volatilitou než akciové fondy.",
+      "Fond kupuje již fungující obchodní centra a sklady ve střední Evropě. Cílem je dlouhodobě stabilní výnos s menším kolísáním než u akciových fondů.",
     strategy:
-      "Investuje především do fungujících komerčních nemovitostí s nájemními výnosy. Důraz klade na diverzifikaci podle lokality, typu nemovitosti a nájemců; významnou část portfolia tvoří retail a logistika.",
+      "Investuje hlavně do komerčních nemovitostí, které přinášejí pravidelné nájemné. Rozkládá riziko mezi různé lokality, typy budov a nájemce; velkou část portfolia tvoří obchody a logistika.",
     description:
-      "Známý retailový nemovitostní fond používaný v českém poradenství. Výnos je tažený zejména nájemným z komerčních objektů a správou portfolia reálných aktiv. Od ledna 2026 fond oficiálně komunikuje značku EFEKTA Real Estate Fund, ale pro legacy kompatibilitu v Aidvisoře zůstává i značka CREIF.",
+      "Nemovitostní fond dostupný pro běžné investory. Peníze vydělává hlavně z nájmů komerčních objektů. Od ledna 2026 se oficiálně jmenuje EFEKTA Real Estate Fund; v Aidvisoře zůstává i starší název CREIF.",
     suitable:
-      "Pro spíše konzervativní až vyvážené investory, kteří chtějí expozici na komerční nemovitosti bez nutnosti vlastnit konkrétní nemovitost napřímo.",
+      "Pro opatrnější investory, kteří chtějí mít „kousek nemovitostí“ v portfoliu, aniž by museli sami kupovat konkrétní dům.",
     horizon: "4+ roky",
     liquidity:
-      "Otevřený fond; průběžné vklady i výběry jsou možné, ale podkladová aktiva jsou méně likvidní než ETF nebo peněžní fondy.",
+      "Peníze lze průběžně vkládat i vybírat, ale protože fond drží nemovitosti, nejde o peníze okamžitě – nemovitosti nelze prodat tak rychle jako akcie.",
     risks:
-      "Riziko poklesu cen nemovitostí, nižší likvidita podkladových aktiv, úvěrové a protistranové riziko, regulatorní změny a koncentrace portfolia do segmentu komerčních nemovitostí.",
+      "Hodnota nemovitostí může klesat, prodej nemovitostí může trvat, mohou se změnit daně a pravidla. Fond je hodně zaměřený na komerční nemovitosti jako jsou obchody a sklady.",
     minInvestment: null,
     planningRate: 5,
     officialPerformance: {
@@ -44,9 +44,9 @@ export const BATCH_D_SEED_ROWS: readonly BatchASeedRow[] = [
       asOf: "2026-04-05",
     },
     benefits: [
-      "Expozice na portfolio komerčních nemovitostí ve střední Evropě.",
-      "Dlouhodobě stabilní výnosový profil založený na nájemném.",
-      "Dobře srozumitelný fond pro klienty, kteří chtějí „cihly“ bez přímého vlastnictví nemovitosti.",
+      "Získáte podíl na portfoliu obchodních center a skladů ve střední Evropě.",
+      "Stabilní dlouhodobý výnos opřený o pravidelné nájmy.",
+      "Srozumitelná investice do „cihel“ – bez nutnosti kupovat vlastní nemovitost.",
     ],
     parameters: {
       fundType: "Otevřený podílový fond / real estate",
@@ -116,17 +116,17 @@ export const BATCH_D_SEED_ROWS: readonly BatchASeedRow[] = [
     ticker: null,
     riskSRI: 3,
     goal:
-      "Fond investuje primárně do komerčních nemovitostí s cílem dlouhodobě udržitelné výnosnosti a stabilního růstu hodnoty podílového listu.",
+      "Fond kupuje hlavně obchodní a kancelářské budovy s cílem dlouhodobě a stabilně zhodnocovat peníze investorů.",
     strategy:
-      "Portfolio staví na prémiových komerčních nemovitostech, dlouhodobých nájemních smlouvách a nízké zadluženosti. Významná je orientace na služby, zdravotnictví, administrativu a vybrané pražské lokality.",
+      "Drží kvalitní komerční nemovitosti s dlouhými nájemními smlouvami a nízkými dluhy. Zaměřuje se na služby, zdravotnictví, kanceláře a vybrané pražské lokality.",
     description:
-      "Domácí realitní fond s dlouhou historií a poměrně konzervativním profilem. Atraktivní je kombinace nízkého LTV, vysoké obsazenosti a dlouhých nájemních smluv.",
+      "Český nemovitostní fond s dlouhou historií. Jeho výhodou je nízké zadlužení, skoro plná obsazenost budov a dlouhé nájemní smlouvy.",
     suitable:
-      "Pro klienty, kteří chtějí realitní složku portfolia se stabilnější volatilitou než akcie a preferují český fond s fyzickými nemovitostmi.",
+      "Pro klienty, kteří chtějí mít v portfoliu nemovitosti s menším kolísáním než u akcií a preferují český fond s reálnými budovami.",
     horizon: "min. 5 let",
-    liquidity: "Otevřený fond; hodnota podílového listu se stanovuje měsíčně.",
+    liquidity: "Hodnota podílu se přepočítává jednou měsíčně; peníze z fondu lze vybrat, ale ne okamžitě jako z běžného účtu.",
     risks:
-      "Riziko nižší likvidity realitních aktiv, poklesu cen komerčních nemovitostí, koncentrace na vybrané sektory a města a riziko spojené s nájemci a obsazeností.",
+      "Prodej nemovitostí může trvat déle, ceny komerčních budov mohou klesat, fond se zaměřuje na vybraná odvětví a města. Výnos závisí i na tom, jestli jsou budovy pronajaté.",
     minInvestment: "od 500 Kč",
     planningRate: 5,
     officialPerformance: {
@@ -216,18 +216,18 @@ export const BATCH_D_SEED_ROWS: readonly BatchASeedRow[] = [
     ticker: null,
     riskSRI: 6,
     goal:
-      "Podfond usiluje o zhodnocování investovaných prostředků zejména prostřednictvím majetkové účasti ve společnosti PENTA REAL ESTATE HOLDING LIMITED a souvisejících real estate projektech skupiny Penta.",
+      "Fond investuje peníze hlavně do nemovitostí a výstavby, které v Česku a na Slovensku vlastní a připravuje skupina Penta. Cílem je dlouhodobě peníze zhodnocovat.",
     strategy:
-      "Fond kombinuje hotové výnosové nemovitosti a development projekty skupiny Penta Real Estate. Investice je určena kvalifikovaným investorům a počítá s delším horizontem a vyšší rizikovostí než retailové realitní fondy.",
+      "Fond drží jak dokončené pronajímané budovy, tak projekty ve výstavbě. Počítá s delším investičním horizontem a vyšším kolísáním hodnoty než běžné realitní fondy pro veřejnost.",
     description:
-      "Alternativní real estate fond kvalifikovaných investorů navázaný na developerský ekosystém Penty v Česku a na Slovensku. Je vhodný spíše jako doplněk bohatších klientských portfolií než jako mainstream retailová volba.",
+      "Nemovitostní fond pro bonitnější klienty, který investuje do staveb skupiny Penta v Česku a na Slovensku. Není to běžný fond pro drobné investory – hodí se jako doplněk už rozvinutého portfolia.",
     suitable:
-      "Pro kvalifikované investory, kteří chtějí expozici na development a prémiové nemovitosti skupiny Penta a akceptují vyšší riziko i delší likviditu.",
+      "Vhodné pro zkušenější investory s delším horizontem a vyšším majetkem, kteří chtějí získat podíl na nemovitostech a projektech skupiny Penta a počítají s tím, že peníze nelze vybrat hned.",
     horizon: "5+ let",
     liquidity:
-      "Měsíční oceňování; odkup je možný, ale vypořádání může podle dokumentace trvat až 24 měsíců od konce oceňovacího období.",
+      "Hodnota fondu se přepočítává jednou měsíčně. Peníze z fondu lze vybrat, ale jejich skutečné vyplacení může trvat až 24 měsíců.",
     risks:
-      "Vyšší rizikovost alternativního fondu, koncentrace na realitní projekty skupiny Penta, omezená likvidita, použití leverage a rizika developmentu a ekonomického cyklu.",
+      "Vyšší riziko než u běžných realitních fondů, silná vazba na projekty Penty, omezená možnost rychle vybrat peníze, využití úvěrů a rizika výstavby i ekonomického cyklu.",
     minInvestment: "od 1 000 000 Kč / 50 000 EUR",
     planningRate: 13,
     officialPerformance: {
@@ -240,9 +240,9 @@ export const BATCH_D_SEED_ROWS: readonly BatchASeedRow[] = [
       asOf: "2026-04-05",
     },
     benefits: [
-      "Přístup k development a real estate portfoliu skupiny Penta.",
-      "Potenciálně vyšší výnosový profil než u retailových realitních fondů.",
-      "Dává smysl jako specializovaná alternativní složka pro bonitnější klienty.",
+      "Možnost podílet se na konkrétních nemovitostech a stavbách skupiny Penta.",
+      "Potenciálně vyšší výnos, než nabízejí běžné realitní fondy pro širokou veřejnost.",
+      "Dává smysl jako doplněk portfolia pro klienty s větším majetkem.",
     ],
     parameters: {
       fundType: "Qualified investor fund / SICAV sub-fund",

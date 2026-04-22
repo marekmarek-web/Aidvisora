@@ -45,8 +45,15 @@ const ERROR_PATTERNS: ErrorPattern[] = [
     userMessage: "Odkazovaný záznam neexistuje nebo byl smazán.",
   },
   {
+    // L1: restrict to specifically-auth phrases. Previous matcher ("mismatch")
+    // swallowed unrelated errors like "schema mismatch" or "type mismatch",
+    // producing a misleading "ověřte přihlášení" hint.
     classification: "auth_mismatch",
-    test: (m) => m.includes("Nesoulad") || m.includes("mismatch"),
+    test: (m) =>
+      /\b(auth(entication)?|tenant|session|user)[^\n]{0,30}mismatch\b/i.test(m) ||
+      /\b(IDOR|cross[- ]tenant|tenant[ _-]?bleed)\b/i.test(m) ||
+      m.includes("Nesoulad tenantu") ||
+      m.includes("Nesoulad přihlášení"),
     userMessage: "Bezpečnostní nesoulad — ověřte přihlášení a zkuste znovu.",
   },
   {

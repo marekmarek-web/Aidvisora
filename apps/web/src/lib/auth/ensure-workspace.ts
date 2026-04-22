@@ -1,27 +1,23 @@
 import { createClient } from "@/lib/supabase/server";
 import { getMembership } from "@/lib/auth/get-membership";
 import { perfLog } from "@/lib/perf-log";
-import { db } from "db";
-import { tenants, roles, memberships, opportunityStages } from "db";
+import { withUserContext } from "@/lib/db/with-tenant-context";
+import { sql } from "drizzle-orm";
 import { DEFAULT_TRIAL_PLAN, getTrialDurationDays } from "@/lib/billing/plan-catalog";
 
 export type EnsureMembershipResult =
   | { ok: true; redirectTo: string }
   | { ok: false; error: string; redirectTo?: string };
 
-/** Stejné výchozí fáze jako v ensureDefaultStages (pipeline.ts). */
-const DEFAULT_OPPORTUNITY_STAGES = [
-  { name: "Zahájeno", sortOrder: 0, probability: 0 },
-  { name: "Analýza potřeb", sortOrder: 1, probability: 20 },
-  { name: "Nabídka", sortOrder: 2, probability: 40 },
-  { name: "Před uzavřením", sortOrder: 3, probability: 60 },
-  { name: "Realizace", sortOrder: 4, probability: 80 },
-  { name: "Péče a servis", sortOrder: 5, probability: 100 },
-] as const;
-
 function mapProvisionError(msg: string): string {
   if (msg.includes("relation") && msg.includes("does not exist")) {
     return "V databázi chybí tabulky. V repozitáři spusť: pnpm db:apply-schema (s DATABASE_URL na tento Supabase projekt).";
+  }
+  if (
+    msg.includes("function public.provision_workspace_v1") ||
+    msg.includes("function provision_workspace_v1")
+  ) {
+    return "Bootstrap funkce chybí. Spusť migraci rls-m8-bootstrap-provision-and-gaps.sql na příslušném Supabase projektu.";
   }
   if (msg.includes("connection") || msg.includes("ECONNREFUSED") || msg.includes("timeout")) {
     return "Nepodařilo se připojit k databázi. Zkontrolujte DATABASE_URL na Vercelu a že Supabase projekt běží.";
@@ -43,7 +39,20 @@ function mapProvisionError(msg: string): string {
 
 /**
  * Po prvním přihlášení vytvoří tenant, role, membership a výchozí pipeline fáze.
- * Volitelně z server component (redirect) i ze server action.
+ *
+ * Implementační poznámka (WS-2 Batch M1-A):
+ * - Runtime po cutoveru poběží pod `aidvisora_app` (NOBYPASSRLS). Přímé INSERTy
+ *   do `tenants`/`roles`/`memberships`/`opportunity_stages` bez aktivního tenant
+ *   GUC by narazily na RLS WITH CHECK (u `tenants` navíc není žádný scope, na
+ *   který se dá před prvním membership napojit — klasický chicken-and-egg).
+ * - Celý bootstrap je proto delegován do SECURITY DEFINER funkce
+ *   `public.provision_workspace_v1(...)`, která běží pod ownerem (BYPASSRLS
+ *   implicitně uvnitř těla), atomicky vytvoří všechny řádky a vrátí
+ *   `{ tenant_id, slug }`. Volajícímu stačí `withUserContext(userId)` pro
+ *   auditní logiku (`current_setting('app.user_id')`).
+ * - Funkce je definována v migraci
+ *   `packages/db/migrations/rls-m8-bootstrap-provision-and-gaps.sql`
+ *   (viz todo `m1-sql-gap-migration`).
  */
 export async function provisionWorkspaceIfNeeded(): Promise<EnsureMembershipResult> {
   const t0 = Date.now();
@@ -71,56 +80,22 @@ export async function provisionWorkspaceIfNeeded(): Promise<EnsureMembershipResu
     }
 
     const email = user.email ?? "";
-    const slug =
+    const slugBase =
       email.replace(/@.*/, "").replace(/[^a-z0-9]/gi, "-").toLowerCase().slice(0, 20) || "workspace";
+    const slug = slugBase + "-" + Math.random().toString(36).slice(2, 8);
 
-    const trialStartedAt = new Date();
-    const trialEndsAt = new Date(
-      trialStartedAt.getTime() + getTrialDurationDays() * 86_400_000
-    );
+    const trialDays = getTrialDurationDays();
 
-    await db.transaction(async (tx) => {
-      const [tenant] = await tx
-        .insert(tenants as any)
-        .values({
-          name: "Můj workspace",
-          slug: slug + "-" + Math.random().toString(36).slice(2, 8),
-          trialStartedAt,
-          trialEndsAt,
-          trialPlanKey: DEFAULT_TRIAL_PLAN,
-        })
-        .returning({ id: tenants.id, slug: tenants.slug } as any);
-      if (!tenant) throw new Error("Nepodařilo se vytvořit workspace.");
-
-      const roleRows = await tx
-        .insert(roles as any)
-        .values([
-          { tenantId: tenant.id, name: "Admin" },
-          { tenantId: tenant.id, name: "Advisor" },
-          { tenantId: tenant.id, name: "Manager" },
-          { tenantId: tenant.id, name: "Director" },
-          { tenantId: tenant.id, name: "Viewer" },
-          { tenantId: tenant.id, name: "Client" },
-        ])
-        .returning({ id: roles.id, name: roles.name } as any);
-
-      const adminRole = roleRows.find((r: any) => r?.name === "Admin");
-      if (!adminRole) throw new Error("Nepodařilo se vytvořit roli.");
-
-      await tx.insert(memberships as any).values({
-        tenantId: tenant.id,
-        userId: user.id,
-        roleId: adminRole.id,
-      });
-
-      await tx.insert(opportunityStages as any).values(
-        DEFAULT_OPPORTUNITY_STAGES.map((s) => ({
-          tenantId: tenant.id,
-          name: s.name,
-          sortOrder: s.sortOrder,
-          probability: s.probability,
-        })),
-      );
+    await withUserContext(user.id, async (tx) => {
+      await tx.execute(sql`
+        select public.provision_workspace_v1(
+          ${user.id}::uuid,
+          ${email}::text,
+          ${slug}::text,
+          ${DEFAULT_TRIAL_PLAN}::text,
+          ${trialDays}::int
+        )
+      `);
     });
 
     perfLog("ensureMembership", t0);

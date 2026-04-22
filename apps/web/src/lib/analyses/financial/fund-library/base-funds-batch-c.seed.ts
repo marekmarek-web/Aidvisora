@@ -84,10 +84,11 @@ export const BATCH_C_SEED_ROWS: readonly BatchASeedRow[] = [
     logo: "/logos/funds/conseq_globalni_akciovy_ucastnicky.png",
     heroImage: "/report-assets/funds/conseq_globalni_akciovy_ucastnicky/hero.svg",
     galleryImages: [
-      "/report-assets/funds/conseq_globalni_akciovy_ucastnicky/gallery-1.svg",
-      "/report-assets/funds/conseq_globalni_akciovy_ucastnicky/gallery-2.svg",
-      "/report-assets/funds/conseq_globalni_akciovy_ucastnicky/gallery-3.svg",
+      "/report-assets/funds/conseq_globalni_akciovy_ucastnicky/conseq-dps-allianz.png",
+      "/report-assets/funds/conseq_globalni_akciovy_ucastnicky/conseq-dps-otp.png",
+      "/report-assets/funds/conseq_globalni_akciovy_ucastnicky/conseq-dps-vig.png",
     ],
+    galleryType: "logo",
     sources: [
       {
         label: "Official product page",

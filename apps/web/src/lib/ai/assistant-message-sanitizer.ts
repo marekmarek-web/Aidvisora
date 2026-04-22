@@ -76,9 +76,26 @@ const ORPHAN_HEX_PREFIX_RE = /\b[0-9a-f]{8}…\b/gi;
 /**
  * Strips standalone JSON blocks that the model may emit outside of [RESULT:] wrappers.
  * Matches `{` at line start (optional whitespace), balanced braces spanning 2+ lines.
+ *
+ * L4: skip content inside fenced code blocks (``` ... ```), so legitimate JSON
+ * that the advisor (or the model, deliberately) wraps in a code fence is
+ * preserved. Also keep very large payloads — anything over 4 kB is almost
+ * certainly intentional advisor output and we prefer to err on the side of
+ * showing it.
  */
 function stripOrphanJsonBlocks(text: string): string {
-  return text.replace(/^[ \t]*\{[\s\S]*?\n[ \t]*\}[ \t]*$/gm, (match) => {
+  const fenceRegions: Array<[number, number]> = [];
+  const fenceRe = /```[\s\S]*?```/g;
+  let fenceMatch: RegExpExecArray | null;
+  while ((fenceMatch = fenceRe.exec(text)) !== null) {
+    fenceRegions.push([fenceMatch.index, fenceMatch.index + fenceMatch[0].length]);
+  }
+  const inFence = (idx: number) =>
+    fenceRegions.some(([s, e]) => idx >= s && idx < e);
+
+  return text.replace(/^[ \t]*\{[\s\S]*?\n[ \t]*\}[ \t]*$/gm, (match, offset: number) => {
+    if (inFence(offset)) return match;
+    if (match.length > 4096) return match;
     try {
       JSON.parse(match.trim());
       return "";

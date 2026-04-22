@@ -1,5 +1,6 @@
 import { requireClientZoneAuth } from "@/lib/auth/require-auth";
-import { db, contacts, and, eq } from "db";
+import { contacts, and, eq } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import { getClientHouseholdForContact } from "@/app/actions/households";
 import { ProfileClientView } from "./ProfileClientView";
 
@@ -19,20 +20,22 @@ export default async function ClientProfilePage() {
   let household: Awaited<ReturnType<typeof getClientHouseholdForContact>> = null;
   try {
     [profile, household] = await Promise.all([
-      db
-        .select({
-          firstName: contacts.firstName,
-          lastName: contacts.lastName,
-          email: contacts.email,
-          phone: contacts.phone,
-          street: contacts.street,
-          city: contacts.city,
-          zip: contacts.zip,
-        })
-        .from(contacts)
-        .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, auth.contactId)))
-        .limit(1)
-        .then((rows) => rows[0] ?? null),
+      withTenantContext({ tenantId: auth.tenantId, userId: auth.userId }, (tx) =>
+        tx
+          .select({
+            firstName: contacts.firstName,
+            lastName: contacts.lastName,
+            email: contacts.email,
+            phone: contacts.phone,
+            street: contacts.street,
+            city: contacts.city,
+            zip: contacts.zip,
+          })
+          .from(contacts)
+          .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, auth.contactId!)))
+          .limit(1)
+          .then((rows) => rows[0] ?? null),
+      ),
       getClientHouseholdForContact(auth.contactId),
     ]);
   } catch {

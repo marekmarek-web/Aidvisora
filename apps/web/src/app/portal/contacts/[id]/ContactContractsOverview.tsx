@@ -53,6 +53,7 @@ function productIcon(segment: string | undefined): LucideIcon {
       return Shield;
     case "MAJ":
     case "ODP":
+    case "ODP_ZAM":
       return Home;
     case "AUTO_PR":
     case "AUTO_HAV":
@@ -77,6 +78,7 @@ function segmentIconColors(segment: string | undefined): string {
       return "bg-purple-100 text-purple-700 border-purple-200";
     case "MAJ":
     case "ODP":
+    case "ODP_ZAM":
       return "bg-blue-100 text-blue-700 border-blue-200";
     case "AUTO_PR":
     case "AUTO_HAV":
@@ -99,6 +101,7 @@ function segmentLabel(segment: string | undefined): string {
     UVER: "Úvěry a hypotéky",
     MAJ: "Majetkové pojištění",
     ODP: "Odpovědnostní pojištění",
+    ODP_ZAM: "Odpovědnost zaměstnance",
     AUTO_PR: "Autopojištění (POV)",
     AUTO_HAV: "Autopojištění (HAV)",
     CEST: "Cestovní pojištění",
@@ -664,7 +667,7 @@ const SEGMENT_GROUPS: { label: string; segments: string[] }[] = [
   { label: "Investice", segments: ["INV", "DIP"] },
   { label: "Penzijní produkty", segments: ["DPS"] },
   { label: "Úvěry a hypotéky", segments: ["HYPO", "UVER"] },
-  { label: "Majetkové pojištění", segments: ["MAJ", "ODP"] },
+  { label: "Majetkové pojištění", segments: ["MAJ", "ODP", "ODP_ZAM"] },
   { label: "Autopojištění", segments: ["AUTO_PR", "AUTO_HAV"] },
   { label: "Cestovní pojištění", segments: ["CEST"] },
   { label: "Firemní pojištění", segments: ["FIRMA_POJ"] },

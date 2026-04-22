@@ -49,6 +49,7 @@ function topListForSegment(segmentCode: string): TopListEntry[] | null {
     case "ZP":
     case "MAJ":
     case "ODP":
+    case "ODP_ZAM":
     case "AUTO_PR":
     case "AUTO_HAV":
     case "CEST":

@@ -173,6 +173,8 @@ export default function ScanPage() {
     canAddMore,
     qualityWarnings,
     hasQualityIssues,
+    aggregateQualityScore,
+    worstQualityScore,
     didManualRotate,
   } = useScanCapture();
   const { uploadFile, progress } = useFileUpload();
@@ -406,35 +408,12 @@ export default function ScanPage() {
     );
   }
 
-  if (!supportsMultiPageScan) {
-    return (
-      <div className="mx-auto flex w-full max-w-lg flex-col gap-4 px-4 pb-8 pt-8 sm:px-6">
-        <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5">
-          <h1 className="text-lg font-semibold text-[color:var(--wp-text)]">Sken na tomto zařízení</h1>
-          <p className="mt-2 text-sm text-[color:var(--wp-text-secondary)]">
-            Vícestránkové skenování je v širokém webovém zobrazení vypnuté. Nahrajte PDF nebo obrázek v sekci dokumentů,
-            nebo použijte telefon (prohlížeč nebo aplikaci Aidvisora).
-          </p>
-          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-            <Link
-              href="/portal/documents"
-              className="inline-flex min-h-[44px] items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white"
-            >
-              Otevřít dokumenty
-            </Link>
-            <Link
-              href="/portal/today"
-              className="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-[color:var(--wp-border-strong)] px-4 text-sm font-semibold text-[color:var(--wp-text-secondary)]"
-            >
-              Zpět na přehled
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   if (step === "mode") {
+    const canShowScanCta = supportsMultiPageScan;
+    const scanCtaCopy =
+      tier === "native_capacitor"
+        ? "Systémový skener iOS / Android (ořez, perspektiva, multi-page). Úprava stran, náhled PDF, nahrání do Aidvisory. Po uložení spustíme přípravu textu na pozadí (OCR a extrakce), pokud je zapnutá."
+        : "Foťte jednotlivé strany z prohlížeče. Automatický ořez ani narovnání perspektivy v prohlížeči nejsou — pro scanner-quality výstup použijte mobilní aplikaci Aidvisora. Po uložení spustíme přípravu textu na pozadí (OCR a extrakce), pokud je zapnutá.";
     return (
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 pb-8 pt-4 sm:px-6">
         <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4">
@@ -444,17 +423,36 @@ export default function ScanPage() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setStep("capture")}
-          className="flex w-full flex-col gap-1 rounded-2xl border-2 border-blue-500 bg-blue-50/80 p-4 text-left transition hover:bg-blue-50"
-        >
-          <span className="text-base font-semibold text-blue-950">Skenovat dokument</span>
-          <span className="text-sm text-blue-900/90">
-            V mobilní aplikaci systémový skener (ořez, perspektiva). Úprava stran, náhled PDF, nahrání do Aidvisory.
-            Po uložení spustíme přípravu textu na pozadí (OCR a extrakce), pokud je zapnutá.
-          </span>
-        </button>
+        {/* Release-gate disclaimer — scan pipeline není premium „Adobe Scan" kvality.
+            Při změně rozsahu podpory aktualizuj i audit v scan_ocr_forensic_audit_* plan. */}
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+          <strong className="mb-1 block text-[13px] font-semibold">
+            Rozsah podpory skenování dnes
+          </strong>
+          Skenování je optimalizované pro čisté dokumenty známých typů (životní pojištění, DIP, DPS,
+          hypotéka) v mobilní aplikaci. Mimo tento rozsah (web mobile, fotografované dokumenty pod
+          úhlem / se stíny, komisionářské a mandátní smlouvy) je dokument stále nahraný, ale AI
+          Review může vrátit jen částečný výsledek a bude vyžadovat manuální kontrolu.
+        </div>
+
+        {canShowScanCta ? (
+          <button
+            type="button"
+            onClick={() => setStep("capture")}
+            className="flex w-full flex-col gap-1 rounded-2xl border-2 border-blue-500 bg-blue-50/80 p-4 text-left transition hover:bg-blue-50"
+          >
+            <span className="text-base font-semibold text-blue-950">Skenovat dokument</span>
+            <span className="text-sm text-blue-900/90">{scanCtaCopy}</span>
+          </button>
+        ) : (
+          <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)] p-4 text-sm text-[color:var(--wp-text-secondary)]">
+            <strong className="block text-[color:var(--wp-text)]">
+              Skenování není na tomto zařízení dostupné
+            </strong>
+            Vícestránkové skenování z fotoaparátu funguje pouze v mobilní aplikaci Aidvisora nebo v
+            mobilním prohlížeči. Na počítači použijte <em>Rychlé nahrání</em> níže.
+          </div>
+        )}
 
         <button
           type="button"
@@ -649,6 +647,12 @@ export default function ScanPage() {
   }
 
   if (step === "capture") {
+    // Hard guard: desktop web does not expose scan multi-page capture (no usable camera flow).
+    // Fallback to mode-select where the user sees the tier-aware disclaimer + quick upload CTA.
+    if (!supportsMultiPageScan) {
+      setStep("mode");
+      return null;
+    }
     return (
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 pb-8 pt-4 sm:px-6">
         <button
@@ -736,9 +740,35 @@ export default function ScanPage() {
         </div>
 
         <div className="sticky bottom-0 z-10 rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/95 p-3 backdrop-blur">
+          {aggregateQualityScore !== null && pages.length > 0 ? (
+            <div
+              className={`mb-2 flex items-center justify-between rounded-lg border px-3 py-1.5 text-xs font-medium ${
+                aggregateQualityScore >= 80
+                  ? "border-emerald-300 bg-emerald-50 text-emerald-800"
+                  : aggregateQualityScore >= 60
+                    ? "border-amber-300 bg-amber-50 text-amber-800"
+                    : "border-red-300 bg-red-50 text-red-800"
+              }`}
+            >
+              <span>
+                Kvalita scanu: <strong>{aggregateQualityScore}%</strong>
+                {worstQualityScore !== null && worstQualityScore < aggregateQualityScore
+                  ? ` · nejhorší strana ${worstQualityScore}%`
+                  : ""}
+              </span>
+              <span className="text-[11px] font-normal opacity-75">
+                {aggregateQualityScore >= 80
+                  ? "OCR má vysokou šanci projít"
+                  : aggregateQualityScore >= 60
+                    ? "OCR může mít mezery"
+                    : "OCR téměř jistě selže"}
+              </span>
+            </div>
+          ) : null}
           {hasQualityIssues ? (
-            <div className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-800">
-              Některé strany mají nízkou kvalitu. Přefoťte je prosím znovu pro lepší rozpoznání textu.
+            <div className="mb-2 rounded-lg border border-red-300 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-800">
+              Některé strany mají příliš nízkou kvalitu (rozmazání / tmavost / rozlišení). Než budete
+              moci pokračovat, přefoťte je prosím znovu — OCR na takovém skenu téměř jistě selže.
             </div>
           ) : null}
           <div className="flex flex-col gap-2">
@@ -757,7 +787,12 @@ export default function ScanPage() {
               <button
                 type="button"
                 onClick={() => setStep("metadata")}
-                disabled={pages.length === 0}
+                disabled={pages.length === 0 || hasQualityIssues}
+                title={
+                  hasQualityIssues
+                    ? "Přefoťte strany s chybou kvality, pak pokračujte"
+                    : undefined
+                }
                 className="min-h-[44px] flex-1 rounded-lg border border-[color:var(--wp-border-strong)] px-4 text-sm font-semibold text-[color:var(--wp-text-secondary)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Pokračovat ({pages.length} {pages.length === 1 ? "strana" : pages.length < 5 ? "strany" : "stran"})

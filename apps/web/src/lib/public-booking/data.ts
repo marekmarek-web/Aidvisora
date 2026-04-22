@@ -1,7 +1,8 @@
 import "server-only";
 
-import { db, advisorPreferences, tenants, userProfiles, events, contacts, eq, and, lt, or, isNull, ne, sql } from "db";
+import { db, events, contacts, eq, and, lt, or, isNull, ne, sql } from "db";
 import type { BookingWeeklyAvailability } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import { getValidAccessToken } from "@/lib/integrations/google-calendar-integration-service";
 import { queryFreeBusy } from "@/lib/integrations/google-calendar";
 import { addDaysPragueYmd, formatYmdInPrague, pragueWallToUtcMs, BOOKING_TIMEZONE } from "./prague-time";
@@ -17,50 +18,50 @@ export type ResolvedPublicBookingAdvisor = {
   availability: BookingWeeklyAvailability;
 };
 
+/**
+ * Pre-auth token resolution pro veřejné rezervační URL.
+ *
+ * Runtime po cutoveru běží pod `aidvisora_app` (NOBYPASSRLS, FORCE RLS) a
+ * `advisor_preferences`, `tenants`, `user_profiles` nejsou anonymně čitelné.
+ * Resolveru nepomůže bootstrap GUC (nemáme ani tenant, ani user) — jediná
+ * bezpečná cesta je SECURITY DEFINER funkce `public.resolve_public_booking_v1`
+ * (viz migrace rls-m8-bootstrap-provision-and-gaps.sql, todo m1-sql-gap-migration),
+ * která uvnitř ownerské identity zkontroluje token a vrátí minimum potřebných
+ * sloupců bez úniku dalších tenantových dat.
+ */
 export async function resolveEnabledPublicBooking(
   token: string,
 ): Promise<ResolvedPublicBookingAdvisor | null> {
   const t = token.trim();
   if (!t || t.length > 80) return null;
 
-  const rows = await db
-    .select({
-      tenantId: advisorPreferences.tenantId,
-      userId: advisorPreferences.userId,
-      slotMinutes: advisorPreferences.bookingSlotMinutes,
-      bufferMinutes: advisorPreferences.bookingBufferMinutes,
-      availability: advisorPreferences.bookingAvailability,
-      tenantName: tenants.name,
-    })
-    .from(advisorPreferences)
-    .innerJoin(tenants, eq(advisorPreferences.tenantId, tenants.id))
-    .where(
-      and(
-        eq(advisorPreferences.publicBookingToken, t),
-        eq(advisorPreferences.publicBookingEnabled, true),
-      ),
-    )
-    .limit(1);
+  type Row = {
+    tenant_id: string;
+    user_id: string;
+    tenant_name: string | null;
+    advisor_name: string | null;
+    slot_minutes: number | null;
+    buffer_minutes: number | null;
+    availability: BookingWeeklyAvailability | null;
+  };
+
+  const rows = (await db.execute(
+    sql`select tenant_id, user_id, tenant_name, advisor_name, slot_minutes, buffer_minutes, availability
+        from public.resolve_public_booking_v1(${t}::text)`,
+  )) as unknown as Row[];
 
   const row = rows[0];
   if (!row) return null;
-
-  const [profile] = await db
-    .select({ fullName: userProfiles.fullName })
-    .from(userProfiles)
-    .where(eq(userProfiles.userId, row.userId))
-    .limit(1);
-
   const availability = (row.availability ?? null) as BookingWeeklyAvailability | null;
   if (!availability || Object.keys(availability).length === 0) return null;
 
   return {
-    tenantId: row.tenantId,
-    userId: row.userId,
-    tenantName: row.tenantName?.trim() || "—",
-    advisorName: profile?.fullName?.trim() || "Poradce",
-    slotMinutes: row.slotMinutes ?? 30,
-    bufferMinutes: row.bufferMinutes ?? 0,
+    tenantId: row.tenant_id,
+    userId: row.user_id,
+    tenantName: row.tenant_name?.trim() || "—",
+    advisorName: row.advisor_name?.trim() || "Poradce",
+    slotMinutes: row.slot_minutes ?? 30,
+    bufferMinutes: row.buffer_minutes ?? 0,
     availability,
   };
 }
@@ -98,22 +99,24 @@ export async function loadBusyIntervalsForAdvisor(
   rangeStartUtc: Date,
   rangeEndUtc: Date,
 ): Promise<BusyInterval[]> {
-  const rows = await db
-    .select({
-      startAt: events.startAt,
-      endAt: events.endAt,
-      allDay: events.allDay,
-      status: events.status,
-    })
-    .from(events)
-    .where(
-      and(
-        eq(events.tenantId, tenantId),
-        eq(events.assignedTo, userId),
-        lt(events.startAt, rangeEndUtc),
-        or(isNull(events.status), ne(events.status, "cancelled")),
+  const rows = await withTenantContext({ tenantId, userId }, (tx) =>
+    tx
+      .select({
+        startAt: events.startAt,
+        endAt: events.endAt,
+        allDay: events.allDay,
+        status: events.status,
+      })
+      .from(events)
+      .where(
+        and(
+          eq(events.tenantId, tenantId),
+          eq(events.assignedTo, userId),
+          lt(events.startAt, rangeEndUtc),
+          or(isNull(events.status), ne(events.status, "cancelled")),
+        ),
       ),
-    );
+  );
 
   const out: BusyInterval[] = [];
   const rangeStartMs = rangeStartUtc.getTime();
@@ -190,12 +193,14 @@ export async function loadMergedBusyIntervalsForPublicBooking(
 export async function findContactIdByEmail(tenantId: string, email: string): Promise<string | null> {
   const normalized = email.trim().toLowerCase();
   if (!normalized) return null;
-  const [row] = await db
-    .select({ id: contacts.id })
-    .from(contacts)
-    .where(
-      and(eq(contacts.tenantId, tenantId), sql`lower(trim(${contacts.email})) = ${normalized}`),
-    )
-    .limit(1);
+  const [row] = await withTenantContext({ tenantId }, (tx) =>
+    tx
+      .select({ id: contacts.id })
+      .from(contacts)
+      .where(
+        and(eq(contacts.tenantId, tenantId), sql`lower(trim(${contacts.email})) = ${normalized}`),
+      )
+      .limit(1),
+  );
   return row?.id ?? null;
 }

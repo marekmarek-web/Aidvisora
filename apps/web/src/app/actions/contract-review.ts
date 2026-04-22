@@ -27,7 +27,16 @@ import { eq, and } from "db";
 import { notifyClientAdvisorSharedDocument } from "@/lib/documents/notify-client-visible-document";
 
 export type ContractReviewActionResult =
-  | { ok: true; payload?: import("@/lib/ai/review-queue-repository").ApplyResultPayload }
+  | {
+      ok: true;
+      payload?: import("@/lib/ai/review-queue-repository").ApplyResultPayload;
+      /**
+       * Non-fatal post-commit warning the UI MUST display. Apply succeeded
+       * (CRM tx committed) but a downstream step (e.g. reviewStatus persist)
+       * failed. Shown as a banner so user does not see a plain "Uloženo" toast.
+       */
+      warning?: { code: string; message: string };
+    }
   | { ok: false; error: string; blockedReasons?: string[] };
 
 function canApproveOrReject(processingStatus: string): boolean {
@@ -580,8 +589,19 @@ export async function applyContractReviewDrafts(
       } catch {
         /* Sentry nesmí crashovat apply response */
       }
-      // Apply proběhl úspěšně — vracíme ok:true ale signalizujeme varování
-      return { ok: true, payload: bridgedPayload };
+      // Apply proběhl úspěšně (CRM tx committed), ale reviewStatus persist HARD-FAIL.
+      // Vracíme ok:true (abychom nespustili retry, který by ztratil idempotenci apply)
+      // ALE s machine-readable warningem — UI MUSÍ zobrazit, že stav záznamu je
+      // rozbitý, ne plnohodnotné „Uloženo". Bez toho = false-success.
+      return {
+        ok: true,
+        payload: bridgedPayload,
+        warning: {
+          code: "review_status_persist_failed",
+          message:
+            "Zápis do CRM proběhl, ale stav záznamu se nepodařilo uložit. Kontaktujte support — technický tým byl upozorněn.",
+        },
+      };
     }
   }
 

@@ -63,6 +63,27 @@ const RULES: Rule[] = [
     markers: [/pojistn[aá]\s+smlouva/i, /pojistitel/i, /číslo\s+pojistné\s+smlouvy|cislo\s+pojistne\s+smlouvy/i],
     targetType: "life_insurance_contract",
   },
+  // Komisionářská / mandátní / obhospodařování — investiční service agreements.
+  // Text je po NFD-strip bez diakritiky, proto markery pokrývají varianty
+  // (komisionarska, komisionar, komise, obhospodarovani, zprostredkovani investic).
+  // Golden eval v fixtures/golden-ai-review/eval-outputs/painful-subset-*/report.md
+  // ukazuje, že LLM klasifikuje tyto dokumenty jako consent_or_declaration — force
+  // opravíme na investment_service_agreement.
+  {
+    id: "investment_service_agreement_komisionarska",
+    minHits: 2,
+    markers: [
+      /komisionar(ska|sky|ske|skou|e)?\s+smlouv/i,
+      /\bkomisionar(e|stvi)?\b/i,
+      /smlouva\s+o\s+obhospodarovani/i,
+      /obhospodarovani\s+(maj(etku|etek)|cennych\s+papir)/i,
+      /mandatni\s+smlouv/i,
+      /smlouva\s+o\s+zprostredkovani\s+(investic|cennych\s+papir)/i,
+      /smlouva\s+o\s+poskytovani\s+investicnich\s+sluzeb/i,
+      /investicni\s+(sluzby|poradenstvi|mandat)/i,
+    ],
+    targetType: "investment_service_agreement",
+  },
 ];
 
 // ─── Product family override: DIP / DPS / PP ─────────────────────────────────

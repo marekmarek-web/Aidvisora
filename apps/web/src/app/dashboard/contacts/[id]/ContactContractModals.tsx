@@ -21,7 +21,7 @@ import {
   validateContractFormForSubmit,
 } from "@/lib/contracts/contract-form-payload";
 import type { ContractFormState } from "@/lib/contracts/contract-form-payload";
-import { getSegmentUiGroup, segmentUsesAnnualPremiumPrimaryInput } from "@/lib/contracts/contract-segment-wizard-config";
+import { segmentUsesAnnualPremiumPrimaryInput } from "@/lib/contracts/contract-segment-wizard-config";
 import { annualPremiumFromMonthlyInput } from "@/lib/contracts/annual-premium-from-monthly";
 import { WizardShell, WizardHeader, WizardBody } from "@/app/components/wizard";
 
@@ -112,9 +112,11 @@ export function ContactContractModals({ contactId }: { contactId: string }) {
       startDate: form.startDate || undefined,
       anniversaryDate: form.anniversaryDate || undefined,
       note: form.note || undefined,
-      ...(getSegmentUiGroup(form.segment) === "investment" && form.paymentType
-        ? { paymentType: form.paymentType }
-        : {}),
+      // F2: propagujeme explicitní frekvenci + derivovaný paymentType.
+      // paymentType posíláme vždy (i pro pojistné segmenty), aby portfolio_attributes.paymentType
+      // bylo zapsáno a KPI měsíčních investic se nespletlo s jednorázovkami.
+      paymentType: form.paymentType ?? "regular",
+      paymentFrequency: form.paymentFrequency ?? "monthly",
       visibleToClient: visibleToClientEdit,
       portfolioStatus: portfolioStatusEdit,
     };
@@ -151,13 +153,23 @@ export function ContactContractModals({ contactId }: { contactId: string }) {
     // choval jako „nevyplněno" a UI by to mohlo reportovat jako jednorázovou.
     const attrs = (c.portfolioAttributes as Record<string, unknown> | null | undefined) ?? {};
     const rawPaymentType = typeof attrs.paymentType === "string" ? attrs.paymentType : "";
-    const paymentFreq = String(attrs.paymentFrequency ?? "").toLowerCase();
+    const paymentFreq = String(attrs.paymentFrequency ?? attrs.paymentFrequencyLabel ?? "").toLowerCase();
     const paymentType: "one_time" | "regular" =
       rawPaymentType === "one_time" || rawPaymentType === "regular"
         ? (rawPaymentType as "one_time" | "regular")
         : /jednorázov|jednorazov|one.?time|lump.?sum|single/.test(paymentFreq)
           ? "one_time"
           : "regular";
+    const paymentFrequency: "monthly" | "annual" | "quarterly" | "semiannual" | "one_time" =
+      paymentType === "one_time"
+        ? "one_time"
+        : /čtvrtlet|ctvrtlet|quarterly/.test(paymentFreq)
+          ? "quarterly"
+          : /polo\s*let|semiannual|semi-annual/.test(paymentFreq)
+            ? "semiannual"
+            : /roč|annual|yearly/.test(paymentFreq)
+              ? "annual"
+              : "monthly";
     setForm({
       segment: c.segment,
       partnerId: c.partnerId ?? "",
@@ -171,6 +183,7 @@ export function ContactContractModals({ contactId }: { contactId: string }) {
       anniversaryDate: c.anniversaryDate ?? "",
       note: c.note ?? "",
       paymentType,
+      paymentFrequency,
     });
     setPickerValue({
       partnerId: c.partnerId ?? "",
@@ -281,37 +294,8 @@ export function ContactContractModals({ contactId }: { contactId: string }) {
               {/* Sekce: Parametry smlouvy */}
               <SectionDivider icon={Package} label="Parametry smlouvy" />
 
-              {/* Typ platby pro investice */}
-              {getSegmentUiGroup(form.segment) === "investment" && (
-                <div className="flex items-center gap-3 rounded-lg border border-[color:var(--wp-border)] bg-[color:var(--wp-surface-muted)] px-3 py-2.5">
-                  <span className="text-xs font-medium text-[color:var(--wp-text-muted)] shrink-0">Typ platby:</span>
-                  <div className="flex gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setForm((f) => ({ ...f, paymentType: "regular", premiumAnnual: f.premiumAmount ? f.premiumAmount : "" }))}
-                      className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
-                        form.paymentType !== "one_time"
-                          ? "bg-indigo-600 text-white"
-                          : "bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] border border-[color:var(--wp-border)]"
-                      }`}
-                    >
-                      Pravidelná
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setForm((f) => ({ ...f, paymentType: "one_time", premiumAnnual: "" }))}
-                      className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
-                        form.paymentType === "one_time"
-                          ? "bg-amber-500 text-white"
-                          : "bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] border border-[color:var(--wp-border)]"
-                      }`}
-                    >
-                      Jednorázová
-                    </button>
-                  </div>
-                </div>
-              )}
-
+              {/* F2: „Typ platby" (investice) nahrazeno segmented controlem Frekvence platby
+                  uvnitř ContractParametersFields — podporuje monthly/annual/one_time. */}
               <ContractParametersFields
                 form={form}
                 setForm={setForm}

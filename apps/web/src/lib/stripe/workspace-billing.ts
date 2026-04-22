@@ -1,7 +1,7 @@
 import "server-only";
 
 import { unstable_cache } from "next/cache";
-import { db, tenants, subscriptions, eq, desc } from "db";
+import { tenants, subscriptions, eq, desc } from "db";
 import type { WorkspaceBillingSnapshot } from "./billing-types";
 import { getCheckoutCatalogSnapshot } from "./price-catalog";
 import { isStripeCheckoutAvailable, isStripePortalAvailable } from "./server";
@@ -9,44 +9,47 @@ import {
   getDaysRemainingInTrial,
   isTrialActive,
 } from "@/lib/billing/plan-catalog";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 
 export type { WorkspaceBillingSnapshot } from "./billing-types";
 
 async function fetchBillingRows(tenantId: string, knownStripeCustomerId?: string | null) {
-  const [tenantStripeRow, latestSubRow] = await Promise.all([
-    db
-      .select({
-        stripeCustomerId: tenants.stripeCustomerId,
-        trialStartedAt: tenants.trialStartedAt,
-        trialEndsAt: tenants.trialEndsAt,
-        trialPlanKey: tenants.trialPlanKey,
-        trialConvertedAt: tenants.trialConvertedAt,
-      })
-      .from(tenants)
-      .where(eq(tenants.id, tenantId))
-      .limit(1)
-      .then((r) => {
-        const row = r[0];
-        if (!row) return null;
-        return {
-          ...row,
-          stripeCustomerId:
-            knownStripeCustomerId !== undefined ? knownStripeCustomerId : row.stripeCustomerId,
-        };
-      }),
-    db
-      .select({
-        status: subscriptions.status,
-        currentPeriodEnd: subscriptions.currentPeriodEnd,
-        plan: subscriptions.plan,
-      })
-      .from(subscriptions)
-      .where(eq(subscriptions.tenantId, tenantId))
-      .orderBy(desc(subscriptions.updatedAt))
-      .limit(1)
-      .then((r) => r[0]),
-  ]);
-  return { tenantStripeRow, latestSubRow };
+  return withTenantContext({ tenantId }, async (tx) => {
+    const [tenantStripeRow, latestSubRow] = await Promise.all([
+      tx
+        .select({
+          stripeCustomerId: tenants.stripeCustomerId,
+          trialStartedAt: tenants.trialStartedAt,
+          trialEndsAt: tenants.trialEndsAt,
+          trialPlanKey: tenants.trialPlanKey,
+          trialConvertedAt: tenants.trialConvertedAt,
+        })
+        .from(tenants)
+        .where(eq(tenants.id, tenantId))
+        .limit(1)
+        .then((r) => {
+          const row = r[0];
+          if (!row) return null;
+          return {
+            ...row,
+            stripeCustomerId:
+              knownStripeCustomerId !== undefined ? knownStripeCustomerId : row.stripeCustomerId,
+          };
+        }),
+      tx
+        .select({
+          status: subscriptions.status,
+          currentPeriodEnd: subscriptions.currentPeriodEnd,
+          plan: subscriptions.plan,
+        })
+        .from(subscriptions)
+        .where(eq(subscriptions.tenantId, tenantId))
+        .orderBy(desc(subscriptions.updatedAt))
+        .limit(1)
+        .then((r) => r[0]),
+    ]);
+    return { tenantStripeRow, latestSubRow };
+  });
 }
 
 export async function getWorkspaceBillingSnapshot(params: {

@@ -20,6 +20,21 @@ const segmentSchema = z.enum(
   [...CONTRACT_SEGMENT_CODES] as [ContractSegmentCode, ...ContractSegmentCode[]]
 );
 
+/**
+ * Frekvence platby — zdroj pravdy pro derivaci `paymentType`, `premiumAmount` a `premiumAnnual`.
+ * - `monthly`     → advisor zadává měsíční částku; roční = x × 12.
+ * - `annual`      → advisor zadává roční částku; měsíční = x ÷ 12.
+ * - `quarterly`   → advisor zadává čtvrtletní částku; roční = x × 4, měsíční = x ÷ 3.
+ * - `semiannual`  → advisor zadává pololetní částku; roční = x × 2, měsíční = x ÷ 6.
+ * - `one_time`    → advisor zadává jednorázovou částku; `premiumAnnual` = null, `paymentType` = "one_time".
+ */
+export type ContractPaymentFrequency =
+  | "monthly"
+  | "annual"
+  | "quarterly"
+  | "semiannual"
+  | "one_time";
+
 export type ContractFormState = {
   segment: string;
   partnerId: string;
@@ -34,6 +49,11 @@ export type ContractFormState = {
   note: string;
   /** "one_time" = jednorázová platba (investiční pokyn); "regular" = pravidelná; null = neznámo */
   paymentType: "one_time" | "regular" | null;
+  /**
+   * Frekvence platby — explicitní vstup z wizardu, určuje derivaci paymentType
+   * a obou částek. Monthly = default, pokud advisor neurčí jinak.
+   */
+  paymentFrequency: ContractPaymentFrequency;
 };
 
 /** Payload pro createContract / updateContract (normalizovaný). */
@@ -51,7 +71,38 @@ export type ContractPersistPayload = {
   note?: string;
   /** "one_time" = jednorázová platba; "regular" = pravidelná; undefined = neuvádí se / neznámo */
   paymentType?: "one_time" | "regular";
+  /** Explicitní frekvence z wizardu — propaguje se do portfolio_attributes.paymentFrequencyLabel. */
+  paymentFrequency?: ContractPaymentFrequency;
+  /** Čitelný label pro portfolio_attributes (cs) — derivuje se z paymentFrequency. */
+  paymentFrequencyLabel?: string;
 };
+
+const PAYMENT_FREQUENCY_LABELS_CS: Record<ContractPaymentFrequency, string> = {
+  monthly: "měsíčně",
+  annual: "ročně",
+  quarterly: "čtvrtletně",
+  semiannual: "pololetně",
+  one_time: "jednorázově",
+};
+
+export function paymentFrequencyLabelCs(freq: ContractPaymentFrequency): string {
+  return PAYMENT_FREQUENCY_LABELS_CS[freq];
+}
+
+export function isContractPaymentFrequency(v: unknown): v is ContractPaymentFrequency {
+  return (
+    v === "monthly" ||
+    v === "annual" ||
+    v === "quarterly" ||
+    v === "semiannual" ||
+    v === "one_time"
+  );
+}
+
+/** Derivace `paymentType` z frekvence (jednorázově → one_time, jinak regular). */
+export function paymentTypeFromFrequency(freq: ContractPaymentFrequency): "one_time" | "regular" {
+  return freq === "one_time" ? "one_time" : "regular";
+}
 
 const optionalTrimmed = z
   .string()
@@ -63,15 +114,50 @@ export function normalizeContractFormForSave(form: ContractFormState): ContractP
   if (!segment) return { segment: "" };
 
   const showPremium = segmentShowsPremiumOrContributionFields(segment);
-  const isOneTimeInvestment = form.paymentType === "one_time";
+  // Zdroj pravdy: explicitní `paymentFrequency` ze segmented control.
+  // `paymentType` derivujeme z frekvence; zachováváme zpětnou kompatibilitu pro
+  // volání, která dodávají jen `paymentType` (vytvořená před F2 rolloutem).
+  const frequency: ContractPaymentFrequency = isContractPaymentFrequency(form.paymentFrequency)
+    ? form.paymentFrequency
+    : form.paymentType === "one_time"
+      ? "one_time"
+      : "monthly";
+  const paymentType = paymentTypeFromFrequency(frequency);
+  const isOneTime = frequency === "one_time";
+
   let premiumAmount = form.premiumAmount?.trim() || undefined;
   let premiumAnnual = form.premiumAnnual?.trim() || undefined;
   if (showPremium) {
-    if (isOneTimeInvestment) {
-      // Jednorázová investice: částka v premiumAmount je lump-sum, NESMÍME ji násobit 12.
+    if (isOneTime) {
+      // Jednorázová platba: částka v `premiumAmount` je lump-sum, roční NESMÍ existovat.
       // Dříve portál ukazoval „12 000 000 Kč / rok“ místo „1 000 000 Kč jednorázově“.
       premiumAnnual = undefined;
+    } else if (frequency === "annual") {
+      // Advisor zadal roční částku — dopočítáme měsíční.
+      if (premiumAnnual) {
+        premiumAmount = monthlyPremiumFromAnnualInput(premiumAnnual) || premiumAmount;
+      } else if (premiumAmount) {
+        premiumAnnual = annualPremiumFromMonthlyInput(premiumAmount) || premiumAnnual;
+      }
+    } else if (frequency === "quarterly") {
+      // Čtvrtletní částka × 4 = roční, měsíční = roční / 12.
+      if (premiumAmount) {
+        const annualNumber = Number(premiumAmount) * 4;
+        if (Number.isFinite(annualNumber) && annualNumber > 0) {
+          premiumAnnual = annualNumber.toFixed(2);
+          premiumAmount = monthlyPremiumFromAnnualInput(premiumAnnual) || premiumAmount;
+        }
+      }
+    } else if (frequency === "semiannual") {
+      if (premiumAmount) {
+        const annualNumber = Number(premiumAmount) * 2;
+        if (Number.isFinite(annualNumber) && annualNumber > 0) {
+          premiumAnnual = annualNumber.toFixed(2);
+          premiumAmount = monthlyPremiumFromAnnualInput(premiumAnnual) || premiumAmount;
+        }
+      }
     } else if (segmentUsesAnnualPremiumPrimaryInput(segment)) {
+      // MAJ: historicky primární vstup je roční → měsíční dopočítáme.
       if (premiumAnnual) {
         const m = monthlyPremiumFromAnnualInput(premiumAnnual);
         if (m) premiumAmount = m;
@@ -79,6 +165,7 @@ export function normalizeContractFormForSave(form: ContractFormState): ContractP
         premiumAnnual = annualPremiumFromMonthlyInput(premiumAmount) || premiumAnnual;
       }
     } else if (premiumAmount) {
+      // monthly (default): měsíční × 12 = roční.
       premiumAnnual = annualPremiumFromMonthlyInput(premiumAmount) || premiumAnnual;
     }
   }
@@ -104,7 +191,9 @@ export function normalizeContractFormForSave(form: ContractFormState): ContractP
     startDate: form.startDate?.trim() || undefined,
     anniversaryDate: form.anniversaryDate?.trim() || undefined,
     note: form.note?.trim() || undefined,
-    paymentType: form.paymentType ?? undefined,
+    paymentType,
+    paymentFrequency: frequency,
+    paymentFrequencyLabel: paymentFrequencyLabelCs(frequency),
   };
 }
 
@@ -121,6 +210,8 @@ const persistSchema = z.object({
   anniversaryDate: optionalTrimmed,
   note: optionalTrimmed,
   paymentType: z.enum(["one_time", "regular"]).optional(),
+  paymentFrequency: z.enum(["monthly", "annual", "quarterly", "semiannual", "one_time"]).optional(),
+  paymentFrequencyLabel: optionalTrimmed,
 });
 
 /** Validace před uložením (klient i server). */
@@ -245,7 +336,14 @@ export function contractFormAnnualPillLabel(form: ContractFormState): string | n
 
 const EMPTY_STEP2: Pick<
   ContractFormState,
-  "premiumAmount" | "premiumAnnual" | "contractNumber" | "startDate" | "anniversaryDate" | "note" | "paymentType"
+  | "premiumAmount"
+  | "premiumAnnual"
+  | "contractNumber"
+  | "startDate"
+  | "anniversaryDate"
+  | "note"
+  | "paymentType"
+  | "paymentFrequency"
 > = {
   premiumAmount: "",
   premiumAnnual: "",
@@ -253,7 +351,8 @@ const EMPTY_STEP2: Pick<
   startDate: "",
   anniversaryDate: "",
   note: "",
-  paymentType: null,
+  paymentType: "regular",
+  paymentFrequency: "monthly",
 };
 
 /** Po změně segmentu: partner/produkt + pole kroku 2 vyčistit (volá se z wizardu). */
@@ -284,5 +383,8 @@ export const initialContractFormState = (): ContractFormState => ({
   startDate: "",
   anniversaryDate: "",
   note: "",
-  paymentType: null,
+  // Default: měsíčně/pravidelně. `null` bylo kořenem KPI bugu „Měsíční investice"
+  // (jednorázovky se počítaly jako měsíční, protože paymentType = null → fallback "regular").
+  paymentType: "regular",
+  paymentFrequency: "monthly",
 });

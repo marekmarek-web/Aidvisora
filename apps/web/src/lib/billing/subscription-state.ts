@@ -1,7 +1,8 @@
 import "server-only";
 
-import { db, subscriptions, eq, desc } from "db";
+import { subscriptions, eq, desc } from "db";
 import { getEffectiveSettingValue } from "@/lib/admin/effective-settings-resolver";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import type { SubscriptionState } from "@/lib/stripe/billing-types";
 
 export type { SubscriptionState } from "@/lib/stripe/billing-types";
@@ -10,16 +11,18 @@ const ACTIVE_STATUSES = new Set(["active", "trialing"]);
 const PAST_DUE_STATUSES = new Set(["past_due"]);
 
 export async function getSubscriptionState(tenantId: string): Promise<SubscriptionState> {
-  const [latestSub] = await db
-    .select({
-      status: subscriptions.status,
-      plan: subscriptions.plan,
-      currentPeriodEnd: subscriptions.currentPeriodEnd,
-    })
-    .from(subscriptions)
-    .where(eq(subscriptions.tenantId, tenantId))
-    .orderBy(desc(subscriptions.updatedAt))
-    .limit(1);
+  const [latestSub] = await withTenantContext({ tenantId }, (tx) =>
+    tx
+      .select({
+        status: subscriptions.status,
+        plan: subscriptions.plan,
+        currentPeriodEnd: subscriptions.currentPeriodEnd,
+      })
+      .from(subscriptions)
+      .where(eq(subscriptions.tenantId, tenantId))
+      .orderBy(desc(subscriptions.updatedAt))
+      .limit(1),
+  );
 
   if (!latestSub) {
     return { status: null, plan: null, currentPeriodEnd: null, isActive: false, inGracePeriod: false };

@@ -7,7 +7,22 @@ import { createHash } from "crypto";
 import type { ExecutionStep, WriteActionType } from "./assistant-domain-model";
 
 const FINGERPRINT_KEYS_BY_ACTION: Record<WriteActionType, string[]> = {
-  createOpportunity: ["contactId", "productDomain", "caseType", "taskTitle"],
+  // H4: include amount/purpose/title and other business-relevant discriminators so that
+  // two distinct deals for the same contact+domain don't collide, and same-amount
+  // re-sends within TTL are still detected as duplicates.
+  createOpportunity: [
+    "contactId",
+    "productDomain",
+    "caseType",
+    "taskTitle",
+    "title",
+    "subject",
+    "amount",
+    "expectedValue",
+    "purpose",
+    "insuranceType",
+    "investmentGoal",
+  ],
   updateOpportunity: ["opportunityId", "title", "productDomain"],
   createServiceCase: ["contactId", "productDomain", "subject", "noteContent"],
   createTask: ["contactId", "taskTitle", "resolvedDate"],
@@ -89,6 +104,11 @@ const FINGERPRINT_KEYS_BY_ACTION: Record<WriteActionType, string[]> = {
     "accountNumber",
     "iban",
     "variableSymbol",
+    "constantSymbol",
+    "specificSymbol",
+    "amount",
+    "frequency",
+    "firstPaymentDate",
   ],
 };
 

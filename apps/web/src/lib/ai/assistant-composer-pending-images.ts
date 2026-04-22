@@ -10,7 +10,21 @@ export type MergePendingImageAssetsResult = {
 };
 
 /**
+ * M27: stable content key for deduping composer images. Uses the data-URL
+ * payload when available (content-addressed), otherwise falls back to the
+ * legacy name+size+type tuple. Filesystem-level `File` objects are normalized
+ * to payloads before hitting this merger, so the URL is available in practice.
+ */
+function contentKey(asset: ImageAssetPayload): string {
+  if (typeof asset.url === "string" && asset.url.length > 0) {
+    return asset.url;
+  }
+  return `${asset.filename ?? ""}:${asset.sizeBytes ?? ""}:${asset.mimeType ?? ""}`;
+}
+
+/**
  * Append incoming image payloads to the existing pending list, capped at `max`.
+ * Dedups by content hash (see `contentKey`) — M27.
  */
 export function mergePendingImageAssets(
   existing: ImageAssetPayload[],
@@ -20,12 +34,20 @@ export function mergePendingImageAssets(
   if (incoming.length === 0) {
     return { next: existing, truncatedFromIncoming: false };
   }
+  const seen = new Set(existing.map(contentKey));
+  const uniqueIncoming: ImageAssetPayload[] = [];
+  for (const a of incoming) {
+    const k = contentKey(a);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    uniqueIncoming.push(a);
+  }
   const space = max - existing.length;
   if (space <= 0) {
-    return { next: existing, truncatedFromIncoming: true };
+    return { next: existing, truncatedFromIncoming: uniqueIncoming.length > 0 };
   }
-  const take = incoming.slice(0, space);
-  const truncatedFromIncoming = incoming.length > take.length;
+  const take = uniqueIncoming.slice(0, space);
+  const truncatedFromIncoming = uniqueIncoming.length > take.length;
   return {
     next: [...existing, ...take],
     truncatedFromIncoming,

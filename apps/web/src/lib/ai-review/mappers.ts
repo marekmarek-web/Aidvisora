@@ -14,6 +14,7 @@ import type {
 } from "./types";
 import { buildHumanSummary, buildHumanErrorMessage, getDocumentTypeLabel } from "../ai/document-messages";
 import type { PrimaryDocumentType } from "../ai/document-review-types";
+import { isSupportingDocumentOnly } from "../ai/apply-policy-enforcement";
 import { isDateFieldKey, normalizeDateForAdvisorDisplay } from "../ai/canonical-date-normalize";
 import { dedupeCzechAccountTrailingBankCode, formatDomesticAccountDisplayLine, sanitizeVariableSymbolForCanonical } from "../ai/payment-field-contract";
 import type { DocumentReviewEnvelope } from "../ai/document-review-types";
@@ -1937,10 +1938,20 @@ export function mapApiToExtractionDocument(
     ...(advisorReview?.workActions ?? []),
   ]);
 
+  const supportingOnly = (() => {
+    try {
+      return isSupportingDocumentOnly(extracted as Record<string, unknown>);
+    } catch {
+      return false;
+    }
+  })();
+
   return {
     id: detail.id as string,
     fileName: detail.fileName as string,
     documentType: documentTypeLabel,
+    detectedPrimaryType: envelopePrimaryType,
+    isSupportingOnlyDocument: supportingOnly,
     clientName,
     uploadTime: detail.createdAt
       ? new Date(detail.createdAt as string).toLocaleString("cs-CZ")

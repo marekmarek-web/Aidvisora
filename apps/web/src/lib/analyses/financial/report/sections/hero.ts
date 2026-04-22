@@ -27,6 +27,9 @@ export function renderHero(ctx: SectionCtx): string {
     (data.liabilities?.loans ?? 0) +
     (data.liabilities?.other ?? 0);
   const netWorth = totalAssets - totalLiabilities;
+  /** Pokud klient vůbec nevyplnil bilanci, nezobrazujeme „0 Kč" jako hrdý headline — zobrazíme pomlčku. */
+  const hasBalanceSheetData = totalAssets > 0 || totalLiabilities > 0;
+  const netWorthLabel = hasBalanceSheetData ? fmtBigCzk(netWorth) : '—';
 
   const dateStr = new Date().toLocaleDateString('cs-CZ', { day: 'numeric', month: 'long', year: 'numeric' });
   const advisorName = branding.advisorName ?? 'Finanční poradce';
@@ -45,7 +48,7 @@ export function renderHero(ctx: SectionCtx): string {
       <div class="hero-badge">Finanční plán ${planYear}</div>
     </div>
     <div class="hero-center">
-      <div class="hero-eyebrow"><span class="hero-eyebrow-line"></span>Finanční analýza</div>
+      <div class="hero-eyebrow"><span class="hero-eyebrow-line"></span>Finanční plán</div>
       <div class="hero-title">${titleName}</div>
       <div class="hero-subtitle">Komplexní přehled vašeho majetku, investičního plánu, důchodové strategie a pojištění — navrženo na míru vaší životní situaci.</div>
     </div>
@@ -57,8 +60,8 @@ export function renderHero(ctx: SectionCtx): string {
       </div>
       <div class="hero-meta-item">
         <div class="hero-meta-label">Čisté jmění</div>
-        <div class="hero-meta-val">${fmtBigCzk(netWorth)}</div>
-        <div class="hero-meta-sub">aktiva − závazky</div>
+        <div class="hero-meta-val">${netWorthLabel}</div>
+        <div class="hero-meta-sub">${hasBalanceSheetData ? 'aktiva − závazky' : 'bilance zatím nevyplněna'}</div>
       </div>
       <div class="hero-meta-item">
         <div class="hero-meta-label">Datum</div>

@@ -52,6 +52,8 @@ export type BatchASeedRow = {
   logo?: string;
   heroImage?: string;
   galleryImages?: string[];
+  /** `"logo"` = sada značek/partnerů (bílé pozadí, padding); default `"photo"`. */
+  galleryType?: "photo" | "logo";
   sources: BatchASeedSource[];
   assetTodo: string[];
   notes?: string[];
@@ -80,17 +82,17 @@ export const BATCH_A_SEED_ROWS: readonly BatchASeedRow[] = [
     ticker: 'SWDA',
     riskSRI: null,
     goal:
-      'Fond se snaží sledovat výkonnost indexu MSCI World Index (Net), tedy široce diverzifikovaného koše velkých a středních firem z rozvinutých trhů.',
+      'Fond kopíruje světový akciový index MSCI World. Peníze se tak rozdělí mezi velké a střední firmy z rozvinutých zemí světa.',
     strategy:
-      'Pasivní globální akciový ETF s optimalizovanou metodologií a fyzickou strukturou.',
+      'Fond jednotlivé akcie sám nevybírá – kopíruje složení světového indexu a fyzicky drží podíly těchto firem.',
     description:
-      'Jádrový globální akciový fond pro dlouhodobé investování do rozvinutých trhů. Vhodný jako hlavní růstová složka portfolia.',
+      'Základní celosvětový akciový fond pro dlouhodobé investování. Hodí se jako hlavní růstová složka portfolia.',
     suitable:
-      'Pro investory, kteří chtějí dlouhodobou globální akciovou expozici napříč rozvinutými trhy bez stock-pickingu jednotlivých firem.',
+      'Pro investory, kteří chtějí mít jednoduše zastoupeny firmy z celého rozvinutého světa a nechtějí si sami vybírat konkrétní akcie.',
     horizon: '7+ let',
-    liquidity: 'Burzovně obchodovaný UCITS ETF; běžná tržní likvidita.',
+    liquidity: 'Fond se obchoduje na burze každý den, takže peníze lze relativně rychle získat zpět.',
     risks:
-      'Hodnota akcií může kolísat podle vývoje trhů, makroekonomiky a firemních výsledků. Přítomné je také měnové riziko a riziko protistrany.',
+      'Hodnota akcií kolísá podle vývoje trhů, ekonomiky a výsledků firem. Přidává se také riziko změny kurzu dolaru vůči koruně.',
     minInvestment: null,
     planningRate: 8,
     officialPerformance: {
@@ -143,11 +145,10 @@ export const BATCH_A_SEED_ROWS: readonly BatchASeedRow[] = [
     factsheetAsOf: '2026-02-28',
     verifiedAt: '2026-04-05',
     logo: '/logos/funds/ishares_brand.png',
-    heroImage: '/report-assets/funds/ishares_core_msci_world/hero.svg',
     galleryImages: [
-      '/report-assets/funds/ishares_core_msci_world/gallery-1.svg',
-      '/report-assets/funds/ishares_core_msci_world/gallery-2.svg',
-      '/report-assets/funds/ishares_core_msci_world/gallery-3.svg',
+      '/report-assets/funds/ishares_core_msci_world/msci1.png',
+      '/report-assets/funds/ishares_core_msci_world/msci2.png',
+      '/report-assets/funds/ishares_core_msci_world/msci3.png',
     ],
     sources: [
       {

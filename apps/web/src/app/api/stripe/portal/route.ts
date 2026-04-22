@@ -5,7 +5,8 @@ import { getMembership } from "@/lib/auth/get-membership";
 import { getBillingReturnUrls, parseBillingContext } from "@/lib/stripe/billing-return-paths";
 import { getStripe, isStripePortalAvailable } from "@/lib/stripe/server";
 import { checkRateLimit } from "@/lib/security/rate-limit";
-import { db, tenants, eq } from "db";
+import { tenants, eq } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 
 export const dynamic = "force-dynamic";
 
@@ -49,11 +50,15 @@ export async function POST(request: Request) {
     );
   }
 
-  const [tenantRow] = await db
-    .select({ stripeCustomerId: tenants.stripeCustomerId })
-    .from(tenants)
-    .where(eq(tenants.id, m.tenantId))
-    .limit(1);
+  const [tenantRow] = await withTenantContext(
+    { tenantId: m.tenantId, userId: user.id },
+    (tx) =>
+      tx
+        .select({ stripeCustomerId: tenants.stripeCustomerId })
+        .from(tenants)
+        .where(eq(tenants.id, m.tenantId))
+        .limit(1),
+  );
   const customerId = tenantRow?.stripeCustomerId?.trim();
   if (!customerId) {
     return NextResponse.json(

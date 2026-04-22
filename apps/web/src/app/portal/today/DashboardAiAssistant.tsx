@@ -19,6 +19,10 @@ function getHref(action: SuggestedAction): string | null {
   if (action.type === "open_task") {
     return "/portal/tasks";
   }
+  if (action.type === "open_portal_path" && typeof action.payload.path === "string") {
+    const p = action.payload.path;
+    if (p.startsWith("/portal/")) return p;
+  }
   return null;
 }
 

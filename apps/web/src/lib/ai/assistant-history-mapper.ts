@@ -3,7 +3,7 @@
  */
 import type { ExecutionPlan } from "./assistant-domain-model";
 import { normalizeExecutionPlanFromDb } from "./assistant-plan-snapshot";
-import type { StepPreviewItem } from "./assistant-execution-ui";
+import type { StepPreviewItem, StepOutcomeSummary } from "./assistant-execution-ui";
 /** Namespace import avoids duplicate named bindings if merges duplicate lines in `{ … }`. */
 import * as assistantExecutionPlan from "./assistant-execution-plan";
 import { sanitizeAssistantMessageForAdvisor, sanitizeWarningForAdvisor } from "./assistant-message-sanitizer";
@@ -24,6 +24,25 @@ export type AssistantMessageHistoryRow = {
   createdAt: Date;
   meta: Record<string, unknown> | null;
   executionPlanSnapshot: unknown;
+  referencedEntities?: unknown;
+};
+
+export type AssistantReferencedEntityDto = {
+  type: string;
+  id: string;
+  label?: string;
+};
+
+export type AssistantSuggestedNextStepItemDto = {
+  label: string;
+  message?: string;
+  action?: Record<string, unknown>;
+};
+
+export type AssistantSuggestedActionDto = {
+  type: string;
+  label: string;
+  payload: Record<string, unknown>;
 };
 
 export type AdvisorAssistantHistoryUserMessage = {
@@ -56,6 +75,12 @@ export type AdvisorAssistantHistoryAssistantMessage = {
     lockedClientId: string | null;
     lockedClientLabel?: string | null;
   } | null;
+  referencedEntities?: AssistantReferencedEntityDto[];
+  stepOutcomes?: StepOutcomeSummary[];
+  suggestedNextSteps?: string[];
+  suggestedNextStepItems?: AssistantSuggestedNextStepItemDto[];
+  suggestedActions?: AssistantSuggestedActionDto[];
+  hasPartialFailure?: boolean;
 };
 
 export type AdvisorAssistantHistoryMessageDto =
@@ -109,6 +134,118 @@ function warningsFromMeta(meta: Record<string, unknown> | null): string[] {
     .filter((w) => w.length > 0);
 }
 
+function referencedEntitiesFromRow(
+  rowEntities: unknown,
+): AssistantReferencedEntityDto[] | undefined {
+  if (!Array.isArray(rowEntities)) return undefined;
+  const out: AssistantReferencedEntityDto[] = [];
+  for (const e of rowEntities) {
+    if (!e || typeof e !== "object") continue;
+    const rec = e as Record<string, unknown>;
+    const type = typeof rec.type === "string" ? rec.type : null;
+    const id = typeof rec.id === "string" ? rec.id : null;
+    if (!type || !id) continue;
+    const label = typeof rec.label === "string" ? rec.label : undefined;
+    out.push({ type, id, ...(label ? { label } : {}) });
+  }
+  return out.length > 0 ? out : undefined;
+}
+
+function stepOutcomesFromMeta(
+  meta: Record<string, unknown> | null,
+): StepOutcomeSummary[] | undefined {
+  if (!meta || !Array.isArray(meta.stepOutcomes)) return undefined;
+  const out: StepOutcomeSummary[] = [];
+  for (const raw of meta.stepOutcomes) {
+    if (!raw || typeof raw !== "object") continue;
+    const rec = raw as Record<string, unknown>;
+    const stepId = typeof rec.stepId === "string" ? rec.stepId : null;
+    const action = typeof rec.action === "string" ? rec.action : null;
+    const label = typeof rec.label === "string" ? rec.label : null;
+    const status = typeof rec.status === "string" ? rec.status : null;
+    if (!stepId || !action || !label || !status) continue;
+    const allowed = new Set<StepOutcomeSummary["status"]>([
+      "succeeded",
+      "failed",
+      "skipped",
+      "requires_input",
+      "idempotent_hit",
+    ]);
+    if (!allowed.has(status as StepOutcomeSummary["status"])) continue;
+    out.push({
+      stepId,
+      action,
+      label,
+      status: status as StepOutcomeSummary["status"],
+      entityId: typeof rec.entityId === "string" ? rec.entityId : null,
+      entityType: typeof rec.entityType === "string" ? rec.entityType : null,
+      error: typeof rec.error === "string" ? rec.error : null,
+      warnings: Array.isArray(rec.warnings)
+        ? rec.warnings.filter((x): x is string => typeof x === "string")
+        : [],
+      retryable: typeof rec.retryable === "boolean" ? rec.retryable : undefined,
+    });
+  }
+  return out.length > 0 ? out : undefined;
+}
+
+function suggestedNextStepsFromMeta(
+  meta: Record<string, unknown> | null,
+): string[] | undefined {
+  if (!meta) return undefined;
+  const raw = meta.suggestedNextSteps;
+  if (!Array.isArray(raw)) return undefined;
+  const out = raw.filter((s): s is string => typeof s === "string" && s.trim().length > 0);
+  return out.length > 0 ? out : undefined;
+}
+
+function suggestedNextStepItemsFromMeta(
+  meta: Record<string, unknown> | null,
+): AssistantSuggestedNextStepItemDto[] | undefined {
+  if (!meta || !Array.isArray(meta.suggestedNextStepItems)) return undefined;
+  const out: AssistantSuggestedNextStepItemDto[] = [];
+  for (const raw of meta.suggestedNextStepItems) {
+    if (!raw || typeof raw !== "object") continue;
+    const rec = raw as Record<string, unknown>;
+    const label = typeof rec.label === "string" ? rec.label : null;
+    if (!label) continue;
+    const item: AssistantSuggestedNextStepItemDto = { label };
+    if (typeof rec.message === "string") item.message = rec.message;
+    if (rec.action && typeof rec.action === "object") {
+      item.action = rec.action as Record<string, unknown>;
+    }
+    out.push(item);
+  }
+  return out.length > 0 ? out : undefined;
+}
+
+function suggestedActionsFromMeta(
+  meta: Record<string, unknown> | null,
+): AssistantSuggestedActionDto[] | undefined {
+  if (!meta || !Array.isArray(meta.suggestedActions)) return undefined;
+  const out: AssistantSuggestedActionDto[] = [];
+  for (const raw of meta.suggestedActions) {
+    if (!raw || typeof raw !== "object") continue;
+    const rec = raw as Record<string, unknown>;
+    const type = typeof rec.type === "string" ? rec.type : null;
+    const label = typeof rec.label === "string" ? rec.label : null;
+    const payload =
+      rec.payload && typeof rec.payload === "object"
+        ? (rec.payload as Record<string, unknown>)
+        : {};
+    if (!type || !label) continue;
+    out.push({ type, label, payload });
+  }
+  return out.length > 0 ? out : undefined;
+}
+
+function hasPartialFailureFromMeta(
+  meta: Record<string, unknown> | null,
+): boolean | undefined {
+  if (!meta) return undefined;
+  return typeof meta.hasPartialFailure === "boolean" ? meta.hasPartialFailure : undefined;
+}
+
 /**
  * Rows must be in chronological order (oldest first).
  */
@@ -145,6 +282,12 @@ export function mapAssistantHistoryRowsToClientPayload(
     const plan = normalizeExecutionPlanFromDb(r.executionPlanSnapshot);
     const isLastAssistant = i === lastAssistantIndex;
     const lockedId = isLastAssistant ? conversation.lockedContactId : null;
+    const refEntities = referencedEntitiesFromRow(r.referencedEntities);
+    const outcomes = stepOutcomesFromMeta(r.meta);
+    const nextStepItems = suggestedNextStepItemsFromMeta(r.meta);
+    const nextStepStrings = suggestedNextStepsFromMeta(r.meta);
+    const suggestedActions = suggestedActionsFromMeta(r.meta);
+    const hasPartialFailure = hasPartialFailureFromMeta(r.meta);
     out.push({
       kind: "assistant",
       stableKey: r.id,
@@ -160,6 +303,12 @@ export function mapAssistantHistoryRowsToClientPayload(
               lockedClientLabel: null,
             }
           : null,
+      ...(refEntities ? { referencedEntities: refEntities } : {}),
+      ...(outcomes ? { stepOutcomes: outcomes } : {}),
+      ...(nextStepItems ? { suggestedNextStepItems: nextStepItems } : {}),
+      ...(nextStepStrings ? { suggestedNextSteps: nextStepStrings } : {}),
+      ...(suggestedActions ? { suggestedActions } : {}),
+      ...(hasPartialFailure !== undefined ? { hasPartialFailure } : {}),
     });
   }
   return out;

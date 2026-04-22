@@ -30,6 +30,20 @@ export const AssistantTelemetryAction = {
   DEPENDENCY_SKIPPED: "assistant.dependency_skipped",
   RUN_COMPLETE: "assistant.run_complete",
   RUN_ERROR: "assistant.run_error",
+  /**
+   * M18: emitted when an incoming request includes a sessionId that is NOT
+   * present in this process's in-memory session map. On Vercel multi-instance,
+   * this is almost always evidence that the client hit a different lambda
+   * from the one that created the session. Used to surface cross-instance
+   * session loss until sessions live in Redis/DB.
+   */
+  SESSION_NOT_FOUND_BY_ID: "assistant.session_not_found_by_id",
+  /**
+   * M16: emitted when a context-builder loader throws and the builder
+   * continues with degraded data (partial review counts, missing client
+   * enrichment, etc.). Lets ops see silent context-degradation trends.
+   */
+  CONTEXT_LOADER_FAILED: "assistant.context_loader_failed",
 } as const;
 
 export type AssistantTelemetryActionType = (typeof AssistantTelemetryAction)[keyof typeof AssistantTelemetryAction];

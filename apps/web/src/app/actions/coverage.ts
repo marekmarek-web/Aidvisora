@@ -103,7 +103,9 @@ export async function getCoverageForContact(contactId: string): Promise<GetCover
   }
 }
 
-export type UpsertCoverageItemResult = { ok: true } | { ok: false; message: string };
+export type UpsertCoverageItemResult =
+  | { ok: true; id: string | null }
+  | { ok: false; message: string };
 
 /**
  * Upsert jedné položky pokrytí (unikát tenant + contact + itemKey).
@@ -121,8 +123,8 @@ export async function upsertCoverageItem(
   },
 ): Promise<UpsertCoverageItemResult> {
   try {
-    await setCoverageStatus(contactId, itemKey, payload);
-    return { ok: true };
+    const id = await setCoverageStatus(contactId, itemKey, payload);
+    return { ok: true, id };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     if (msg === "Forbidden") {
@@ -142,7 +144,7 @@ export async function setCoverageStatus(
     notes?: string | null;
     isRelevant?: boolean;
   }
-): Promise<void> {
+): Promise<string | null> {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "contacts:write")) throw new Error("Forbidden");
 
@@ -189,9 +191,13 @@ export async function setCoverageStatus(
         updatedBy: values.updatedBy,
       })
       .where(eq(contactCoverage.id, existing[0].id));
-  } else {
-    await db.insert(contactCoverage).values(values);
+    return existing[0].id ?? null;
   }
+  const inserted = await db
+    .insert(contactCoverage)
+    .values(values)
+    .returning({ id: contactCoverage.id });
+  return inserted[0]?.id ?? null;
 }
 
 export async function linkCoverageToContract(

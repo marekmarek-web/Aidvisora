@@ -1,7 +1,8 @@
 import "server-only";
 
 import { cache } from "react";
-import { and, contacts, db, eq } from "db";
+import { and, contacts, eq } from "db";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import { listClientMaterialRequests } from "@/app/actions/advisor-material-requests";
 import {
   listClientAdvisorProposals,
@@ -93,21 +94,23 @@ export const loadClientPortalSessionBundle = cache(async function loadClientPort
     advisor,
     advisorProposals,
   ] = await Promise.all([
-    db
-      .select({
-        firstName: contacts.firstName,
-        lastName: contacts.lastName,
-        email: contacts.email,
-        phone: contacts.phone,
-        street: contacts.street,
-        city: contacts.city,
-        zip: contacts.zip,
-        notificationUnsubscribedAt: contacts.notificationUnsubscribedAt,
-      })
-      .from(contacts)
-      .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, contactId)))
-      .limit(1)
-      .then((rows) => rows[0] ?? null),
+    withTenantContext({ tenantId: auth.tenantId, userId: auth.userId }, (tx) =>
+      tx
+        .select({
+          firstName: contacts.firstName,
+          lastName: contacts.lastName,
+          email: contacts.email,
+          phone: contacts.phone,
+          street: contacts.street,
+          city: contacts.city,
+          zip: contacts.zip,
+          notificationUnsubscribedAt: contacts.notificationUnsubscribedAt,
+        })
+        .from(contacts)
+        .where(and(eq(contacts.tenantId, auth.tenantId), eq(contacts.id, contactId)))
+        .limit(1)
+        .then((rows) => rows[0] ?? null),
+    ),
     getClientDashboardMetrics(contactId).catch(() => emptyQuickStats),
     getClientRequests().catch(() => [] as ClientRequestItem[]),
     getClientPortfolioForContact(contactId).catch(() => [] as ContractRow[]),

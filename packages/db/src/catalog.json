@@ -14,12 +14,13 @@
       "Slavia",
       "Moneta"
     ],
-    "tbdPlaceholderName": "Ostatní (doplnit z dropdownu)",
+    "tbdPlaceholderName": "Vlastní produkt (zadejte název)",
     "notes": [
       "Po úklidu 2026-04-21: sjednocen casing partnerů (UNIQA, INVESTIKA), deduplikace produktů, jediný TBD placeholder 'Ostatní (doplnit z dropdownu)'.",
       "is_tbd v DB se v seed-catalog.mjs detekuje buď podle prefixu 'TBD' nebo výskytu '(doplnit'.",
       "Segment ZDRAV (zdravotní) byl odstraněn — nepoužíval se (0 partnerů) a chyběl v contractSegments.",
-      "Gap fill 2026-04-21 (priorita 1–5): přidáni Generali Česká pojišťovna, UNIQA Penzijní společnost, Modrá pyramida; doplněn CEST segment (6 partnerů); rozšířen FIRMA_POJ na 6 partnerů. Odstraněn Moneta (nepoužívá se)."
+      "Gap fill 2026-04-21 (priorita 1–5): přidáni Generali Česká pojišťovna, UNIQA Penzijní společnost, Modrá pyramida; doplněn CEST segment (6 partnerů); rozšířen FIRMA_POJ na 6 partnerů. Odstraněn Moneta (nepoužívá se).",
+      "F3 2026-04-22: escape-hatch přejmenován 'Ostatní (doplnit z dropdownu)' → 'Vlastní produkt (zadejte název)' (plnohodnotný fallback, NENÍ is_tbd). Legacy název zachycuje seed-catalog.mjs a migruje na nový."
     ]
   },
   "categories": [
@@ -33,6 +34,7 @@
     "INV",
     "MAJ",
     "ODP",
+    "ODP_ZAM",
     "UVER",
     "ZP"
   ],
@@ -62,7 +64,9 @@
       "partner": "Allianz pojišťovna",
       "category": "FIRMA_POJ",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "Moje Firma (Komfort/Plus/Extra/Max)",
+        "Pojištění podnikatelů",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
@@ -112,14 +116,18 @@
       "partner": "ATRIS",
       "category": "INV",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "ATRIS SPORO",
+        "Fond Realita (otevřený podílový fond, ISIN CZ0008473139)",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
       "partner": "Avant",
       "category": "INV",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "AVANT Flex",
+        "Fondy kvalifikovaných investorů (AVANT)",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
@@ -150,7 +158,10 @@
       "partner": "Cyrrus",
       "category": "INV",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "CYRRUS Udržitelná budoucnost",
+        "RESIDENTO (nemovitostní fond)",
+        "Cyrrus Pravidelko",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
@@ -164,7 +175,9 @@
       "partner": "Česká spořitelna",
       "category": "UVER",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "Půjčka na cokoliv",
+        "Konsolidace půjček",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
@@ -178,35 +191,42 @@
       "partner": "ČPP",
       "category": "AUTO_HAV",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "Havarijní pojištění vozidel",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
       "partner": "ČPP",
       "category": "AUTO_PR",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "Povinné ručení SPOROPOV",
+        "Povinné ručení SPECIÁLPOV",
+        "Povinné ručení SUPERPOV",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
       "partner": "ČPP",
       "category": "FIRMA_POJ",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "Pojištění podnikatelů a průmyslu na míru",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
       "partner": "ČPP",
       "category": "MAJ",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "DOMEX+ (MINI/OPTI/MAXI)",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
       "partner": "ČPP",
       "category": "ODP",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "Pojištění odpovědnosti (součást DOMEX+)",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
@@ -220,14 +240,20 @@
       "partner": "ČSOB",
       "category": "UVER",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "Půjčka na cokoliv",
+        "Půjčka po ruce",
+        "Konsolidace",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
       "partner": "ČSOB Hypoteční banka",
       "category": "HYPO",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "Hypotéka",
+        "Americká hypotéka",
+        "Refinancování hypotéky",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
@@ -241,21 +267,25 @@
       "partner": "ČSOB pojišťovna",
       "category": "FIRMA_POJ",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "TRUMF (živnostníci a menší firmy)",
+        "Pojištění podnikatelských rizik",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
       "partner": "ČSOB pojišťovna",
       "category": "MAJ",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "Náš domov (Standard/Dominant/Premiant)",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
       "partner": "ČSOB pojišťovna",
       "category": "ZP",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "Forte (investiční a úrazové pojištění)",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
@@ -269,14 +299,16 @@
       "partner": "Direct",
       "category": "AUTO_HAV",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "Havarijní pojištění",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
       "partner": "Direct",
       "category": "AUTO_PR",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "Povinné ručení (Mám to nejnutnější/Vozím rodinu/Vždycky dojedu/Mám tam všechno)",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
@@ -290,21 +322,25 @@
       "partner": "Direct",
       "category": "FIRMA_POJ",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "Pojištění podnikání",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
       "partner": "Direct",
       "category": "MAJ",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "Pojištění majetku",
+        "Pojištění domu bez limitů",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
       "partner": "Direct",
       "category": "ODP",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "Pojištění odpovědnosti z občanského života",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
@@ -395,7 +431,9 @@
       "partner": "J&T",
       "category": "INV",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "J&T MONEY (dluhopisový fond)",
+        "J&T OPPORTUNITY (akciový fond)",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
@@ -417,7 +455,10 @@
       "partner": "Komerční banka",
       "category": "UVER",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "Osobní půjčka",
+        "Konsolidace půjček",
+        "Americká hypotéka",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
@@ -431,14 +472,16 @@
       "partner": "Kooperativa",
       "category": "AUTO_HAV",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "NAMÍRU – Havarijní pojištění",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
       "partner": "Kooperativa",
       "category": "AUTO_PR",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "NAMÍRU – Povinné ručení",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
@@ -452,21 +495,26 @@
       "partner": "Kooperativa",
       "category": "FIRMA_POJ",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "Pojištění odpovědnosti podnikatelů a OSVČ",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
       "partner": "Kooperativa",
       "category": "MAJ",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "Pojištění domácnosti Prima",
+        "Pojištění domácnosti Komfort",
+        "Pojištění nemovitosti (rodinného domu) Prima/Komfort",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
       "partner": "Kooperativa",
       "category": "ODP",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "Pojištění odpovědnosti (součást Prima/Komfort)",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
@@ -480,21 +528,26 @@
       "partner": "Maxima",
       "category": "AUTO_HAV",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "Havarijní pojištění (kasko)",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
       "partner": "Maxima",
       "category": "AUTO_PR",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "Pojištění motorových vozidel – povinné ručení",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
       "partner": "Maxima",
       "category": "MAJ",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "Pojištění majetku Ideal",
+        "Pojištění majetku Excelent",
+        "Pojištění majetku VIP",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
@@ -508,14 +561,18 @@
       "partner": "mBank",
       "category": "HYPO",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "mHypotéka",
+        "Americká hypotéka",
+        "Refinancování hypotéky",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
       "partner": "mBank",
       "category": "UVER",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "mPůjčka",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
@@ -547,7 +604,10 @@
       "partner": "Moventum",
       "category": "INV",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "Moventum Plus Aktiv – Defensiv",
+        "Moventum Plus Aktiv – Vyvážené portfolio",
+        "Moventum Plus Aktiv – Dynamické portfolio",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
@@ -568,28 +628,35 @@
       "partner": "Oberbank",
       "category": "HYPO",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "Standard hypotéka (CZK/EUR)",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
       "partner": "Oberbank",
       "category": "UVER",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "Spotřebitelský úvěr",
+        "Spotřebitelský úvěr na bydlení",
+        "Spotřebitelský úvěr zajištěný zástavním právem",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
       "partner": "Pillow",
       "category": "MAJ",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "Pojištění nemovitosti",
+        "Pojištění domácnosti",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
       "partner": "Pillow",
       "category": "ODP",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "Pojištění odpovědnosti",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
@@ -604,7 +671,10 @@
       "partner": "Raiffeisen Leasing",
       "category": "UVER",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "Úvěr",
+        "Finanční leasing",
+        "Operativní leasing",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
@@ -623,14 +693,18 @@
       "partner": "Raiffeisenbank",
       "category": "UVER",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "Konsolidace a refinancování",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
       "partner": "RSTS",
       "category": "HYPO",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "Úvěr HYPO (tarif)",
+        "HYPOsplátka (překlenovací úvěr na bydlení)",
+        "REKO (úvěr na rekonstrukci)",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
@@ -660,7 +734,8 @@
       "partner": "UNIQA",
       "category": "FIRMA_POJ",
       "products": [
-        "Ostatní (doplnit z dropdownu)"
+        "Perfekt (pojištění pro malé a střední podnikatele)",
+        "Vlastní produkt (zadejte název)"
       ]
     },
     {
@@ -697,6 +772,48 @@
       "category": "DPS",
       "products": [
         "Doplňkové penzijní spoření (DPS)"
+      ]
+    },
+    {
+      "partner": "Allianz pojišťovna",
+      "category": "ODP_ZAM",
+      "products": [
+        "Pojištění profesní odpovědnosti zaměstnance"
+      ]
+    },
+    {
+      "partner": "ČPP",
+      "category": "ODP_ZAM",
+      "products": [
+        "Pojištění odpovědnosti zaměstnance za škodu"
+      ]
+    },
+    {
+      "partner": "ČSOB pojišťovna",
+      "category": "ODP_ZAM",
+      "products": [
+        "Pojištění odpovědnosti zaměstnance"
+      ]
+    },
+    {
+      "partner": "Generali Česká pojišťovna",
+      "category": "ODP_ZAM",
+      "products": [
+        "Pojištění odpovědnosti zaměstnance"
+      ]
+    },
+    {
+      "partner": "Kooperativa",
+      "category": "ODP_ZAM",
+      "products": [
+        "Pojištění odpovědnosti zaměstnance za škodu"
+      ]
+    },
+    {
+      "partner": "UNIQA",
+      "category": "ODP_ZAM",
+      "products": [
+        "Pojištění odpovědnosti zaměstnance"
       ]
     }
   ]

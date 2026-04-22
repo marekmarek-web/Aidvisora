@@ -9,7 +9,7 @@ import type { CanonicalProduct } from "@/lib/products/canonical-product-read";
 import { resolveFvMonthlyContribution } from "./portal-portfolio-display";
 
 const INVEST_SEGMENTS = new Set(["INV", "DIP", "DPS"]);
-const INSURANCE_SEGMENTS = new Set(["ZP", "MAJ", "ODP", "AUTO_PR", "AUTO_HAV", "CEST", "FIRMA_POJ"]);
+const INSURANCE_SEGMENTS = new Set(["ZP", "MAJ", "ODP", "ODP_ZAM", "AUTO_PR", "AUTO_HAV", "CEST", "FIRMA_POJ"]);
 /** F0-4 (C-10): úvěrové segmenty — do této opravy se do KPI vůbec nepočítaly. */
 const LOAN_SEGMENTS = new Set(["HYPO", "UVER"]);
 
@@ -54,10 +54,32 @@ function isOneTimeInvestment(p: CanonicalProduct): boolean {
   return p.segmentDetail?.kind === "investment" && p.segmentDetail.paymentType === "one_time";
 }
 
+/**
+ * F4 double-guard: pokud `paymentType` chybí (ani „regular" ani „one_time") a
+ * řádek vypadá jako potenciální jednorázová investice (nemá roční prémii,
+ * ale měsíční prémie je nereálně vysoká → typicky lump-sum zadaný jako
+ * „měsíční"), vrátíme 0 místo halucinovaného KPI. Threshold 50k CZK je
+ * bezpečný default — běžné pravidelné investice jsou < 50k/měsíc, lump-sum
+ * investice bývají 100k+ zapsané jako „měsíční".
+ */
+function hasAmbiguousInvestmentPaymentType(p: CanonicalProduct): boolean {
+  if (!INVEST_SEGMENTS.has(p.segment)) return false;
+  if (p.segmentDetail?.kind !== "investment") return false;
+  if (p.segmentDetail.paymentType != null) return false;
+  const monthly = p.premiumMonthly ?? 0;
+  const annual = p.premiumAnnual ?? 0;
+  return annual <= 0 && monthly > 50000;
+}
+
 /** Měsíční cashflow — u jednorázové investice vždy 0 (není to měsíční). */
 function monthlyCashflowForKpi(p: CanonicalProduct): number {
   if (INVEST_SEGMENTS.has(p.segment)) {
     if (isOneTimeInvestment(p)) return 0;
+    if (hasAmbiguousInvestmentPaymentType(p)) {
+      // Zatím ticho v prod – konzervativní 0, abychom nenafukovali „Měsíční investice“.
+      // Záznam se v UI ukáže jako „chybí frekvence“ přes read-model (segmentDetail.paymentType = null).
+      return 0;
+    }
     const v = resolveFvMonthlyContribution(p);
     if (v != null && v > 0) return v;
     return p.premiumMonthly ?? 0;

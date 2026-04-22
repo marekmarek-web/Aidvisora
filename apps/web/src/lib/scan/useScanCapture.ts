@@ -29,10 +29,49 @@ function nextPageId(): string {
   return `scan-page-${Date.now()}-${++_pageIdCounter}`;
 }
 
+/**
+ * S2-C1: HEIC/HEIF detekce na web multi-page scan.
+ *
+ * iPhone default fotí v HEIC; Chrome/Firefox/Edge/Samsung Internet tento formát
+ * neumí dekódovat přes `createImageBitmap`. Bez této detekce dostával uživatel
+ * obecný "Zpracování stránky selhalo" nebo dokonce prázdný bitmap → černá stránka
+ * v PDF. Safari HEIC dekóduje, takže tam propouštíme (lze stále selhat při
+ * exotických HEIC variantách — chytneme to downstream).
+ *
+ * Cíl: vrátit konkrétní, akční chybovou hlášku HNED, aby poradce věděl, že má
+ * buď (a) použít nativní Aidvisora aplikaci, nebo (b) přepnout iPhone na JPEG.
+ */
+function isHeicOrHeif(file: File): boolean {
+  const mime = (file.type ?? "").toLowerCase();
+  if (mime === "image/heic" || mime === "image/heif") return true;
+  const name = (file.name ?? "").toLowerCase();
+  return name.endsWith(".heic") || name.endsWith(".heif");
+}
+
+function isSafariLike(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent ?? "";
+  if (!/Safari/i.test(ua)) return false;
+  // Chrome, Edge, Opera a většina Chromium browserů také obsahují "Safari" v UA,
+  // ale Safari samotný NEmá "Chrome" / "Chromium" / "Edg" / "OPR".
+  return !/Chrome|Chromium|CriOS|FxiOS|Edg|EdgiOS|OPR|OPT/i.test(ua);
+}
+
+const HEIC_REJECTION_MESSAGE =
+  "HEIC/HEIF formát z iPhonu — prohlížeč ho neumí zobrazit. " +
+  "Buď použijte mobilní aplikaci Aidvisora (tam HEIC funguje), nebo v telefonu " +
+  "Nastavení → Fotoaparát → Formát → Nejkompatibilnější (uloží rovnou JPEG).";
+
 async function pipeNewPageFile(
   file: File,
   source: ScanPageCaptureSource
 ): Promise<{ file: File; quality: ScanQualityResult }> {
+  // S2-C1: HEIC hard-block na non-Safari prohlížečích. Bez tohoto guardu skončí
+  // soubor v prázdném canvas → PDF stránka je černá, nebo selže `createImageBitmap`
+  // s málo informativní chybou.
+  if (isHeicOrHeif(file) && !isSafariLike()) {
+    throw new Error(HEIC_REJECTION_MESSAGE);
+  }
   const normalized = await normalizeScanImageForPdf(file, {
     enhanceContrast: source !== "native_scanner",
   });
@@ -284,6 +323,23 @@ export function useScanCapture() {
     [scanPages]
   );
 
+  // Unified scan-quality score (Batch 3 — release gate hint).
+  // `aggregateQualityScore` = průměr přes stránky s vyhodnocenou kvalitou (0–100).
+  // `worstQualityScore` = nejhorší kvalita jedné stránky — to je typicky to,
+  // co zhorší OCR výsledek celého PDF.
+  const { aggregateQualityScore, worstQualityScore } = useMemo(() => {
+    const scored = scanPages
+      .map((p) => p.quality?.score)
+      .filter((s): s is number => typeof s === "number");
+    if (scored.length === 0) {
+      return { aggregateQualityScore: null as number | null, worstQualityScore: null as number | null };
+    }
+    const sum = scored.reduce((acc, s) => acc + s, 0);
+    const avg = Math.round(sum / scored.length);
+    const worst = scored.reduce((acc, s) => Math.min(acc, s), scored[0]);
+    return { aggregateQualityScore: avg, worstQualityScore: worst };
+  }, [scanPages]);
+
   return {
     pages,
     scanPages,
@@ -295,6 +351,8 @@ export function useScanCapture() {
     canAddMore,
     qualityWarnings,
     hasQualityIssues,
+    aggregateQualityScore,
+    worstQualityScore,
     didManualRotate,
     setError,
     capturePage,

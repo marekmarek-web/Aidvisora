@@ -48,6 +48,13 @@ jobs:
         working-directory: apps/web
         run: pnpm test
 
+      # M30: hard gate — assistant release-gate suite must pass before we
+      # allow deploys. Covers eval pass rate, required domains, red flags,
+      # and regression/golden scenario counts via `evaluateReleaseGate`.
+      - name: Assistant release gate (blocking)
+        working-directory: apps/web
+        run: pnpm test:f2-wave-b-release-gate
+
       - name: Build
         working-directory: apps/web
         run: pnpm build

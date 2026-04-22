@@ -91,12 +91,19 @@ async function resolveOpportunityRef(
   contactId: string | null,
 ): Promise<ResolvedEntity | null> {
   if (isUuid(ref)) {
+    // L6: when a caller supplies both a uuid and an expected contactId, the
+    // resolver must refuse to return an opportunity that belongs to a
+    // different client. Previously we trusted the uuid blindly and the
+    // opportunity could end up attached to the wrong contact downstream.
     const rows = await db
-      .select({ id: opportunities.id, title: opportunities.title })
+      .select({ id: opportunities.id, title: opportunities.title, contactId: opportunities.contactId })
       .from(opportunities)
       .where(and(eq(opportunities.id, ref), eq(opportunities.tenantId, tenantId), isNull(opportunities.archivedAt)))
       .limit(1);
     if (rows[0]) {
+      if (contactId && rows[0].contactId && rows[0].contactId !== contactId) {
+        return null;
+      }
       return {
         entityType: "opportunity",
         entityId: rows[0].id,
@@ -134,14 +141,31 @@ async function resolveOpportunityRef(
         alternatives: [],
       };
     }
-    if (rows.length > 1 && rows[0]) {
+    if (rows.length > 1) {
+      // L5: title collisions previously silently degraded to "newest". Prefer
+      // an exact case-insensitive title match when present; otherwise return
+      // an ambiguous response with ALL candidates so the UI can prompt the
+      // advisor to pick. Never silently pick the newest title collision.
+      const refLower = ref.trim().toLowerCase();
+      const exact = rows.find((r) => r.title.trim().toLowerCase() === refLower);
+      if (exact) {
+        return {
+          entityType: "opportunity",
+          entityId: exact.id,
+          displayLabel: exact.title,
+          confidence: 0.9,
+          ambiguous: false,
+          alternatives: [],
+        };
+      }
+      const first = rows[0]!;
       return {
         entityType: "opportunity",
-        entityId: rows[0].id,
-        displayLabel: rows[0].title,
-        confidence: 0.5,
+        entityId: first.id,
+        displayLabel: first.title,
+        confidence: 0.4,
         ambiguous: true,
-        alternatives: rows.slice(1).map((r) => ({ id: r.id, label: r.title })),
+        alternatives: rows.map((r) => ({ id: r.id, label: r.title })),
       };
     }
   }

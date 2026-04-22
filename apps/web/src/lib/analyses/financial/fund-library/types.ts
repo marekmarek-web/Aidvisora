@@ -35,6 +35,8 @@ export interface FundAssetPack {
   logoPath?: string;
   heroPath?: string;
   galleryPaths?: string[];
+  /** Jak zobrazit galerii v reportu — `"logo"` = značky/partneři (bílé pozadí, padding). */
+  galleryType?: "photo" | "logo";
 }
 
 /** Numerický snímek (volitelný; Batch A používá spíše officialPerformance). */

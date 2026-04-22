@@ -274,6 +274,18 @@ export type ExtractionDocument = {
   id: string;
   fileName: string;
   documentType: string;
+  /**
+   * Detected primary type (pipeline code) — NOT a user-visible label.
+   * Used by the review shell to gate UI warnings (e.g. HARD_SUPPORTING banner).
+   */
+  detectedPrimaryType?: string;
+  /**
+   * True when the document is classified as a hard-supporting type (consent/declaration,
+   * payslip, tax return, bank statement, medical questionnaire, AML/FATCA, …). Such
+   * documents WILL NOT create a contract/payment on apply, even if advisor approves.
+   * Mirrors `isSupportingDocumentOnly` from apply-policy-enforcement.ts.
+   */
+  isSupportingOnlyDocument?: boolean;
   clientName: string;
   uploadTime: string;
   pageCount: number;

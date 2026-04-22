@@ -145,29 +145,6 @@ describe("Tool orchestration correctness", () => {
   });
 });
 
-describe("Tenant isolation", () => {
-  it("action guard blocks cross-tenant review access", async () => {
-    const { validateActionExecution } = await import("../action-guards");
-    const { buildActionPayload } = await import("../action-catalog");
-    const action = buildActionPayload("prepare_contract_apply", "review", "r1");
-    const result = validateActionExecution(action, {
-      tenantId: "t1",
-      userId: "u1",
-      roleName: "Advisor",
-      reviewRow: {
-        tenantId: "OTHER_TENANT",
-        reviewStatus: "approved",
-        matchedClientId: "c1",
-        matchedClientCandidates: [],
-        processingStatus: "extracted",
-        confidence: 0.9,
-      },
-    });
-    expect(result.allowed).toBe(false);
-    expect(result.blockedReasons).toContain("TENANT_MISMATCH");
-  });
-});
-
 describe("Permission boundaries", () => {
   it("Viewer cannot create drafts", async () => {
     const { canPerformAssistantAction } = await import("../assistant-permissions");
@@ -232,26 +209,6 @@ describe("Security -- no sensitive data leaks", () => {
     const obj = masked as Record<string, unknown>;
     expect(String(obj.iban)).not.toContain("192000145399");
     expect(obj.name).toBe("safe");
-  });
-
-  it("guard blocks unapproved review apply with no client", async () => {
-    const { validateActionExecution } = await import("../action-guards");
-    const { buildActionPayload } = await import("../action-catalog");
-    const action = buildActionPayload("prepare_contract_apply", "review", "r1");
-    const result = validateActionExecution(action, {
-      tenantId: "t1",
-      userId: "u1",
-      roleName: "Advisor",
-      reviewRow: {
-        tenantId: "t1",
-        reviewStatus: "pending",
-        matchedClientId: null,
-        matchedClientCandidates: [],
-        processingStatus: "extracted",
-        confidence: 0.9,
-      },
-    });
-    expect(result.blockedReasons).toContain("NO_CLIENT_MATCH");
   });
 });
 

@@ -551,10 +551,16 @@ function finalizeContractPayload(params: {
       ? data.documentMeta.overallConfidence
       : data.documentClassification.confidence ?? 0.5;
   // Clamp to [0,1]: guard against models returning confidence as integer percentage (e.g. 54, 98, 99)
-  const extractionConfidence =
+  let extractionConfidence =
     rawExtractionConfidence > 1
       ? Math.min(1, rawExtractionConfidence / 100)
       : Math.max(0, Math.min(1, rawExtractionConfidence));
+  // Scan vision fallback: cap confidence so downstream review routing forces human review.
+  // Even if the vision model is confident, OCR text was weak — we must not publish silently.
+  const visionFallbackUsed = allReasons.includes("scan_vision_fallback_used");
+  if (visionFallbackUsed) {
+    extractionConfidence = Math.min(extractionConfidence, 0.55);
+  }
   data.documentMeta.overallConfidence = extractionConfidence;
   const fieldConfidenceMap = Object.fromEntries(
     Object.entries(data.extractedFields).map(([key, field]) => {
@@ -1140,7 +1146,7 @@ export async function runAiReviewV2Pipeline(
     inputModeResult.inputMode === "mixed_pdf" ||
     inputModeResult.inputMode === "image_document";
   const isScanFallbackEarly = (modeEarly === "vision_fallback" || modeEarly === "ocr_enhanced") && inputModeIsActualScan;
-  if (
+  const scanOcrUnusableEarly =
     promptKey !== "paymentInstructionsExtraction" &&
     shouldSkipContractLlmExtractionForScanOcr({
       isScanFallback: isScanFallbackEarly,
@@ -1148,8 +1154,27 @@ export async function runAiReviewV2Pipeline(
       preprocessStatus: options?.preprocessMeta?.preprocessStatus,
       readabilityScore: options?.preprocessMeta?.readabilityScore,
       textCoverageEstimate: textCov,
-    })
-  ) {
+    });
+
+  // Batch 2 — Page-image multimodal fallback for low-OCR scan PDFs.
+  // When OCR hint is too weak to extract over text, and we have a PDF fileUrl,
+  // allow the downstream pipeline to route through createResponseWithFile (OpenAI
+  // Responses API renders PDF pages internally as vision input). Feature-flagged
+  // for safe rollout. Envelope confidence is later capped when this path is used.
+  const scanVisionFallbackEnabled = process.env.AI_REVIEW_SCAN_VISION_FALLBACK === "true";
+  const normalizedMimeType = (mimeType ?? "").toLowerCase();
+  const hasPdfFileForVisionFallback =
+    !!fileUrl && (normalizedMimeType.includes("pdf") || fileUrl.toLowerCase().endsWith(".pdf"));
+  const visionFallbackActivated =
+    scanOcrUnusableEarly && scanVisionFallbackEnabled && hasPdfFileForVisionFallback;
+
+  if (visionFallbackActivated) {
+    (trace as Record<string, unknown>).scanVisionFallbackActivated = true;
+    trace.warnings = [...(trace.warnings ?? []), "scan_vision_fallback_used"];
+    allReasons.push("scan_vision_fallback_used");
+  }
+
+  if (scanOcrUnusableEarly && !visionFallbackActivated) {
     const stub = buildScanOcrUnusableStubEnvelope({
       classification,
       inputMode: inputModeResult.inputMode as string,
@@ -1331,7 +1356,9 @@ export async function runAiReviewV2Pipeline(
     // GOLDEN_EVAL_FORCE_LOCAL_TEMPLATE=1: skip stored prompt and always use local template.
     // Used in eval harness when Adobe preprocess succeeded but stored prompt is known to be outdated.
     const forceLocalTemplate = process.env.GOLDEN_EVAL_FORCE_LOCAL_TEMPLATE === "1" && preprocessSucceeded;
-    if (extractionPromptId && documentTextForExtraction.length >= 400 && !forceLocalTemplate) {
+    // Scan vision fallback: skip both text branches and route straight to file-PDF so
+    // OpenAI Responses API renders scan pages as vision input.
+    if (!visionFallbackActivated && extractionPromptId && documentTextForExtraction.length >= 400 && !forceLocalTemplate) {
       trace.extractionSecondPass = "prompt_text";
       extractionBuilder = "prompt_builder";
       extractionPmptFingerprint = fingerprintOpenAiPromptId(extractionPromptId);
@@ -1390,7 +1417,7 @@ export async function runAiReviewV2Pipeline(
           }
         }
       }
-    } else if (allowTextSecondPass) {
+    } else if (!visionFallbackActivated && allowTextSecondPass) {
       trace.extractionSecondPass = "text";
       extractionBuilder = "schema_text_wrap";
       extractionPmptFingerprint = null;
@@ -1426,6 +1453,8 @@ export async function runAiReviewV2Pipeline(
       }
       rawExtraction = await createResponse(textExtractionSystemPrompt, { routing: { category: "ai_review" } });
     } else {
+      // When visionFallbackActivated, the "pdf" secondPass is actually the vision
+      // fallback path — trace.scanVisionFallbackActivated marks the distinction.
       trace.extractionSecondPass = "pdf";
       extractionBuilder = "file_pdf";
       extractionPmptFingerprint = null;

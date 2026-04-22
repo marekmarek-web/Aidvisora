@@ -1,7 +1,8 @@
 import "server-only";
 
-import { db, memberships, and, eq } from "db";
+import { memberships, and, eq } from "db";
 import { createClient } from "@/lib/supabase/server";
+import { withTenantContext } from "@/lib/db/with-tenant-context";
 import type { RoleName } from "@/shared/rolePermissions";
 
 /**
@@ -78,16 +79,20 @@ export async function resolveAdvisorMfaEnforcement(params: {
 
   const graceDays = resolveGraceDays();
 
-  const [mem] = await db
-    .select({ joinedAt: memberships.joinedAt, mfaEnabled: memberships.mfaEnabled })
-    .from(memberships)
-    .where(
-      and(
-        eq(memberships.tenantId, params.tenantId),
-        eq(memberships.userId, params.userId),
-      ),
-    )
-    .limit(1);
+  const [mem] = await withTenantContext(
+    { tenantId: params.tenantId, userId: params.userId },
+    (tx) =>
+      tx
+        .select({ joinedAt: memberships.joinedAt, mfaEnabled: memberships.mfaEnabled })
+        .from(memberships)
+        .where(
+          and(
+            eq(memberships.tenantId, params.tenantId),
+            eq(memberships.userId, params.userId),
+          ),
+        )
+        .limit(1),
+  );
 
   const joinedAt = mem?.joinedAt ?? new Date();
   const gracePeriodEndsAt = new Date(

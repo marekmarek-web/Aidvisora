@@ -95,6 +95,7 @@ function productIcon(segment: string): LucideIcon {
       return Shield;
     case "MAJ":
     case "ODP":
+    case "ODP_ZAM":
       return Home;
     case "AUTO_PR":
     case "AUTO_HAV":
@@ -126,6 +127,7 @@ function segmentIconColors(segment: string): string {
       return "bg-purple-100 text-purple-700";
     case "MAJ":
     case "ODP":
+    case "ODP_ZAM":
       return "bg-blue-100 text-blue-700";
     case "AUTO_PR":
     case "AUTO_HAV":
@@ -149,6 +151,7 @@ function segmentBadgeColors(segment: string): string {
       return "bg-purple-50 text-purple-800 border border-purple-200/60";
     case "MAJ":
     case "ODP":
+    case "ODP_ZAM":
       return "bg-blue-50 text-blue-800 border border-blue-200/60";
     case "AUTO_PR":
     case "AUTO_HAV":
@@ -172,6 +175,7 @@ function segmentKpiBg(segment: string): string {
       return "bg-purple-50/40 border border-purple-100/60";
     case "MAJ":
     case "ODP":
+    case "ODP_ZAM":
       return "bg-blue-50/40 border border-blue-100/60";
     case "HYPO":
     case "UVER":

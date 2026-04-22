@@ -35,7 +35,7 @@ export const COVERAGE_CATEGORIES: CoverageCategory[] = [
   {
     type: "single",
     category: "Pojištění zaměstnanecké odpovědnosti",
-    item: { code: "ODP", label: "Zaměstnanecká odpovědnost" },
+    item: { code: "ODP_ZAM", label: "Zaměstnanecká odpovědnost" },
   },
   {
     type: "single",
@@ -108,6 +108,7 @@ export const SEGMENT_TO_CASE_TYPE: Record<string, string> = {
   AUTO_PR: "auto",
   AUTO_HAV: "auto",
   ODP: "pojištění",
+  ODP_ZAM: "pojištění",
   CEST: "pojištění",
   FIRMA_POJ: "pojištění",
 };

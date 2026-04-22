@@ -16,6 +16,7 @@ export const contractSegments = [
   "ZP",
   "MAJ",
   "ODP",
+  "ODP_ZAM",
   "AUTO_PR",
   "AUTO_HAV",
   "CEST",
@@ -32,6 +33,7 @@ export const SEGMENT_LABELS: Record<string, string> = {
   ZP: "Životní pojištění",
   MAJ: "Majetek",
   ODP: "Odpovědnost",
+  ODP_ZAM: "Odpovědnost zaměstnance",
   AUTO_PR: "Auto – povinné ručení",
   AUTO_HAV: "Auto – havarijní pojištění",
   CEST: "Cestovní pojištění",
@@ -168,6 +170,63 @@ export const paymentAccounts = pgTable("payment_accounts", {
   segment: text("segment").notNull(),
   accountNumber: text("account_number").notNull(),
   bank: text("bank"),
+  /**
+   * Kód banky (např. „0100", „0300"). Pokud je `account_number` ve formátu
+   * „123456789/0100", je kód duplicitní – držíme ho sem pro výstupy, kde se
+   * číslo rozděluje (Conseq template, IBAN generování).
+   */
+  bankCode: text("bank_code"),
+  /**
+   * Šablona pro dynamické číslo účtu (Conseq: „{contractPrefix}-{contractNumber}/0100").
+   * Když je vyplněna, `account_number` se vygeneruje ze smlouvy klienta a šablona
+   * má přednost před statickým account_number.
+   */
+  accountNumberTemplate: text("account_number_template"),
+  /**
+   * Zda je pro danou instituci povinný variabilní symbol. U Consequ je `false`
+   * (předčíslí účtu plní roli VS), u většiny institucí `true`.
+   */
+  variableSymbolRequired: boolean("variable_symbol_required").notNull().default(true),
+  /**
+   * Rozlišení typu platby, protože u některých institucí se liší účet podle
+   * typu pojistného (např. Allianz auto: 1. pojistné má jiný účet než běžné;
+   * ČPP: běžné 700135002/0800 vs mimořádné 700485002/0800; Conseq DPS:
+   * účastník vs mimořádné/zaměstnavatelské). Hodnoty:
+   *   'regular' – běžné pojistné / pravidelný příspěvek (default)
+   *   'first'   – 1. pojistné (start smlouvy)
+   *   'extra'   – mimořádné pojistné
+   *   'employer' – zaměstnavatelský příspěvek (DPS, DIP)
+   * NULL = „generický, platí pro jakýkoli payment type“ (fallback).
+   */
+  paymentType: text("payment_type"),
+  /**
+   * Produktový kód pro případy, kdy se v rámci jedné (partner, segment, paymentType)
+   * účty liší podle konkrétního produktu (Conseq: Active/Horizont Invest vs
+   * Classic Invest CZK). NULL = „generický“ default.
+   */
+  productCode: text("product_code"),
+  /**
+   * Defaultní konstantní symbol (KS). Statická hodnota bez placeholderů
+   * (např. „558" pro Conseq DPS účastník, „3552" pro Conseq DPS zaměstnavatel,
+   * „3558" pro ČSOB PS). NULL = instituce KS nevyžaduje nebo není jednotný.
+   */
+  constantSymbol: text("constant_symbol"),
+  /**
+   * Šablona pro specifický symbol (SS). Může obsahovat literál (např. „99"
+   * pro Conseq DPS mimořádné účastníka) nebo placeholdery:
+   *   {birthNumber} – rodné číslo klienta (ČSOB PS)
+   *   {ico}         – IČ zaměstnavatele (Conseq DPS/DIP employer)
+   *   {yearMonth}   – RRRRMM období platby (Conseq DPS hromadný employer)
+   * NULL = instituce SS nepotřebuje nebo není unifikován.
+   */
+  specificSymbolTemplate: text("specific_symbol_template"),
+  /**
+   * Volitelný textový popis všech pravidel pro symboly (VS/SS/KS), který
+   * UI může zobrazit jako tooltip / hint pod polem symbolů. Slouží hlavně
+   * u institucí, kde pravidla závisí na plátci (klient vs zaměstnavatel)
+   * nebo produktové variantě a nelze je zachytit statickou hodnotou.
+   */
+  symbolRulesNote: text("symbol_rules_note"),
   note: text("note"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),

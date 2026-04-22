@@ -50,6 +50,11 @@ Při **nové** migraci nebo významné úpravě `.sql` přidejte **jeden řádek
 | 2026-04-21 | Produkce (UX blocker): `contracts.bj_units` (numeric 14,4) + `contracts.bj_calculation` (jsonb) + částečný index `idx_contracts_tenant_advisor_bj` pro rychlé součty BJ za období. Bez toho `getProductionSummary` padal na 42703 a obrazovka Produkce se na mobilu vůbec nenačetla. | [add_bj_units_on_contracts_2026-04-21.sql](../packages/db/migrations/add_bj_units_on_contracts_2026-04-21.sql) |
 | 2026-04-21 | Úklid katalogu: merge duplicitních partnerů case-insensitive (Uniqa/UNIQA → UNIQA, Investika/INVESTIKA → INVESTIKA) s přepisem FK v `contracts`, `payment_accounts` a `client_payment_setups`; dedup produktů v rámci (partner, segment); odstranění ČSOB/HYPO duplicity vs. ČSOB Hypoteční banka; odstranění segmentu ZDRAV (guard na 0 smluv, jinak RAISE EXCEPTION) | [catalog-dedup-partners-products-2026-04-21.sql](../packages/db/migrations/catalog-dedup-partners-products-2026-04-21.sql) |
 | 2026-04-21 | Gap fill (priorita 1–5) + odstranění Moneta: FK `contracts.partner_id` / `payment_accounts.partner_id` / `client_payment_setups.partner_id` → NULL pro Moneta, DELETE globálních produktů Moneta, DELETE globálního partnera Moneta (HYPO + UVER). Nové partnery (Generali Česká pojišťovna, UNIQA Penzijní společnost, Modrá pyramida) a nové segmenty (CEST, FIRMA_POJ) doplní `pnpm run db:seed-catalog` z aktualizovaného `catalog.json` | [catalog-moneta-removal-2026-04-21.sql](../packages/db/migrations/catalog-moneta-removal-2026-04-21.sql) |
+| 2026-04-22 | Segment ODP_ZAM (Odpovědnost zaměstnance): idempotentní backfill `contracts.segment` a `client_payment_setups.segment` z `ODP` → `ODP_ZAM` kde product/provider name obsahuje „zaměstnanec". Nové partnery (Allianz pojišťovna, ČPP, ČSOB pojišťovna, Generali Česká pojišťovna, Kooperativa, UNIQA) doplní `pnpm run db:seed-catalog` | [catalog-odp-zam-segment-2026-04-22.sql](../packages/db/migrations/catalog-odp-zam-segment-2026-04-22.sql) |
+| 2026-04-22 | Doplnění reálných produktů do 41 (partner, segment) kombinací (viz [catalog-product-fills-2026-04-22.md](catalog-product-fills-2026-04-22.md)) + přejmenování escape-hatche: UPDATE products SET name='Vlastní produkt (zadejte název)' WHERE name='Ostatní (doplnit z dropdownu)' + is_tbd=FALSE. Nové reálné produkty doplní `pnpm run db:seed-catalog` z aktualizovaného `catalog.json` (Allianz FIRMA_POJ / ATRIS INV / Avant INV / Cyrrus INV / ČPP 5× / ČSOB UVER / ČSOB Hypoteční banka HYPO / ČSOB pojišťovna 3× / Direct 5× / J&T INV / Komerční banka UVER / Kooperativa 5× / Maxima 3× / mBank 2× / Moventum INV / Oberbank 2× / Pillow 2× / Raiffeisen Leasing UVER / Raiffeisenbank UVER / RSTS HYPO / UNIQA FIRMA_POJ / Česká spořitelna UVER) | [catalog-fill-tbd-products-2026-04-22.sql](../packages/db/migrations/catalog-fill-tbd-products-2026-04-22.sql) |
+| 2026-04-22 | KPI „Měsíční investice" oprava: backfill `portfolio_attributes.paymentType` pro INV/DPS/DIP smlouvy, kde chyběl. Když `paymentFrequencyLabel`/`paymentFrequency` obsahuje „jednoráz"/„one time"/„single"/„lump" → `one_time`, jinak `regular`. Idempotentní (nepřepisuje existující hodnotu). Zastavuje halucinaci KPI pro jednorázové investice, které se do té doby počítaly jako měsíční | [portfolio-attributes-payment-type-backfill-2026-04-22.sql](../packages/db/migrations/portfolio-attributes-payment-type-backfill-2026-04-22.sql) |
+| 2026-04-22 | F5 v3 — institucionální platební účty (druhý audit): k v2 přidány sloupce `payment_accounts.constant_symbol`, `specific_symbol_template` (literál nebo placeholder {birthNumber}/{ico}/{yearMonth}), `symbol_rules_note`. Opraveny bankovní názvy: `/0800` je Česká spořitelna, ne ČSOB (Kooperativa, NN PS, KB PS, ČPP běžné + mimořádné, Conseq DPS extra/employer). Conseq DPS regular (sdružená platba účastníka 662266-{contractNumber}/2700) má nyní VS POVINNÝ = číslo smlouvy, KS = 558. Conseq DPS rozděleno na regular (účastník sdružená) / extra (mimořádný příspěvek účastníka, SS=99, KS=558) / employer (individuální zaměstnavatel, SS=IČ, KS=3552); hromadný employer (VS=IČ, SS=RRRRMM) dokumentovaný v `symbol_rules_note` pro ruční zadání. ČSOB PS dostává KS=3558 a SS={birthNumber}. Conseq DIP employer SS={ico}. Direct všechny řádky označeny jako FALLBACK v notes s alternativním účtem 2330257/0100. Přidány NN životní varianty: productCode `contract_10_digit` (1000588419/3500) a `contract_8_digit` (1010101010/3500) — zdroj https://www.nn.cz/poradna/pojistovna/platby.html. Seed migrace je destruktivní vůči `tenant_id IS NULL` (DELETE + reseed); tenant overrides ponechány. ZÁMĚRNĚ VYNECHÁNO: Generali Česká pojišťovna | [payment-accounts-institutional-defaults-2026-04-22.sql](../packages/db/migrations/payment-accounts-institutional-defaults-2026-04-22.sql) |
+| 2026-04-22 | WS-2 Batch M1-SQL — Bootstrap provisioning + RLS gaps + NULLIF normalizace. Tři SECURITY DEFINER funkce: `provision_workspace_v1(uuid,text,text,text,int)` (ensure-workspace), `resolve_public_booking_v1(text)` (public booking pre-auth), `lookup_invite_metadata_v1(text,text)` (invite prefill). Bootstrap RLS na `client_invitations` + `staff_invitations` (self select přes `auth_user_id = app.user_id`). Nové policies + FORCE RLS na `user_terms_acceptance`, `user_devices`, `unsubscribe_tokens`, `opportunity_stages`, `partners` (read-all + tenant-write), `products` (via partner), `fund_add_requests`, `dead_letter_items`, `ai_generations`, `ai_feedback` (via generation), `analysis_import_jobs`, `analysis_versions` (via analysis). Normalizace existujících policies na robustní `NULLIF(current_setting('app.tenant_id', true), '')::uuid` pattern (fail-closed → 0 řádků místo SQLSTATE) napříč contacts, households, documents, financial_*, tasks, opportunities, audit_log, activity_log, tenant_settings, contracts, messages/message_attachments, advisor_proposals (jen tenant_* scope), advisor_notifications, assistant_conversations/messages, client_requests*. Všechny grants na `aidvisora_app`. **HARD BLOCKER pro cutover na `aidvisora_app` runtime.** | [rls-m8-bootstrap-provision-and-gaps-2026-04-22.sql](../packages/db/migrations/rls-m8-bootstrap-provision-and-gaps-2026-04-22.sql) |
 
 ---
 
@@ -122,6 +127,72 @@ Odkaz: [`packages/db/migrations/catalog-dedup-partners-products-2026-04-21.sql`]
 <summary><strong>catalog-moneta-removal-2026-04-21.sql</strong> — Gap fill (priorita 1–5) + odstranění Moneta: FK přepsán na NULL, DELETE globálního partnera/produktů Moneta. Nové partnery (Generali Česká pojišťovna, UNIQA Penzijní společnost, Modrá pyramida) a segmenty CEST + FIRMA_POJ doplní seed script.</summary>
 
 Odkaz: [`packages/db/migrations/catalog-moneta-removal-2026-04-21.sql`](../packages/db/migrations/catalog-moneta-removal-2026-04-21.sql)
+
+</details>
+
+<details>
+<summary><strong>catalog-fill-tbd-products-2026-04-22.sql</strong> — Přejmenování escape-hatche „Ostatní (doplnit z dropdownu)" → „Vlastní produkt (zadejte název)" + is_tbd=FALSE; reálné produkty pro 41 (partner, segment) kombinací doplní seed</summary>
+
+Odkaz: [`packages/db/migrations/catalog-fill-tbd-products-2026-04-22.sql`](../packages/db/migrations/catalog-fill-tbd-products-2026-04-22.sql)
+Auditní poznámka: [`docs/catalog-product-fills-2026-04-22.md`](catalog-product-fills-2026-04-22.md)
+
+</details>
+
+<details>
+<summary><strong>portfolio-attributes-payment-type-backfill-2026-04-22.sql</strong> — Backfill `portfolio_attributes.paymentType` pro INV/DPS/DIP smlouvy bez explicitní hodnoty (KPI „Měsíční investice" fix)</summary>
+
+Odkaz: [`packages/db/migrations/portfolio-attributes-payment-type-backfill-2026-04-22.sql`](../packages/db/migrations/portfolio-attributes-payment-type-backfill-2026-04-22.sql)
+
+</details>
+
+<details>
+<summary><strong>payment-accounts-institutional-defaults-2026-04-22.sql</strong> (v2 po auditu) — Rozšíření `payment_accounts` o `bank_code`, `variable_symbol_required`, `account_number_template`, `payment_type`, `product_code` + reseed pouze ověřených globálních platebních účtů</summary>
+
+Odkaz: [`packages/db/migrations/payment-accounts-institutional-defaults-2026-04-22.sql`](../packages/db/migrations/payment-accounts-institutional-defaults-2026-04-22.sql)
+Datový zdroj: [`packages/db/src/data/institution-payment-accounts-v1.json`](../packages/db/src/data/institution-payment-accounts-v1.json)
+Audit se zdroji: [`docs/institution-payment-accounts-audit-2026-04-22.md`](institution-payment-accounts-audit-2026-04-22.md)
+
+**Důležité:** v1 obsahovala halucinovaná čísla (NN PS 2270100, Allianz PS 1234567, UNIQA PS 3024900010, KB PS 786786786, ČPP 2727272727, ČSOB pojišťovna 35-1003970707 univerzální, Direct 2102262727, Pillow 107-9876543210, NN životní 2270200, Generali 2220002227 a Conseq s `/0100` templatem). v2 je provádí `DELETE WHERE tenant_id IS NULL` a znovu naseeduje pouze ověřené řádky. Tenant overrides (tenant_id != NULL) migrace neřeší.
+
+</details>
+
+<details>
+<summary><strong>rls-m8-bootstrap-provision-and-gaps-2026-04-22.sql</strong> — WS-2 Batch M1-SQL: SECURITY DEFINER funkce pro bootstrap/pre-auth (provision_workspace_v1, resolve_public_booking_v1, lookup_invite_metadata_v1) + RLS gap tabulky + NULLIF normalizace policies. HARD BLOCKER pro cutover na `aidvisora_app`.</summary>
+
+Odkaz: [`packages/db/migrations/rls-m8-bootstrap-provision-and-gaps-2026-04-22.sql`](../packages/db/migrations/rls-m8-bootstrap-provision-and-gaps-2026-04-22.sql)
+
+**SECURITY DEFINER funkce:**
+- `public.provision_workspace_v1(p_user_id uuid, p_email text, p_slug text, p_trial_plan text, p_trial_days int) → uuid` — atomicky vytvoří `tenants + roles(6) + admin membership + opportunity_stages(6)`. Idempotentní přes membership lookup (1 user = 1 tenant). Volá se z `apps/web/src/lib/auth/ensure-workspace.ts`.
+- `public.resolve_public_booking_v1(p_token text) → TABLE(tenant_id, user_id, tenant_name, advisor_name, slot_minutes, buffer_minutes, availability)` — pre-auth lookup veřejného booking URL. Volá se z `apps/web/src/lib/public-booking/data.ts`.
+- `public.lookup_invite_metadata_v1(p_token text, p_kind text) → TABLE(kind, email, expires_at, first_name, tenant_name)` — pre-auth prefill invite formuláře (client i staff pozvánky). Volá se z `apps/web/src/app/api/invite/metadata/route.ts`.
+
+**Nové RLS policies + FORCE RLS:**
+- Bootstrap tier: `client_invitations_self_bootstrap_select`, `staff_invitations_self_bootstrap_select` (přes `auth_user_id = app.user_id` / `auth.uid()`).
+- Gap tabulky: `user_terms_acceptance` (self/tenant append-only), `user_devices` (tenant-scoped), `unsubscribe_tokens` (přes contacts join), `opportunity_stages` (tenant), `partners` (read-all + tenant-write; globální katalog tenant_id IS NULL je read-only), `products` (read/write přes partner.tenant_id), `fund_add_requests`, `dead_letter_items`, `ai_generations`, `ai_feedback` (přes generation), `analysis_import_jobs`, `analysis_versions` (přes analysis).
+
+**NULLIF normalizace existujících policies:**
+- Drop + recreate tenant_* policies na: contacts, households, documents, document_extractions, document_extraction_fields, contract_upload_reviews, contract_review_corrections, contact_coverage, tasks, opportunities, financial_analyses, financial_shared_facts, fa_plan_items, fa_sync_log, consents, processing_purposes, aml_checklists, exports, audit_log (SELECT/INSERT only, append-only hardening drží), activity_log, communication_drafts, reminders, meeting_notes, portal_notifications, tenant_settings, contracts, messages, advisor_proposals (tenant scope; client scope přes `client_contacts` zůstává), advisor_notifications, assistant_conversations, assistant_messages, client_requests, client_request_files.
+- Vzor: `tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid` + `IS NOT NULL` guard → bez GUC vrátí 0 řádků místo SQLSTATE 22P02.
+
+**Sanity kontroly v migraci (RAISE EXCEPTION při neúspěchu):**
+- všechny 3 SECURITY DEFINER funkce existují + `aidvisora_app` má EXECUTE.
+- Každá gap tabulka má ≥1 policy po migraci.
+- `client_invitations_self_bootstrap_select` obsahuje `aidvisora_app` v `pg_policies.roles`.
+- Žádná policy na core tabulkách nemá křehký `(SELECT current_setting('app.tenant_id', true))::uuid` pattern bez NULLIF guardu.
+- Všechny gap tabulky mají `relforcerowsecurity = true`.
+
+**Post-deploy verify (ruční):**
+```sql
+-- Test fail-closed GUC guard pod aidvisora_app:
+SET ROLE aidvisora_app;
+SELECT count(*) FROM public.contacts;   -- očekáváno: 0 (bez GUC)
+
+-- Test SECURITY DEFINER funkcí:
+SELECT public.provision_workspace_v1(gen_random_uuid(), 'test@example.com', 'test-ws-' || floor(random()*1000)::text, 'pro', 14);
+SELECT * FROM public.resolve_public_booking_v1('neplatny-token');      -- 0 rows
+SELECT * FROM public.lookup_invite_metadata_v1('neplatny', 'client');  -- 0 rows
+RESET role;
+```
 
 </details>
 

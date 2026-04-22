@@ -142,11 +142,17 @@ export async function loadResumableExecutionPlanSnapshot(conversationId: string)
 }
 
 /**
- * Poslední zprávy podle ID konverzace (bez kontroly tenant/user).
- * Pro poradce v UI použijte {@link loadAssistantConversationHistoryMessagesForUser}.
+ * Poslední zprávy podle ID konverzace.
+ *
+ * L7: historicky tato funkce načítala zprávy bez kontroly tenant/user. Dnes
+ * nemá žádné externí callery, ale je exportovaná a je to footgun pro budoucí
+ * znovupoužití (IDOR). Proto je teď explicitně omezená na interní server-
+ * trusted čtení — tenantId je povinný a dotaz joinuje přes conversations.
+ * Pro UI/poradce použijte {@link loadAssistantConversationHistoryMessagesForUser}.
  */
 export async function loadRecentConversationMessages(
   conversationId: string,
+  tenantId: string,
   limit = 20,
 ): Promise<
   {
@@ -156,6 +162,9 @@ export async function loadRecentConversationMessages(
     createdAt: Date;
   }[]
 > {
+  if (!tenantId) {
+    throw new Error("loadRecentConversationMessages: tenantId is required");
+  }
   const rows = await db
     .select({
       id: assistantMessages.id,
@@ -164,6 +173,13 @@ export async function loadRecentConversationMessages(
       createdAt: assistantMessages.createdAt,
     })
     .from(assistantMessages)
+    .innerJoin(
+      assistantConversations,
+      and(
+        eq(assistantConversations.id, assistantMessages.conversationId),
+        eq(assistantConversations.tenantId, tenantId),
+      ),
+    )
     .where(eq(assistantMessages.conversationId, conversationId))
     .orderBy(desc(assistantMessages.createdAt))
     .limit(Math.max(1, Math.min(limit, 100)));
@@ -371,6 +387,7 @@ export type AssistantMessageHistoryDbRow = {
   createdAt: Date;
   meta: Record<string, unknown> | null;
   executionPlanSnapshot: unknown;
+  referencedEntities: unknown;
 };
 
 /**
@@ -420,6 +437,7 @@ export async function loadAssistantConversationHistoryMessagesForUser(
       createdAt: assistantMessages.createdAt,
       meta: assistantMessages.meta,
       executionPlanSnapshot: assistantMessages.executionPlanSnapshot,
+      referencedEntities: assistantMessages.referencedEntities,
     })
     .from(assistantMessages)
     .where(eq(assistantMessages.conversationId, conversationId))
@@ -433,6 +451,7 @@ export async function loadAssistantConversationHistoryMessagesForUser(
     createdAt: r.createdAt,
     meta: (r.meta as Record<string, unknown> | null) ?? null,
     executionPlanSnapshot: r.executionPlanSnapshot,
+    referencedEntities: r.referencedEntities,
   }));
 
   return { conversation, messages: messages.reverse() };

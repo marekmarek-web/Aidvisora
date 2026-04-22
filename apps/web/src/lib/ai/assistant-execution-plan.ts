@@ -278,6 +278,28 @@ const MULTI_ACTION_OPPORTUNITY_CHILD_ACTIONS = new Set<WriteActionType>([
   "attachDocumentToOpportunity",
 ]);
 
+/** Actions that expect a contactId — used for createContact→child chaining. */
+const MULTI_ACTION_CONTACT_CHILD_ACTIONS = new Set<WriteActionType>([
+  "createOpportunity",
+  "createServiceCase",
+  "createTask",
+  "createFollowUp",
+  "scheduleCalendarEvent",
+  "createMeetingNote",
+  "createInternalNote",
+  "createReminder",
+  "createClientRequest",
+  "createMaterialRequest",
+  "createClientPortalNotification",
+  "upsertContactCoverage",
+  "attachDocumentToClient",
+  "sendPortalMessage",
+  "draftEmail",
+  "draftClientPortalMessage",
+  "createContract",
+  "savePaymentSetup",
+]);
+
 /**
  * When multi_action includes createOpportunity, later steps without opportunityId
  * depend on it so the engine can run waves in order and inject the new id.
@@ -295,6 +317,34 @@ export function applyMultiActionOpportunityChaining(steps: ExecutionStep[], inte
     if (oid != null && oid !== "") continue;
     if (!s.dependsOn.includes(oppStep.stepId)) {
       s.dependsOn = [...s.dependsOn, oppStep.stepId];
+    }
+  }
+}
+
+/**
+ * C1: When multi_action includes createContact, later steps whose action expects a
+ * `contactId` depend on it so the engine runs the contact create first and the
+ * resolved contact id is injected into children via
+ * `mergeWriteStepParamsFromCompletedDependencies`.
+ *
+ * Mirrors the image-intake mapper behaviour in
+ * `intake-execution-plan-mapper.ts` so multi_action plans cannot silently attach
+ * children to a stale/session contact id.
+ */
+export function applyMultiActionContactChaining(steps: ExecutionStep[], intent: CanonicalIntent): void {
+  if (intent.intentType !== "multi_action") return;
+  const contactIdx = steps.findIndex((s) => s.action === "createContact");
+  if (contactIdx < 0) return;
+  const contactStep = steps[contactIdx];
+  if (!contactStep) return;
+  for (let i = 0; i < steps.length; i++) {
+    if (i === contactIdx) continue;
+    const s = steps[i]!;
+    if (!MULTI_ACTION_CONTACT_CHILD_ACTIONS.has(s.action)) continue;
+    const cid = s.params.contactId;
+    if (cid != null && cid !== "") continue;
+    if (!s.dependsOn.includes(contactStep.stepId)) {
+      s.dependsOn = [...s.dependsOn, contactStep.stepId];
     }
   }
 }
@@ -340,6 +390,16 @@ const REQUIRED_FIELDS: Record<string, FieldRequirement[]> = {
   sendPortalMessage: ["contactId", ["portalMessageBody", "noteContent"]],
   createContract: ["contactId", "segment"],
   upsertContactCoverage: ["contactId", "itemKey"],
+  // M10: keep the confirm-time preflight aligned with the server's
+  // savePaymentSetup adapter so the UI never lets a plan through that will
+  // then fail with "missing VS / account". See assistant-write-adapters.ts
+  // savePaymentSetup for the runtime checks.
+  savePaymentSetup: [
+    "contactId",
+    "providerName",
+    ["accountNumber", "iban", "account_number"],
+    ["variableSymbol", "variable_symbol"],
+  ],
 };
 
 /**
@@ -632,6 +692,7 @@ export function buildExecutionPlan(
   }
 
   applyMultiActionOpportunityChaining(steps, intent);
+  applyMultiActionContactChaining(steps, intent);
 
   const readyCount = steps.filter(
     (s) => computeWriteStepPreflight(s.action, s.params, intent.productDomain).preflightStatus === "ready",

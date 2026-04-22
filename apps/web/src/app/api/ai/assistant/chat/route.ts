@@ -31,6 +31,7 @@ import { ASSISTANT_CHANNELS, type AssistantChannel, type AssistantMode } from "@
 import { logAudit } from "@/lib/audit";
 import { captureAssistantApiError } from "@/lib/observability/assistant-sentry";
 import { sanitizeAssistantMessageForAdvisor, sanitizeWarningForAdvisor } from "@/lib/ai/assistant-message-sanitizer";
+import { detectPromptInjectionHeuristics } from "@/lib/ai/assistant-prompt-injection-heuristics";
 import {
   isImageIntakeEnabled,
   parseImageAssetsFromBodyResult,
@@ -142,17 +143,25 @@ export async function POST(request: Request) {
   let tenantIdForSentry: string | undefined;
 
   try {
-    let userId: string | null = request.headers.get(USER_ID_HEADER);
-    if (!userId) {
-      const supabase = await createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
-      userId = user.id;
+    // H13: always derive user from the authenticated session. If a header is
+    // present, require it to match; otherwise reject to prevent header-spoof IDOR
+    // on paths that might bypass the proxy header overwrite.
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const headerUserId = request.headers.get(USER_ID_HEADER)?.trim() || null;
+    if (headerUserId && headerUserId !== user.id) {
+      captureAssistantApiError(new Error("assistant_user_id_header_mismatch"), {
+        traceId,
+        assistantRunId,
+      });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const userId: string = user.id;
     const membership = await getMembership(userId);
     if (!membership) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -227,6 +236,20 @@ export async function POST(request: Request) {
               { error: "Chybí zpráva." },
               { status: 400, headers: correlationHeaders(traceId, assistantRunId) },
             );
+          }
+
+          // L9: advisory prompt-injection detection. We do NOT block or edit
+          // the message — the advisor may legitimately paste adversarial-
+          // looking text for review. Logging is sufficient to spot abuse or
+          // accidentally copy-pasted jailbreak fragments in real traffic.
+          if (message) {
+            const injectionHits = detectPromptInjectionHeuristics(message);
+            if (injectionHits.length > 0) {
+              logAssistantTelemetry(AssistantTelemetryAction.RUN_START, {
+                promptInjectionHit: true,
+                patterns: injectionHits.map((h) => h.pattern),
+              });
+            }
           }
 
           if ((confirmExecution || cancelExecution) && orchestration !== "canonical") {
@@ -525,6 +548,10 @@ export async function POST(request: Request) {
               },
             );
           } else if (orchestration === "canonical" && (confirmExecution || cancelExecution)) {
+            // L10: propagate client IP from forwarded headers so the audit row
+            // for each confirmed plan step records who fired it from where.
+            const xff = request.headers.get("x-forwarded-for") ?? "";
+            const clientIp = xff.split(",")[0]?.trim() || undefined;
             const confirmOut = await handleAssistantAwaitingConfirmation(
               session,
               {
@@ -532,7 +559,7 @@ export async function POST(request: Request) {
                 selectedStepIds: confirmExecution ? selectedStepIds : undefined,
                 stepParamOverrides: confirmExecution ? stepParamOverrides : undefined,
               },
-              { tenantId, userId, roleName: membership.roleName },
+              { tenantId, userId, roleName: membership.roleName, ipAddress: clientIp },
             );
             if (!confirmOut) {
               return NextResponse.json(
@@ -669,6 +696,11 @@ export async function POST(request: Request) {
                 meta: {
                   warnings: persistedResponse.warnings ?? [],
                   confidence: persistedResponse.confidence,
+                  stepOutcomes: persistedResponse.stepOutcomes ?? null,
+                  suggestedNextSteps: persistedResponse.suggestedNextSteps ?? null,
+                  suggestedNextStepItems: persistedResponse.suggestedNextStepItems ?? null,
+                  suggestedActions: persistedResponse.suggestedActions ?? null,
+                  hasPartialFailure: persistedResponse.hasPartialFailure ?? null,
                   traceId,
                   assistantRunId,
                 },
@@ -676,23 +708,60 @@ export async function POST(request: Request) {
               if (orchestration === "canonical") {
                 appendToConversationDigest(session, message);
               }
-              await logAudit({
-                tenantId,
-                userId,
-                action: "assistant.conversation_message",
-                entityType: "assistant_conversation",
-                entityId: session.sessionId,
-                request,
-                meta: {
-                  channel,
-                  orchestration,
-                  messageCount: session.messageCount,
+              try {
+                await logAudit({
+                  tenantId,
+                  userId,
+                  action: "assistant.conversation_message",
+                  entityType: "assistant_conversation",
+                  entityId: session.sessionId,
+                  request,
+                  meta: {
+                    channel,
+                    orchestration,
+                    messageCount: session.messageCount,
+                    traceId,
+                    assistantRunId,
+                  },
+                });
+              } catch (auditErr) {
+                // C4: surface audit failures to Sentry + log, never swallow silently.
+                console.error(
+                  "[assistant-chat] logAudit failed",
+                  { traceId, assistantRunId, tenantId, userId },
+                  auditErr,
+                );
+                logAssistantTelemetry(AssistantTelemetryAction.RUN_ERROR, {
+                  code: "assistant_audit_write_failed",
+                  message: auditErr instanceof Error ? auditErr.message : "unknown",
+                });
+                captureAssistantApiError(auditErr, {
                   traceId,
                   assistantRunId,
-                },
-              }).catch(() => {});
-            } catch {
-              // Persistence failure must not affect the client response.
+                  tenantId,
+                  channel,
+                  orchestration,
+                });
+              }
+            } catch (persistErr) {
+              // C4/M28: persistence failure must not affect the client response, but
+              // must be observable: emit Sentry capture, telemetry and a console error.
+              console.error(
+                "[assistant-chat] after() persistence failed",
+                { traceId, assistantRunId, tenantId, userId, sessionId: session.sessionId },
+                persistErr,
+              );
+              logAssistantTelemetry(AssistantTelemetryAction.RUN_ERROR, {
+                code: "assistant_persistence_failed",
+                message: persistErr instanceof Error ? persistErr.message : "unknown",
+              });
+              captureAssistantApiError(persistErr, {
+                traceId,
+                assistantRunId,
+                tenantId,
+                channel,
+                orchestration,
+              });
             }
           });
 

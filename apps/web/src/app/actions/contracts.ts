@@ -422,6 +422,8 @@ export async function createContract(
     note?: string;
     /** "one_time" = jednorázová, "regular" = pravidelná, null = neznámo */
     paymentType?: "one_time" | "regular" | null;
+    /** Explicitní frekvence platby ze segmented controlu (F2). */
+    paymentFrequency?: "monthly" | "annual" | "quarterly" | "semiannual" | "one_time";
   }
 ): Promise<CreateContractResult> {
   try {
@@ -504,6 +506,9 @@ export async function createContract(
       const initialPortfolioAttributes: Record<string, unknown> = {};
       if (normalized.paymentType) {
         initialPortfolioAttributes.paymentType = normalized.paymentType;
+      }
+      if (normalized.paymentFrequencyLabel) {
+        initialPortfolioAttributes.paymentFrequencyLabel = normalized.paymentFrequencyLabel;
       }
 
       const [row] = await tx
@@ -639,6 +644,8 @@ export async function updateContract(
     portfolioStatus?: string;
     /** "one_time" = jednorázová, "regular" = pravidelná, null = neznámo */
     paymentType?: "one_time" | "regular" | null;
+    /** Explicitní frekvence platby ze segmented controlu (F2). */
+    paymentFrequency?: "monthly" | "annual" | "quarterly" | "semiannual" | "one_time";
   }
 ) {
   try {
@@ -658,6 +665,10 @@ export async function updateContract(
       anniversaryDate: form.anniversaryDate ?? "",
       note: form.note ?? "",
       paymentType: form.paymentType ?? null,
+      // Pokud volající neposlal frequency, derivuj z paymentType.
+      paymentFrequency:
+        form.paymentFrequency ??
+        (form.paymentType === "one_time" ? "one_time" : "monthly"),
     };
 
     const validation = validateContractFormForSubmit(full);
@@ -680,10 +691,13 @@ export async function updateContract(
         portfolioPatch.portfolioStatus = ps;
       }
     }
-    // Při změně typu platby slijeme hodnotu do existujícího portfolio_attributes JSONB
+    // Při změně typu platby / frekvence slijeme hodnoty do existujícího portfolio_attributes JSONB
     // (Postgres `||` operátor), abychom nepřepisovali ostatní klíče.
-    if (normalized.paymentType) {
-      const patchJson = JSON.stringify({ paymentType: normalized.paymentType });
+    if (normalized.paymentType || normalized.paymentFrequencyLabel) {
+      const patch: Record<string, string> = {};
+      if (normalized.paymentType) patch.paymentType = normalized.paymentType;
+      if (normalized.paymentFrequencyLabel) patch.paymentFrequencyLabel = normalized.paymentFrequencyLabel;
+      const patchJson = JSON.stringify(patch);
       portfolioPatch.portfolioAttributes = sql`COALESCE(${contracts.portfolioAttributes}, '{}'::jsonb) || ${patchJson}::jsonb`;
     }
     const touchPortfolioMeta =

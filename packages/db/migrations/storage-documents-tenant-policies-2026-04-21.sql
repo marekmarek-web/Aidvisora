@@ -33,15 +33,30 @@
 BEGIN;
 
 -- =============================================================================
--- 1) Zapnout RLS na storage.objects (Supabase default je ON, ale ujišťujeme se).
+-- 1) Ověření, že RLS je na storage.objects zapnutá.
+--    V Supabase je RLS na storage.objects defaultně ON a tabulku vlastní
+--    `supabase_storage_admin`, takže `ALTER TABLE storage.objects ENABLE RLS`
+--    z role `postgres` spadne na `42501: must be owner of table objects`.
+--    Místo ALTER ji jen defensivně ověříme — pokud by v nějakém budoucím
+--    nestandardním projektu RLS nebyla zapnutá, migrace záměrně spadne,
+--    aby se policies netvořily nad tabulkou bez RLS.
 -- =============================================================================
 DO $$
+DECLARE
+  rls_enabled boolean;
 BEGIN
-  IF EXISTS (
-    SELECT 1 FROM information_schema.tables
-    WHERE table_schema = 'storage' AND table_name = 'objects'
-  ) THEN
-    EXECUTE 'ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY';
+  SELECT c.relrowsecurity
+    INTO rls_enabled
+  FROM pg_class c
+  JOIN pg_namespace n ON n.oid = c.relnamespace
+  WHERE n.nspname = 'storage' AND c.relname = 'objects';
+
+  IF rls_enabled IS NULL THEN
+    RAISE EXCEPTION 'M7: storage.objects neexistuje — ověř, že má projekt povolené Storage.';
+  END IF;
+
+  IF rls_enabled = false THEN
+    RAISE EXCEPTION 'M7: RLS není zapnutá na storage.objects. Zapnout přes Supabase Dashboard → Storage → Policies (postgres role nemá na tuhle tabulku ALTER).';
   END IF;
 END $$;
 

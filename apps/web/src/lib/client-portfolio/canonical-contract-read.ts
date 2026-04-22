@@ -180,6 +180,7 @@ const SEGMENT_LABEL_MAP: Record<string, string> = {
   ZP: "Životní pojištění",
   MAJ: "Majetek",
   ODP: "Odpovědnost",
+  ODP_ZAM: "Odpovědnost zaměstnance",
   AUTO_PR: "Auto – povinné ručení",
   AUTO_HAV: "Auto – havarijní pojištění",
   CEST: "Cestovní pojištění",
@@ -280,6 +281,18 @@ function resolveDisplayProductName(
 function readPaymentType(attrs: Record<string, unknown>): "one_time" | "regular" | null {
   const raw = attrs.paymentType;
   if (raw === "one_time" || raw === "regular") return raw;
+  // F2 fallback: pokud `paymentType` chybí, zkusíme odvodit z `paymentFrequencyLabel`
+  // nebo legacy `paymentFrequency`. Regex detekuje „jednoráz"/"one time"/"single" →
+  // jinak defaultně „regular". Tím se KPI oprava projeví i na starších smlouvách
+  // bez explicitního paymentType.
+  const rawLabel = attrs.paymentFrequencyLabel ?? attrs.paymentFrequency;
+  if (typeof rawLabel === "string" && rawLabel.trim()) {
+    const lower = rawLabel.toLowerCase();
+    if (/jednorázov|jednorazov|one.?time|lump.?sum|single/.test(lower)) return "one_time";
+    if (/měsíč|mesic|roč|ročně|rocne|annual|monthly|quarterly|semi-?annual|polo\s*let|čtvrtlet|ctvrtlet/.test(lower)) {
+      return "regular";
+    }
+  }
   return null;
 }
 
@@ -347,7 +360,7 @@ function buildPropertyDetail(
 ): PropertyDetail {
   return {
     kind: "property",
-    subtype: contract.segment === "ODP" ? "liability" : "property",
+    subtype: (contract.segment === "ODP" || contract.segment === "ODP_ZAM") ? "liability" : "property",
     propertyAddress: safeString(attrs.propertyAddress),
     insurer: contract.partnerName,
     coverageLines: safeCoverageLines(attrs.coverageLines),
@@ -394,7 +407,7 @@ const INVESTMENT_SEGMENTS = new Set(["INV", "DIP"]);
 const PENSION_SEGMENTS = new Set(["DPS"]);
 const LOAN_SEGMENTS = new Set(["HYPO", "UVER"]);
 const VEHICLE_SEGMENTS = new Set(["AUTO_PR", "AUTO_HAV"]);
-const PROPERTY_SEGMENTS = new Set(["MAJ", "ODP"]);
+const PROPERTY_SEGMENTS = new Set(["MAJ", "ODP", "ODP_ZAM"]);
 const LIFE_SEGMENTS = new Set(["ZP"]);
 
 function buildSegmentDetail(

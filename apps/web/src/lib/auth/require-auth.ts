@@ -8,7 +8,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getMembership, getDemoClientContactId } from "./get-membership";
 import { clientZoneSkipPendingPasswordGate } from "@/lib/auth/client-zone-pending-gate";
 import type { RoleName } from "@/shared/rolePermissions";
-import { db, clientInvitations, and, gt, isNull, sql } from "db";
+import { clientInvitations, and, gt, isNull, sql } from "db";
+import { withUserContext } from "@/lib/db/with-tenant-context";
 import {
   isDemoMode,
   DEMO_TENANT_ID,
@@ -37,24 +38,32 @@ function getDemoAuthContext(): AuthContext {
   };
 }
 
-async function findPendingClientPasswordChangeRedirect(email: string | null | undefined): Promise<string | null> {
+async function findPendingClientPasswordChangeRedirect(
+  userId: string,
+  email: string | null | undefined,
+): Promise<string | null> {
   const normalizedEmail = email?.trim().toLowerCase();
   if (!normalizedEmail) return null;
 
   try {
-    const rows = await db
-      .select({ token: clientInvitations.token })
-      .from(clientInvitations)
-      .where(
-        and(
-          sql`lower(${clientInvitations.email}) = ${normalizedEmail}`,
-          gt(clientInvitations.expiresAt, new Date()),
-          isNull(clientInvitations.revokedAt),
-          isNull(clientInvitations.acceptedAt),
-          isNull(clientInvitations.passwordChangedAt),
-        ),
-      )
-      .limit(1);
+    // Bootstrap-tier lookup: `app.user_id` nastavený na přihlášeného Supabase
+    // uživatele; RLS policy na `client_invitations` pouští čtení vlastních
+    // invitací skrz join na `client_contacts.user_id = app.user_id`.
+    const rows = await withUserContext(userId, (tx) =>
+      tx
+        .select({ token: clientInvitations.token })
+        .from(clientInvitations)
+        .where(
+          and(
+            sql`lower(${clientInvitations.email}) = ${normalizedEmail}`,
+            gt(clientInvitations.expiresAt, new Date()),
+            isNull(clientInvitations.revokedAt),
+            isNull(clientInvitations.acceptedAt),
+            isNull(clientInvitations.passwordChangedAt),
+          ),
+        )
+        .limit(1),
+    );
     const inviteToken = rows[0]?.token?.trim();
     return inviteToken
       ? `/prihlaseni/nastavit-heslo?${buildClientInvitePasswordSetupSearch(inviteToken)}`
@@ -230,7 +239,7 @@ async function requireClientZoneAuthUncached(): Promise<AuthContext> {
   }
   const pendingPasswordChangeRedirect = clientZoneSkipPendingPasswordGate(m)
     ? null
-    : await findPendingClientPasswordChangeRedirect(user.email);
+    : await findPendingClientPasswordChangeRedirect(user.id, user.email);
   if (pendingPasswordChangeRedirect) {
     redirect(pendingPasswordChangeRedirect);
   }

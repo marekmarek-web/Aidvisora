@@ -88,12 +88,39 @@ function pickRichText(catalog: string, legacy: string): string {
   return ct || lt || "—";
 }
 
+/** Normalizované jádro textu (bez diakritiky, interpunkce a vícenásobných mezer) pro detekci duplicit
+ * typu "Zlatá koruna 2024 – 1. místo v kategorii penzijní spoření" vs. "Zlatá koruna 2024 — 1. místo". */
+function normalizeAwardKey(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
 function mergeAwards(catalog?: string, legacy?: string): string | undefined {
   const parts = [catalog, legacy]
     .filter((x): x is string => typeof x === "string" && x.trim().length > 0)
-    .map((x) => x.trim());
+    .flatMap((x) => x.split(/\s*·\s*/).map((p) => p.trim()).filter(Boolean));
   if (parts.length === 0) return undefined;
-  return [...new Set(parts)].join(" · ");
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of parts) {
+    const key = normalizeAwardKey(raw);
+    if (!key) continue;
+    let duplicate = false;
+    for (const existing of seen) {
+      if (existing === key || existing.includes(key) || key.includes(existing)) {
+        duplicate = true;
+        break;
+      }
+    }
+    if (duplicate) continue;
+    seen.add(key);
+    out.push(raw);
+  }
+  return out.length > 0 ? out.join(" · ") : undefined;
 }
 
 /** Hero + 3× galerie vždy vyplněné (placeholdery), aby HTML/PDF nespoléhaly na optional řetězce. */
@@ -248,7 +275,7 @@ function buildDetailFromBaseFund(fund: BaseFund): FundDetail {
     category: categoryLabel,
     heroImage: hero,
     galleryImages: gallery,
-    galleryType: "photo",
+    galleryType: (fund.assets?.galleryType ?? "photo") as "photo" | "logo",
   };
 }
 

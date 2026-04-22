@@ -223,13 +223,24 @@ function MessageBubble({
   function getEntityLink(entity: ReferencedEntity): string {
     switch (entity.type) {
       case "review":
+      case "contract_review":
+      case "ai_review":
         return `/portal/contracts/review/${entity.id}`;
       case "task":
+      case "createTask":
+      case "createFollowUp":
+      case "createReminder":
         return `/portal/tasks`;
       case "client":
       case "contact":
+      case "createContact":
+      case "updateContact":
         return `/portal/contacts/${entity.id}`;
       case "opportunity":
+      case "createOpportunity":
+      case "updateOpportunity":
+      case "createServiceCase":
+      case "createClientRequest":
         return `/portal/pipeline/${entity.id}`;
       default:
         return "#";
@@ -248,13 +259,24 @@ function MessageBubble({
   function getEntityLabel(type: string): string {
     switch (type) {
       case "review":
+      case "contract_review":
+      case "ai_review":
         return "AI smlouva";
       case "task":
+      case "createTask":
+      case "createFollowUp":
+      case "createReminder":
         return "Úkoly";
       case "client":
       case "contact":
+      case "createContact":
+      case "updateContact":
         return "Klient";
       case "opportunity":
+      case "createOpportunity":
+      case "updateOpportunity":
+      case "createServiceCase":
+      case "createClientRequest":
         return "Obchod";
       default:
         return "Otevřít";
@@ -467,14 +489,43 @@ function nextId() {
   return `msg-${++msgIdCounter}`;
 }
 
+/** M25: how many image refs to keep per message in sessionStorage. */
+const PERSIST_IMAGE_ASSETS_PER_MESSAGE = 4;
+/** M25: max data-URL length (approx bytes) allowed per persisted thumb. Larger
+ * URLs are replaced by `chatImagesTruncatedForStorage = true` so the bubble
+ * still tells the user "images were sent" without blowing sessionStorage. */
+const PERSIST_IMAGE_ASSET_MAX_URL_CHARS = 80_000;
+
 function persistSession(messages: ChatMessage[]) {
   try {
     migrateAiChatSession();
     const serializable = messages.slice(-50).map((m) => {
+      // M25: keep small thumbnail/urls so reloaded sessions don't lose the
+      // "user sent a photo" affordance. Drop any payload that is too big to
+      // store safely and mark the bubble with `chatImagesTruncatedForStorage`.
+      let imageAssets: ImageAssetPayload[] | undefined;
+      let truncated = m.chatImagesTruncatedForStorage === true;
+      if (m.imageAssets && m.imageAssets.length > 0) {
+        const capped = m.imageAssets.slice(0, PERSIST_IMAGE_ASSETS_PER_MESSAGE);
+        if (m.imageAssets.length > PERSIST_IMAGE_ASSETS_PER_MESSAGE) {
+          truncated = true;
+        }
+        const safe = capped.filter((a) => {
+          if (typeof a.url !== "string") return false;
+          if (a.url.length > PERSIST_IMAGE_ASSET_MAX_URL_CHARS) {
+            truncated = true;
+            return false;
+          }
+          return true;
+        });
+        if (safe.length > 0) imageAssets = safe;
+      }
       const { imageAssets: _drop, chatImagesTruncatedForStorage: _t, ...rest } = m;
       return {
         ...rest,
         timestamp: m.timestamp.toISOString(),
+        ...(imageAssets ? { imageAssets } : {}),
+        ...(truncated ? { chatImagesTruncatedForStorage: true } : {}),
       };
     });
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(serializable));
@@ -515,6 +566,11 @@ export function AiAssistantChatScreen() {
   /** 6C: výběr kroků pro potvrzení podle planId (parita s AiAssistantDrawer). */
   const [stepSelectionByPlanId, setStepSelectionByPlanId] = useState<
     Record<string, Record<string, boolean>>
+  >({});
+  /** M3: inline param overrides per plan/step. Parity with desktop drawer so
+   * confirmation can carry edited values through to the server. */
+  const [inlineValuesByPlanId, setInlineValuesByPlanId] = useState<
+    Record<string, Record<string, Record<string, string>>>
   >({});
   const chatSubmitLockRef = useRef(false);
   const [input, setInput] = useState("");
@@ -683,6 +739,10 @@ export function AiAssistantChatScreen() {
         router.push("/portal/tasks");
         return;
       }
+      if (action.type === "create_task") {
+        router.push("/portal/tasks");
+        return;
+      }
       if (action.type === "draft_email" && typeof action.payload.clientId === "string") {
         void runDraftEmailForClient(action.payload.clientId);
       }
@@ -698,7 +758,7 @@ export function AiAssistantChatScreen() {
         targetTag: (e.target as HTMLElement).tagName,
         activeElementTag: document.activeElement?.tagName,
       });
-      const { files, truncated } = extractImageFilesFromClipboardData(cd, { max: 32 });
+      const { files, truncated } = extractImageFilesFromClipboardData(cd, { max: 4 });
       logAssistantImagePipelineClient("paste_clipboard", {
         itemCount: cd.items.length,
         fileCount: cd.files.length,
@@ -713,7 +773,7 @@ export function AiAssistantChatScreen() {
         return;
       }
       if (truncated) {
-        toast.showToast("Ve schránce bylo hodně obrázků — načte se jen prvních 32.", "error");
+        toast.showToast("Ve schránce bylo hodně obrázků — načtou se jen první 4.", "error");
       }
 
       const accompanying = inputRef.current?.value.trim() ?? "";
@@ -905,6 +965,8 @@ export function AiAssistantChatScreen() {
     setIsTyping(true);
     setError(null);
     try {
+      const stepParamOverrides =
+        pid && inlineValuesByPlanId[pid] ? inlineValuesByPlanId[pid] : undefined;
       const complete = await postAssistantChatStreaming(
         {
           method: "POST",
@@ -916,6 +978,7 @@ export function AiAssistantChatScreen() {
               routeOpportunityId,
               channel: "mobile",
               selectedStepIds: canSelect ? picked : undefined,
+              stepParamOverrides,
             }),
           ),
         },
@@ -956,6 +1019,11 @@ export function AiAssistantChatScreen() {
         const { [pid]: _removed, ...rest } = prev;
         return rest;
       });
+      setInlineValuesByPlanId((prev) => {
+        if (!prev[pid]) return prev;
+        const { [pid]: _removed, ...rest } = prev;
+        return rest;
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Nepodařilo se potvrdit plán.");
       setMessages((prev) => prev.filter((m) => m.id !== streamAssistantId));
@@ -970,6 +1038,7 @@ export function AiAssistantChatScreen() {
     routeContactId,
     routeOpportunityId,
     stepSelectionByPlanId,
+    inlineValuesByPlanId,
   ]);
 
   const submitCancelPlan = useCallback(async () => {

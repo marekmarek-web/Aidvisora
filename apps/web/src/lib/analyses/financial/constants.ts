@@ -87,18 +87,18 @@ export const FUND_DETAILS: Record<string, FundDetail> = {
   penta: {
     name: 'Penta Real Estate Fund',
     manager: 'CODYA investiční společnost, a.s.',
-    goal: 'Zhodnocování prostřednictvím real estate projektů skupiny Penta (FKI)',
-    assets: 'Výnosové nemovitosti a development (Česko, Slovensko)',
-    yield: 'Cílové pásmo dle dokumentace fondu (není garancí)',
-    risks: 'Alternativní fond, koncentrace na skupinu Penta, omezená likvidita, leverage',
-    liquidity: 'Měsíční oceňování; vypořádání odkupu až 24 měsíců dle dokumentace',
-    suitable: 'Kvalifikovaní investoři s dlouhým horizontem',
-    why: 'Přístup k real estate portfoliu skupiny Penta mimo retailové nemovitostní fondy.',
+    goal: 'Podíl na nemovitostech a stavbách skupiny Penta v Česku a na Slovensku',
+    assets: 'Pronajímané nemovitosti a projekty ve výstavbě (Česko, Slovensko)',
+    yield: 'Cílový výnos uvedený v dokumentaci fondu – není to garantovaný výnos',
+    risks: 'Vyšší riziko, silná vazba na Pentu, peníze nelze vybrat hned, využití úvěrů',
+    liquidity: 'Hodnota se přepočítává měsíčně; skutečné vyplacení peněz může trvat až 24 měsíců',
+    suitable: 'Pro bonitnější investory, kteří mohou peníze odložit na několik let',
+    why: 'Umožní se zapojit do nemovitostí skupiny Penta, které jsou jinak mimo dosah běžných fondů.',
     defaultRate: 0.13,
     description:
-      'Penta Real Estate Fund (podfond SICAV) je fond určený kvalifikovaným investorům, zaměřený na nemovitosti a development skupiny Penta v Česku a na Slovensku. Nevyhovuje retailovému standardu — vyžaduje splnění podmínek FKI.',
+      'Nemovitostní fond pro bonitnější klienty. Investuje do budov a staveb skupiny Penta v Česku a na Slovensku. Nepatří mezi běžné fondy pro širokou veřejnost – je určen pro zkušenější investory s větším majetkem.',
     strategy:
-      'Kombinace hotových výnosových nemovitostí a development projektů; vyšší rizikovost a delší horizont než u běžných realitních OPF.',
+      'Fond drží jak dokončené pronajímané budovy, tak projekty ve výstavbě. Oproti běžným realitním fondům má vyšší riziko, vyšší potenciální výnos a vyžaduje delší horizont.',
     riskSRI: '6/7',
     horizon: '5+ let',
     currency: 'CZK',
@@ -111,8 +111,8 @@ export const FUND_DETAILS: Record<string, FundDetail> = {
     ],
     galleryType: 'logo' as const,
     benefits: [
-      'Expozice na výnosové i development nemovitosti skupiny Penta v ČR a na SK.',
-      'Určeno kvalifikovaným investorům; nesrovnatelné s retailovými realitními OPF.',
+      'Možnost podílet se na nemovitostech a stavbách skupiny Penta v ČR a na Slovensku.',
+      'Určeno pro zkušenější investory – nejde o běžný fond pro drobné střadatele.',
     ],
     countries: [
       { name: 'Česko', weight: 55 },

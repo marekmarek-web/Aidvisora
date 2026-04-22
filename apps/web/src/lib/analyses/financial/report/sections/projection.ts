@@ -46,8 +46,15 @@ const PROJECTION_INTERACTIVE_JS = `
   var lblR=q('fa-proj-rate-lbl');
   var horEl=q('fa-proj-chart-horizon');
   function fmt(n){
+    if(Math.abs(n)>=1e9)return (n/1e9).toLocaleString('cs-CZ',{maximumFractionDigits:1})+' mld. Kč';
     if(Math.abs(n)>=1e6)return (n/1e6).toLocaleString('cs-CZ',{maximumFractionDigits:1})+' mil. Kč';
     return Math.round(n).toLocaleString('cs-CZ')+' Kč';
+  }
+  function fmtAxis(n){
+    if(Math.abs(n)>=1e9)return (n/1e9).toLocaleString('cs-CZ',{maximumFractionDigits:1})+' mld.';
+    if(Math.abs(n)>=1e6)return Math.round(n/1e6).toLocaleString('cs-CZ')+' mil.';
+    if(Math.abs(n)>=1e3)return Math.round(n/1e3).toLocaleString('cs-CZ')+' tis.';
+    return Math.round(n).toLocaleString('cs-CZ');
   }
   function fvAt(monthly,lump,yr,rate){
     var months=Math.round(yr*12);
@@ -84,7 +91,7 @@ const PROJECTION_INTERACTIVE_JS = `
       if(v>maxV)maxV=v;
     }
     if(maxV<1)maxV=1;
-    var padL=56,padR=12,padT=16,padB=36;
+    var padL=68,padR=12,padT=16,padB=36;
     var cw=w-padL-padR,ch=h-padT-padB;
     lastPts=pts;lastPadL=padL;lastPadT=padT;lastCh=ch;lastCw=cw;lastMaxV=maxV;
     ctx.strokeStyle='#e5e7eb';
@@ -95,7 +102,7 @@ const PROJECTION_INTERACTIVE_JS = `
       if(g<4){
         var gv=maxV*(1-g/4);
         ctx.fillStyle='#94a3b8';ctx.font='9px sans-serif';ctx.textAlign='right';
-        ctx.fillText(fmt(gv),padL-4,gy+3);
+        ctx.fillText(fmtAxis(gv),padL-4,gy+3);
       }
     }
     var xs=[],ys=[];
@@ -235,14 +242,14 @@ export function renderProjection(ctx: SectionCtx): string {
   <div class="page-inner">
     <div class="sec-header">
       <div class="sec-number">${num} — Projekce</div>
-      <div class="sec-title">Růstová projekce</div>
-      <div class="sec-desc">Tato stránka shrnuje <strong>modelační scénář</strong> z kroku strategie (mřížka produktů) — není totéž jako součet z evidence skutečných smluv v CRM. Odhad budoucí hodnoty vychází ze stejného výpočetního modelu jako shrnutí analýzy; níže můžete parametry upravit (pouze v elektronické verzi).</div>
+      <div class="sec-title">Jak poroste vaše portfolio</div>
+      <div class="sec-desc">Odhad vývoje vašich investic podle zvolené strategie a vkladů. V elektronické verzi můžete parametry níže měnit a rovnou vidět, jak to ovlivní výsledek.</div>
     </div>
 
     <div class="kpi-row kpi-row-3" style="margin-bottom:var(--s8,32px)">
-      <div class="kpi-cell"><div class="kpi-label">Celkem investováno</div><div class="kpi-value" id="fa-proj-inv">${fmtBigCzk(totalInvested)}</div></div>
-      <div class="kpi-cell green-cell"><div class="kpi-label">Budoucí hodnota (FV)</div><div class="kpi-value" id="fa-proj-fv">${fmtBigCzk(totalFV)}</div></div>
-      <div class="kpi-cell gold-cell"><div class="kpi-label">Čistý výnos</div><div class="kpi-value" id="fa-proj-gain">${fmtBigCzk(gain)}</div></div>
+      <div class="kpi-cell"><div class="kpi-label">Celkem vložíte</div><div class="kpi-value" id="fa-proj-inv">${fmtBigCzk(totalInvested)}</div></div>
+      <div class="kpi-cell green-cell"><div class="kpi-label">Odhadovaná hodnota na konci</div><div class="kpi-value" id="fa-proj-fv">${fmtBigCzk(totalFV)}</div></div>
+      <div class="kpi-cell gold-cell"><div class="kpi-label">Odhadovaný výnos</div><div class="kpi-value" id="fa-proj-gain">${fmtBigCzk(gain)}</div></div>
     </div>
 
     <div class="fa-interactive-only fa-proj-controls">

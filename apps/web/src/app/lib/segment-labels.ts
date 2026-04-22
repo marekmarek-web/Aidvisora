@@ -7,6 +7,7 @@ export const SEGMENT_LABELS: Record<string, string> = {
   ZP: "Životní pojištění",
   MAJ: "Majetek",
   ODP: "Odpovědnost",
+  ODP_ZAM: "Odpovědnost zaměstnance",
   AUTO_PR: "Auto – povinné ručení",
   AUTO_HAV: "Auto – havarijní pojištění",
   CEST: "Cestovní pojištění",

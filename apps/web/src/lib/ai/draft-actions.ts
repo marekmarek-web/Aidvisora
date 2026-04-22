@@ -46,7 +46,14 @@ function normalizeSegmentHintText(value: unknown): string {
     .trim();
 }
 
-function inferNonLifeSegment(hints?: { subtype?: string | null; productName?: string | null; insurer?: string | null }): string {
+/**
+ * S2-N1: bezhintový fallback vracel "MAJ" — dokument bez jakéhokoliv signálu
+ * o segmentu (komisionářská smlouva, nejasná pojistka, prázdná extrakce) byl
+ * tiše oštítkován jako majetková pojistka a vytvořil falešnou smlouvu.
+ * Návratový typ je teď `string | null`; callery musí null explicitně ošetřit
+ * (preferované chování: přerušit publish chain, požádat o manuální kategorii).
+ */
+function inferNonLifeSegment(hints?: { subtype?: string | null; productName?: string | null; insurer?: string | null }): string | null {
   const blob = [
     normalizeSegmentHintText(hints?.subtype),
     normalizeSegmentHintText(hints?.productName),
@@ -54,7 +61,7 @@ function inferNonLifeSegment(hints?: { subtype?: string | null; productName?: st
   ]
     .filter(Boolean)
     .join(" ");
-  if (!blob) return "MAJ";
+  if (!blob) return null;
   if (
     /\b(povinne ruceni|povko|odpovednost z provozu vozidla|odpovednost vozidla|vozidla)\b/.test(blob)
   ) {
@@ -72,14 +79,20 @@ function inferNonLifeSegment(hints?: { subtype?: string | null; productName?: st
   if (/\b(majet|domacnost|domov|nemovitost|property|household|home)\b/.test(blob)) {
     return "MAJ";
   }
-  return "MAJ";
+  // S2-N1: neznámý non-life subtyp → null (původně "MAJ" → ticho silně zkreslovalo KPI).
+  return null;
 }
 
-/** Maps document primary type to CRM contract segment code. */
+/**
+ * Maps document primary type to CRM contract segment code.
+ * S2-N1: může vrátit `null`, pokud primaryType ani hinty nedávají spolehlivý
+ * segment. Callery MUSÍ null ošetřit (throw / skip / manual route), NEpoužívat
+ * slepý `?? "MAJ"` fallback.
+ */
 export function resolveSegmentFromType(
   primaryType: string,
   hints?: { subtype?: string | null; productName?: string | null; insurer?: string | null }
-): string {
+): string | null {
   const map: Record<string, string> = {
     life_insurance_final_contract: "ZP",
     life_insurance_contract: "ZP",
@@ -146,12 +159,15 @@ export function buildCreateClientDraft(extracted: ExtractedContractSchema): Draf
 
 export function buildCreateContractDraft(extracted: ExtractedContractSchema): DraftActionBase {
   const primary = String(extracted.documentType ?? "");
+  // S2-N1: resolveSegmentFromType může vrátit null. Draft payload může segment
+  // vynechat — downstream apply se zastaví na required-field check a poradce
+  // vybere segment manuálně, což je preferované chování proti tichému MAJ.
   const segment = resolveSegmentFromType(primary || "life_insurance_contract", {
     subtype: primary,
     productName: extracted.productName ?? null,
     insurer: extracted.institutionName ?? null,
   });
-  const { premiumAmount, premiumAnnual } = computeDraftPremiums(segment, extracted);
+  const { premiumAmount, premiumAnnual } = computeDraftPremiums(segment ?? "", extracted);
   return {
     type: "create_contract",
     label: "Vytvořit smlouvu v Aidvisory",
@@ -625,6 +641,8 @@ export function buildAllDraftActions(
   }
   if (requested.includes("create_or_update_contract_record")) {
     const pt = maybeEnvelope.documentClassification.primaryType;
+    // S2-N1: může vrátit null — payload.segment pak přijde jako null a apply
+    // publish chain to rozpozná jako missing required field (lepší než tichý MAJ).
     const segment = resolveSegmentFromType(pt, {
       subtype: maybeEnvelope.documentClassification.subtype ?? null,
       productName: String(fieldValue(maybeEnvelope, "productName") ?? ""),
@@ -635,7 +653,7 @@ export function buildAllDraftActions(
           ""
       ),
     });
-    const premiums = computeDraftPremiumsFromEnvelope(maybeEnvelope, segment);
+    const premiums = computeDraftPremiumsFromEnvelope(maybeEnvelope, segment ?? "");
     const inst = String(
       fieldValue(maybeEnvelope, "insurer") ??
         fieldValue(maybeEnvelope, "institutionName") ??

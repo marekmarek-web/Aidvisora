@@ -48,6 +48,7 @@ export type PaymentSegmentCategory =
 const SEGMENT_TO_PAYMENT_CATEGORY: Record<string, PaymentSegmentCategory> = {
   MAJ: "pojisteni_majetku",
   ODP: "pojisteni_majetku",
+  ODP_ZAM: "pojisteni_majetku",
   HYPO: "bydleni",
   UVER: "uvery",
   ZP: "pojisteni_osob",

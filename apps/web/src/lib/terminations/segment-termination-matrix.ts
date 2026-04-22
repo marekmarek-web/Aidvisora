@@ -46,6 +46,14 @@ const SEGMENT_MODE_MAP: Partial<Record<string, TerminationMode[]>> = {
     "mutual_agreement",
     "manual_review_other",
   ],
+  // Odpovědnost zaměstnance – stejné možnosti jako občanská odpovědnost
+  ODP_ZAM: [
+    "end_of_insurance_period",
+    "within_two_months_from_inception",
+    "distance_withdrawal",
+    "mutual_agreement",
+    "manual_review_other",
+  ],
   // Auto – povinné ručení; po pojistné události povoleno
   AUTO_PR: [
     "end_of_insurance_period",

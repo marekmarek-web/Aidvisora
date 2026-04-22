@@ -63,6 +63,7 @@ body{font-family:var(--ff-sans);background:var(--stone-100);color:var(--stone-70
 .main .page-inner{max-width:880px;margin-left:auto;margin-right:auto;box-sizing:border-box;width:100%}
 .page.hero .hero-logo-img,.page.company-hero .hero-logo-img{filter:brightness(0) invert(1)}
 .print-only{display:none!important}
+.fa-print-only{display:none}
 .fa-interactive-only{display:block}
 .fa-interactive-note{font-size:12px;color:var(--stone-500);margin-top:var(--s4)}
 .fa-proj-controls{margin:var(--s5) 0;padding:var(--s4) var(--s5);background:var(--stone-50);border:1px solid var(--stone-200);border-radius:var(--r-md)}
@@ -205,7 +206,7 @@ table.dt td.num{font-family:var(--ff-serif);font-size:15px;font-variant-numeric:
 .bar-row-name{font-size:12.5px;color:var(--stone-600);flex:0 0 150px}
 .bar-track{flex:1;height:4px;background:var(--stone-100);border-radius:99px;overflow:hidden}
 .bar-fill{height:100%;border-radius:99px}
-.bar-pct{font-size:12px;font-weight:700;color:var(--stone-700);flex:0 0 40px;text-align:right;font-variant-numeric:tabular-nums}
+.bar-pct{font-size:12px;font-weight:700;color:var(--stone-700);flex:0 0 56px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .check-list{list-style:none;display:flex;flex-direction:column;gap:var(--s3)}
 .check-list li{display:flex;align-items:flex-start;gap:var(--s3);font-size:13px;color:var(--stone-600);line-height:1.6}
 .check-list li::before{content:'';width:18px;height:18px;border-radius:50%;background:var(--green-100);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M2.5 7l3 3 6-6' stroke='%2316a34a' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:center;flex-shrink:0;margin-top:1px}
@@ -296,6 +297,8 @@ table.dt td.num{font-family:var(--ff-serif);font-size:15px;font-variant-numeric:
 .ins-provider-logo{width:56px;height:40px;object-fit:contain;flex-shrink:0}
 .ins-provider-fallback{font-size:11px;font-weight:600;color:var(--stone-500)}
 .sum-row td{border-top:2px solid var(--gold-500);padding-top:8px;font-weight:700}
+.sum-row{page-break-inside:avoid;break-inside:avoid}
+table.dt tbody tr.total{page-break-inside:avoid;break-inside:avoid}
 
 /* SIGNATURES */
 .sig-area{display:grid;grid-template-columns:1fr 1fr;gap:var(--s16);margin-top:var(--s16);padding-top:var(--s8)}
@@ -328,6 +331,7 @@ table.dt td.num{font-family:var(--ff-serif);font-size:15px;font-variant-numeric:
 @media print{
   .print-only.print-advisor-footer{display:block!important;position:fixed;bottom:0;left:0;right:0;padding:5mm 8mm;font-size:8pt;color:#444;border-top:1px solid #ccc;background:#fff;z-index:99999;text-align:center;box-sizing:border-box}
   .fa-interactive-only,.fa-interactive-note,.fa-backtest-controls,.fa-backtest-chart-wrap{display:none!important}
+  .fa-print-only{display:inline!important}
   .sidebar{display:none!important}
   .main{margin-left:0!important}
   .page{min-height:auto;page-break-after:always;break-after:page;page-break-inside:auto;break-inside:auto;overflow:visible}
@@ -384,9 +388,9 @@ table.dt td.num{font-family:var(--ff-serif);font-size:15px;font-variant-numeric:
   .product-desc{font-size:10px;line-height:1.4;margin-bottom:8px;padding-bottom:8px}
   .product-hero-image{max-height:90px}
   .product-gallery{gap:6px;margin-bottom:10px}
-  .product-gallery-image{height:58px}
+  .product-gallery-image{max-height:58px;height:auto;width:auto;max-width:100%;object-fit:contain}
   .product-gallery-logos .product-gallery-item{padding:6px}
-  .product-gallery-logos .product-gallery-image{height:40px}
+  .product-gallery-logos .product-gallery-image{max-height:48px;height:auto;width:auto;max-width:100%;object-fit:contain}
   .ins-provider-logo{width:44px;height:32px}
   .stat-cell{padding:7px 8px}
   .stat-lbl{font-size:7.5px}
@@ -395,7 +399,7 @@ table.dt td.num{font-family:var(--ff-serif);font-size:15px;font-variant-numeric:
   .bar-section-title{font-size:8px;margin-bottom:4px}
   .bar-row{gap:7px;margin-bottom:4px}
   .bar-row-name{flex:0 0 98px;font-size:9px}
-  .bar-pct{font-size:9px;flex-basis:30px}
+  .bar-pct{font-size:9px;flex-basis:42px;white-space:nowrap}
   .check-list{gap:4px}
   .check-list li{font-size:9px;line-height:1.35}
   .chart-wrap{padding:8px}

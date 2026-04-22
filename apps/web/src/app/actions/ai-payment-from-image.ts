@@ -8,6 +8,10 @@ import {
   type PaymentInstructionExtraction,
 } from "@/lib/ai/payment-instruction-extraction";
 import { formatDomesticAccountDisplayLine } from "@/lib/ai/payment-field-contract";
+import {
+  inferMimeTypeForIntakeAsset,
+  normalizeHeicHeifIntakeAssetIfNeeded,
+} from "@/lib/ai/image-intake/normalize-intake-image-input";
 
 export type PaymentFromImageDraft = {
   providerName: string;
@@ -69,7 +73,32 @@ export async function extractPaymentDraftFromImageAction(
     return { ok: false, error: "Nepodporovaný formát obrázku." };
   }
 
-  const result = await extractPaymentInstructionsFromImageUrl(imageDataUrl);
+  // H9: OpenAI vision does not accept HEIC/HEIF data URLs reliably. Normalize on server
+  // before calling the extractor so that iPhone "Live Photo" / HEIC screenshots work.
+  let normalizedImageUrl = imageDataUrl;
+  try {
+    const inferredMime = imageDataUrl.startsWith("data:")
+      ? (imageDataUrl.slice(5).split(";")[0] ?? "image/jpeg")
+      : "image/jpeg";
+    const inferred = inferMimeTypeForIntakeAsset({
+      url: imageDataUrl,
+      mimeType: inferredMime,
+      filename: null,
+      width: null,
+      height: null,
+      contentHash: null,
+    });
+    const normalized = await normalizeHeicHeifIntakeAssetIfNeeded(inferred);
+    normalizedImageUrl = normalized.url;
+  } catch {
+    return {
+      ok: false,
+      error:
+        "Fotku ve formátu HEIC/HEIF se nepodařilo převést na podporovaný obrázek. Zkuste ji v telefonu uložit jako JPEG.",
+    };
+  }
+
+  const result = await extractPaymentInstructionsFromImageUrl(normalizedImageUrl);
   if (!result.ok) {
     return { ok: false, error: result.error };
   }

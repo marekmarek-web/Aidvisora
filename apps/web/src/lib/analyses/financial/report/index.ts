@@ -43,7 +43,7 @@ const SIDEBAR_JS = `<script>
     var docH=document.documentElement.scrollHeight-window.innerHeight;
     var p=docH>0?Math.round((scrollTop/docH)*100):0;
     if(fill)fill.style.width=p+'%';
-    if(pct)pct.textContent=p+' %';
+    if(pct)pct.textContent=p+'\u00A0%';
     var active='';
     pages.forEach(function(s){if(s.getBoundingClientRect().top<=120)active=s.id;});
     links.forEach(function(l){l.classList.toggle('active',l.getAttribute('data-section')===active);});

@@ -26,6 +26,7 @@ export const SEGMENT_TO_PRIMARY_TYPE: Record<ContractSegment, PrimaryDocumentTyp
   ZP: "life_insurance_contract",
   MAJ: "nonlife_insurance_contract",
   ODP: "nonlife_insurance_contract",
+  ODP_ZAM: "liability_insurance_offer",
   AUTO_PR: "nonlife_insurance_contract",
   AUTO_HAV: "nonlife_insurance_contract",
   CEST: "nonlife_insurance_contract",
@@ -90,6 +91,12 @@ export const SEGMENT_PRIMARY_TYPE_SET: Record<ContractSegment, ReadonlySet<Prima
     "insurance_policy_change_or_service_doc",
   ]),
   ODP: new Set([
+    "nonlife_insurance_contract",
+    "liability_insurance_offer",
+    "precontract_information",
+    "insurance_policy_change_or_service_doc",
+  ]),
+  ODP_ZAM: new Set([
     "nonlife_insurance_contract",
     "liability_insurance_offer",
     "precontract_information",

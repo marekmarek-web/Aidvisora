@@ -1,6 +1,16 @@
 /**
  * Lightweight in-memory assistant session state.
  * TTL: 30 minutes. DB persistence via assistant_conversations when available.
+ *
+ * M18 (KNOWN LIMITATION): this state lives in a per-process `Map`. On any
+ * multi-instance deploy (e.g. Vercel lambdas) a session created on instance A
+ * is not visible on instance B. The execution ledger + stable idempotency key
+ * (see assistant-execution-engine.ts, C2 fix) guarantee no duplicate writes
+ * across instances, but plan-reconfirm / context-lock flows rely on the
+ * session and WILL behave as "cold start" after a cross-instance hop. See
+ * `AssistantTelemetryAction.SESSION_NOT_FOUND_BY_ID` for the observability
+ * signal. TODO(M18): back with Redis or assistant_sessions DB table before
+ * horizontal scaling beyond a single warm instance.
  */
 
 import type { SuggestedAction } from "./dashboard-types";
@@ -13,6 +23,7 @@ import type {
 import type { ExtractedFactBundle, ImageIntakeActionPlan, ReviewHandoffPayload } from "./image-intake/types";
 import { defaultContextLock } from "./assistant-domain-model";
 import { randomUUID } from "crypto";
+import { logAssistantTelemetry, AssistantTelemetryAction } from "./assistant-telemetry";
 
 /**
  * Saved state from an ambiguous_needs_input image intake that needs client resolution.
@@ -137,6 +148,20 @@ export function getOrCreateSession(
     const existing = sessions.get(sessionId)!;
     if (existing.tenantId === tenantId && existing.userId === userId) {
       return existing;
+    }
+  }
+
+  // M18: the client believed it had an active session but this process has
+  // no record of it. Emit telemetry so we can see cross-instance session loss
+  // on multi-lambda deploys; on a single warm instance this should be zero.
+  if (sessionId && isUuid(sessionId)) {
+    try {
+      logAssistantTelemetry(AssistantTelemetryAction.SESSION_NOT_FOUND_BY_ID, {
+        sessionId,
+        tenantId,
+      });
+    } catch {
+      /* telemetry best-effort */
     }
   }
 
