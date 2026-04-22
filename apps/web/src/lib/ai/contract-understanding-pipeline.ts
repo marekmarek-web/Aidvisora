@@ -104,6 +104,12 @@ export type PipelinePreprocessMeta = {
   preprocessTextSizeChars?: number;
   /** Number of structured pages returned by Adobe. */
   preprocessStructuredPagesCount?: number;
+  /** 0..1 — quality score from `scoreTextLayerQuality`. */
+  textQualityScore?: number | null;
+  /** True when the extracted text is almost certainly OCR garbage. */
+  textQualityIsGarbage?: boolean;
+  /** Reason codes from `scoreTextLayerQuality` (camelcase_*, digit_in_word_*, …). */
+  textQualityReasons?: string[];
 };
 
 function logPipelineEvent(phase: string, payload: Record<string, unknown>): void {

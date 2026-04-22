@@ -258,6 +258,19 @@ if (
 
 **Rollback:** Revert. Nezávislé na F0-1, F0-2.
 
+**B2.3 status (2026-04-22 pre-launch audit):**
+- Hard barrier (`UNOVERRIDABLE_GATE_REASONS` + supporting-doc block v
+  `applyContractReviewDrafts`) je MERGED a pokrývá payslip / low-confidence
+  klasifikaci / ambiguous client match.
+- Skipped test na "premium fallback do action.payload" byl překlasifikován
+  na **won't-fix** (rozhodnutí 2026-04-22): fallback by oslabil
+  `manual_required` semantics — enforcement vyprazdňuje `premium*` právě
+  proto, aby advisor musel hodnoty potvrdit. Non-sensitive fields
+  (`productName`, `institutionName`, `effectiveDate`) fallback mají
+  (viz F1-2), `premiumAmount`/`premiumAnnual` schválně ne.
+- Test je nyní "DOCUMENTED (C-04 won't-fix)" regression guard
+  v `golden-regression-extended.test.ts`.
+
 ### F0-4 — Přidat HYPO/UVER do KPI agregátoru (řeší C-10)
 
 **Soubor:** `apps/web/src/lib/client-portfolio/contact-overview-kpi.ts`

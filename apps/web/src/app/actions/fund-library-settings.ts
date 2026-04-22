@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidateTag } from "next/cache";
 import { withAuthContext } from "@/lib/auth/with-auth-context";
 import {
   tenantSettings,
@@ -18,6 +19,10 @@ import {
   type AdvisorFundLibraryValue,
   type FundAddRequestQueueStatus,
 } from "@/lib/fund-library/fund-library-setup-types";
+import {
+  getFundLibraryCacheTag,
+  getFundLibraryAdvisorCacheTag,
+} from "@/lib/fund-library/setup-snapshot.server";
 import { BASE_FUND_KEYS, type BaseFundKey } from "@/lib/analyses/financial/fund-library/legacy-fund-key-map";
 import { BASE_FUNDS } from "@/lib/analyses/financial/fund-library/base-funds";
 
@@ -75,6 +80,11 @@ export async function saveTenantFundAllowlist(allowedBaseFundKeys: string[] | nu
         version: 1,
       });
     }
+    // B2.6 — bez revalidate musel advisor čekat až 60s (unstable_cache TTL)
+    // než setting změny propadnul do snapshotu. Tenant allowlist propaguje
+    // do VŠECH advisorů tohoto tenantu → invalidujeme jen tenant-level tag;
+    // per-advisor tagy se invalidují samy při příštím snapshotu.
+    revalidateTag(getFundLibraryCacheTag(auth.tenantId));
   });
 }
 
@@ -122,6 +132,10 @@ export async function saveAdvisorFundLibrary(prefs: AdvisorFundLibraryValue): Pr
         fundLibrary: payload,
       });
     }
+    // B2.6 — per-advisor fund library ordering/enabled map je uložená v
+    // `advisorPreferences`; invalidujeme jen cache tag tohoto advisora,
+    // abychom okamžitě promítli změnu do UI (bez 60s stale state).
+    revalidateTag(getFundLibraryAdvisorCacheTag(auth.tenantId, auth.userId));
   });
 }
 

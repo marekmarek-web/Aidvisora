@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { getMembership } from "@/lib/auth/get-membership";
+import { resolveAuthenticatedApiUser } from "@/lib/auth/api-auth-user";
 import { hasPermission, type RoleName } from "@/lib/auth/permissions";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { createResponseSafe } from "@/lib/openai";
@@ -9,20 +9,14 @@ import { ADVISOR_AI_INTERNAL_SCOPE_CS } from "@/lib/ai/compliance-prompt-suffix"
 
 export const dynamic = "force-dynamic";
 
-const USER_ID_HEADER = "x-user-id";
-
 export async function POST(request: Request) {
   const start = Date.now();
   try {
-    let userId: string | null = request.headers.get(USER_ID_HEADER);
-    if (!userId) {
-      const supabase = await createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return NextResponse.json({ error: "Nejste přihlášeni." }, { status: 401 });
-      userId = user.id;
+    const auth = await resolveAuthenticatedApiUser(request);
+    if (!auth.ok) {
+      return NextResponse.json({ error: "Nejste přihlášeni." }, { status: auth.status });
     }
+    const userId = auth.userId;
 
     const membership = await getMembership(userId);
     if (!membership || !hasPermission(membership.roleName as RoleName, "opportunities:read")) {

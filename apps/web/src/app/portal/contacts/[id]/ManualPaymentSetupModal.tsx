@@ -110,7 +110,11 @@ const EMPTY_FORM: FormState = {
   currency: "CZK",
   frequency: "Měsíčně",
   firstPaymentDate: "",
-  visibleToClient: true,
+  // B2.12 — visibility teď defaultně `false`. Sjednocuje se chování se všemi
+  // ostatními advisor inputy (AI review, payment-from-image draft) a brání
+  // nechtěnému sdílení polotovarů dřív, než poradce hodnoty ověří.
+  // Poradce explicitním toggle zapne zobrazení v klientském portále.
+  visibleToClient: false,
 };
 
 export type ManualPaymentSetupPrefill = {
@@ -614,23 +618,29 @@ export function ManualPaymentSetupModal({
           </div>
 
           {/* Visible to client toggle */}
-          <label className="flex items-center gap-3 cursor-pointer select-none">
-            <div
-              onClick={() => setForm((f) => ({ ...f, visibleToClient: !f.visibleToClient }))}
-              className={`relative w-11 h-6 rounded-full transition-colors ${
-                form.visibleToClient ? "bg-emerald-500" : "bg-[color:var(--wp-surface-card-border)]"
-              }`}
-            >
-              <span
-                className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                  form.visibleToClient ? "translate-x-5" : ""
+          <div className="space-y-1">
+            <label className="flex items-center gap-3 cursor-pointer select-none">
+              <div
+                onClick={() => setForm((f) => ({ ...f, visibleToClient: !f.visibleToClient }))}
+                className={`relative w-11 h-6 rounded-full transition-colors ${
+                  form.visibleToClient ? "bg-emerald-500" : "bg-[color:var(--wp-surface-card-border)]"
                 }`}
-              />
-            </div>
-            <span className="text-sm font-semibold text-[color:var(--wp-text)]">
-              Zobrazit v portálu klienta
-            </span>
-          </label>
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                    form.visibleToClient ? "translate-x-5" : ""
+                  }`}
+                />
+              </div>
+              <span className="text-sm font-semibold text-[color:var(--wp-text)]">
+                Zobrazit v portálu klienta
+              </span>
+            </label>
+            <p className="text-xs text-[color:var(--wp-text-secondary)] pl-14">
+              Po aktivaci uvidí klient tuto platbu v klientském portále. Nechte vypnuté,
+              dokud hodnoty neověříte.
+            </p>
+          </div>
 
           {formError && (
             <p className="text-sm font-semibold text-red-600 rounded-xl bg-red-50 border border-red-200 px-4 py-3">

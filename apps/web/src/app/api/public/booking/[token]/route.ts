@@ -11,6 +11,7 @@ import {
   findContactIdByEmail,
 } from "@/lib/public-booking/data";
 import { sendPublicBookingNotifications } from "@/lib/public-booking/public-booking-emails";
+import { verifyTurnstileToken } from "@/lib/security/turnstile";
 
 export const dynamic = "force-dynamic";
 
@@ -94,6 +95,9 @@ type PostBody = {
   contactType?: string;
   topic?: string;
   subtopic?: string;
+  // B3.7 — Cloudflare Turnstile token. Až zapneme `TURNSTILE_SECRET` v Vercel env,
+  // validujeme ho server-side; bez secretu request projde (soft-gate).
+  turnstileToken?: string;
 };
 
 const CONTACT_TYPE_LABELS: Record<string, string> = {
@@ -132,6 +136,20 @@ export async function POST(request: Request, ctx: { params: Promise<{ token: str
     body = (await request.json()) as PostBody;
   } catch {
     return jsonError(400, "invalid_json");
+  }
+
+  // B3.7 — CAPTCHA gate. Když `TURNSTILE_SECRET` není nastaven, validace
+  // se přeskočí (rollout-friendly). Jakmile Ops přidá secret do Vercel env,
+  // bot traffic se zavřou tímhle checkem dřív, než sahneme do DB.
+  const turnstileToken =
+    typeof body.turnstileToken === "string" ? body.turnstileToken : null;
+  const turnstileVerdict = await verifyTurnstileToken(turnstileToken, ip);
+  if (turnstileVerdict.enforced && !turnstileVerdict.ok) {
+    return jsonError(
+      400,
+      "captcha_failed",
+      "Ověření bezpečnostní kontroly se nezdařilo. Obnovte stránku a zkuste to znovu.",
+    );
   }
 
   const clientName = (body.clientName ?? "").trim();

@@ -282,7 +282,13 @@ export function WorkspaceStripeBilling({
           ) : null}
         </p>
       ) : null}
-      {trialDays > 0 && billing.checkoutAvailable ? (
+      {/*
+        B1.11 — App Store 3.1.1 + Play Payments Policy: v native WebView shellu
+        neukazujeme žádnou trial/pricing marketing copy, protože by to bylo
+        vyhodnoceno jako "external payment" a shell by byl rejected. CTA už
+        jsou gated (`isNative` níže), ale i tento textový blok musí zmizet.
+      */}
+      {trialDays > 0 && billing.checkoutAvailable && !isNative ? (
         <p className="max-w-xl text-sm text-[color:var(--wp-text-secondary)]">
           <span className="font-semibold text-[color:var(--wp-text)]">
             {trialDays} dní zdarma ({ACCESS_MODE_UI_LABEL.trialPlanNote})

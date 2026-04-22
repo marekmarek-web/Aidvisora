@@ -7,6 +7,7 @@ import {
   LEGAL_STATUS_PAGE_URL,
   LEGAL_SUPPORT_EMAIL,
 } from "@/app/legal/legal-meta";
+import { headers } from "next/headers";
 
 export const metadata: Metadata = {
   title: "Provozní stav | Aidvisora",
@@ -14,6 +15,108 @@ export const metadata: Metadata = {
     "Provozní stav platformy Aidvisora, plánované odstávky, historie incidentů a kontaktní informace pro hlášení. Public status page se připravuje.",
   alternates: { canonical: "/status" },
   robots: { index: true, follow: true },
+};
+
+// B3.9 — RSC fetch `/api/healthcheck` a zobrazit per-dependency status.
+// Neblokuje render při výpadku healthcheck endpointu: pokud fetch selže,
+// zobrazíme "neznámý" stav bez exceptionu (stránka musí zůstat dostupná
+// i když je platforma degradovaná — o tom status page právě je).
+export const dynamic = "force-dynamic";
+
+type HealthComponent = {
+  status: "ok" | "fail" | "skipped";
+  latencyMs?: number;
+  error?: string;
+};
+
+type HealthSnapshot = {
+  status: "ok" | "degraded" | "down" | "unknown";
+  timestamp: string | null;
+  components: {
+    database: HealthComponent | null;
+    supabaseAuth: HealthComponent | null;
+    stripe: HealthComponent | null;
+    resend: HealthComponent | null;
+    openai: HealthComponent | null;
+  };
+};
+
+async function loadHealthSnapshot(): Promise<HealthSnapshot> {
+  const fallback: HealthSnapshot = {
+    status: "unknown",
+    timestamp: null,
+    components: {
+      database: null,
+      supabaseAuth: null,
+      stripe: null,
+      resend: null,
+      openai: null,
+    },
+  };
+  try {
+    const h = await headers();
+    const host = h.get("x-forwarded-host") ?? h.get("host");
+    const proto = h.get("x-forwarded-proto") ?? "https";
+    if (!host) return fallback;
+    const base = `${proto}://${host}`;
+    const res = await fetch(`${base}/api/healthcheck`, {
+      cache: "no-store",
+      headers: { accept: "application/json" },
+    });
+    const data = (await res.json()) as Partial<HealthSnapshot> & {
+      components?: HealthSnapshot["components"];
+    };
+    return {
+      status: data.status ?? "unknown",
+      timestamp: data.timestamp ?? null,
+      components: {
+        database: data.components?.database ?? null,
+        supabaseAuth: data.components?.supabaseAuth ?? null,
+        stripe: data.components?.stripe ?? null,
+        resend: data.components?.resend ?? null,
+        openai: data.components?.openai ?? null,
+      },
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+function statusPill(c: HealthComponent | null) {
+  if (!c) {
+    return (
+      <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+        neznámý
+      </span>
+    );
+  }
+  if (c.status === "ok") {
+    return (
+      <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
+        v pořádku
+      </span>
+    );
+  }
+  if (c.status === "skipped") {
+    return (
+      <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+        neaktivní
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800 dark:bg-red-950/40 dark:text-red-200">
+      nedostupné
+    </span>
+  );
+}
+
+const COMPONENT_LABELS: Record<keyof HealthSnapshot["components"], string> = {
+  database: "Databáze (Postgres)",
+  supabaseAuth: "Přihlášení (Supabase Auth)",
+  stripe: "Platební brána (Stripe)",
+  resend: "Odchozí e-maily (Resend)",
+  openai: "AI (OpenAI)",
 };
 
 type InfoCardProps = {
@@ -36,7 +139,24 @@ function InfoCard({ icon: Icon, title, description }: InfoCardProps) {
   );
 }
 
-export default function StatusPage() {
+export default async function StatusPage() {
+  const snapshot = await loadHealthSnapshot();
+  const statusLabel =
+    snapshot.status === "ok"
+      ? "Všechny komponenty v pořádku"
+      : snapshot.status === "degraded"
+        ? "Některé komponenty degradované"
+        : snapshot.status === "down"
+          ? "Kritická komponenta nedostupná"
+          : "Stav se aktuálně nedaří načíst";
+  const statusColor =
+    snapshot.status === "ok"
+      ? "text-emerald-700 dark:text-emerald-300"
+      : snapshot.status === "degraded"
+        ? "text-amber-700 dark:text-amber-300"
+        : snapshot.status === "down"
+          ? "text-red-700 dark:text-red-300"
+          : "text-gray-700 dark:text-gray-300";
   return (
     <main className="mx-auto min-h-screen max-w-4xl px-4 py-10 sm:py-14">
       <header className="border-b border-gray-200 pb-8 dark:border-gray-700">
@@ -46,12 +166,50 @@ export default function StatusPage() {
         <h1 className="mt-2 text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl">
           Provozní stav
         </h1>
+        <p className={`mt-3 text-sm font-semibold ${statusColor}`}>{statusLabel}</p>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-gray-700 dark:text-gray-300">
           Aidvisora je v controlled beta režimu s Premium Brokers. Veřejná status page je v přípravě
           a bude dostupná na externí doméně po spuštění monitorovacího stacku (Sentry alerting,
           uptime monitoring, public incident feed).
         </p>
       </header>
+
+      {/* B3.9 — per-component status (live z /api/healthcheck). */}
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+          Stav komponent
+        </h2>
+        <ul className="mt-4 divide-y divide-gray-200 rounded-xl border border-gray-200 bg-white dark:divide-gray-700 dark:border-gray-700 dark:bg-gray-900/40">
+          {(Object.keys(snapshot.components) as Array<keyof HealthSnapshot["components"]>).map(
+            (key) => {
+              const comp = snapshot.components[key];
+              return (
+                <li
+                  key={key}
+                  className="flex items-center justify-between px-5 py-3 text-sm"
+                >
+                  <span className="font-medium text-gray-800 dark:text-gray-200">
+                    {COMPONENT_LABELS[key]}
+                  </span>
+                  <span className="flex items-center gap-3">
+                    {comp?.latencyMs != null && comp.status === "ok" ? (
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {comp.latencyMs} ms
+                      </span>
+                    ) : null}
+                    {statusPill(comp)}
+                  </span>
+                </li>
+              );
+            },
+          )}
+        </ul>
+        {snapshot.timestamp ? (
+          <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+            Poslední měření: {new Date(snapshot.timestamp).toLocaleString("cs-CZ")}
+          </p>
+        ) : null}
+      </section>
 
       <section className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <InfoCard

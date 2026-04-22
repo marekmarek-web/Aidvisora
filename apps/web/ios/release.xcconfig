@@ -1,0 +1,11 @@
+// Release config — paired with ios/debug.xcconfig.
+//
+// CAPACITOR_DEBUG is surfaced into Info.plist via the $(CAPACITOR_DEBUG)
+// substitution on line 5-6. Without a release.xcconfig the substitution
+// silently returned empty, which some Capacitor plugins interpret as
+// "unknown → treat as debug" → leaked the safari-style remote inspector
+// into TestFlight/App Store builds.
+//
+// Keep this file minimal; any additional release-only build settings
+// belong here (analytics keys via xcodebuild -xcconfig export, etc.).
+CAPACITOR_DEBUG = false

@@ -33,7 +33,7 @@ export function InvestmentInputPanel({
     Math.min(INVESTMENT_DEFAULTS.yearsMax, Math.max(INVESTMENT_DEFAULTS.yearsMin, v));
 
   return (
-    <div className="rounded-[20px] border-[1.5px] border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-[0_1px_3px_rgba(13,31,78,0.06),0_1px_2px_rgba(13,31,78,0.04)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.25)] sm:p-6 md:p-7">
+    <div className="rounded-[16px] sm:rounded-[20px] border-[1.5px] border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4 shadow-[0_1px_3px_rgba(13,31,78,0.06),0_1px_2px_rgba(13,31,78,0.04)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.25)] sm:p-6 md:p-7">
 
       {/* Počáteční vklad */}
       <div className="mb-0">

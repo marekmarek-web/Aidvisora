@@ -1,8 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import crypto from "node:crypto";
-import { and, eq } from "drizzle-orm";
-import { dbService } from "@/lib/db/service-db";
-import { notificationLog } from "db";
+import { and, eq, sql } from "drizzle-orm";
+import { dbService, withServiceTenantContext } from "@/lib/db/service-db";
+import {
+  notificationLog,
+  emailCampaignRecipients,
+  emailCampaignEvents,
+  contacts,
+} from "db";
 
 /**
  * Resend webhook handler — delivery events, bounces, complaints.
@@ -152,6 +157,7 @@ export async function POST(request: NextRequest) {
         : null;
 
   try {
+    // 1) Legacy: notification_log
     await dbService
       .update(notificationLog)
       .set({
@@ -165,6 +171,92 @@ export async function POST(request: NextRequest) {
           eq(notificationLog.channel, "email"),
         ),
       );
+
+    // 2) Campaign recipients — najdi řádek a zapiš event + status.
+    const [recipient] = await dbService
+      .select({
+        id: emailCampaignRecipients.id,
+        tenantId: emailCampaignRecipients.tenantId,
+        campaignId: emailCampaignRecipients.campaignId,
+        contactId: emailCampaignRecipients.contactId,
+      })
+      .from(emailCampaignRecipients)
+      .where(eq(emailCampaignRecipients.providerMessageId, emailId))
+      .limit(1);
+
+    if (recipient) {
+      await withServiceTenantContext({ tenantId: recipient.tenantId }, async (tx) => {
+        const now = new Date();
+        const updates: Record<string, unknown> = {};
+        let recipientStatusColumn: string | null = null;
+
+        switch (event.type) {
+          case "email.delivered":
+            updates.deliveredAt = now;
+            recipientStatusColumn = "delivered";
+            break;
+          case "email.opened":
+            updates.openedAt = sql`coalesce(${emailCampaignRecipients.openedAt}, ${now})`;
+            recipientStatusColumn = "opened";
+            break;
+          case "email.clicked":
+            updates.firstClickAt = sql`coalesce(${emailCampaignRecipients.firstClickAt}, ${now})`;
+            updates.clickCount = sql`${emailCampaignRecipients.clickCount} + 1`;
+            recipientStatusColumn = "clicked";
+            break;
+          case "email.bounced":
+            updates.bouncedAt = now;
+            updates.bounceType = event.data?.bounce?.subType ?? "hard";
+            updates.status = "bounced";
+            updates.errorMessage = (errorMessage ?? "bounced").slice(0, 500);
+            break;
+          case "email.complained":
+            updates.complaintAt = now;
+            updates.status = "complained";
+            break;
+        }
+
+        if (recipientStatusColumn) {
+          // Monotone forward progress: status jde jen na 'dál', neregresuje z failed/bounced.
+          updates.status = sql`CASE WHEN ${emailCampaignRecipients.status} NOT IN ('failed','bounced','complained','unsubscribed') THEN ${recipientStatusColumn} ELSE ${emailCampaignRecipients.status} END`;
+        }
+
+        if (Object.keys(updates).length > 0) {
+          await tx
+            .update(emailCampaignRecipients)
+            .set(updates)
+            .where(eq(emailCampaignRecipients.id, recipient.id));
+        }
+
+        await tx.insert(emailCampaignEvents).values({
+          tenantId: recipient.tenantId,
+          campaignId: recipient.campaignId,
+          recipientId: recipient.id,
+          eventType: statusLabel,
+          url: event.data?.click?.link ?? null,
+          metadata: {
+            providerMessageId: emailId,
+            errorMessage: errorMessage ?? null,
+            bounceSubType: event.data?.bounce?.subType ?? null,
+            feedbackType: event.data?.complaint?.feedbackType ?? null,
+          },
+        });
+
+        // Hard bounce nebo complained → auto do_not_email (compliance).
+        const isHardBounce =
+          event.type === "email.bounced" && event.data?.bounce?.subType !== "transient";
+        const isComplaint = event.type === "email.complained";
+        if ((isHardBounce || isComplaint) && recipient.contactId) {
+          await tx
+            .update(contacts)
+            .set({
+              doNotEmail: true,
+              updatedAt: now,
+            })
+            .where(eq(contacts.id, recipient.contactId));
+        }
+      });
+    }
   } catch (err) {
     console.error("[resend-webhook] update failed", err);
     return NextResponse.json({ ok: false, error: "Update failed" }, { status: 500 });

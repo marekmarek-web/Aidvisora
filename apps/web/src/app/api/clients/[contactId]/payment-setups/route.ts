@@ -91,8 +91,16 @@ export async function GET(
 
   const items = result.rows.map((r) => ({
     ...r,
-    /** Phase 3E: explicit client visibility tier. Phase 5 will use this to decide portal exposure. */
-    clientVisibility: resolvePaymentSetupClientVisibility(r.status),
+    /**
+     * B2.10 — client visibility now reflects the real trio
+     * (`status` × `needsHumanReview` × `visibleToClient`). Matches what
+     * the portal actually renders and what analytics report as `portalReady`.
+     */
+    clientVisibility: resolvePaymentSetupClientVisibility(
+      r.status,
+      r.needsHumanReview ?? undefined,
+      r.visibleToClient ?? undefined,
+    ),
   }));
 
   return NextResponse.json({ items });

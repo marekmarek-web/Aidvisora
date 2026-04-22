@@ -3,6 +3,7 @@
  * Internal Stripe/DB tiers remain starter | pro | team; public names are Start | Pro | Management.
  */
 
+import { TRIAL_DURATION_DAYS } from "@/lib/billing/trial-constants";
 import type { PlanTier } from "@/lib/stripe/billing-types";
 
 // ─── Public vs internal identity ─────────────────────────────────────────────
@@ -91,8 +92,12 @@ export type EffectiveAccessContext = Readonly<{
   isRestricted: boolean;
 }>;
 
-/** Workspace trial: same duration as Stripe marketing default; independent access mode. */
-export const TRIAL_DURATION_DAYS = 14 as const;
+/**
+ * Workspace trial: same duration as Stripe marketing default; independent access mode.
+ * Perf — konstanta žije v `trial-constants.ts`, aby marketing bundle nemusel
+ * tahat celý plan-catalog kvůli jednomu číslu. Re-export pro zpětnou kompatibilitu.
+ */
+export { TRIAL_DURATION_DAYS };
 
 /**
  * Internal tier key for default trial entitlements (maps to PRO public plan / capabilities).

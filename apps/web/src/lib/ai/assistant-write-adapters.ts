@@ -991,7 +991,15 @@ export function registerAssistantWriteAdapters(): void {
 
   registerWriteAdapter("createClientPortalNotification", async (params, ctx) => {
     try {
-      const { tenantId } = await assertCtx(ctx);
+      const auth = await assertCtx(ctx);
+      // B2.8 — defense-in-depth: notifikaci do klientského portálu může
+      // vytvořit jen role s communications:write (Advisor+). Bez tohoto
+      // gate mohl Viewer přes AI Drawer tool-call vygenerovat notifikaci
+      // bez auditovaného entry-pointu z UI.
+      if (!hasPermission(auth.roleName, "communications:write")) {
+        return errResult("Chybí oprávnění pro vytvoření notifikace klientovi.");
+      }
+      const tenantId = auth.tenantId;
       const contactId = strParam(params, "contactId");
       const title = strParam(params, "portalNotificationTitle");
       const body = strParam(params, "portalNotificationBody") ?? null;

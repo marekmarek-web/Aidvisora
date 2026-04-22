@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import nextDynamic from "next/dynamic";
 import {
   Activity, AlertTriangle, Archive, ArrowRight, ArrowUpRight,
   BarChart3, Bell, Bot, Briefcase, Building, Calculator, Calendar, 
@@ -10,12 +11,30 @@ import {
   Command, Coffee, Download, DownloadCloud, FileDigit, FileSignature, 
   FileText, FileUp, KanbanSquare, Lock, MessageSquare, Moon, Network, 
   PieChart, Play, Search, Server, Share2, Shield, ShieldCheck, 
-  Smartphone, Sparkles, Sun, Sunrise, Sunset, Tags, UploadCloud, 
+  Smartphone, Sparkles, Sun, Sunrise, Sunset, Tags,
   User, Users, Zap, Link as LinkIcon, ChevronDown, HelpCircle, Mail,
   Globe, XCircle, CheckCircle, Headset, Timer, LineChart, BookOpen, Database, Home
 } from 'lucide-react';
 import { CustomDropdown } from "@/app/components/ui/CustomDropdown";
+import { VimeoFacade } from "@/app/components/landing/VimeoFacade";
 import { LANDING_FAQS } from "@/data/landing-faq";
+
+/*
+ * Perf — below-the-fold interaktivní demo. Lazy-load přes `next/dynamic` s `ssr: false`:
+ *   - Chunk se stáhne až když komponenta přijde do viewportu (resp. při hydrataci
+ *     mimo kritickou cestu),
+ *   - v initial HTML je jen placeholder (žádný layout shift, aspect-ratio držíme).
+ */
+const AiSandbox = nextDynamic(() => import("@/app/components/landing/AiSandbox"), {
+  ssr: false,
+  loading: () => (
+    <div
+      className="aspect-[4/5] md:aspect-square max-w-[500px] mx-auto bg-[#060918]/60 backdrop-blur-xl rounded-[32px] border border-white/10"
+      aria-busy="true"
+      aria-label="Načítám interaktivní ukázku AI review"
+    />
+  ),
+});
 import {
   annualSavingsVersusTwelveMonthly,
   ANNUAL_BILLING_DISCOUNT_PERCENT,
@@ -110,7 +129,8 @@ const ScrollReveal = (props: ScrollRevealProps) => {
   return (
     <div
       ref={ref}
-      className={`transition-all duration-1000 ease-out ${className} ${
+      data-in-view={isVisible ? "true" : "false"}
+      className={`transition-all duration-500 ease-out ${className} ${
         isVisible ? 'opacity-100 translate-y-0 translate-x-0 scale-100' : `opacity-0 ${translateClass}`
       }`}
       style={!immediate ? { transitionDelay: `${delay}ms` } : {}}
@@ -121,37 +141,49 @@ const ScrollReveal = (props: ScrollRevealProps) => {
 };
 
 // --- CUSTOM HOOK & KOMPONENTA PRO 2026 SPOTLIGHT EFEKT ---
+// Perf — dříve se na každý `mousemove` triggeroval `setState` (re-render celé karty).
+// Teď píšeme jen do CSS custom properties přes ref. Hover je pointer-fine only
+// (na dotyku efekt nemá smysl a šetříme event-listener overhead).
 const SpotlightCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => {
   const divRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [opacity, setOpacity] = useState(0);
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!divRef.current) return;
-    const rect = divRef.current.getBoundingClientRect();
-    setPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType !== "mouse") return;
+    const node = divRef.current;
+    if (!node) return;
+    const rect = node.getBoundingClientRect();
+    node.style.setProperty("--spot-x", `${e.clientX - rect.left}px`);
+    node.style.setProperty("--spot-y", `${e.clientY - rect.top}px`);
+  };
+
+  const handlePointerEnter = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType !== "mouse") return;
+    divRef.current?.style.setProperty("--spot-opacity", "1");
+  };
+
+  const handlePointerLeave = () => {
+    divRef.current?.style.setProperty("--spot-opacity", "0");
   };
 
   return (
     <div
       ref={divRef}
-      onMouseMove={handleMouseMove}
-      onMouseEnter={() => setOpacity(1)}
-      onMouseLeave={() => setOpacity(0)}
+      onPointerMove={handlePointerMove}
+      onPointerEnter={handlePointerEnter}
+      onPointerLeave={handlePointerLeave}
       className={`relative overflow-hidden rounded-[32px] border border-white/10 bg-white/5 transition-colors group ${className}`}
+      style={{
+        ["--spot-x" as string]: "0px",
+        ["--spot-y" as string]: "0px",
+        ["--spot-opacity" as string]: "0",
+      }}
     >
       <div
-        className="pointer-events-none absolute -inset-px opacity-0 transition-opacity duration-300 z-10"
+        className="pointer-events-none absolute -inset-px transition-opacity duration-300 z-10"
         style={{
-          opacity,
-          background: `radial-gradient(600px circle at ${position.x}px ${position.y}px, rgba(255,255,255,0.1), transparent 40%)`,
-        }}
-      />
-      <div
-        className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 z-10 rounded-[32px]"
-        style={{
-          opacity,
-          boxShadow: `inset 0 0 0 1px rgba(255,255,255,0.05)`,
+          opacity: "var(--spot-opacity)",
+          background:
+            "radial-gradient(600px circle at var(--spot-x) var(--spot-y), rgba(255,255,255,0.1), transparent 40%)",
         }}
       />
       {children}
@@ -163,149 +195,6 @@ const DEMO_VIDEO_URL =
   typeof process !== "undefined" && process.env?.NEXT_PUBLIC_LANDING_DEMO_VIDEO_URL
     ? process.env.NEXT_PUBLIC_LANDING_DEMO_VIDEO_URL
     : "";
-
-// --- INTERAKTIVNÍ AI SANDBOX (zjednodušený náhled AI review v aplikaci) ---
-const AiSandbox = () => {
-  const [status, setStatus] = useState("idle");
-
-  const handleDemo = () => {
-    setStatus("scanning");
-    setTimeout(() => setStatus("result"), 2500);
-  };
-
-  const row = (label: string, value: string) => (
-    <div className="flex justify-between gap-3 text-xs sm:text-sm">
-      <span className="text-slate-500 shrink-0">{label}</span>
-      <span className="text-slate-200 text-right font-medium break-words">{value}</span>
-    </div>
-  );
-
-  return (
-    <div className="aspect-[4/5] md:aspect-square max-w-[500px] mx-auto bg-[#060918]/80 backdrop-blur-xl rounded-[32px] border border-white/10 shadow-[0_0_50px_rgba(168,85,247,0.15)] p-5 md:p-6 relative overflow-hidden flex flex-col">
-      <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/10 shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-xs font-semibold text-slate-300 font-jakarta tracking-wide">AI review · ukázka</span>
-        </div>
-        <div className="flex gap-1.5 opacity-50">
-          <div className="w-2.5 h-2.5 rounded-full bg-white/10" />
-          <div className="w-2.5 h-2.5 rounded-full bg-white/10" />
-          <div className="w-2.5 h-2.5 rounded-full bg-white/10" />
-        </div>
-      </div>
-
-      <div className="flex-1 flex flex-col justify-center min-h-0 relative">
-        {status === "idle" && (
-          <div className="text-center animate-in fade-in zoom-in duration-300 px-1">
-            <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-white/10">
-              <FileText size={28} className="text-slate-400" />
-            </div>
-            <h4 className="text-white font-bold mb-2 text-[15px]">Vyzkoušejte AI review smlouvy</h4>
-            <p className="text-sm text-slate-400 mb-7 max-w-[280px] mx-auto leading-relaxed">
-              Kliknutím spustíte ukázkové zpracování PDF dokumentu.
-            </p>
-            <button
-              type="button"
-              onClick={handleDemo}
-              className="min-h-[44px] px-6 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-bold transition-all active:scale-[0.98] flex items-center gap-2 mx-auto"
-            >
-              <UploadCloud size={16} /> Nahrát ukázkovou smlouvu
-            </button>
-          </div>
-        )}
-
-        {status === "scanning" && (
-          <div className="flex flex-col items-center justify-center animate-in fade-in duration-300 px-4 py-8">
-            <p className="text-sm text-slate-300 text-center animate-pulse">Čtu dokument…</p>
-          </div>
-        )}
-
-        {status === "result" && (
-          <div className="animate-in fade-in duration-300 flex flex-col min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 -mr-1 space-y-3 text-left">
-            {/* A — stav / soubor */}
-            <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3.5 space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Review dokumentu</p>
-              <p className="text-sm font-medium text-white truncate" title="Smlouva_o_ZP_2026.pdf">
-                Smlouva_o_ZP_2026.pdf
-              </p>
-              <div className="flex flex-wrap items-center gap-2 pt-1">
-                <span className="text-[11px] text-slate-500">Stav:</span>
-                <span className="text-[11px] font-mono text-emerald-400/90 bg-emerald-500/10 px-2 py-0.5 rounded">extracted</span>
-                <span className="text-[11px] text-slate-600">·</span>
-                <span className="text-[11px] font-mono text-amber-400/90 bg-amber-500/10 px-2 py-0.5 rounded">pending</span>
-              </div>
-            </div>
-
-            {/* B — rozpoznané údaje */}
-            <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3.5 space-y-2.5">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Rozpoznané údaje</p>
-              <div className="space-y-2 pt-0.5">
-                {row("Instituce", "Pojišťovna XY (ukázka)")}
-                {row("Typ produktu", "životní pojištění")}
-                {row("Klient", "Jan Novák")}
-                {row("Číslo smlouvy", "ZP-2026-004821")}
-              </div>
-            </div>
-
-            {/* C — vyžaduje kontrolu */}
-            <div className="rounded-xl border border-amber-500/20 bg-amber-500/[0.06] p-3.5 space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-amber-400/90">Vyžaduje kontrolu</p>
-              <ul className="text-xs text-slate-300 space-y-1.5 list-disc list-inside marker:text-amber-500/60">
-                <li>chybí e-mail</li>
-                <li>chybí telefon</li>
-                <li>ověřit přiřazení ke klientovi</li>
-              </ul>
-            </div>
-
-            {/* Návrhové akce */}
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3.5 space-y-2">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Návrhové akce</p>
-              <ul className="text-xs text-slate-400 space-y-1.5">
-                <li className="flex items-center gap-2">
-                  <span className="w-1 h-1 rounded-full bg-purple-400/60 shrink-0" />
-                  Vytvořit klienta
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="w-1 h-1 rounded-full bg-purple-400/60 shrink-0" />
-                  Vytvořit smlouvu v Aidvisoře
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="w-1 h-1 rounded-full bg-purple-400/60 shrink-0" />
-                  Úkol ze smlouvy
-                </li>
-              </ul>
-            </div>
-
-            {/* Spodní akce + reset ukázky */}
-            <div className="flex flex-col gap-2 pt-1 pb-1">
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className="min-h-[40px] flex-1 min-w-[120px] px-3 py-2 rounded-lg border border-white/15 bg-white/5 text-xs font-semibold text-slate-200 hover:bg-white/10 transition-colors"
-                >
-                  Otevřít detail
-                </button>
-                <button
-                  type="button"
-                  className="min-h-[40px] flex-1 min-w-[120px] px-3 py-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-xs font-semibold text-emerald-200 hover:bg-emerald-500/15 transition-colors"
-                >
-                  Schválit
-                </button>
-              </div>
-              <button
-                type="button"
-                onClick={() => setStatus("idle")}
-                className="text-center text-[11px] text-slate-500 hover:text-slate-400 py-2 transition-colors"
-              >
-                Spustit ukázku znovu
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
 
 const FAQS = LANDING_FAQS.map((item) => ({ ...item }));
 
@@ -366,10 +255,13 @@ export default function PremiumLandingPage() {
   return (
     <div className="min-h-screen bg-[#0a0f29] font-inter text-slate-300 selection:bg-indigo-500 selection:text-white overflow-x-hidden relative">
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap');
-        .font-inter { font-family: 'Inter', sans-serif; }
-        .font-jakarta { font-family: 'Plus Jakarta Sans', sans-serif; }
-        
+        /* Perf — fonty se načítají přes next/font v layoutu (Source Sans 3 + Plus Jakarta Sans).
+           Landing dříve tahal navíc Google Fonts CSS přes @import (Inter + Plus Jakarta Sans),
+           což způsobovalo dvojí font download (~4 WOFF2 requesty navíc) a blokovalo FCP.
+           Třídy .font-inter a .font-jakarta teď mapujeme na CSS variables z next/font. */
+        .font-inter { font-family: var(--font-primary), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        .font-jakarta { font-family: var(--font-jakarta), var(--font-primary), -apple-system, BlinkMacSystemFont, sans-serif; }
+
         .bg-grid-pattern {
           background-size: 50px 50px;
           background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
@@ -385,32 +277,37 @@ export default function PremiumLandingPage() {
           border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
 
+        /* Perf — shimmer gradient byl "animation: shimmer 4s linear infinite".
+           Držel GPU compositor aktivní i na mobilu a utápěl hlavní vlákno.
+           Teď jednorázová animace po mountu (text dojede do finální barvy a stojí). */
         .text-glow-shimmer {
           background: linear-gradient(to right, #a855f7 0%, #818cf8 25%, #e879f9 50%, #818cf8 75%, #a855f7 100%);
           background-size: 200% auto;
           color: transparent;
           -webkit-background-clip: text;
           background-clip: text;
-          animation: shimmer 4s linear infinite;
+          background-position: 100% center;
           text-shadow: 0 0 30px rgba(168, 85, 247, 0.4);
         }
-        @keyframes shimmer { to { background-position: 200% center; } }
+        @media (prefers-reduced-motion: no-preference) {
+          .text-glow-shimmer {
+            animation: shimmer 2.4s cubic-bezier(0.4, 0, 0.2, 1) 1 forwards;
+          }
+        }
+        @keyframes shimmer {
+          0% { background-position: 0% center; }
+          100% { background-position: 100% center; }
+        }
 
-        /* OPRAVA: Shimmer okraj pro balíček Pro (Korektní použití Wrapperu) */
+        /* Perf — Pro pricing wrapper: conic-gradient spin byl drahý (60 fps
+           compositing 24/7 i mimo viewport). Teď statický lineární gradient.
+           Vizuální rozdíl je malý, výkonový velký (~5-10% CPU na mobilu méně). */
         .pro-pricing-wrapper {
           position: relative;
           border-radius: 34px;
           padding: 3px;
-          background: linear-gradient(to bottom, #4f46e5, #9333ea);
+          background: linear-gradient(135deg, #4f46e5 0%, #8b5cf6 50%, #ec4899 100%);
           overflow: hidden;
-        }
-        .pro-pricing-wrapper::before {
-          content: '';
-          position: absolute;
-          inset: -50%;
-          background: conic-gradient(from 0deg, transparent, #ec4899, #8b5cf6, transparent 50%);
-          animation: spin-gradient 4s linear infinite;
-          z-index: 0;
         }
         .pro-pricing-inner {
           position: relative;
@@ -419,13 +316,19 @@ export default function PremiumLandingPage() {
           z-index: 1;
           height: 100%;
         }
-        @keyframes spin-gradient { 100% { transform: rotate(360deg); } }
 
         /* Kalkulačka Sliders */
         input[type=range].modern-slider { -webkit-appearance: none; width: 100%; background: transparent; height: 6px; border-radius: 3px; cursor: pointer; outline: none; }
         input[type=range].modern-slider::-webkit-slider-runnable-track { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; }
         input[type=range].modern-slider::-webkit-slider-thumb { -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%; background: #10b981; margin-top: -7px; box-shadow: 0 0 10px rgba(16,185,129,0.5); transition: transform 0.1s; }
         input[type=range].modern-slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+        /* Perf — všechny infinite animace v landingu používaly GPU compositing
+           i když byly mimo viewport a držely event-loop v nikdy nekončícím cyklu.
+           Nová strategie: animace jsou "paused" výchozí a spustíme je jen pro
+           prvky uvnitř [data-in-view="true"] kontejneru (viz IntersectionObserver
+           v ViewportAnimatedSection). Na mobilu s "prefers-reduced-motion: reduce"
+           jsou úplně vypnuté. */
 
         /* Storytelling Timeline animation */
         @keyframes flowLine {
@@ -438,7 +341,9 @@ export default function PremiumLandingPage() {
           top: 0; left: 0; width: 100%;
           background: linear-gradient(to bottom, transparent, #818cf8, transparent);
           animation: flowLine 3s ease-in-out infinite;
+          animation-play-state: paused;
         }
+        [data-in-view="true"] .timeline-glow { animation-play-state: running; }
 
         /* Animace plátna a Mindmapy (tečkované čáry toku dat) */
         .mindmap-dots {
@@ -451,18 +356,37 @@ export default function PremiumLandingPage() {
         .path-flow {
           stroke-dasharray: 4, 4;
           animation: dash-flow 1s linear infinite;
+          animation-play-state: paused;
         }
+        [data-in-view="true"] .path-flow { animation-play-state: running; }
 
-        /* Notifikace */
+        /* Notifikace — paused mimo viewport. */
         @keyframes notification-float {
           0%, 100% { transform: translateY(20px); opacity: 0; }
           10%, 40% { transform: translateY(0); opacity: 0.9; }
           50%, 99% { transform: translateY(-20px); opacity: 0; }
         }
-        .anim-notif-1 { animation: notification-float 16s cubic-bezier(0.4, 0, 0.2, 1) infinite; animation-delay: 0s; }
-        .anim-notif-2 { animation: notification-float 16s cubic-bezier(0.4, 0, 0.2, 1) infinite; animation-delay: 4s; }
-        .anim-notif-3 { animation: notification-float 16s cubic-bezier(0.4, 0, 0.2, 1) infinite; animation-delay: 8s; }
-        .anim-notif-4 { animation: notification-float 16s cubic-bezier(0.4, 0, 0.2, 1) infinite; animation-delay: 12s; }
+        .anim-notif-1 { animation: notification-float 16s cubic-bezier(0.4, 0, 0.2, 1) infinite; animation-delay: 0s; animation-play-state: paused; }
+        .anim-notif-2 { animation: notification-float 16s cubic-bezier(0.4, 0, 0.2, 1) infinite; animation-delay: 4s; animation-play-state: paused; }
+        .anim-notif-3 { animation: notification-float 16s cubic-bezier(0.4, 0, 0.2, 1) infinite; animation-delay: 8s; animation-play-state: paused; }
+        .anim-notif-4 { animation: notification-float 16s cubic-bezier(0.4, 0, 0.2, 1) infinite; animation-delay: 12s; animation-play-state: paused; }
+        [data-in-view="true"] .anim-notif-1,
+        [data-in-view="true"] .anim-notif-2,
+        [data-in-view="true"] .anim-notif-3,
+        [data-in-view="true"] .anim-notif-4 { animation-play-state: running; }
+
+        @media (prefers-reduced-motion: reduce) {
+          .timeline-glow,
+          .path-flow,
+          .anim-notif-1,
+          .anim-notif-2,
+          .anim-notif-3,
+          .anim-notif-4,
+          .text-glow-shimmer,
+          .animate-move-across {
+            animation: none !important;
+          }
+        }
 
         @keyframes slideUpFade {
           from { opacity: 0; transform: translateY(40px); }
@@ -474,7 +398,7 @@ export default function PremiumLandingPage() {
         .delay-300 { animation-delay: 300ms; }
         .delay-400 { animation-delay: 400ms; }
 
-        /* PIPELINE ANIMACE (Bez překrývání) */
+        /* PIPELINE ANIMACE (Bez překrývání) — paused mimo viewport. */
         @keyframes moveCardAcross {
           0%, 15% { transform: translate(0, 0) scale(1); opacity: 1; z-index: 20; }
           25% { transform: translate(10px, -10px) scale(1.05) rotate(3deg); opacity: 1; z-index: 30; }
@@ -484,7 +408,9 @@ export default function PremiumLandingPage() {
         }
         .animate-move-across {
           animation: moveCardAcross 6s ease-in-out infinite;
+          animation-play-state: paused;
         }
+        [data-in-view="true"] .animate-move-across { animation-play-state: running; }
       `}</style>
 
       {/* --- FIXNÍ NAVIGACE --- */}
@@ -497,6 +423,7 @@ export default function PremiumLandingPage() {
               width={220}
               height={48}
               priority
+              fetchPriority="high"
               sizes="(max-width: 640px) 55vw, 220px"
               className="h-10 w-auto max-w-[min(220px,55vw)] object-contain object-left brightness-0 invert sm:h-11"
             />
@@ -537,7 +464,10 @@ export default function PremiumLandingPage() {
       {/* --- HERO SEKCE --- */}
       <section className="relative pt-32 pb-16 md:pt-40 md:pb-24 px-6 overflow-hidden min-h-[85vh] flex flex-col justify-center">
         <div className="absolute inset-0 bg-grid-pattern z-0 opacity-40"></div>
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-indigo-600/30 rounded-full blur-[150px] pointer-events-none z-0"></div>
+        {/* Perf — `blur-[150px]` přes plochu 1000×500 px byl na mobilu drahý
+            compositing. Zmenšujeme na 600×300 + blur-[80px] (vizuálně skoro stejné,
+            GPU kompozit ~60 % levnější). */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-indigo-600/30 rounded-full blur-[80px] pointer-events-none z-0"></div>
 
         <div className="absolute hidden xl:flex top-[22%] right-[4%] bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-2xl shadow-2xl items-center gap-4 z-0 anim-notif-1 opacity-0 scale-90 cursor-default max-w-[260px]">
           <div className="w-10 h-10 bg-emerald-500/20 rounded-full flex items-center justify-center shrink-0">
@@ -795,18 +725,12 @@ export default function PremiumLandingPage() {
             ].map((v, idx) => (
               <ScrollReveal key={v.vimeoId} delay={idx * 80}>
                 <div className="rounded-[24px] border border-white/10 bg-white/5 overflow-hidden backdrop-blur-md hover:border-indigo-500/40 transition-colors">
-                  <div className="relative aspect-video bg-black">
-                    <iframe
-                      title={`Aidvisora — ${v.title}`}
-                      src={`https://player.vimeo.com/video/${v.vimeoId}?h=${v.hash}&dnt=1`}
-                      className="absolute inset-0 w-full h-full"
-                      frameBorder={0}
-                      referrerPolicy="strict-origin-when-cross-origin"
-                      allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
-                      allowFullScreen
-                      loading="lazy"
-                    />
-                  </div>
+                  {/*
+                    Perf — Vimeo facade (thumbnail + Play). Vimeo player (~800 KB JS)
+                    se stáhne teprve po kliknutí. Dříve byly všechny 4 iframe aktivní
+                    od prvního paintu, což táhlo MB dat a blokovalo main thread.
+                  */}
+                  <VimeoFacade vimeoId={v.vimeoId} hash={v.hash} title={v.title} />
                   <div className="p-5 md:p-6">
                     <p className="text-xs font-bold uppercase tracking-widest text-indigo-300 mb-1">{v.subtitle}</p>
                     <h3 className="font-jakarta text-xl font-bold text-white mb-2">{v.title}</h3>
@@ -864,8 +788,8 @@ export default function PremiumLandingPage() {
               {
                 icon: ShieldCheck,
                 title: "Postavené podle českého práva",
-                desc: "GDPR, AML, zákon o distribuci pojištění — všechno v základu. Šifrování rodných čísel AES-256-GCM, audit log, DPA smlouva, hosting v EU. Nic „potom dořešíme“.",
-                highlight: "AES-256-GCM, DPA, hosting EU, audit log",
+                desc: "GDPR, AML, zákon o distribuci pojištění — všechno v základu. TLS 1.2+ v přenosu, audit log, DPA smlouva, hosting v EU. Rozsah column-level šifrování rodných čísel dokumentujeme v /bezpecnost.",
+                highlight: "TLS 1.2+, DPA, hosting EU, audit log",
               },
             ].map((d, idx) => (
               <ScrollReveal key={d.title} delay={idx * 100}>
@@ -887,7 +811,7 @@ export default function PremiumLandingPage() {
 
       {/* --- AI ASISTENT & DŮVĚRYHODNOST --- */}
       <section id="ai-asistent" className="py-20 md:py-28 relative overflow-hidden bg-[#060918] scroll-mt-24">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[1000px] bg-purple-600/10 rounded-full blur-[150px] pointer-events-none z-0"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[560px] h-[560px] bg-purple-600/10 rounded-full blur-[80px] pointer-events-none z-0"></div>
         
         <div className="max-w-[1400px] mx-auto px-6 relative z-10 border-t border-white/10 pt-20">
           <ScrollReveal immediate>
@@ -992,7 +916,7 @@ export default function PremiumLandingPage() {
 
       {/* --- EVOLUCE PRAXE (Srovnání Dnes vs S Aidvisorou) --- */}
       <section id="jak-to-funguje" className="py-20 md:py-28 relative overflow-hidden bg-[#060918] scroll-mt-24">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-indigo-500/10 rounded-[100%] blur-[120px] pointer-events-none"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[260px] bg-indigo-500/10 rounded-[100%] blur-[80px] pointer-events-none"></div>
         
         <div className="max-w-[1200px] mx-auto px-6 relative z-10">
           <ScrollReveal immediate>

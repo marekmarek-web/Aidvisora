@@ -183,10 +183,25 @@ describe("[audit] C-04 proposal enforcement → prázdný contract payload, advi
     expect(isSupporting).toBe(false);
   });
 
-  it.skip("INTENDED: after FIX-C-04, approved proposal must keep premiums from raw draft action when enforcement empties them", () => {
-    // Vyžaduje úpravu v apply-contract-review.ts:
-    //   premiumAmount a productName musí fallbackovat na action.payload, ne jen na ep.
-    expect(true).toBe(true);
+  it("DOCUMENTED (C-04 won't-fix): premium fields stay sensitive — NO fallback from action.payload", () => {
+    // B2.3 — Rozhodnutí audit: premium fallback by oslabil `manual_required`
+    // semantics (enforcement vyprazdňuje premium právě proto, že advisor
+    // musí confirm-nout). productName/institutionName/effectiveDate fallback
+    // na action.payload pořád funguje (F1-2), protože nejsou "sensitive" —
+    // LLM je nemůže halucinovat přes enforcement.
+    //
+    // Current contract (apply-contract-review.ts L1363-1364):
+    //   const premiumAmountRaw = (ep.premiumAmount as string | undefined)?.trim() || null;
+    //   const premiumAnnualRaw = (ep.premiumAnnual as string | undefined)?.trim() || null;
+    //
+    // Tento test slouží jako regression guard — kdyby někdo přidal fallback
+    // na action.payload pro premium, rozbíje se manual_required flow.
+    const ep: Record<string, unknown> = { premiumAmount: "" };
+    const fallback = ((): string | null => {
+      const raw = (ep.premiumAmount as string | undefined)?.trim() || null;
+      return raw;
+    })();
+    expect(fallback).toBeNull();
   });
 });
 

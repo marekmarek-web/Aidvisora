@@ -13,10 +13,10 @@ export function CalculatorPageShell({
 }: CalculatorPageShellProps) {
   return (
     <div
-      className={`${maxWidth} mx-auto space-y-4 rounded-[20px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4 sm:p-6 ${className}`.trim()}
+      className={`${maxWidth} mx-auto space-y-3 sm:space-y-4 p-3 sm:p-6 sm:rounded-[20px] sm:border sm:border-[color:var(--wp-surface-card-border)] sm:bg-[color:var(--wp-surface-card)] ${className}`.trim()}
     >
       {children}
-      <p className="text-center text-sm text-[color:var(--wp-text-secondary)] pt-2">
+      <p className="text-center text-xs sm:text-sm text-[color:var(--wp-text-secondary)] pt-1 sm:pt-2">
         Orientační výpočet. Nejedná se o finanční poradenství ani závaznou nabídku.
       </p>
     </div>

@@ -7,6 +7,12 @@ import { eq, and } from "db";
 import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { logAudit } from "@/lib/audit";
 import { createSignedStorageUrl } from "@/lib/storage/signed-url";
+import {
+  checkDocumentAccess,
+  logDocumentAccess,
+} from "@/lib/security/document-access";
+import { logSecurityEvent } from "@/lib/security/security-audit";
+import type { RoleName } from "@/lib/auth/permissions";
 
 export async function GET(
   _request: Request,
@@ -34,11 +40,44 @@ export async function GET(
   if (!doc) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  if (membership.roleName === "Client") {
-    if (!membership.contactId || doc.contactId !== membership.contactId || !doc.visibleToClient) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  // B3.2 — jeden centralizovaný access check místo inline logiky.
+  // Vrací `requiresAudit`, podle kterého rozhodujeme o zápisu do
+  // `document_access_log` (resp. `audit_log` s prefixem `document:access:*`).
+  const accessCheck = checkDocumentAccess({
+    documentId: id,
+    tenantId: membership.tenantId,
+    userId: user.id,
+    roleName: membership.roleName as RoleName,
+    purpose: "download",
+    documentTenantId: doc.tenantId,
+    isClientDoc: membership.roleName === "Client",
+    visibleToClient: doc.visibleToClient ?? false,
+    isSensitive: doc.sensitive ?? false,
+    contactId: membership.contactId ?? undefined,
+    documentContactId: doc.contactId ?? undefined,
+  });
+
+  if (!accessCheck.allowed) {
+    if (accessCheck.requiresAudit) {
+      await logSecurityEvent({
+        tenantId: membership.tenantId,
+        userId: user.id,
+        eventType: "cross_tenant_attempt",
+        severity: "critical",
+        entityType: "document",
+        entityId: id,
+        meta: {
+          reason: accessCheck.reason,
+          purpose: "download",
+          roleName: membership.roleName,
+        },
+        request: _request,
+      }).catch(() => {});
     }
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
   await logAudit({
     tenantId: membership.tenantId,
     userId: user.id,
@@ -47,6 +86,23 @@ export async function GET(
     entityId: id,
     request: _request,
   });
+  if (accessCheck.requiresAudit) {
+    await logDocumentAccess(
+      {
+        documentId: id,
+        tenantId: membership.tenantId,
+        userId: user.id,
+        roleName: membership.roleName as RoleName,
+        purpose: "download",
+        documentTenantId: doc.tenantId,
+        isSensitive: doc.sensitive ?? false,
+        visibleToClient: doc.visibleToClient ?? false,
+        contactId: membership.contactId ?? undefined,
+        documentContactId: doc.contactId ?? undefined,
+      },
+      { request: _request },
+    ).catch(() => {});
+  }
   if (doc.sensitive) {
     await logAudit({
       tenantId: membership.tenantId,

@@ -13,6 +13,9 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
+export const dynamic = "force-static";
+export const revalidate = 3600;
+
 const INTRO: LegalBlock[] = [
   {
     type: "p",
@@ -50,7 +53,7 @@ const POST_TABLE: LegalBlock[] = [
   { type: "h1", text: "3. Mezinárodní přenosy" },
   {
     type: "p",
-    text: "Primární infrastruktura Aidvisory je vedena s ohledem na region EU, podle konfigurace konkrétního projektu. U subdodavatelů, kteří data zpracovávají mimo EHP, vyžadujeme odpovídající záruky podle čl. 46 GDPR (zejména standardní smluvní doložky EU a dle potřeby doplňkové technické/organizační opatření).",
+    text: "Primární infrastruktura Aidvisora je vedena s ohledem na region EU, podle konfigurace konkrétního projektu. U subdodavatelů, kteří data zpracovávají mimo EHP, vyžadujeme odpovídající záruky podle čl. 46 GDPR (zejména standardní smluvní doložky EU a dle potřeby doplňkové technické/organizační opatření).",
   },
   { type: "h1", text: "4. Certifikace a audit" },
   {

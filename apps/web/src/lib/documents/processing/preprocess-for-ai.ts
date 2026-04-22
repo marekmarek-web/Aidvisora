@@ -7,12 +7,13 @@ import { preprocessDocument } from "@/lib/documents/adobe-service";
 import { createAdminClient } from "@/lib/supabase/server";
 import { createSignedStorageUrl } from "@/lib/storage/signed-url";
 import { extractTextFromPdfUrl } from "./pdf-text-fallback";
+import { scoreTextLayerQuality, getTextQualityGarbageThreshold } from "./text-quality";
 
 export type PreprocessResult = {
   preprocessed: boolean;
   /** Adobe / preprocessing layer outcome for pipeline persistence. */
   preprocessStatus: "completed" | "failed" | "skipped" | "partial";
-  preprocessMode: "adobe" | "none" | "pdf_parse_fallback";
+  preprocessMode: "adobe" | "none" | "pdf_parse_fallback" | "pdf_parse_fallback_garbage";
   fileUrl: string;
   markdownContent: string | null;
   ocrPdfPath: string | null;
@@ -22,6 +23,12 @@ export type PreprocessResult = {
   readabilityScore: number;
   ocrConfidenceEstimate: number;
   pageCountEstimate: number | null;
+  /** 0..1 — estimated quality of the extracted text layer (scoreTextLayerQuality). */
+  textQualityScore: number | null;
+  /** True when the text layer is almost certainly OCR garbage. */
+  textQualityIsGarbage: boolean;
+  /** Human-readable reasons from `scoreTextLayerQuality`. */
+  textQualityReasons: string[];
 };
 
 /** Musí odpovídat `USABLE_TEXT_MIN` v `contract-review-scan-gate.ts` (scan defer vs. text layer). */
@@ -132,6 +139,54 @@ export async function preprocessForAiExtraction(
   const hasUsableMarkdown = Boolean(markdownContent?.trim());
   const adobePreprocessedOk = canonical.ok && preprocessed && !adobeDisabled;
 
+  // Score the text layer quality so downstream gates can detect garbled OCR
+  // (e.g. scanner-embedded garbage that `pdf-parse` happily returns as text).
+  let textQualityScore: number | null = null;
+  let textQualityIsGarbage = false;
+  let textQualityReasons: string[] = [];
+  if (markdownContent && markdownContent.trim().length >= 40) {
+    const quality = scoreTextLayerQuality(markdownContent, {
+      garbageThreshold: getTextQualityGarbageThreshold(),
+    });
+    textQualityScore = quality.score;
+    textQualityIsGarbage = quality.isLikelyGarbage;
+    textQualityReasons = quality.reasons;
+    if (quality.isLikelyGarbage) {
+      warnings.push(
+        `text_quality_garbage: score=${quality.score.toFixed(2)}, reasons=${quality.reasons.join("|")}`
+      );
+      // Cap readability so downstream UI / trace aren't misled by the long but
+      // meaningless text length. Real reading quality here is terrible.
+      const cappedReadability = Math.min(readabilityScore, 35);
+      if (cappedReadability !== readabilityScore) {
+        warnings.push(
+          `text_quality_garbage_readability_capped: ${readabilityScore} -> ${cappedReadability}`
+        );
+      }
+      // Flag the preprocess mode so the scan gate + pipeline know to route through vision.
+      if (preprocessMode === "pdf_parse_fallback") {
+        preprocessMode = "pdf_parse_fallback_garbage";
+      }
+      return {
+        preprocessed: adobePreprocessedOk || hasUsableMarkdown,
+        preprocessStatus,
+        preprocessMode,
+        fileUrl: bestFileUrl,
+        markdownContent,
+        ocrPdfPath: canonical.normalizedPdfPath ?? null,
+        normalizedPdfPath: canonical.normalizedPdfPath ?? null,
+        providerJobIds: canonical.providerJobIds,
+        warnings,
+        readabilityScore: cappedReadability,
+        ocrConfidenceEstimate: Math.min(ocrConfidenceEstimate, 0.35),
+        pageCountEstimate: canonical.pageCount ?? null,
+        textQualityScore,
+        textQualityIsGarbage,
+        textQualityReasons,
+      };
+    }
+  }
+
   return {
     preprocessed: adobePreprocessedOk || (hasUsableMarkdown && preprocessMode === "pdf_parse_fallback"),
     preprocessStatus,
@@ -145,5 +200,8 @@ export async function preprocessForAiExtraction(
     readabilityScore,
     ocrConfidenceEstimate,
     pageCountEstimate: canonical.pageCount ?? null,
+    textQualityScore,
+    textQualityIsGarbage,
+    textQualityReasons,
   };
 }

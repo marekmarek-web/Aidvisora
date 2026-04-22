@@ -32,6 +32,9 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
+export const dynamic = "force-static";
+export const revalidate = 3600;
+
 type StatusKind = "live" | "soon" | "roadmap";
 
 function StatusBadge({ status }: { status: StatusKind }) {

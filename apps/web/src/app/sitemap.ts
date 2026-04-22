@@ -19,7 +19,10 @@ const PUBLIC_ROUTES: Array<{
   { path: "/o-nas", priority: 0.6, changeFrequency: "monthly" },
   { path: "/kontakt", priority: 0.6, changeFrequency: "monthly" },
   { path: "/klientska-zona", priority: 0.7, changeFrequency: "monthly" },
-  { path: "/rezervace", priority: 0.5, changeFrequency: "monthly" },
+  // B2.16 — `/rezervace` top-level nemá page (pouze `/rezervace/[token]` pro
+  // tokenové booking linky). Záznam v sitemap vedl k 404 u crawlerů. Až budeme
+  // chtít veřejnou landing pro rezervace, přidat `rezervace/page.tsx` a
+  // záznam sem zpět.
   { path: "/bezpecnost", priority: 0.6, changeFrequency: "monthly" },
   { path: "/terms", priority: 0.3, changeFrequency: "yearly" },
   { path: "/privacy", priority: 0.3, changeFrequency: "yearly" },

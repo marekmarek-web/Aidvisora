@@ -22,6 +22,12 @@ const SEGMENT_TO_COVERAGE_ITEM: Record<string, string> = {
   AUTO_PR: "Pojištění vozidel",
   AUTO_HAV: "Pojištění vozidel",
   ODP: "Pojištění odpovědnosti",
+  // B2.2 — ODP_ZAM (odpovědnost zaměstnance vůči zaměstnavateli) spadá do
+  // stejného coverage bucketu jako obecná odpovědnost, aby review fixture
+  // se segmentem ODP_ZAM vůbec vyprodukovala coverage row. Bez této položky
+  // `SEGMENT_TO_COVERAGE_ITEM[segment]` vrátilo undefined a upsert tiše
+  // skipnul, což vedlo k dead coverage po apply.
+  ODP_ZAM: "Pojištění odpovědnosti",
   DPS: "DPS",
   DIP: "Investice",
   INV: "Investice",
@@ -43,6 +49,15 @@ type UpsertCoverageInput = {
    * globálního `db` a chová se jako legacy post-commit varianta.
    */
   tx?: typeof db;
+  /**
+   * B2.1 (H-09) — per-contract segment hint. Envelope `coverageList` je
+   * review-wide; v bundles (2+ contractů různých segmentů) by bez této
+   * nápovědy každá iterace overwritla coverage prvního contractu, protože
+   * lista itemů platí napříč celým envelope. Když je segment předaný,
+   * envelope coverageList se filtruje na položky tohoto segmentu a
+   * fallback jde přes `SEGMENT_TO_COVERAGE_ITEM[contractSegment]`.
+   */
+  contractSegment?: string | null;
 };
 
 /**
@@ -78,10 +93,14 @@ export async function upsertCoverageFromAppliedReview(
     (extractedPayload?.productArea as string) ??
     inferredSegment;
 
-  // Determine segment from contract type / product area if available
+  // Determine segment from contract type / product area if available.
+  // B2.1: explicit `contractSegment` hint má absolutní prioritu (per-contract
+  // bundle support); jinak jdeme na draftActions → envelope fallback (legacy).
   let segment = "ZP";
   const draftActions = row.draftActions as Array<{ type: string; payload: Record<string, unknown> }> | null;
-  if (Array.isArray(draftActions)) {
+  if (input.contractSegment && input.contractSegment.trim()) {
+    segment = input.contractSegment.trim();
+  } else if (Array.isArray(draftActions)) {
     const contractAction = draftActions.find(
       (a) =>
         a.type === "create_contract" ||
@@ -103,7 +122,19 @@ export async function upsertCoverageFromAppliedReview(
   const coverageList: CoverageListItem[] = Array.isArray(rawCoverageList) ? rawCoverageList : [];
 
   if (coverageList.length > 0) {
-    for (const item of coverageList) {
+    // B2.1 (H-09): v bundles filtrujeme envelope coverageList na položky
+    // aktuálního contract segmentu — jinak by druhý contract přepsal coverage
+    // linkedContractId prvního (shared itemKey), nebo by kompletně vyhrabal
+    // coverage z cizího segmentu. Pro single-contract case (contractSegment
+    // = null) se chovají všechny items tak jako dřív.
+    const filtered = input.contractSegment
+      ? coverageList.filter((item) => {
+          const itemSeg = (item.segmentCode ?? item.segment ?? "").toString().trim();
+          if (!itemSeg) return true; // legacy items bez segment tagu — apply
+          return itemSeg === segment;
+        })
+      : coverageList;
+    for (const item of filtered) {
       const key = item.itemKey ?? item.name;
       const seg = item.segmentCode ?? item.segment ?? segment;
       if (key && typeof key === "string" && key.trim()) {
@@ -112,7 +143,7 @@ export async function upsertCoverageFromAppliedReview(
     }
   }
 
-  // Fallback to segment-level mapping when no explicit list
+  // Fallback to segment-level mapping when no explicit list (or filtered empty).
   if (coverageItems.length === 0) {
     const itemKey = SEGMENT_TO_COVERAGE_ITEM[segment];
     if (!itemKey) return;

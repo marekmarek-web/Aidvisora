@@ -85,7 +85,10 @@ import {
   runCombinedClassifyAndExtract,
   type BundleSectionTexts,
 } from "./combined-extraction";
-import { runPageImageFallbackForMissingRequired } from "./page-image-fallback";
+import {
+  runPageImageFallbackForMissingRequired,
+  runFullDocumentVisionExtraction,
+} from "./page-image-fallback";
 import {
   breadcrumbPageImageFallbackRecovery,
   capturePageImageFallbackError,
@@ -153,6 +156,16 @@ function mergePreprocessIntoTrace(trace: ExtractionTrace, meta?: PipelinePreproc
   if (meta.preprocessWarnings?.length) {
     trace.warnings = [...(trace.warnings ?? []), ...meta.preprocessWarnings];
   }
+  // Surface text-quality heuristic outputs to admin debug / trace.
+  if (typeof meta.textQualityScore === "number") {
+    trace.textQualityScore = meta.textQualityScore;
+  }
+  if (typeof meta.textQualityIsGarbage === "boolean") {
+    trace.textQualityIsGarbage = meta.textQualityIsGarbage;
+  }
+  if (Array.isArray(meta.textQualityReasons) && meta.textQualityReasons.length) {
+    trace.textQualityReasons = [...meta.textQualityReasons];
+  }
 }
 
 /** Compact JSON for classifier `adobe_signals` — no document body. */
@@ -174,12 +187,31 @@ function logPipelineEvent(phase: string, payload: Record<string, unknown>): void
   console.info(`[ai-review-v2] ${phase}`, JSON.stringify(payload));
 }
 
-/** Saves one OpenAI file call when preprocess already proves a text-heavy PDF. */
-function tryInferInputModeFromPreprocess(
+/**
+ * Saves one OpenAI file call when preprocess already proves a text-heavy PDF.
+ *
+ * Exported for unit tests. The garbage-text guard (textQualityIsGarbage /
+ * `pdf_parse_fallback_garbage` / low textQualityScore) prevents garbled scans
+ * from being treated as `text_pdf` — Pilíř 2 of the "AI Review scan reading fix".
+ */
+export function tryInferInputModeFromPreprocess(
   meta: PipelinePreprocessMeta | null | undefined,
   hintLength: number
 ): InputModeResult | null {
-  if (meta?.preprocessMode === "pdf_parse_fallback" && hintLength > 0) {
+  // If the text layer looks like OCR garbage (e.g. scanned PDF with a garbled
+  // embedded text layer), NEVER shortcut to `text_pdf`. Let `detectInputMode`
+  // run so the pipeline can correctly identify it as a scan and route through
+  // the vision fallback. This is the whole point of the text-quality gate.
+  const isGarbage =
+    meta?.textQualityIsGarbage === true ||
+    meta?.preprocessMode === "pdf_parse_fallback_garbage" ||
+    (typeof meta?.textQualityScore === "number" && meta.textQualityScore < 0.5);
+
+  if (
+    meta?.preprocessMode === "pdf_parse_fallback" &&
+    hintLength > 0 &&
+    !isGarbage
+  ) {
     return {
       inputMode: "text_pdf",
       confidence: 0.9,
@@ -193,6 +225,7 @@ function tryInferInputModeFromPreprocess(
   if (process.env.AI_REVIEW_SKIP_INPUT_MODE_WHEN_PREPROCESS_OK !== "true") return null;
   if (hintLength < 800) return null;
   if (typeof meta?.readabilityScore !== "number" || meta.readabilityScore < 68) return null;
+  if (isGarbage) return null;
   return {
     inputMode: "text_pdf",
     confidence: 0.85,
@@ -208,11 +241,23 @@ async function tryExtractPaymentWithPrompt(
   fileUrl: string,
   mimeType: string | null | undefined,
   documentText: string,
-  ctx: { classificationReasons: string[]; adobeSignals: string; filename: string }
+  ctx: {
+    classificationReasons: string[];
+    adobeSignals: string;
+    filename: string;
+    /** When true, skip Prompt Builder text path entirely and use the file-based multimodal call. */
+    preferFileMultimodal?: boolean;
+  }
 ): Promise<
   | { ok: true; data: PaymentInstructionExtraction; raw: string }
   | { ok: false; error: string; errorCode?: string }
 > {
+  // Garbage/scan short-circuit: the text path cannot produce a usable result
+  // when `documentText` is OCR noise, so go straight to file-based multimodal.
+  if (ctx.preferFileMultimodal) {
+    return extractPaymentInstructionsFromDocument(fileUrl, mimeType);
+  }
+
   const promptId = getAiReviewPromptId("paymentInstructionsExtraction");
   if (!promptId) {
     return extractPaymentInstructionsFromDocument(fileUrl, mimeType);
@@ -412,6 +457,19 @@ function finalizeContractPayload(params: {
   data.documentMeta.preprocessMode = options?.preprocessMeta?.preprocessMode;
   data.documentMeta.preprocessStatus = options?.preprocessMeta?.preprocessStatus;
   data.documentMeta.textCoverageEstimate = textCov;
+  // extractionSourceKind — derived from the final extraction path so UI can
+  // surface "read directly from scan (vision)" for garbled PDFs.
+  const traceRec = trace as unknown as Record<string, unknown>;
+  const secondPass = typeof trace.extractionSecondPass === "string" ? trace.extractionSecondPass : null;
+  if (traceRec.scanVisionFallbackActivated === true) {
+    data.documentMeta.extractionSourceKind = "file_multimodal";
+  } else if (secondPass === "pdf") {
+    data.documentMeta.extractionSourceKind = "file_multimodal";
+  } else if (secondPass === "prompt_text") {
+    data.documentMeta.extractionSourceKind = "prompt_builder_text";
+  } else if (secondPass === "text") {
+    data.documentMeta.extractionSourceKind = "schema_text_wrap";
+  }
   if (extractionRoute === "supporting_document") {
     allReasons.push("supporting_document_review");
   }
@@ -1164,19 +1222,51 @@ export async function runAiReviewV2Pipeline(
   // Batch 2 — Page-image multimodal fallback for low-OCR scan PDFs.
   // When OCR hint is too weak to extract over text, and we have a PDF fileUrl,
   // allow the downstream pipeline to route through createResponseWithFile (OpenAI
-  // Responses API renders PDF pages internally as vision input). Feature-flagged
-  // for safe rollout. Envelope confidence is later capped when this path is used.
-  const scanVisionFallbackEnabled = process.env.AI_REVIEW_SCAN_VISION_FALLBACK === "true";
+  // Responses API renders PDF pages internally as vision input). As of 2026-04
+  // this is ON by default (AI_REVIEW_SCAN_VISION_FALLBACK=false disables it) and
+  // triggers not just on the legacy `scanOcrUnusableEarly` condition but also
+  // when text is formally long enough but actually OCR garbage, or whenever the
+  // input mode detector says the PDF is a scan/image.
+  const scanVisionFallbackEnabled =
+    process.env.AI_REVIEW_SCAN_VISION_FALLBACK !== "false";
   const normalizedMimeType = (mimeType ?? "").toLowerCase();
   const hasPdfFileForVisionFallback =
     !!fileUrl && (normalizedMimeType.includes("pdf") || fileUrl.toLowerCase().endsWith(".pdf"));
+
+  const textQualityIsGarbageMeta = Boolean(options?.preprocessMeta?.textQualityIsGarbage);
+  const lowTextCoverage = typeof textCov === "number" && textCov < 0.3;
+  const isGarbagePreprocessMode =
+    options?.preprocessMeta?.preprocessMode === "pdf_parse_fallback_garbage";
+
+  // Vision path is needed whenever any of:
+  //   1. legacy scanOcrUnusableEarly (very short / no usable text from preprocess)
+  //   2. the file is detected as a scan or image
+  //   3. the text layer exists but is OCR garbage (garbled embedded layer)
+  //   4. text coverage is below 30% of the page area
+  const needsVisionPath =
+    scanOcrUnusableEarly ||
+    inputModeIsActualScan ||
+    textQualityIsGarbageMeta ||
+    isGarbagePreprocessMode ||
+    lowTextCoverage;
+
   const visionFallbackActivated =
-    scanOcrUnusableEarly && scanVisionFallbackEnabled && hasPdfFileForVisionFallback;
+    needsVisionPath && scanVisionFallbackEnabled && hasPdfFileForVisionFallback;
 
   if (visionFallbackActivated) {
     (trace as Record<string, unknown>).scanVisionFallbackActivated = true;
+    (trace as Record<string, unknown>).visionFallbackReasons = [
+      scanOcrUnusableEarly ? "scan_ocr_unusable_early" : null,
+      inputModeIsActualScan ? "input_mode_scan" : null,
+      textQualityIsGarbageMeta ? "text_quality_garbage" : null,
+      isGarbagePreprocessMode ? "preprocess_mode_garbage" : null,
+      lowTextCoverage ? "low_text_coverage" : null,
+    ].filter(Boolean) as string[];
     trace.warnings = [...(trace.warnings ?? []), "scan_vision_fallback_used"];
     allReasons.push("scan_vision_fallback_used");
+    if (textQualityIsGarbageMeta || isGarbagePreprocessMode) {
+      allReasons.push("garbled_text_layer_used_vision");
+    }
   }
 
   if (scanOcrUnusableEarly && !visionFallbackActivated) {
@@ -1218,6 +1308,7 @@ export async function runAiReviewV2Pipeline(
       classificationReasons: classification.reasons,
       adobeSignals: buildAdobeSignalsSummary(options?.preprocessMeta ?? null),
       filename: options?.sourceFileName?.trim() || "unknown",
+      preferFileMultimodal: visionFallbackActivated && hasPdfFileForVisionFallback,
     });
     trace.extractionDurationMs = Date.now() - extStart;
 
@@ -1821,17 +1912,20 @@ export async function runAiReviewV2Pipeline(
 
   // Page-image fallback: for required fields left empty / low-confidence by the primary
   // text or input_file extraction pass, re-run the model against the rasterized source
-  // page and merge the rescued value back in with confidence capped at 0.7. Gated
-  // behind AI_REVIEW_PAGE_IMAGE_FALLBACK (default off for safe rollout).
-  const pageImageFallbackEnabled = process.env.AI_REVIEW_PAGE_IMAGE_FALLBACK === "true";
+  // page and merge the rescued value back in with confidence capped at 0.7.
+  // As of 2026-04, default ON (AI_REVIEW_PAGE_IMAGE_FALLBACK=false disables it).
+  const pageImageFallbackEnabled = process.env.AI_REVIEW_PAGE_IMAGE_FALLBACK !== "false";
   if (pageImageFallbackEnabled) {
     try {
+      const scanVisionWasActive =
+        (trace as unknown as Record<string, unknown>).scanVisionFallbackActivated === true;
       const fallbackResult = await runPageImageFallbackForMissingRequired({
         envelope: validated.data,
         documentType: resolvedDocumentType,
         fileUrl,
         mimeType,
         enabled: true,
+        aggressiveForScan: scanVisionWasActive,
       });
       if (fallbackResult.recoveredFieldKeys.length > 0) {
         trace.pageImageFallbackRecoveries = fallbackResult.recoveredFieldKeys;
@@ -1859,6 +1953,48 @@ export async function runAiReviewV2Pipeline(
         documentType: resolvedDocumentType,
         error: e instanceof Error ? e.message : String(e),
       });
+    }
+  }
+
+  // Full-document vision safety net: if we went through the vision fallback path
+  // (scanned/garbled PDF) but the extraction still has zero required-field values,
+  // rasterize the first N pages and send them as a single multimodal batch. This
+  // is the last-resort path before we give up on the document.
+  const stillZeroRequiredFields = hasZeroRequiredFieldValues(
+    validated.data.extractedFields ?? {},
+    resolvedDocumentType
+  );
+  const scanVisionFallbackWasActive =
+    (trace as unknown as Record<string, unknown>).scanVisionFallbackActivated === true;
+  if (
+    scanVisionFallbackWasActive &&
+    stillZeroRequiredFields &&
+    pageImageFallbackEnabled
+  ) {
+    try {
+      const full = await runFullDocumentVisionExtraction({
+        fileUrl,
+        mimeType,
+        documentType: resolvedDocumentType,
+        envelope: validated.data,
+      });
+      if (full.mergedFieldKeys.length > 0) {
+        (trace as Record<string, unknown>).fullVisionPagesUsed = full.pagesUsed;
+        (trace as Record<string, unknown>).fullVisionMergedFieldKeys = full.mergedFieldKeys;
+        trace.warnings = [...(trace.warnings ?? []), "full_document_vision_recovered"];
+        allReasons.push("full_document_vision_recovered");
+        allReasons.push("read_via_vision_fallback");
+      } else if (full.skippedReason) {
+        trace.warnings = [
+          ...(trace.warnings ?? []),
+          `full_document_vision_skipped:${full.skippedReason}`,
+        ];
+      }
+    } catch (e) {
+      trace.warnings = [
+        ...(trace.warnings ?? []),
+        `full_document_vision_error:${e instanceof Error ? e.message : String(e)}`,
+      ];
     }
   }
 

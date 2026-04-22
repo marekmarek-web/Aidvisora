@@ -22,6 +22,13 @@ export interface EmailPayload {
   from?: string;
   /** Reply-To (jinak env `RESEND_REPLY_TO`). */
   replyTo?: string;
+  /** Extra RFC 5322 / RFC 8058 headery (List-Unsubscribe, List-Unsubscribe-Post, …). */
+  headers?: Record<string, string>;
+  /**
+   * Tags posílané do Resend (zobrazují se v dashboardu, hodí se pro filtraci).
+   * Resend akceptuje lowercase [a-z0-9_] do 256 znaků.
+   */
+  tags?: { name: string; value: string }[];
   /**
    * Audit stopa pro `notification_log`. Pokud je přítomna, `sendEmail` po
    * Resend odpovědi zapíše řádek do `notification_log` s `providerMessageId`
@@ -62,6 +69,10 @@ async function sendViaResend(payload: EmailPayload): Promise<SendResult> {
         subject: payload.subject,
         html: payload.html,
         ...(replyTo ? { reply_to: replyTo } : {}),
+        ...(payload.headers && Object.keys(payload.headers).length > 0
+          ? { headers: payload.headers }
+          : {}),
+        ...(payload.tags && payload.tags.length > 0 ? { tags: payload.tags } : {}),
       }),
     });
 

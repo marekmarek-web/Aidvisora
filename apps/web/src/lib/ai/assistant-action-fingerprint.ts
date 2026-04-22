@@ -70,7 +70,16 @@ const FINGERPRINT_KEYS_BY_ACTION: Record<WriteActionType, string[]> = {
   createClientPortalNotification: ["contactId", "portalNotificationTitle"],
   createClientRequest: ["contactId", "productDomain", "noteContent"],
   updateClientRequest: ["opportunityId", "subject"],
-  createMaterialRequest: ["contactId", "noteContent"],
+  // B3.6 — rozšířit o `title`, `opportunityId` a `category`, ať dvě
+  // material requesty se stejným notem ale jiným titulem / opportunity / kategorií
+  // nedostanou kolizní fingerprint a nezablokují se navzájem jako duplikát.
+  createMaterialRequest: [
+    "contactId",
+    "noteContent",
+    "title",
+    "opportunityId",
+    "category",
+  ],
   publishPortfolioItem: ["contractId"],
   updatePortfolioItem: ["contractId"],
   createReminder: ["contactId", "taskTitle", "resolvedDate"],

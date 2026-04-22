@@ -10,6 +10,9 @@ export const metadata: Metadata = {
   description: `Veřejná příloha k internímu použití funkcí AI v Aidvisoře. Účinnost od ${LEGAL_EFFECTIVE_CS}.`,
 };
 
+export const dynamic = "force-static";
+export const revalidate = 3600;
+
 export default function AiDisclaimerPage() {
   const blocks = aiBlocks as LegalBlock[];
 

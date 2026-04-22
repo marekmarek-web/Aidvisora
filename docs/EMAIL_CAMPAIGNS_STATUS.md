@@ -1,48 +1,152 @@
-# E-mailové kampaně — stav MVP
+# E-mailové kampaně — stav platformy (v2, 2026-04)
 
-Krátký audit funkce `portal/email-campaigns` z pohledu připravenosti k produkčnímu použití. Slouží jako reference při dalším rozvoji (po UX QA passu).
+Tento dokument popisuje aktuální stav plné platformy e-mailových kampaní. Nahrazuje
+předchozí MVP audit — MVP funkce jsou v produkci a rozšířené o plánování, queue,
+tracking, automatizace, referraly, kurátované novinky a AI generátor.
 
-## Co funguje
+## Hlavní moduly
 
-- **Tvorba a ukládání kampaní** (`email_campaigns` tabulka v Supabase) včetně konceptu (draft) a odeslaných (sent).
-- **Segmentace kontaktů** s počty (`getSegmentCounts`) — klienti, potenciální, bez kategorie.
-- **Merge fields** `{{jmeno}}`, `{{cele_jmeno}}`, `{{unsubscribe_url}}` přes `previewReplace` (klient) a reálná substituce při odesílání (server).
-- **Rozesílka přes Resend API** (serverová action) s respektováním odhlášení (`unsubscribed_at` / globální opt-out).
-- **Testovací odeslání** na vlastní e-mail před spuštěním.
-- **Limit dávky** 80 příjemců na jedno spuštění (soft cap, chrání před náhodným masovým sendem a Resend rate-limits).
-- **WYSIWYG editor** s přepínáním vizuální / zdroj HTML (po UX QA passu).
-- **Dynamické jméno odesílatele** (`fromName` z auth user metadata, fallback na e-mail).
+### F1 — Draft / odeslání / šablony
 
-## Co nefunguje / chybí
+- `email_campaigns` s poli pro draft, naplánované odeslání, preheader, `tracking_enabled`,
+  `from_name_override`, `segment_id`, `segment_filter`, `template_id`, a A/B
+  meta (`parent_campaign_id`, `ab_variant`, `ab_winner_at`).
+- `email_templates` per tenant + globální katalog (seedovaná sada šablon
+  `blank`, `birthday`, `newsletter`, `consultation`, `year_in_review`,
+  `referral_ask`). UI má „Uložit jako šablonu".
+- Personalizace `{{jmeno}}`, `{{cele_jmeno}}`, `{{unsubscribe_url}}`,
+  `{{year_savings_total}}`, `{{products_list}}`, `{{meetings_count}}`,
+  `{{referral_url}}`.
+- Advisor `fromName` z `advisor_preferences` / `tenant_settings`, override
+  per-kampaň.
 
-| Oblast | Stav | Poznámka |
-| --- | --- | --- |
-| Sledování **otevření** (open pixel) | ❌ | V UI zobrazeno „Metriky nejsou sledovány“. |
-| Sledování **prokliků** (link wrapping) | ❌ | Resend nabízí via webhooky — zatím nenapojeno. |
-| **Bounce / complaint handling** | ❌ | Žádný webhook listener, stav doručení se neaktualizuje. |
-| **Queue / worker** pro velké segmenty | ❌ | Odesílání běží inline v server action → limit 80/spuštění. |
-| **Scheduling** (naplánované odeslání) | ❌ | Pouze okamžité odeslání. |
-| **A/B testování** předmětu | ❌ | — |
-| **Custom from (brand domain)** | ⚠️ | Hardcoded doména v Resendu, jméno dnes z auth metadata. |
-| **Šablony per tenant** | ⚠️ | Pouze globální `EMPTY_TEMPLATE` + statická galerie; per-workspace šablony v plánu. |
-| **Uložení draftu na server** | ⚠️ | Draft žije v `email_campaigns` při „Uložit koncept“, ale není live autosave. |
+### F2 — Queue & scheduling
 
-## Technické zadluženější body
+- `email_send_queue` s per-job retry backoff, `FOR UPDATE SKIP LOCKED`.
+- Vercel Cron `/api/cron/email-queue-worker` (každou minutu):
+  - `activateDueScheduledCampaigns` → draft/scheduled → queued v čase `scheduled_at`,
+  - `processEmailQueueBatch` (5× batch po 40),
+  - `reapStuckQueueJobs`,
+  - `finalizeCompletedCampaigns`,
+  - `finalizeDueAbTests`.
+- Kill-switch `EMAIL_SENDING_DISABLED=1`.
+- Scheduling v UI (date-time picker na kampaň, progress bar na detailu).
 
-- `EmailCampaignsClient.tsx` je monolit (~1 100 řádků) — v příštím passu rozdělit na `Editor`, `Preview`, `History`, `TemplateGallery`.
-- `contenteditable` vizuální editor je lightweight (`document.execCommand`) — deprecated API, pro plnohodnotný WYSIWYG by bylo dobré přejít na **TipTap** nebo **Lexical**.
-- Hardcoded galerie šablon (`TEMPLATES`) by měla žít v DB (`email_templates` per tenant / globální katalog).
-- `sendCampaign` action posílá sekvenčně — při 80 příjemcích OK, vyšší sendy vyžadují batch + retry logic.
+### F3 — Tracking & deliverability
 
-## Doporučený next step (mimo tento UX pass)
+- `/api/t/o/[token]` — open pixel.
+- `/api/t/c/[token]` — click wrapper s whitelist redirect ochranou proti
+  open redirect útokům.
+- Worker přepisuje `<a href>` v HTML a vkládá open pixel (respektuje
+  `tracking_enabled` flag).
+- `/api/email/resend-webhook` (Svix verify) — `delivered`, `bounced`,
+  `complained`, `opened`, `clicked`. Hard bounce → `contacts.do_not_email = true`.
+- `List-Unsubscribe` + `List-Unsubscribe-Post: One-Click` headery pro native
+  unsubscribe v Gmailu / Apple Mailu.
+- Detail kampaně: KPI karty (sent / delivered / opened / clicked / bounced /
+  unsubscribed), recipient tabulka s per-uživatelem stavem, sparkline vývoje.
 
-1. Webhook listener pro Resend (bounce, delivered, complaint) → `email_campaign_events` tabulka.
-2. Open/click tracking (pixel + wrapped URL) + agregovaný dashboard v detailu kampaně.
-3. Queue (Trigger.dev nebo Supabase Cron + worker) pro segmenty > 80 adres.
-4. Per-workspace šablony a WYSIWYG (TipTap) s media knihovnou.
-5. Plán odeslání (cron) + status „scheduled“.
+### F4 — Automations
+
+- `email_automation_rules`, `email_automation_runs` tabulky s RLS a indexy.
+- Visual **segment query builder** (`SegmentBuilder`) — AND/OR rules,
+  pole: tag, city, birthMonth, createdWithinDays, hasActiveContract, hasEmail.
+  Live preview počtu kontaktů přes `previewSegmentCount`.
+- Cron `/api/cron/email-automations` (denně) — triggery:
+  - `birthday`: offset dny před / po narozeninách,
+  - `inactive_client`: N dnů bez updatu,
+  - `year_in_review`: 1× ročně kolem konkrétního data.
+  Idempotence přes `email_automation_runs` (dedup-window, kontaktID + rule).
+- UI `/portal/email-campaigns/automations` — tabulka pravidel, modal pro
+  create/edit (trigger, config, template, offset, send hour, aktivace).
+
+### F5 — Year in review & referrals
+
+- `generateYearInReviewDraft` — agreguje za kontakt nebo tenant počty smluv,
+  objem pojistného, produktový list, počet schůzek. Personalizuje šablonu
+  `year_in_review` a vrací draft k úpravě.
+- `referral_requests` tabulka s per-request tokenem (60 dní expirace default).
+- `createReferralRequest({ contactId, sendEmail })` — generuje token + URL,
+  volitelně odešle e-mail přes šablonu `referral_ask`.
+- `/r/[token]` public landing (service role, bypass RLS) s `ReferralFormClient`:
+  form pro doporučujícího, vytvoří nový `contacts` řádek s tagy
+  `["lead","referral"]` a vazbou na zdrojový kontakt přes `lead_source="referral"`,
+  `source_kind="manual"`.
+- `ClientReferralSection` → tlačítka "Poslat žádost o doporučení" a
+  "Zkopírovat referral odkaz".
+- `/portal/email-campaigns/referrals` — KPI (total / opened / submitted /
+  conversion rate) + tabulka všech requestů.
+
+### F6 — Content & AI
+
+- `email_content_sources` — kurátorovaný seznam článků (manual, vysvětlené
+  explicitní rozhodnutí — automatický scraper v MVP ne). Tabulka obsahuje
+  `url`, `canonical_url`, `title`, `description`, `image_url`, `source_name`,
+  `tags`, `is_evergreen`.
+- `fetchArticleMetadata(url)` — server-only fetcher, parsuje Open Graph /
+  Twitter Card / HTML meta. Timeout 8s, content-type whitelist.
+- `listContentSources`, `previewArticleMetadata`, `saveContentSource`,
+  `deleteContentSource`, `markContentSourceUsed` — CRUD actions.
+- `composeNewsletterHtml(templateHtml, articles)` injektuje karty mezi
+  `<!-- articles:start -->` / `<!-- articles:end -->` markery
+  šablony `newsletter`.
+- `generateNewsletterDraft({ articleIds, subjectOverride?, preheaderOverride? })`
+  sestaví draft z vybraných článků.
+- **AI generátor** `generateCampaignDraft({ goal, audienceDescription?,
+  baseTemplateKind?, articleIds?, toneHints? })` — OpenAI Responses API
+  (structured output, `default` routing). Vrací `{ subject, preheader,
+  bodyHtml, notes }` s povinnými placeholdery `{{jmeno}}` a `{{unsubscribe_url}}`.
+- **A/B testing subjectu**:
+  - `createAbVariant({ parentCampaignId, subjectB, preheaderB? })` — kopíruje
+    body, liší se pouze subject; parent → `ab_variant='a'`, child →
+    `ab_variant='b'` + `parent_campaign_id`.
+  - `launchAbTest({ parentCampaignId, splitPercent=20, pickWinnerAfterMinutes=240 })`
+    — shuffle audience, pošle 20 % na A, 20 % na B, zbytek uloží do metadata
+    `segment_filter._ab.holdoutContactIds` s `finalizeAt`.
+  - `finalizeAbTestWinner(parentId)` / `finalizeDueAbTests()` (cron) —
+    po uplynutí `finalizeAt` vybere variantu s vyšším open-rate a rozesla
+    holdout zbytek pod subjectem vítěze.
+
+## Bezpečnost
+
+- Všechny write akce gated přes `hasPermission(role, "contacts:write")`.
+- Cron routes chráněné `CRON_SECRET` přes `cronAuthResponse`.
+- Public routes (`/r/[token]`, `/t/o`, `/t/c`, `/unsubscribe`) používají
+  `withServiceTenantContext` + bypass RLS, všechny operace idempotentní
+  a scoped na konkrétní token.
+- Resend webhook verifikovaný Svix signaturami.
+
+## Provozní checklist
+
+- [ ] `EMAIL_SENDING_DISABLED` kill-switch (environment).
+- [ ] `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET` nastaveny ve Vercel env.
+- [ ] Cron `email-queue-worker` běží každou minutu.
+- [ ] Cron `email-automations` běží 1× denně (08:00 UTC).
+- [ ] Seed `email_templates` (globální) proveden.
+- [ ] Whitelist domén pro click-tracking (per tenant v DB / env).
 
 ## Ověření
 
-- Manuální test: vytvořit kampaň, přepnout mezi vizuálním a HTML režimem, vložit proměnnou, odeslat testovací e-mail, zkontrolovat preview (správné „Od:“ jméno).
-- Smoke test v staging prostředí na malou segmentaci (< 10 kontaktů).
+- Vytvořit kampaň → uložit draft → naplánovat (+5 min) → ověřit, že cron ji
+  zařadí do queue a odesílá.
+- Ručně spustit `/api/email/resend-webhook` payloadem typu `email.opened` →
+  stav recipienta musí přejít na `opened`.
+- Vytvořit A/B test (createAbVariant + launchAbTest s pickWinnerAfterMinutes=5),
+  otevřít pár e-mailů pouze v jedné variantě → po 5 minutách musí cron
+  automaticky rozeslat zbytek s vítězným subjectem.
+- Vytvořit referral request z kontaktu, otevřít `/r/[token]` v inkognito,
+  vyplnit formulář → nový `contacts` řádek s tagy `lead,referral` musí
+  vzniknout, referral_request status = `submitted`.
+
+## Zadluženější body / next steps
+
+- Per-tenant whitelist domén pro click-tracking (teď globální).
+- Media knihovna pro e-mail editor (uploads do storage).
+- TipTap / Lexical WYSIWYG (současný `contenteditable` je funkční, ale
+  limitovaný).
+- Advisor / tenant preference pro preferovaný čas odeslání automatizací
+  (lokální TZ; nyní pouze UTC `send_hour`).
+- Rozdělit `EmailCampaignsClient.tsx` na Editor / Preview / History
+  subcomponenty.
+- Statistický test významnosti u A/B (nyní jen porovnání open rate) —
+  Wilson confidence interval + minimum sample threshold.

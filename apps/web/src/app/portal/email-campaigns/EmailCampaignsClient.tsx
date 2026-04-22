@@ -887,6 +887,14 @@ Odeslání nelze vrátit zpět.`,
                           </button>
                         </>
                       )}
+                      {row.status !== "draft" && (
+                        <a
+                          href={`/portal/email-campaigns/${row.id}`}
+                          className="inline-flex items-center gap-1 rounded-lg border border-[color:var(--wp-surface-card-border)] bg-white px-3 py-1.5 text-xs font-bold text-[color:var(--wp-text)] transition-colors hover:bg-[color:var(--wp-main-scroll-bg)]"
+                        >
+                          Detail →
+                        </a>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -957,6 +965,14 @@ Odeslání nelze vrátit zpět.`,
                 </button>
               </div>
             )}
+            {row.status !== "draft" && (
+              <a
+                href={`/portal/email-campaigns/${row.id}`}
+                className="inline-flex w-full items-center justify-center gap-1 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-white px-3 py-2 text-xs font-bold text-[color:var(--wp-text)]"
+              >
+                Zobrazit detail →
+              </a>
+            )}
           </div>
         ))
       )}
@@ -1015,6 +1031,20 @@ Odeslání nelze vrátit zpět.`,
               Hromadné a personalizované oslovení vašich klientů. Vytvořte kampaň od nuly
               nebo použijte předpřipravenou šablonu.
             </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <a
+              href="/portal/email-campaigns/automations"
+              className="inline-flex items-center gap-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-white px-4 py-2 text-sm font-bold text-[color:var(--wp-text)] shadow-sm hover:bg-[color:var(--wp-main-scroll-bg)]"
+            >
+              Automatizace →
+            </a>
+            <a
+              href="/portal/email-campaigns/referrals"
+              className="inline-flex items-center gap-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-white px-4 py-2 text-sm font-bold text-[color:var(--wp-text)] shadow-sm hover:bg-[color:var(--wp-main-scroll-bg)]"
+            >
+              Doporučení →
+            </a>
           </div>
         </div>
 

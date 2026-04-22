@@ -77,9 +77,12 @@ export async function getExecutiveKPIs(
         kpis.avgTimeToApplyHours = Math.round(docStats.avgApplyTime * 10) / 10;
       }
 
+      // B2.10 — `portalReady` teď odráží realitu portálu: `active && !needsHumanReview && visibleToClient`.
+      // Dřív to bylo pouze `status='active'`, takže dashboard ukazoval vyšší readiness,
+      // než kolik plateb klient skutečně viděl.
       const [paymentStats] = await tx.select({
         total: sql<number>`count(*)::int`,
-        portalReady: sql<number>`count(*) filter (where ${clientPaymentSetups.status} = 'active')::int`,
+        portalReady: sql<number>`count(*) filter (where ${clientPaymentSetups.status} = 'active' and ${clientPaymentSetups.needsHumanReview} = false and ${clientPaymentSetups.visibleToClient} = true)::int`,
       }).from(clientPaymentSetups)
         .where(eq(clientPaymentSetups.tenantId, tenantId));
       if (paymentStats && paymentStats.total > 0) {

@@ -293,9 +293,9 @@ export function ProfileClientView({ profile, household }: ProfileClientViewProps
           <div className="flex items-center justify-between py-3 px-4 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-main-scroll-bg)]/50">
             <div className="flex items-center gap-3">
               <Shield size={16} className="text-[color:var(--wp-text-tertiary)]" />
-              <span className="text-sm font-bold text-[color:var(--wp-text)]">Dvoufaktorové ověření</span>
+              <span className="text-sm font-bold text-[color:var(--wp-text)]">Dvoufaktorové přihlášení (TOTP, volitelné)</span>
             </div>
-            <span className="text-xs font-bold text-[color:var(--wp-text-tertiary)]">Spravováno přes Supabase</span>
+            <span className="text-xs font-bold text-[color:var(--wp-text-tertiary)]">Kontaktujte poradce</span>
           </div>
         </div>
       </SectionCard>

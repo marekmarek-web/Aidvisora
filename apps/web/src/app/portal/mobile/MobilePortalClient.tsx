@@ -69,6 +69,7 @@ import {
   useToast,
 } from "@/app/shared/mobile-ui/primitives";
 import { notifyRouteForWebview, notifyWebviewReady } from "@/app/shared/mobile-ui/webview-bridge";
+import { registerBackHandler } from "@/app/shared/mobile-ui/native-back-stack";
 import { openIntegrationConnect } from "@/lib/native/open-integration-connect";
 import { useDeviceClass } from "@/lib/ui/useDeviceClass";
 import { useMobilePortalDocumentViewportLock } from "@/lib/ui/useMobilePortalDocumentViewportLock";
@@ -185,33 +186,21 @@ const ColdContactsMobileScreen = dynamic(
   { loading: () => <RouteLoadingSkeleton /> },
 );
 
-type TabId = "home" | "tasks" | "clients" | "pipeline" | "none";
+// Navigation helpers extracted to a pure module for unit-testing. See
+// `./route-helpers.ts` — the mobile portal must keep using these imports so
+// that unit tests and this client stay in sync.
+import {
+  type TabId,
+  pathnameToBottomTab,
+  isDetailRoute,
+  resolveParentRoute,
+  decideHeaderBackAction,
+  parseContactIdFromPath,
+  parseOpportunityIdFromPath,
+  parseHouseholdIdFromPath,
+} from "./route-helpers";
+
 type TaskFilter = "all" | "today" | "week" | "overdue" | "completed";
-
-/** Bottom navigation highlight only for primary tabs; other routes use `none`. */
-function pathnameToBottomTab(pathname: string): TabId {
-  if (pathname.startsWith("/portal/today")) return "home";
-  if (pathname.startsWith("/portal/tasks")) return "tasks";
-  if (pathname.startsWith("/portal/contacts")) return "clients";
-  if (pathname.startsWith("/portal/pipeline")) return "pipeline";
-  return "none";
-}
-
-
-function parseContactIdFromPath(pathname: string): string | null {
-  const m = pathname.match(/^\/portal\/contacts\/([^/]+)/);
-  return m?.[1] ?? null;
-}
-
-function parseOpportunityIdFromPath(pathname: string): string | null {
-  const m = pathname.match(/^\/portal\/pipeline\/([^/]+)/);
-  return m?.[1] ?? null;
-}
-
-function parseHouseholdIdFromPath(pathname: string): string | null {
-  const m = pathname.match(/^\/portal\/households\/([^/]+)/);
-  return m?.[1] ?? null;
-}
 
 function parseContractReviewIdFromPath(pathname: string): string | null {
   const m = pathname.match(/^\/portal\/contracts\/review\/([^/]+)/);
@@ -226,32 +215,6 @@ function parseCalculatorSlugFromPath(pathname: string): string | null {
 function parseMindmapMapId(pathname: string): string | null {
   const m = pathname.match(/^\/portal\/mindmap\/([^/]+)$/);
   return m?.[1] ?? null;
-}
-
-/** True for routes with a dynamic segment (show back arrow, not hamburger). */
-function isDetailRoute(pathname: string): boolean {
-  if (/^\/portal\/contacts\/[^/]+$/.test(pathname) && !pathname.endsWith("/new")) return true;
-  if (/^\/portal\/households\/[^/]+$/.test(pathname)) return true;
-  if (/^\/portal\/pipeline\/[^/]+$/.test(pathname)) return true;
-  if (/^\/portal\/mindmap\/[^/]+$/.test(pathname)) return true;
-  if (/^\/portal\/contracts\/review\/[^/]+$/.test(pathname)) return true;
-  if (/^\/portal\/calculators\/[^/]+$/.test(pathname)) return true;
-  if (pathname.startsWith("/portal/analyses/financial")) return true;
-  if (pathname.startsWith("/portal/scan")) return true;
-  return false;
-}
-
-/** Resolve the logical parent route for the back button. */
-function resolveParentRoute(pathname: string): string {
-  if (pathname.startsWith("/portal/analyses/financial")) return "/portal/analyses";
-  if (/^\/portal\/contacts\/[^/]+/.test(pathname)) return "/portal/contacts";
-  if (/^\/portal\/households\/[^/]+/.test(pathname)) return "/portal/households";
-  if (/^\/portal\/pipeline\/[^/]+/.test(pathname)) return "/portal/pipeline";
-  if (/^\/portal\/mindmap\/[^/]+/.test(pathname)) return "/portal/mindmap";
-  if (/^\/portal\/contracts\/review\/[^/]+/.test(pathname)) return "/portal/contracts/review";
-  if (/^\/portal\/calculators\/[^/]+/.test(pathname)) return "/portal/calculators";
-  if (pathname.startsWith("/portal/scan")) return "/portal/documents";
-  return "/portal/today";
 }
 
 /* ------------------------------------------------------------------ */
@@ -499,9 +462,18 @@ export function MobilePortalClient({
     notifyWebviewReady();
   }, []);
 
+  /**
+   * Notify the native shell when the pathname changes. `searchParams` is
+   * intentionally NOT a dependency — many screens (Calendar, Messages,
+   * Board, Documents) use `router.replace(?foo=bar)` to sync UI state into
+   * the URL, and we don't want to spam the native shell with route events
+   * for every filter tweak. The native side only cares about coarse
+   * navigation.
+   */
   useEffect(() => {
     notifyRouteForWebview(pathname, searchParams.toString());
-  }, [pathname, searchParams]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -530,6 +502,21 @@ export function MobilePortalClient({
       setOpportunityDetailOpen(false);
     }
   }, [pathname, selectedOpportunityPathId]);
+
+  /**
+   * Hook the side drawer and global search into the shared back stack so
+   * Android hw back / iOS edge-swipe / Esc all dismiss them consistently
+   * before popping the Next.js router history.
+   */
+  useEffect(() => {
+    if (!drawerOpen) return;
+    return registerBackHandler(() => setDrawerOpen(false));
+  }, [drawerOpen]);
+
+  useEffect(() => {
+    if (!globalSearchOpen) return;
+    return registerBackHandler(() => setGlobalSearchOpen(false));
+  }, [globalSearchOpen]);
 
   /**
    * Badge refetch — nezávislý na `pathname`. Dřívější varianta refetchovala
@@ -617,17 +604,35 @@ export function MobilePortalClient({
 
   const detailRouteActive = isDetailRoute(pathname);
 
+  /**
+   * Header back. Uses `router.back()` so we pop the existing history entry
+   * instead of pushing a new one — critical for the "returning from click
+   * back to origin" bug where `router.push(parent)` kept doubling history.
+   *
+   * Fallback: when there's no prior entry (deep-link cold start), we
+   * `replace()` to the logical parent so the user still lands somewhere
+   * sensible without leaving a broken "back" entry in the stack.
+   */
   function handleHeaderBack() {
     setDrawerOpen(false);
-    if (detailRouteActive) {
-      router.push(resolveParentRoute(pathname));
+    const historyLength =
+      typeof window !== "undefined" ? window.history.length : 0;
+    const decision = decideHeaderBackAction({ pathname, historyLength });
+    Sentry.addBreadcrumb({
+      category: "nav.header-back",
+      level: "info",
+      message: decision.kind === "back" ? "router_back" : "router_replace_parent",
+      data: {
+        pathname,
+        historyLength,
+        target: decision.kind === "replace" ? decision.target : undefined,
+      },
+    });
+    if (decision.kind === "back") {
+      router.back();
       return;
     }
-    if (typeof window !== "undefined" && window.history.length <= 1) {
-      router.push("/portal/today");
-      return;
-    }
-    router.back();
+    router.replace(decision.target);
   }
 
   function refreshTasks(nextFilter: TaskFilter = taskFilter) {
@@ -1094,8 +1099,14 @@ export function MobilePortalClient({
 
       <MobileGlobalSearchOverlay open={globalSearchOpen} onClose={() => setGlobalSearchOpen(false)} />
 
+      {/*
+        NOTE: We intentionally DO NOT set `key={pathname}` on MobileScreen.
+        Remounting the entire screen subtree on every navigation destroyed
+        scroll position, form drafts, and in-flight requests. Individual
+        screen components use their own pathname-derived state if they
+        need to react to route changes.
+      */}
       <MobileScreen
-        key={pathname}
         className={`page-enter${
           onCalendarRoute
             ? " !min-h-0 flex flex-1 flex-col px-0 !space-y-0 pt-2"
@@ -1275,14 +1286,34 @@ export function MobilePortalClient({
         </div>
       </BottomSheet>
 
-      <FullscreenSheet
-        open={opportunityDetailOpen}
-        onClose={() => {
-          setOpportunityDetailOpen(false);
-          router.push("/portal/pipeline");
-        }}
-        title="Detail případu"
-      >
+                  <FullscreenSheet
+                    open={opportunityDetailOpen}
+                    onClose={() => {
+                      // The sheet is opened by the pathname (/portal/pipeline/[id]) via
+                      // the effect above, so closing must traverse history back — not
+                      // push a NEW /portal/pipeline entry (that was the bug: it
+                      // doubled the stack and the next header-back landed on this
+                      // same page). The effect will flip `opportunityDetailOpen` to
+                      // false once the pathname no longer contains an opportunity id.
+                      const canGoBack =
+                        selectedOpportunityPathId &&
+                        typeof window !== "undefined" &&
+                        window.history.length > 1;
+                      Sentry.addBreadcrumb({
+                        category: "nav.opportunity-detail-close",
+                        level: "info",
+                        message: canGoBack ? "router_back" : "router_replace_pipeline",
+                        data: { selectedOpportunityPathId },
+                      });
+                      if (canGoBack) {
+                        router.back();
+                      } else {
+                        setOpportunityDetailOpen(false);
+                        if (selectedOpportunityPathId) router.replace("/portal/pipeline");
+                      }
+                    }}
+                    title="Detail případu"
+                  >
         {!selectedOpportunity ? (
           <EmptyState title="Případ nenalezen" />
         ) : (

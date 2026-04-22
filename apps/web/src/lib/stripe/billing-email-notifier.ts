@@ -1,9 +1,10 @@
 import "server-only";
 import type Stripe from "stripe";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { dbService } from "@/lib/db/service-db";
-import { tenants } from "db";
+import { tenants, memberships, roles, userProfiles } from "db";
 import { sendEmail } from "@/lib/email/send-email";
+import { logAuditAction } from "@/lib/audit";
 import {
   trialEndingTemplate,
   paymentFailedTemplate,
@@ -43,13 +44,37 @@ async function resolveTenantNotificationRecipient(
     .limit(1);
   const tenant = rows[0];
   if (!tenant) return null;
-  const email = tenant.notificationEmail?.trim();
-  if (!email) {
-    // Fallback na workspace owner přes `user_profiles` — caller se musí rozhodnout,
-    // jestli chce spoléhat (dnes ponecháme null = silent skip + Sentry warning).
+  const primaryEmail = tenant.notificationEmail?.trim();
+  if (primaryEmail) {
+    return { tenantId, email: primaryEmail, advisorName: tenant.name };
+  }
+
+  // B1.10 — fallback: notification_email prázdný → první Admin membership →
+  // user_profiles.email. Zalogujeme `billing_email_fallback_used` pro audit
+  // (ops monitoring může detekovat tenants bez vyplněného notification_email).
+  const adminRows = await dbService
+    .select({ userId: memberships.userId, email: userProfiles.email })
+    .from(memberships)
+    .innerJoin(roles, eq(roles.id, memberships.roleId))
+    .leftJoin(userProfiles, eq(userProfiles.userId, memberships.userId))
+    .where(and(eq(memberships.tenantId, tenantId), eq(roles.name, "Admin")))
+    .orderBy(memberships.joinedAt)
+    .limit(1);
+  const admin = adminRows[0];
+  const fallbackEmail = admin?.email?.trim();
+  if (!fallbackEmail) {
+    // Žádný email není dostupný — necháme silent skip (stejně jako dnes).
     return null;
   }
-  return { tenantId, email, advisorName: tenant.name };
+  logAuditAction({
+    tenantId,
+    userId: admin?.userId ?? "system",
+    action: "billing_email_fallback_used",
+    entityType: "tenant",
+    entityId: tenantId,
+    meta: { email: fallbackEmail, reason: "tenants.notification_email is empty" },
+  });
+  return { tenantId, email: fallbackEmail, advisorName: tenant.name };
 }
 
 function formatAmountCzk(amountMinor: number, currency: string | null): string {

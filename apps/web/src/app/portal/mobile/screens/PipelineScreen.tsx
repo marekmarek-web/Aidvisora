@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useTransition, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import {
   Users,
   Calendar,
@@ -12,6 +13,7 @@ import {
   Trash2,
   Trophy,
   Ban,
+  X,
 } from "lucide-react";
 import { getPipelineColumnTheme } from "@/lib/pipeline/column-themes";
 import { getPipelineStageSubtitle } from "@/lib/pipeline/pipeline-stage-subtitles";
@@ -70,38 +72,160 @@ function QuickMoveSheet({
   onClose: () => void;
   onMove: (toStageId: string) => void;
 }) {
-  return (
-    <BottomSheet open title="Přesunout případ" onClose={onClose} compact>
-      <p className="text-sm font-bold text-[color:var(--wp-text)] mb-3 truncate">{opp.title}</p>
-      <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">Vyberte fázi</p>
-      <div className="space-y-1.5 max-h-[min(60vh,420px)] overflow-y-auto">
-        {stages.map((stage) => {
-          const theme = getPipelineColumnTheme(stage.sortOrder);
-          return (
-            <button
-              key={stage.id}
-              type="button"
-              onClick={() => onMove(stage.id)}
-              className={cx(
-                "w-full min-h-[48px] rounded-xl border text-left px-4 text-sm font-semibold flex items-center justify-between transition-colors active:scale-[0.99]",
-                stage.id === opp.stageId
-                  ? "bg-indigo-50 border-indigo-200 text-indigo-700"
-                  : "border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]",
-                "border-l-4",
-                theme.mobileBorderL
-              )}
-            >
-              {stage.name}
-              {stage.id === opp.stageId ? (
-                <span className="text-[10px] font-black text-indigo-500 uppercase">Aktuální</span>
-              ) : (
-                <ArrowRight size={14} className="text-[color:var(--wp-text-tertiary)]" />
-              )}
-            </button>
-          );
-        })}
+  const [portalReady, setPortalReady] = useState(false);
+  const dragState = useRef<{ startY: number; lastY: number; startTime: number } | null>(null);
+  const [translateY, setTranslateY] = useState(0);
+
+  useEffect(() => {
+    setPortalReady(true);
+  }, []);
+
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const handleHandlePointerDown = (e: React.PointerEvent) => {
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    dragState.current = { startY: e.clientY, lastY: e.clientY, startTime: Date.now() };
+  };
+  const handleHandlePointerMove = (e: React.PointerEvent) => {
+    if (!dragState.current) return;
+    const dy = e.clientY - dragState.current.startY;
+    if (dy > 0) {
+      setTranslateY(dy);
+      dragState.current.lastY = e.clientY;
+    }
+  };
+  const handleHandlePointerUp = (e: React.PointerEvent) => {
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
+    if (!dragState.current) return;
+    const dy = dragState.current.lastY - dragState.current.startY;
+    const dt = Math.max(1, Date.now() - dragState.current.startTime);
+    const velocity = dy / dt;
+    dragState.current = null;
+    if (dy > 120 || velocity > 0.6) {
+      setTranslateY(window.innerHeight);
+      setTimeout(onClose, 180);
+    } else {
+      setTranslateY(0);
+    }
+  };
+
+  if (!portalReady) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] flex items-end justify-center bg-[color:var(--wp-overlay-scrim)] backdrop-blur-sm quick-move-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Přesunout případ"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <style>{`
+        .quick-move-overlay { animation: quickMoveFadeIn 0.3s ease-out forwards; }
+        .quick-move-sheet { animation: quickMoveSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes quickMoveFadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes quickMoveSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+      `}</style>
+      <div
+        className="bg-[color:var(--wp-surface-card)] rounded-t-[32px] w-full max-w-[480px] max-h-[92dvh] flex flex-col overflow-hidden pb-[env(safe-area-inset-bottom)] shadow-2xl quick-move-sheet"
+        style={{
+          transform: translateY ? `translateY(${translateY}px)` : undefined,
+          transition: translateY === 0 ? "transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)" : undefined,
+        }}
+      >
+        <div
+          onPointerDown={handleHandlePointerDown}
+          onPointerMove={handleHandlePointerMove}
+          onPointerUp={handleHandlePointerUp}
+          onPointerCancel={handleHandlePointerUp}
+          className="w-full flex justify-center pt-3 pb-1 touch-none cursor-grab"
+        >
+          <div className="w-12 h-1.5 bg-[color:var(--wp-surface-card-border)] rounded-full" />
+        </div>
+
+        <div className="px-5 pb-3 flex items-start gap-3">
+          <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border border-indigo-200 bg-indigo-50 text-indigo-600">
+            <ArrowRightLeft size={20} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="text-[9px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)]">
+                Přesunout případ
+              </span>
+            </div>
+            <h3 className="font-black text-lg text-[color:var(--wp-text)] leading-tight pr-2 truncate">
+              {opp.title}
+            </h3>
+            <div className="flex items-center gap-3 mt-1.5 text-xs text-[color:var(--wp-text-secondary)] font-medium">
+              <span className="inline-flex items-center gap-1 truncate">
+                Aktuální fáze: <span className="font-bold truncate">{opp.stageName}</span>
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="shrink-0 w-10 h-10 rounded-full bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text-secondary)] hover:text-[color:var(--wp-text)] flex items-center justify-center transition-colors"
+            aria-label="Zavřít"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 pb-4">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-2">
+            Vyberte fázi
+          </p>
+          <div className="space-y-1.5">
+            {stages.map((stage) => {
+              const theme = getPipelineColumnTheme(stage.sortOrder);
+              return (
+                <button
+                  key={stage.id}
+                  type="button"
+                  onClick={() => onMove(stage.id)}
+                  className={cx(
+                    "w-full min-h-[48px] rounded-xl border text-left px-4 text-sm font-semibold flex items-center justify-between transition-colors active:scale-[0.99]",
+                    stage.id === opp.stageId
+                      ? "bg-indigo-50 border-indigo-200 text-indigo-700"
+                      : "border-[color:var(--wp-surface-card-border)] text-[color:var(--wp-text-secondary)] hover:bg-[color:var(--wp-surface-muted)]",
+                    "border-l-4",
+                    theme.mobileBorderL
+                  )}
+                >
+                  {stage.name}
+                  {stage.id === opp.stageId ? (
+                    <span className="text-[10px] font-black text-indigo-500 uppercase">Aktuální</span>
+                  ) : (
+                    <ArrowRight size={14} className="text-[color:var(--wp-text-tertiary)]" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
-    </BottomSheet>
+    </div>,
+    document.body
   );
 }
 

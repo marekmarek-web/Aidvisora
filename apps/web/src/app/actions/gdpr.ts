@@ -22,8 +22,9 @@ import {
   advisorProposals,
   portalNotifications,
 } from "db";
-import { eq, and, or, sql } from "db";
+import { eq, and, or, sql, isNull } from "db";
 import { logAuditAction } from "@/lib/audit";
+import { logSecurityEvent } from "@/lib/security/security-audit";
 
 /** Uložení souhlasu s GDPR (registrace / kontakt). */
 export async function recordGdprConsent(contactId: string): Promise<void> {
@@ -40,8 +41,29 @@ export async function recordGdprConsent(contactId: string): Promise<void> {
 export async function exportContactData(contactId: string): Promise<Record<string, unknown>> {
   const auth = await requireAuthInAction();
   if (auth.roleName === "Client") {
-    if (auth.contactId !== contactId) throw new Error("Forbidden");
+    if (auth.contactId !== contactId) {
+      // B3.1 — klient se snaží exportovat cizí kontakt → critical security event.
+      await logSecurityEvent({
+        tenantId: auth.tenantId,
+        userId: auth.userId,
+        eventType: "cross_tenant_attempt",
+        severity: "critical",
+        entityType: "contact",
+        entityId: contactId,
+        meta: { action: "gdpr_export", clientContactId: auth.contactId },
+      }).catch(() => {});
+      throw new Error("Forbidden");
+    }
   } else if (!hasPermission(auth.roleName, "contacts:read")) {
+    await logSecurityEvent({
+      tenantId: auth.tenantId,
+      userId: auth.userId,
+      eventType: "permission_denied",
+      severity: "warning",
+      entityType: "contact",
+      entityId: contactId,
+      meta: { action: "gdpr_export", roleName: auth.roleName },
+    }).catch(() => {});
     throw new Error("Forbidden");
   }
   const data = await withTenantContextFromAuth(auth, (tx) =>
@@ -55,6 +77,16 @@ export async function exportContactData(contactId: string): Promise<Record<strin
     entityId: contactId,
     meta: { roleName: auth.roleName, source: "advisor" },
   });
+  // B3.1 — úspěšný GDPR export trackovat jako security event (audit + alerting).
+  await logSecurityEvent({
+    tenantId: auth.tenantId,
+    userId: auth.userId,
+    eventType: "export_triggered",
+    severity: "warning",
+    entityType: "contact",
+    entityId: contactId,
+    meta: { source: "advisor", roleName: auth.roleName },
+  }).catch(() => {});
   return data;
 }
 
@@ -65,6 +97,7 @@ export async function exportContactDataForClient(): Promise<Record<string, unkno
   const data = await withTenantContextFromAuth(auth, (tx) =>
     doExportContactData(tx, auth.tenantId, auth.contactId!, {
       includeAdvisorAuditMetadata: false,
+      clientScope: true,
     }),
   );
   logAuditAction({
@@ -75,6 +108,16 @@ export async function exportContactDataForClient(): Promise<Record<string, unkno
     entityId: auth.contactId,
     meta: { roleName: auth.roleName, source: "client_portal" },
   });
+  // B3.1 — klientský self-service export: trackovat jako security event.
+  await logSecurityEvent({
+    tenantId: auth.tenantId,
+    userId: auth.userId,
+    eventType: "export_triggered",
+    severity: "info",
+    entityType: "contact",
+    entityId: auth.contactId,
+    meta: { source: "client_portal", roleName: auth.roleName },
+  }).catch(() => {});
   return data;
 }
 
@@ -84,6 +127,22 @@ type ExportOptions = {
    * Pro client-triggered export tyto položky vynecháváme (nepatří do osobního GDPR exportu).
    */
   includeAdvisorAuditMetadata?: boolean;
+  /**
+   * B1.3 — client-scoped export (aligned s portal visibility).
+   * Když `true`:
+   *   - contracts: jen `visibleToClient=true` a nezarchivované; pole `note`
+   *     (interní poznámka poradce) se nulují, `advisorConfirmedAt` /
+   *     `confirmedByUserId` / `sourceContractReviewId` rovněž.
+   *   - documents: jen `visibleToClient=true`.
+   *   - clientPaymentSetups: jen `visibleToClient=true`.
+   *   - contact.notes: interní poznámka poradce, neposílá se.
+   *   - meetingNotes / auditLog interní pole: nezahrnuty (auditLog už je
+   *     gated přes `includeAdvisorAuditMetadata`).
+   *
+   * Když `false` (advisor DSAR na žádost klienta, plná archivace) — export
+   * zahrnuje i interní materiál a caller je zodpovědný za legal review.
+   */
+  clientScope?: boolean;
 };
 
 /**
@@ -136,7 +195,18 @@ async function doExportContactData(
     portalNotificationRows,
     auditLogRows,
   ] = await Promise.all([
-    tx.select().from(contracts).where(and(eq(contracts.tenantId, tenantId), eq(contracts.contactId, contactId))),
+    tx
+      .select()
+      .from(contracts)
+      .where(
+        and(
+          eq(contracts.tenantId, tenantId),
+          eq(contracts.contactId, contactId),
+          ...(options.clientScope
+            ? [eq(contracts.visibleToClient, true), isNull(contracts.archivedAt)]
+            : []),
+        ),
+      ),
     tx
       .select({
         id: documents.id,
@@ -147,7 +217,13 @@ async function doExportContactData(
         sourceChannel: documents.sourceChannel,
       })
       .from(documents)
-      .where(and(eq(documents.tenantId, tenantId), eq(documents.contactId, contactId))),
+      .where(
+        and(
+          eq(documents.tenantId, tenantId),
+          eq(documents.contactId, contactId),
+          ...(options.clientScope ? [eq(documents.visibleToClient, true)] : []),
+        ),
+      ),
     tx.select().from(messages).where(and(eq(messages.tenantId, tenantId), eq(messages.contactId, contactId))),
     tx
       .select()
@@ -191,7 +267,13 @@ async function doExportContactData(
     tx
       .select()
       .from(clientPaymentSetups)
-      .where(and(eq(clientPaymentSetups.tenantId, tenantId), eq(clientPaymentSetups.contactId, contactId))),
+      .where(
+        and(
+          eq(clientPaymentSetups.tenantId, tenantId),
+          eq(clientPaymentSetups.contactId, contactId),
+          ...(options.clientScope ? [eq(clientPaymentSetups.visibleToClient, true)] : []),
+        ),
+      ),
     tx
       .select()
       .from(consents)
@@ -253,9 +335,22 @@ async function doExportContactData(
       : Promise.resolve([] as unknown[]),
   ]);
 
+  const sanitizedContracts = options.clientScope
+    ? contractRows.map((c) => ({
+        ...c,
+        note: null,
+        advisorConfirmedAt: null,
+        confirmedByUserId: null,
+        sourceContractReviewId: null,
+        extractionConfidence: null,
+      }))
+    : contractRows;
+
   return {
     exportDate: new Date().toISOString(),
-    exportScope: "gdpr_article_15_and_20",
+    exportScope: options.clientScope
+      ? "gdpr_article_15_and_20_client_portal_visibility"
+      : "gdpr_article_15_and_20",
     contact: {
       id: contact.id,
       firstName: contact.firstName,
@@ -274,7 +369,10 @@ async function doExportContactData(
       idCardIssuedAt: contact.idCardIssuedAt,
       idCardValidUntil: contact.idCardValidUntil,
       idCardIssuedBy: contact.idCardIssuedBy,
-      notes: contact.notes,
+      // B1.3 — `contact.notes` je interní poznámka poradce; v client-scoped
+      // exportu (Client Zone self-service) ji vynecháváme. Advisor DSAR si ji
+      // může zpřístupnit přes plný export (clientScope=false).
+      notes: options.clientScope ? null : contact.notes,
       tags: contact.tags,
       lifecycleStage: contact.lifecycleStage,
       referralSource: contact.referralSource,
@@ -287,7 +385,7 @@ async function doExportContactData(
       createdAt: contact.createdAt?.toISOString() ?? null,
       updatedAt: contact.updatedAt?.toISOString() ?? null,
     },
-    contracts: contractRows,
+    contracts: sanitizedContracts,
     documents: docRows.map((d) => ({
       ...d,
       createdAt: d.createdAt?.toISOString() ?? null,

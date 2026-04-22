@@ -4,16 +4,28 @@
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:networkSecurityConfig="@xml/network_security_config"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+        <!--
+            userPortrait: portrait only, but respects a device-wide rotation
+            lock toggle. Landscape is disabled because the WebView mobile
+            shell (MobileHeader + bottom nav + FullscreenSheet) was not
+            designed for landscape phone. Tablets running the desktop layout
+            are unaffected (this activity hosts the mobile WebView; tablets
+            load the desktop layout inside the same activity — they still
+            render correctly in portrait).
+        -->
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
             android:name=".MainActivity"
             android:label="@string/title_activity_main"
             android:theme="@style/AppTheme.NoActionBarLaunch"
             android:launchMode="singleTask"
-            android:exported="true">
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize"
+            android:screenOrientation="userPortrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

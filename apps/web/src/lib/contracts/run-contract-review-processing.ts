@@ -124,6 +124,9 @@ export async function runContractReviewProcessing(params: RunContractReviewProce
           normalizedPdfPath: adobePreprocessResult.normalizedPdfPath,
           markdownContentLength: adobePreprocessResult.markdownContent?.length ?? 0,
           pageCountEstimate: adobePreprocessResult.pageCountEstimate,
+          textQualityScore: adobePreprocessResult.textQualityScore,
+          textQualityIsGarbage: adobePreprocessResult.textQualityIsGarbage,
+          textQualityReasons: adobePreprocessResult.textQualityReasons,
         }
       : preprocessThrew
         ? {
@@ -169,6 +172,7 @@ export async function runContractReviewProcessing(params: RunContractReviewProce
       readabilityScore: adobePreprocessResult.readabilityScore,
       preprocessStatus: adobePreprocessResult.preprocessStatus,
       preprocessMode: adobePreprocessResult.preprocessMode,
+      textQualityIsGarbage: adobePreprocessResult.textQualityIsGarbage,
     });
     if (gate.defer) {
       await updateContractReview(id, tenantId, {

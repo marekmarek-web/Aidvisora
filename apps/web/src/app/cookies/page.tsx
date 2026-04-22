@@ -12,6 +12,9 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
+export const dynamic = "force-static";
+export const revalidate = 3600;
+
 export default function CookiesPage() {
   const blocks = cookiesBlocks as LegalBlock[];
 

@@ -278,7 +278,10 @@ export function TeamManagementPanel({
                             }
                             const c = preview.counts;
                             const totalAssignments =
-                              c.tasksAssigned + c.eventsAssigned + c.opportunitiesAssigned;
+                              c.tasksAssigned +
+                              c.eventsAssigned +
+                              c.opportunitiesAssigned +
+                              c.contractsAdvised;
                             const totalRevoked =
                               c.googleDriveIntegrations +
                               c.googleGmailIntegrations +
@@ -301,7 +304,8 @@ export function TeamManagementPanel({
                                         `Tento člen má přiřazeno:\n` +
                                         `  • ${c.tasksAssigned} úkolů\n` +
                                         `  • ${c.eventsAssigned} událostí\n` +
-                                        `  • ${c.opportunitiesAssigned} příležitostí\n\n` +
+                                        `  • ${c.opportunitiesAssigned} příležitostí\n` +
+                                        `  • ${c.contractsAdvised} smluv (advisor)\n\n` +
                                         `Dále se odvolá:\n` +
                                         `  • ${c.googleDriveIntegrations} Google Drive\n` +
                                         `  • ${c.googleGmailIntegrations} Gmail\n` +

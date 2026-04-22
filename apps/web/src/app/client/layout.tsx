@@ -13,6 +13,7 @@ import { ClientPortalShell } from "./ClientPortalShell";
 import { ClientMobileApp } from "./mobile/ClientMobileApp";
 import { MaintenanceBanner } from "@/app/components/MaintenanceBanner";
 import { isClientMobileSpaPath } from "@/lib/client-portal/client-mobile-spa-paths";
+import "@/styles/aidvisora-components.css";
 import "./client-portal.css";
 
 function isRedirectError(e: unknown): boolean {

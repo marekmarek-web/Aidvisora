@@ -68,11 +68,16 @@
 	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<!--
+	    Phone: portrait-only. The mobile shell's layout (MobileHeader, bottom
+	    tab bar with safe-area, FullscreenSheet) isn't designed for landscape
+	    rotation — allowing it led to clipped forms and drifted header back
+	    buttons during the audit. iPad keeps full freedom because the portal
+	    on tablet uses the desktop layout.
+	-->
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
@@ -95,5 +100,38 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<!--
+	    UIStatusBarStyle: fallback style for contexts before the SPA's
+	    StatusBar plugin call has run (cold launch + splash transition).
+	    Use dark content on light surfaces to match web header. Per-VC
+	    UIViewControllerBasedStatusBarAppearance takes precedence at runtime.
+	-->
+	<key>UIStatusBarStyle</key>
+	<string>UIStatusBarStyleDarkContent</string>
+	<!--
+	    WKAppBoundDomains: paired with Capacitor's
+	    `ios.limitsNavigationsToAppBoundDomains` (release only). Limits the
+	    WKWebView to this allow-list of hosts — a mitigation against
+	    third-party JS / iframe exfiltration attempts.
+	-->
+	<key>WKAppBoundDomains</key>
+	<array>
+		<string>aidvisora.cz</string>
+		<string>www.aidvisora.cz</string>
+	</array>
+	<!--
+	    Schemes we want to openURL from the WebView (tel:, mailto:, maps:,
+	    itms-apps: for Store listing). iOS 9+ requires an explicit allowlist
+	    before canOpenURL returns true.
+	-->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>tel</string>
+		<string>mailto</string>
+		<string>sms</string>
+		<string>maps</string>
+		<string>comgooglemaps</string>
+		<string>itms-apps</string>
+	</array>
 </dict>
 </plist>

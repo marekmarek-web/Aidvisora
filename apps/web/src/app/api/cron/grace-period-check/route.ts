@@ -12,7 +12,7 @@ import { sendGracePeriodReminderEmail } from "@/lib/stripe/billing-email-notifie
  * pošleme připomenutí "grace period končí zítra". Idempotence: přes
  * `grace_period_reminder_sent_at` (nastavujeme po odeslání).
  *
- * Spouští se z Vercel Cron:  `vercel.json` → `{ path: "/api/cron/grace-period-check", schedule: "0 9 * * *" }`.
+ * Spouští se z Vercel Cron:  `vercel.json` → `{ path: "/api/cron/grace-period-check", schedule: "30 9 * * *" }`.
  */
 
 export const dynamic = "force-dynamic";

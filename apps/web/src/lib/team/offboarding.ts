@@ -26,6 +26,7 @@ import {
   tasks,
   events,
   opportunities,
+  contracts,
   userGoogleDriveIntegrations,
   userGoogleGmailIntegrations,
   userGoogleCalendarIntegrations,
@@ -41,6 +42,7 @@ export type OffboardingPreview = {
     tasksAssigned: number;
     eventsAssigned: number;
     opportunitiesAssigned: number;
+    contractsAdvised: number;
     googleDriveIntegrations: number;
     googleGmailIntegrations: number;
     googleCalendarIntegrations: number;
@@ -72,6 +74,14 @@ export async function previewOffboarding(
       .select({ count: sql<number>`count(*)::int` })
       .from(opportunities)
       .where(and(eq(opportunities.tenantId, tenantId), eq(opportunities.assignedTo, userId)));
+
+    // B2.5 — pre-launch kontrakty preview: offboarding musí ukázat, kolik
+    // smluv změní pečujícího poradce. Bez tohoto byla business-plan metrics
+    // zamrzlá na bývalém člena i po jeho odchodu.
+    const [contractsRow] = await tx
+      .select({ count: sql<number>`count(*)::int` })
+      .from(contracts)
+      .where(and(eq(contracts.tenantId, tenantId), eq(contracts.advisorId, userId)));
 
     const driveRows = await tx
       .select({ id: userGoogleDriveIntegrations.userId })
@@ -112,6 +122,7 @@ export async function previewOffboarding(
       tasksAssigned: tasksRow?.count ?? 0,
       eventsAssigned: eventsRow?.count ?? 0,
       opportunitiesAssigned: oppsRow?.count ?? 0,
+      contractsAdvised: contractsRow?.count ?? 0,
       googleDriveIntegrations: driveRows.length,
       googleGmailIntegrations: gmailRows.length,
       googleCalendarIntegrations: calRows.length,
@@ -122,7 +133,12 @@ export async function previewOffboarding(
 
 export type OffboardingResult = {
   ok: true;
-  reassigned: { tasks: number; events: number; opportunities: number };
+  reassigned: {
+    tasks: number;
+    events: number;
+    opportunities: number;
+    contracts: number;
+  };
   revoked: { drive: number; gmail: number; calendar: number; devices: number };
 };
 
@@ -179,6 +195,17 @@ export async function executeOffboarding(
       )
       .returning({ id: opportunities.id });
 
+    // B2.5 — servicing advisor přesun. Varianta (A) z plánu: bez nové
+    // `servicing_advisor_id` column přepisujeme `advisorId` přímo, protože
+    // business-plan / analytics joinují přes advisorId a bez rewrite by
+    // metriky bývalého člena zůstaly zamrzlé. `created_by` / originující
+    // advisor historie se neztrácí (ai_review ukládá do `source_*` polí).
+    const contractsResult = await tx
+      .update(contracts)
+      .set({ advisorId: newOwnerUserId, updatedAt: new Date() })
+      .where(and(eq(contracts.tenantId, tenantId), eq(contracts.advisorId, departingUserId)))
+      .returning({ id: contracts.id });
+
     const driveDeleted = await tx
       .delete(userGoogleDriveIntegrations)
       .where(
@@ -220,6 +247,7 @@ export async function executeOffboarding(
         tasks: tasksResult.length,
         events: eventsResult.length,
         opportunities: oppsResult.length,
+        contracts: contractsResult.length,
       },
       revoked: {
         drive: driveDeleted.length,

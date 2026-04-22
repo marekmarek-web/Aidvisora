@@ -137,7 +137,7 @@ export function CalculatorsHubScreen({
 
   const calcNode =
     selectedSlug && ["investment", "mortgage", "pension", "life"].includes(selectedSlug) ? (
-      <div className="-mx-1 max-w-full overflow-x-hidden">
+      <div className="max-w-full overflow-x-hidden">
         <WebCalculatorBody slug={selectedSlug} />
       </div>
     ) : null;
@@ -237,8 +237,9 @@ export function CalculatorsHubScreen({
           open={open}
           onClose={() => setOpen(false)}
           title={selectedSlug ? calcTitles[selectedSlug] : "Kalkulačka"}
+          noPadding
         >
-          <div className="pb-4">{calcNode}</div>
+          {calcNode}
         </FullscreenSheet>
       ) : null}
     </>

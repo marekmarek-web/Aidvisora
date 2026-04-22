@@ -109,8 +109,15 @@ export async function resolveAdvisorMfaEnforcement(params: {
     error,
   } = await supabase.auth.mfa.listFactors();
   if (error) {
-    // Fail-open — raději nenutit než sestřelit portál.
-    return { kind: "skip", reason: "already_enrolled", gracePeriodEndsAt };
+    // B3.3 — fail-CLOSED. Pokud Supabase `listFactors()` selže, nevíme,
+    // jestli user má ověřený TOTP faktor. Dříve jsme fail-openovali
+    // (`skip/already_enrolled`), což se dalo zneužít — při degradaci
+    // Supabase Auth jsme propustili admin/advisor bez MFA. Teď raději
+    // enforceme enrollment; v praxi to znamená, že při krátkém outage
+    // Supabase Auth dostane uživatel MFA enroll prompt, což je
+    // akceptabilní UX vs. security trade-off.
+    console.error("[mfa-enforcement] listFactors failed; fail-closed", error);
+    return { kind: "enforce", gracePeriodEndsAt };
   }
   const hasVerifiedTotp = (factors?.totp ?? []).some((f) => f.status === "verified");
   if (hasVerifiedTotp) {

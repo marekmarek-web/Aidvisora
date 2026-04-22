@@ -31,6 +31,16 @@ const PDF_PARSE_PREPROCESS = {
   preprocessMode: "pdf_parse_fallback" as const,
 };
 
+// Garbled OCR fixture: pdf-parse returned >1200 chars so legacy length gate
+// would say "sufficient_text", but scoreTextLayerQuality flagged it as garbage.
+const PDF_PARSE_GARBAGE_PREPROCESS = {
+  markdownContent: "x".repeat(1500),
+  readabilityScore: 95,
+  preprocessStatus: "partial" as const,
+  preprocessMode: "pdf_parse_fallback_garbage" as const,
+  textQualityIsGarbage: true,
+};
+
 describe("evaluateContractReviewScanGate — default (multimodal-first)", () => {
   beforeEach(() => {
     vi.stubEnv("AI_REVIEW_FORCE_OCR_GATE", "");
@@ -82,6 +92,26 @@ describe("evaluateContractReviewScanGate — default (multimodal-first)", () => 
       "https://example.com/scan.jpg",
       "image/jpeg",
       EMPTY_PREPROCESS
+    );
+    expect(r.defer).toBe(true);
+    expect(r.reason).toBe("image_mime_without_pdf_wrapper");
+  });
+
+  it("passes garbled-OCR PDF through with pdf_parse_fallback_garbage reason (no 'sufficient_text')", async () => {
+    const r = await evaluateContractReviewScanGate(
+      "https://example.com/efekta.pdf",
+      "application/pdf",
+      PDF_PARSE_GARBAGE_PREPROCESS
+    );
+    expect(r.defer).toBe(false);
+    expect(r.reason).toBe("pdf_parse_fallback_garbage");
+  });
+
+  it("does not treat textQualityIsGarbage=true as garbage for non-PDF mimes", async () => {
+    const r = await evaluateContractReviewScanGate(
+      "https://example.com/scan.jpg",
+      "image/jpeg",
+      { ...EMPTY_PREPROCESS, textQualityIsGarbage: true }
     );
     expect(r.defer).toBe(true);
     expect(r.reason).toBe("image_mime_without_pdf_wrapper");

@@ -52,12 +52,15 @@ export function ClientNotificationsList({
         prev.map((n) => (n.id === item.id ? { ...n, readAt: new Date() } : n))
       );
     }
-    // B1.7: vždy naviguj — u neznámých typů vede fallback na /client/notifications
-    // s toastem, místo tichého „nic se nestalo“ po kliku.
+    // B1.7 + B1.12: u neznámých typů ukážeme toast a navíc pro parity s mobile
+    // fallbackem (AppShell pushuje na `/client/notifications`) zachováme i tady
+    // explicitní push — pokud už na notifications jsme, je to no-op; pro jiný
+    // kontext (budoucí list mimo tuto stránku) dostaneme stejné chování.
     const { route, known } = getPortalNotificationDeepLinkWithFallback(item);
     if (!known) {
       setToast("Tato akce již není dostupná nebo má nový formát. Kontaktujte poradce.");
       setTimeout(() => setToast(null), 4000);
+      router.push("/client/notifications");
       return;
     }
     router.push(route);

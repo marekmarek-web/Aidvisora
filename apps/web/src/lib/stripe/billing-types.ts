@@ -5,6 +5,14 @@ export type SubscriptionState = {
   currentPeriodEnd: Date | null;
   isActive: boolean;
   inGracePeriod: boolean;
+  /**
+   * B2.9 — exposed pro dunning banner a downstream consumers. Primárně
+   * `subscriptions.grace_period_ends_at` (napsaný webhookem při
+   * `invoice.payment_failed`); pokud DB column není zapsaný, fallback na
+   * `current_period_end + billing.grace_period_days`. Dunning UI už nikdy
+   * nepočítá grace datum znovu.
+   */
+  graceEndsAt: Date | null;
 };
 
 export type PlanTier = "starter" | "pro" | "team";

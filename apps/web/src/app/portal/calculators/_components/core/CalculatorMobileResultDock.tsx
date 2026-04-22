@@ -27,37 +27,37 @@ export function CalculatorMobileResultDock({
 
   return (
     <div
-      className="lg:hidden fixed bottom-0 left-0 right-0 z-fixed-cta p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pointer-events-none"
+      className="lg:hidden fixed bottom-0 left-0 right-0 z-fixed-cta px-2 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-1 pointer-events-none"
       data-testid="calculator-mobile-result-dock"
     >
       <div
         className={[
-          "pointer-events-auto mx-auto w-full max-w-[420px] overflow-hidden rounded-[18px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-2xl",
+          "pointer-events-auto mx-auto w-full max-w-[420px] overflow-hidden rounded-[14px] border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-2xl",
           "transition-[max-height] duration-300 ease-out",
-          collapsed ? "max-h-[56px]" : "max-h-[70vh]",
+          collapsed ? "max-h-[44px]" : "max-h-[min(52vh,340px)]",
         ].join(" ")}
       >
         <button
           type="button"
           onClick={() => setCollapsed((v) => !v)}
-          className="flex w-full items-center gap-2 border-b border-white/10 bg-[#0d1f4e] px-3 py-2 text-left text-white"
+          className="flex w-full items-center gap-2 border-b border-white/10 bg-[#0d1f4e] px-3 py-1.5 text-left text-white"
           aria-expanded={!collapsed}
           aria-label={collapsed ? "Rozbalit výsledek" : "Sbalit výsledek"}
         >
-          <div className="h-1 w-10 rounded-full bg-white/30" aria-hidden />
-          <span className="flex-1 truncate text-[11px] font-black uppercase tracking-[0.12em] text-white/80">
+          <div className="h-1 w-8 rounded-full bg-white/30" aria-hidden />
+          <span className="flex-1 truncate text-[10px] font-black uppercase tracking-[0.12em] text-white/80">
             {collapsed && collapsedSummary ? collapsedSummary : "Výsledek kalkulačky"}
           </span>
           {collapsed ? (
-            <ChevronUp size={16} className="shrink-0 text-white/80" />
+            <ChevronUp size={14} className="shrink-0 text-white/80" />
           ) : (
-            <ChevronDown size={16} className="shrink-0 text-white/80" />
+            <ChevronDown size={14} className="shrink-0 text-white/80" />
           )}
         </button>
         <div
           className={[
             "overflow-y-auto",
-            collapsed ? "max-h-0 opacity-0" : "max-h-[calc(70vh-56px)] opacity-100",
+            collapsed ? "max-h-0 opacity-0" : "max-h-[calc(min(52vh,340px)-44px)] opacity-100",
           ].join(" ")}
           aria-hidden={collapsed}
         >

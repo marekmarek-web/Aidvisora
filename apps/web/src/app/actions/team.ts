@@ -18,6 +18,7 @@ import { hasPermission, isRoleAtLeast, type RoleName } from "@/shared/rolePermis
 import { validateCareerFieldsForWrite } from "@/lib/career/career-write-validation";
 import { normalizeCareerProgramFromDb } from "@/lib/career/registry";
 import { logAuditAction } from "@/lib/audit";
+import { logSecurityEvent } from "@/lib/security/security-audit";
 import { checkRecentAuth } from "@/lib/auth/require-recent-auth";
 import {
   previewOffboarding,
@@ -284,6 +285,26 @@ export async function updateMemberRole(
     },
   });
 
+  // B3.1 — role change je security-relevant event (privilege escalation
+  // vector). Jdeme do security_events / auditLog přes security kanál s
+  // `credential_change` typem, aby ho bylo možné alertovat nezávisle
+  // na běžném audit logu.
+  await logSecurityEvent({
+    tenantId: auth.tenantId,
+    userId: auth.userId,
+    eventType: "credential_change",
+    severity: "high",
+    entityType: "membership",
+    entityId: membershipId,
+    meta: {
+      subType: "team.role_change",
+      targetUserId: result.targetUserId,
+      previousRole: result.previousRoleName,
+      newRole: newRoleName,
+      performedByRole: auth.roleName,
+    },
+  }).catch(() => {});
+
   return { ok: true };
 }
 
@@ -397,7 +418,12 @@ export async function removeMember(
   // zmizely z pohledu všech ostatních a Google tokeny by zůstaly platné.
   const counts = await previewOffboarding(auth.tenantId, target.userId);
   const hasAssignments =
-    counts.tasksAssigned > 0 || counts.eventsAssigned > 0 || counts.opportunitiesAssigned > 0;
+    counts.tasksAssigned > 0 ||
+    counts.eventsAssigned > 0 ||
+    counts.opportunitiesAssigned > 0 ||
+    // B2.5 — kontrakty pečované odcházejícím advisorem vyžadují nástupce
+    // jinak zamrzne business-plan metrics.
+    counts.contractsAdvised > 0;
   const hasIntegrations =
     counts.googleDriveIntegrations > 0 ||
     counts.googleGmailIntegrations > 0 ||

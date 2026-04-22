@@ -17,6 +17,7 @@ export type NativeScanErrorCode =
   | "permission_denied"
   | "plugin_unavailable"
   | "ml_kit_unavailable"
+  | "no_usable_files"
   | "unknown";
 
 export class NativeScanError extends Error {
@@ -121,5 +122,16 @@ export async function scanDocumentsNative(maxPages: number): Promise<File[]> {
       continue;
     }
   }
+
+  // B2.11 — scanner vrátil URI, ale fetch/blob zkonvertoval 0 použitelných souborů
+  // (např. content:// denial na Androidu, expired cache path). Bez tohoto throwu
+  // UI tiše vrátilo prázdné pole a uživatel nevěděl, proč se nic nenahraje.
+  if (uris.length > 0 && files.length === 0) {
+    throw new NativeScanError(
+      "no_usable_files",
+      "Skener dokument nasnímal, ale nepodařilo se ho otevřít. Zkuste znovu nebo použijte galerii.",
+    );
+  }
+
   return files;
 }

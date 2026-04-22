@@ -16,6 +16,7 @@ import {
   getReferralSummaryForContact,
   getReferralRequestSignals,
 } from "@/app/actions/referral";
+import { createReferralRequest } from "@/app/actions/email-referrals";
 import { createTask } from "@/app/actions/tasks";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
 import type { ReferralSummary, ReferralRequestSignalsResult } from "@/lib/referral/types";
@@ -26,6 +27,9 @@ export function ClientReferralSection({ contactId }: { contactId: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [creatingTask, setCreatingTask] = useState(false);
+  const [sendingReferralEmail, setSendingReferralEmail] = useState(false);
+  const [referralLink, setReferralLink] = useState<string | null>(null);
+  const [referralMessage, setReferralMessage] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -41,6 +45,39 @@ export function ClientReferralSection({ contactId }: { contactId: string }) {
       .catch(() => setError("Nepodařilo načíst doporučení."))
       .finally(() => setLoading(false));
   }, [contactId]);
+
+  const handleSendReferralEmail = async () => {
+    setSendingReferralEmail(true);
+    setReferralMessage(null);
+    try {
+      const res = await createReferralRequest({ contactId, sendEmail: true });
+      setReferralLink(res.url);
+      setReferralMessage("E-mail byl zařazen do fronty a odkaz je vygenerován.");
+    } catch (e) {
+      setReferralMessage(e instanceof Error ? e.message : "Chyba při vytváření odkazu.");
+    } finally {
+      setSendingReferralEmail(false);
+    }
+  };
+
+  const handleCopyReferralLink = async () => {
+    setSendingReferralEmail(true);
+    setReferralMessage(null);
+    try {
+      const res = await createReferralRequest({ contactId, sendEmail: false });
+      setReferralLink(res.url);
+      try {
+        await navigator.clipboard.writeText(res.url);
+        setReferralMessage("Odkaz byl zkopírován do schránky.");
+      } catch {
+        setReferralMessage("Odkaz vytvořen — zkopírujte jej ručně.");
+      }
+    } catch (e) {
+      setReferralMessage(e instanceof Error ? e.message : "Chyba.");
+    } finally {
+      setSendingReferralEmail(false);
+    }
+  };
 
   const handleCreateReferralTask = async () => {
     setCreatingTask(true);
@@ -243,13 +280,39 @@ export function ClientReferralSection({ contactId }: { contactId: string }) {
             </div>
 
             {/* CTA: Přidat doporučeného */}
-            <Link
-              href={`/portal/contacts/new?referralContactId=${contactId}`}
-              className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] text-sm font-semibold shadow-sm hover:bg-[color:var(--wp-surface-muted)] transition-colors w-fit"
-            >
-              <UserPlus size={16} />
-              Přidat doporučeného
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href={`/portal/contacts/new?referralContactId=${contactId}`}
+                className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-[color:var(--wp-text-secondary)] text-sm font-semibold shadow-sm hover:bg-[color:var(--wp-surface-muted)] transition-colors"
+              >
+                <UserPlus size={16} />
+                Přidat doporučeného
+              </Link>
+              <button
+                type="button"
+                onClick={handleSendReferralEmail}
+                disabled={sendingReferralEmail}
+                className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 text-sm font-semibold hover:bg-indigo-100 disabled:opacity-50"
+              >
+                {sendingReferralEmail ? "Odesílám…" : "Poslat žádost o doporučení"}
+              </button>
+              <button
+                type="button"
+                onClick={handleCopyReferralLink}
+                disabled={sendingReferralEmail}
+                className="min-h-[44px] inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-white text-[color:var(--wp-text)] text-sm font-semibold hover:bg-[color:var(--wp-surface-muted)] disabled:opacity-50"
+              >
+                Zkopírovat referral odkaz
+              </button>
+            </div>
+            {referralMessage ? (
+              <p className="text-xs text-[color:var(--wp-text-secondary)]">{referralMessage}</p>
+            ) : null}
+            {referralLink ? (
+              <p className="break-all text-xs font-mono text-[color:var(--wp-text-tertiary)]">
+                {referralLink}
+              </p>
+            ) : null}
 
             {/* Vhodný moment požádat o další referral */}
             {primarySignal && !suppressReason && (

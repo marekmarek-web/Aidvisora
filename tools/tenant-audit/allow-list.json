@@ -108,6 +108,18 @@
       "fn": "processOne",
       "table": "contacts",
       "reason": "Background queue worker — contact lookup přes contactId z recipient řádku, který patří do tenant-gated kampaně."
+    },
+    {
+      "file": "apps/web/src/app/actions/email-ab-testing.ts",
+      "fn": "computeStats",
+      "table": "emailCampaignRecipients",
+      "reason": "Pomocná funkce volaná uvnitř withAuthContext/withServiceTenantContext transakce; campaignId (parent.id / variantB.id) byl o pár řádků výš validován eq(emailCampaigns.tenantId, auth.tenantId). RLS + FK brání cross-tenant přístupu."
+    },
+    {
+      "file": "apps/web/src/lib/email/ab-finalize-worker.ts",
+      "fn": "computeStats",
+      "table": "emailCampaignRecipients",
+      "reason": "Background finalizer běžící v withServiceTenantContext. campaignId (parent.id / variantB.id) byl výš validován eq(emailCampaigns.tenantId, ...). Ne-uživatelský kontext, analog queue-worker processOne."
     }
   ]
 }

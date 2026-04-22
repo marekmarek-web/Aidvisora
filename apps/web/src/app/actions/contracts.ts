@@ -181,6 +181,9 @@ export async function getClientPortfolioForContact(contactId: string): Promise<C
       advisorConfirmedAt: isClient ? null : r.advisorConfirmedAt,
       confirmedByUserId: isClient ? null : r.confirmedByUserId,
       sourceContractReviewId: isClient ? null : r.sourceContractReviewId,
+      // B1.2 — `contracts.note` is advisor-only (free-form internal note);
+      // never surface it through the client portal read-model.
+      note: isClient ? null : r.note,
     }));
 
     const missingAmountIds = mapped
@@ -751,8 +754,32 @@ export async function updateContract(
         portfolioPatch.portfolioAttributes = sql`COALESCE(${contracts.portfolioAttributes}, '{}'::jsonb) || ${patchJson}::jsonb`;
       }
     }
-    const touchPortfolioMeta =
-      form.visibleToClient !== undefined || form.portfolioStatus !== undefined;
+    // B2.4 — whitelist finančních / smluvních polí, které opravdu znamenají
+    // "advisor confirmnul obsah smlouvy". Visibility/portfolio-status toggly
+    // nemají smysl promítat do `advisorConfirmedAt`, protože původní potvrzení
+    // obsahu platí dál; jinak by každý klik "zobrazit klientovi" vyresetoval
+    // datum konfirmace a rozbíjel AI Review reconciliation (trust signal,
+    // že smlouva je ručně odsouhlasená vs čerstvě AI-imported).
+    const financialFieldChanged =
+      form.premiumAmount !== undefined ||
+      form.premiumAnnual !== undefined ||
+      form.contractNumber !== undefined ||
+      form.startDate !== undefined ||
+      form.anniversaryDate !== undefined ||
+      form.segment !== undefined ||
+      form.partnerId !== undefined ||
+      form.partnerName !== undefined ||
+      form.productId !== undefined ||
+      form.productName !== undefined ||
+      form.note !== undefined ||
+      form.paymentType !== undefined ||
+      form.paymentFrequency !== undefined ||
+      form.entryFee !== undefined ||
+      form.loanPrincipal !== undefined ||
+      form.participantContribution !== undefined ||
+      form.hasPpi !== undefined ||
+      form.productCategory !== undefined;
+    const touchPortfolioMeta = financialFieldChanged;
 
     await withTenantContextFromAuth(auth, async (tx) => {
       let partnerName: string | null = normalized.partnerName?.trim() || null;

@@ -10,6 +10,9 @@ export const metadata: Metadata = {
   description: `B2B obchodní podmínky služby Aidvisora pro finanční poradce. Účinnost od ${LEGAL_EFFECTIVE_CS}.`,
 };
 
+export const dynamic = "force-static";
+export const revalidate = 3600;
+
 export default function TermsPage() {
   const blocks = termsBlocks as LegalBlock[];
 

@@ -238,16 +238,21 @@ export async function POST(request: Request) {
             );
           }
 
-          // L9: advisory prompt-injection detection. We do NOT block or edit
-          // the message — the advisor may legitimately paste adversarial-
+          // L9 / B3.4: advisory prompt-injection detection. We do NOT block or
+          // edit the message — the advisor may legitimately paste adversarial-
           // looking text for review. Logging is sufficient to spot abuse or
           // accidentally copy-pasted jailbreak fragments in real traffic.
+          //
+          // B3.4 — použít dedikovaný `PROMPT_INJECTION_DETECTED` event (místo
+          // promptInjectionHit meta na RUN_START), ať umí Sentry zapnout
+          // samostatný alert a dashboard bez šumu z každého běhu.
           if (message) {
             const injectionHits = detectPromptInjectionHeuristics(message);
             if (injectionHits.length > 0) {
-              logAssistantTelemetry(AssistantTelemetryAction.RUN_START, {
-                promptInjectionHit: true,
+              logAssistantTelemetry(AssistantTelemetryAction.PROMPT_INJECTION_DETECTED, {
                 patterns: injectionHits.map((h) => h.pattern),
+                messageLength: message.length,
+                hitCount: injectionHits.length,
               });
             }
           }

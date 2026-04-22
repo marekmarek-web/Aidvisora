@@ -4,6 +4,13 @@ import { communicationDrafts, eq, and, desc } from "db";
 import { requireAuthInAction } from "@/lib/auth/require-auth";
 import { withTenantContextFromAuth } from "@/lib/auth/with-auth-context";
 import { logAuditAction } from "@/lib/audit";
+import { hasPermission } from "@/shared/rolePermissions";
+
+// B2.8 — defense-in-depth permission gate. Bez toho mohl AI Drawer přes
+// `assistant-write-adapters` nechat Viewer role vytvářet/uprávat email
+// drafty — UI je sice schovávané, ale server action byla otevřená všem
+// authenticated userům. Advisor+ může psát, Viewer jen číst.
+const COMMUNICATION_WRITE = "communications:write" as const;
 
 export async function createDraft(params: {
   contactId?: string;
@@ -15,6 +22,9 @@ export async function createDraft(params: {
   metadata?: Record<string, unknown>;
 }) {
   const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, COMMUNICATION_WRITE)) {
+    throw new Error("Chybí oprávnění pro vytvoření komunikace.");
+  }
   const row = await withTenantContextFromAuth(auth, async (tx) => {
     const [inserted] = await tx
       .insert(communicationDrafts)
@@ -50,6 +60,9 @@ export async function updateDraft(
   updates: { subject?: string; body?: string; status?: string },
 ) {
   const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, COMMUNICATION_WRITE)) {
+    throw new Error("Chybí oprávnění pro úpravu komunikace.");
+  }
 
   const updated = await withTenantContextFromAuth(auth, async (tx) => {
     const [existing] = await tx

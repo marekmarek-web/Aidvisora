@@ -21,6 +21,9 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
+export const dynamic = "force-static";
+export const revalidate = 3600;
+
 type ContactCardProps = {
   icon: React.ComponentType<{ size?: number; className?: string; "aria-hidden"?: boolean }>;
   title: string;

@@ -37,7 +37,8 @@
     "ai-review:batch:smoke": "pnpm --filter web ai-review:batch:smoke",
     "debug:anchors": "pnpm --filter web debug:anchors",
     "debug:anchors:core": "pnpm --filter web debug:anchors:core",
-    "test:f9-release-gate": "pnpm --filter web test:f9-release-gate"
+    "test:f9-release-gate": "pnpm --filter web test:f9-release-gate",
+    "seed:review-tenant": "tsx scripts/seed/review-tenant-seed.ts"
   },
   "dependencies": {
     "postgres": "^3.4.4"

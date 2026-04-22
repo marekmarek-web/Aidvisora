@@ -5,14 +5,16 @@ import { db } from "@/lib/db-client";
 /**
  * Out-of-band health endpoint pro Better Stack / Pingdom / Checkly / UptimeRobot.
  *
- * Kontroluje 3 závislosti:
+ * Kontroluje 5 závislostí:
  *   1. Postgres (Supabase) — `SELECT 1` přes Drizzle
  *   2. Stripe — přítomnost `STRIPE_SECRET_KEY` + lightweight API ping
  *   3. Resend — přítomnost `RESEND_API_KEY` + lightweight API ping
+ *   4. Supabase Auth — smoke `GET /auth/v1/settings` (B2.18)
+ *   5. OpenAI — smoke `GET /v1/models` s timeoutem 3s (B2.18)
  *
  * Vrací:
- *   - HTTP 200 když všechno ok
- *   - HTTP 503 když kterákoli kritická závislost selže
+ *   - HTTP 200 když všechno ok (včetně degraded pokud soft závislost padne)
+ *   - HTTP 503 když kterákoli kritická závislost selže (`database` nebo `supabaseAuth`)
  *   - `x-health-summary` header pro rychlé textové rozlišení
  *
  * Bez auth (externí monitor musí umět volat). Žádné citlivé info v odpovědi
@@ -39,10 +41,13 @@ type HealthResponse = {
     database: ComponentStatus;
     stripe: ComponentStatus;
     resend: ComponentStatus;
+    supabaseAuth: ComponentStatus;
+    openai: ComponentStatus;
   };
 };
 
 const HEALTHCHECK_TIMEOUT_MS = 4000;
+const OPENAI_TIMEOUT_MS = 3000;
 
 async function withTimeout<T>(p: Promise<T>, timeoutMs: number, label: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
@@ -125,15 +130,106 @@ async function checkResend(): Promise<ComponentStatus> {
   }
 }
 
+/**
+ * B2.18 — Supabase Auth smoke check.
+ *
+ * Volá public `GET /auth/v1/settings`, což ověří, že auth server odpovídá
+ * a anon key je platný. `getSession()` bez request context se nedá v
+ * serverless healthchecku rozumně spustit, takže jedeme raw REST.
+ */
+async function checkSupabaseAuth(): Promise<ComponentStatus> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY;
+  if (!url || !anonKey) return { status: "skipped" };
+  const start = Date.now();
+  try {
+    const res = await withTimeout(
+      fetch(`${url.replace(/\/$/, "")}/auth/v1/settings`, {
+        headers: {
+          apikey: anonKey,
+          Authorization: `Bearer ${anonKey}`,
+        },
+      }),
+      HEALTHCHECK_TIMEOUT_MS,
+      "supabase-auth",
+    );
+    if (!res.ok) {
+      return {
+        status: "fail",
+        latencyMs: Date.now() - start,
+        error: `HTTP ${res.status}`,
+      };
+    }
+    return { status: "ok", latencyMs: Date.now() - start };
+  } catch (err) {
+    return {
+      status: "fail",
+      latencyMs: Date.now() - start,
+      error: err instanceof Error ? err.message.slice(0, 120) : "unknown",
+    };
+  }
+}
+
+/**
+ * B2.18 — OpenAI smoke check.
+ *
+ * Volá `GET {OPENAI_API_BASE}/models` s 3s timeoutem a zkráceným výsledkem,
+ * abychom rychle detekovali rate-limit / revocation / invalid key. Status
+ * je soft failure — OpenAI down neshodí celý health 503, jen degraded.
+ */
+async function checkOpenAI(): Promise<ComponentStatus> {
+  if (!process.env.OPENAI_API_KEY) return { status: "skipped" };
+  const start = Date.now();
+  try {
+    const base =
+      process.env.OPENAI_API_BASE?.replace(/\/$/, "") ?? "https://api.openai.com/v1";
+    const res = await withTimeout(
+      fetch(`${base}/models`, {
+        headers: {
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        },
+      }),
+      OPENAI_TIMEOUT_MS,
+      "openai",
+    );
+    if (!res.ok) {
+      return {
+        status: "fail",
+        latencyMs: Date.now() - start,
+        error: `HTTP ${res.status}`,
+      };
+    }
+    return { status: "ok", latencyMs: Date.now() - start };
+  } catch (err) {
+    return {
+      status: "fail",
+      latencyMs: Date.now() - start,
+      error: err instanceof Error ? err.message.slice(0, 120) : "unknown",
+    };
+  }
+}
+
 export async function GET() {
-  const [database, stripe, resend] = await Promise.all([
+  const [database, stripe, resend, supabaseAuth, openai] = await Promise.all([
     checkDatabase(),
     checkStripe(),
     checkResend(),
+    checkSupabaseAuth(),
+    checkOpenAI(),
   ]);
 
-  const criticalFailures = [database.status === "fail"];
-  const softFailures = [stripe.status === "fail", resend.status === "fail"];
+  // B2.18 — Supabase Auth je kritická jako DB (bez auth je produkt k ničemu).
+  // OpenAI a Stripe/Resend degraded — portál může jet v omezeném režimu.
+  const criticalFailures = [
+    database.status === "fail",
+    supabaseAuth.status === "fail",
+  ];
+  const softFailures = [
+    stripe.status === "fail",
+    resend.status === "fail",
+    openai.status === "fail",
+  ];
 
   const overall: HealthResponse["status"] = criticalFailures.some(Boolean)
     ? "down"
@@ -146,14 +242,14 @@ export async function GET() {
     version: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "dev",
     region: process.env.VERCEL_REGION ?? "local",
     timestamp: new Date().toISOString(),
-    components: { database, stripe, resend },
+    components: { database, stripe, resend, supabaseAuth, openai },
   };
 
   return NextResponse.json(body, {
     status: overall === "down" ? 503 : 200,
     headers: {
       "Cache-Control": "no-store, no-cache, must-revalidate",
-      "x-health-summary": `db=${database.status} stripe=${stripe.status} resend=${resend.status}`,
+      "x-health-summary": `db=${database.status} auth=${supabaseAuth.status} stripe=${stripe.status} resend=${resend.status} openai=${openai.status}`,
     },
   });
 }

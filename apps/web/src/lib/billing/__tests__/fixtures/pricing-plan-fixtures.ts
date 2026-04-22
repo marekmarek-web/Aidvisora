@@ -11,6 +11,7 @@ export const SUBSCRIPTION_INACTIVE: SubscriptionState = {
   currentPeriodEnd: null,
   isActive: false,
   inGracePeriod: false,
+  graceEndsAt: null,
 };
 
 /** Aktivní placený Start (Stripe/DB plan string typicky odpovídá start / starter). */
@@ -20,6 +21,7 @@ export const PAID_SUBSCRIPTION_START: SubscriptionState = {
   currentPeriodEnd: new Date(Date.now() + 86_400_000 * 30),
   isActive: true,
   inGracePeriod: false,
+  graceEndsAt: null,
 };
 
 export const PAID_SUBSCRIPTION_PRO: SubscriptionState = {
@@ -28,6 +30,7 @@ export const PAID_SUBSCRIPTION_PRO: SubscriptionState = {
   currentPeriodEnd: new Date(Date.now() + 86_400_000 * 30),
   isActive: true,
   inGracePeriod: false,
+  graceEndsAt: null,
 };
 
 /** Interní tier `team` = veřejně Management. */
@@ -37,6 +40,7 @@ export const PAID_SUBSCRIPTION_MANAGEMENT: SubscriptionState = {
   currentPeriodEnd: new Date(Date.now() + 86_400_000 * 30),
   isActive: true,
   inGracePeriod: false,
+  graceEndsAt: null,
 };
 
 const future = () => new Date(Date.now() + 14 * 86_400_000);

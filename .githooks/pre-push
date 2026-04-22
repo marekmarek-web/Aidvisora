@@ -2,17 +2,60 @@
 # Blokuje push do remote, pokud v repu existuje tenant-scope porušení,
 # které není odůvodněné v tools/tenant-audit/allow-list.json.
 #
-# Skip: SKIP_TENANT_AUDIT=1 git push ...
+# B3.12 — doplňuje lint (+ volitelně test/build) check před pushem. Pomalejší,
+# ale zachytí „červený CI" scénář dřív, než odešlem PR.
+#
+# Skip variables:
+#   SKIP_TENANT_AUDIT=1 git push ...   (vypne tenant audit)
+#   SKIP_PREPUSH_LINT=1 git push ...   (vypne lint)
+#   RUN_PREPUSH_TEST=1  git push ...   (zapne vitest quick run; default OFF)
+#   RUN_PREPUSH_BUILD=1 git push ...   (zapne next build; default OFF, velmi pomalé)
 # CI: běží samostatný krok v .github/workflows/ci.yml (zde přeskakujeme).
 
 [ -n "$CI" ] && exit 0
-[ -n "$SKIP_TENANT_AUDIT" ] && exit 0
 
-if ! node tools/tenant-audit/audit-tenant-queries.mjs >/dev/null 2>&1; then
-  echo "" >&2
-  echo "pre-push: tenant-scope audit selhal. Spusť 'pnpm audit:tenant' pro detail." >&2
-  echo "Přidej tenant guard (withAuthContext / eq(X.tenantId, ...)) nebo doplň odůvodněný záznam do tools/tenant-audit/allow-list.json." >&2
-  echo "" >&2
-  exit 1
+# 1) Tenant audit (existující).
+if [ -z "$SKIP_TENANT_AUDIT" ]; then
+  if ! node tools/tenant-audit/audit-tenant-queries.mjs >/dev/null 2>&1; then
+    echo "" >&2
+    echo "pre-push: tenant-scope audit selhal. Spusť 'pnpm audit:tenant' pro detail." >&2
+    echo "Přidej tenant guard (withAuthContext / eq(X.tenantId, ...)) nebo doplň odůvodněný záznam do tools/tenant-audit/allow-list.json." >&2
+    echo "" >&2
+    exit 1
+  fi
 fi
+
+# 2) Lint (rychlý, default ON; lze vypnout SKIP_PREPUSH_LINT=1).
+if [ -z "$SKIP_PREPUSH_LINT" ]; then
+  echo "pre-push: running web lint (SKIP_PREPUSH_LINT=1 to skip)…" >&2
+  if ! pnpm --filter web lint >/dev/null 2>&1; then
+    echo "" >&2
+    echo "pre-push: lint selhal. Spusť 'pnpm --filter web lint' lokálně pro detail." >&2
+    echo "" >&2
+    exit 1
+  fi
+fi
+
+# 3) Test (opt-in; default OFF, pouští se jen při RUN_PREPUSH_TEST=1).
+if [ -n "$RUN_PREPUSH_TEST" ]; then
+  echo "pre-push: running web vitest (RUN_PREPUSH_TEST=1)…" >&2
+  if ! pnpm --filter web test -- --run >/dev/null 2>&1; then
+    echo "" >&2
+    echo "pre-push: vitest selhal. Spusť 'pnpm --filter web test' lokálně pro detail." >&2
+    echo "" >&2
+    exit 1
+  fi
+fi
+
+# 4) Next build (opt-in; default OFF, je pomalé).
+if [ -n "$RUN_PREPUSH_BUILD" ]; then
+  echo "pre-push: running web build (RUN_PREPUSH_BUILD=1)…" >&2
+  if ! pnpm --filter web build >/dev/null 2>&1; then
+    echo "" >&2
+    echo "pre-push: next build selhal. Spusť 'pnpm --filter web build' lokálně pro detail." >&2
+    echo "" >&2
+    exit 1
+  fi
+fi
+
 exit 0

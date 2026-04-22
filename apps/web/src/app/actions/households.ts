@@ -43,7 +43,7 @@ export type HouseholdDetail = {
   name: string;
   icon: string | null;
   sharedGoals: HouseholdSharedGoal[];
-  members: { id: string; contactId: string; firstName: string; lastName: string; email: string | null; phone: string | null; role: string | null }[];
+  members: { id: string; contactId: string; firstName: string; lastName: string; email: string | null; phone: string | null; role: string | null; birthDate: string | null }[];
 };
 
 export async function getHouseholdsList(): Promise<HouseholdRow[]> {
@@ -82,6 +82,11 @@ export async function getHouseholdIdForContactWithAuth(
     .from(householdMembers)
     .innerJoin(households, eq(householdMembers.householdId, households.id))
     .where(and(eq(householdMembers.contactId, contactId), eq(households.tenantId, auth.tenantId)))
+    // B2.7 — deterministic pořadí: dokud není unique constraint zapnutý
+    // (CONCURRENTLY migrace household_members_unique_contact), může
+    // vzniknout dvojitý member row. `joinedAt ASC` garantuje, že klient
+    // vidí vždy první (nejstarší) přiřazení — ne náhodné podle indexu.
+    .orderBy(asc(householdMembers.joinedAt))
     .limit(1);
   return member?.householdId ?? null;
 }
@@ -238,6 +243,7 @@ export async function getHousehold(id: string): Promise<HouseholdDetail | null> 
         lastName: contacts.lastName,
         email: contacts.email,
         phone: contacts.phone,
+        birthDate: contacts.birthDate,
       })
       .from(householdMembers)
       .innerJoin(contacts, eq(householdMembers.contactId, contacts.id))
@@ -256,6 +262,7 @@ export async function getHousehold(id: string): Promise<HouseholdDetail | null> 
         email: m.email,
         phone: m.phone ?? null,
         role: m.role,
+        birthDate: m.birthDate ?? null,
       })),
     };
   });

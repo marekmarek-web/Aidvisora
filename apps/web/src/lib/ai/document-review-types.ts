@@ -137,6 +137,7 @@ export const EVIDENCE_TIERS = [
   "classifier_fallback",       // produced by a classifier prompt, not an extraction prompt
   "model_inference_only",      // model guess, no explicit textual evidence
   "recovered_from_image",      // re-extracted from page image after primary pass left field empty/low-conf
+  "recovered_from_full_vision", // recovered from a multi-page rasterized vision pass over the whole document
   "missing",                   // not found / not applicable
 ] as const;
 
@@ -167,6 +168,7 @@ export const SOURCE_KINDS = [
   "parties_record",        // extracted from envelope.parties by role
   "pipeline_normalized",   // set by alias normalization / pipeline post-processing
   "page_image_fallback",   // recovered by re-running extraction over rasterized page image
+  "full_document_vision",  // recovered by rasterizing first N pages and sending as a single multimodal batch
   "unknown",
 ] as const;
 
@@ -212,6 +214,7 @@ export function sourceKindDisplayLabel(kind: SourceKind | undefined): string {
     parties_record: "ze seznamu účastníků",
     pipeline_normalized: "odvozeno z kontextu",
     page_image_fallback: "doplněno z obrázku stránky",
+    full_document_vision: "přečteno přímo ze skenu (vision)",
     unknown: "",
   };
   return MAP[kind] ?? "";
@@ -330,6 +333,12 @@ export const documentReviewEnvelopeSchema = z.object({
     extractionRoute: z.string().optional(),
     /** Extraction mode used: "specialized" | "best_effort" | "partial". Set on all outputs. */
     extractionMode: z.string().optional(),
+    /**
+     * Which concrete data channel the extraction used. Helps UX explain why a
+     * scan-based document was read even though the text layer looked "OK".
+     * "prompt_builder_text" | "schema_text_wrap" | "file_multimodal" | "rasterized_pages"
+     */
+    extractionSourceKind: z.string().optional(),
   }),
   parties: z.record(z.string(), z.unknown()).default({}),
   productsOrObligations: z.array(z.record(z.string(), z.unknown())).default([]),

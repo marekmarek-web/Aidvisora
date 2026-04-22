@@ -13,17 +13,20 @@ import {
 export const metadata: Metadata = {
   title: "Ceník · Aidvisora",
   description:
-    "Transparentní ceník Aidvisory pro finanční poradce: Start, Pro a Management. Bez per-klient poplatků, trial 14 dní, roční fakturace −20 %.",
+    "Transparentní ceník Aidvisora pro finanční poradce: Start, Pro a Management. Bez per-klient poplatků, trial 14 dní, roční fakturace −20 %.",
   alternates: { canonical: "/pricing" },
   openGraph: {
     title: "Ceník · Aidvisora",
     description:
-      "Start od 990 Kč / měsíc. Bez per-klient poplatků, trial 14 dní, faktura s DPH a DPA smlouvou v základu.",
+      "Start od 990 Kč / měsíc bez DPH. Bez per-klient poplatků, trial 14 dní, faktura přes Stripe Tax a DPA smlouvou v základu.",
     type: "website",
     locale: "cs_CZ",
     url: "/pricing",
   },
 };
+
+export const dynamic = "force-static";
+export const revalidate = 3600;
 
 type Plan = {
   id: "starter" | "pro" | "team";
@@ -106,7 +109,7 @@ export default function PricingPage() {
           <p className="max-w-2xl mx-auto text-lg text-slate-300 leading-relaxed">
             Platíte za sebe, ne za klienty. {PUBLIC_TRIAL_DURATION_DAYS} dní zdarma,
             fakturace měsíčně nebo ročně (ročně −{ANNUAL_BILLING_DISCOUNT_PERCENT}&nbsp;%).
-            DPH 21&nbsp;% je automaticky v ceně.
+            Ceny jsou bez DPH; DPH 21&nbsp;% se doplní podle Stripe Tax (MOSS/OSS, reverse-charge dle DIČ).
           </p>
         </div>
       </section>
@@ -198,8 +201,8 @@ export default function PricingPage() {
             <div>
               <p className="font-bold text-white">DPA + GDPR v základu</p>
               <p className="text-sm text-slate-400 leading-relaxed">
-                Šifrování PII (AES-256-GCM), audit log, hosting v EU. Zpracovatelská
-                smlouva dostupná hned po zřízení účtu.
+                TLS 1.2+ v přenosu, audit log, hosting v EU (Supabase + Vercel). Zpracovatelská
+                smlouva dostupná hned po zřízení účtu; detaily šifrování na /bezpecnost.
               </p>
             </div>
           </div>

@@ -2,6 +2,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
 
 const serverUrl = process.env.CAPACITOR_SERVER_URL?.trim() || "https://www.aidvisora.cz/prihlaseni?native=1";
 const isHttpServer = /^http:\/\//i.test(serverUrl);
+const isProduction = process.env.NODE_ENV === "production";
 
 /**
  * Hostnames whose URLs should stay inside the WKWebView / Android WebView.
@@ -38,11 +39,26 @@ const config: CapacitorConfig = {
      * Tím eliminujeme "gumový" scroll nad/pod app view při overscrollu.
      */
     scrollEnabled: false,
+    /**
+     * App-Bound Domains: extra security layer (iOS 14+). Only URLs whose host
+     * is listed in Info.plist's `WKAppBoundDomains` will load in the WKWebView
+     * when this is on. Off in dev so `CAPACITOR_SERVER_URL=http://localhost:3000`
+     * still works.
+     */
+    limitsNavigationsToAppBoundDomains: isProduction,
   },
   android: {
     allowMixedContent: isHttpServer,
-    captureInput: true,
-    webContentsDebuggingEnabled: process.env.NODE_ENV !== "production",
+    /**
+     * captureInput: false — we want the WebView to bubble hardware-keyboard
+     * shortcuts (Cmd+F, arrow keys inside native text fields, Bluetooth
+     * keyboard shortcuts). The previous `true` value blocked Android IME
+     * behaviour in some OEM keyboards that rely on capturing input at the
+     * Activity level. The back-button is still handled via the shared
+     * native-back-stack on the web side.
+     */
+    captureInput: false,
+    webContentsDebuggingEnabled: !isProduction,
   },
   // Ikony / splash: `pnpm cap:assets` (zdroj `logos/Aidvisora logo new fav.png` v generate-brand-assets.mjs).
 };

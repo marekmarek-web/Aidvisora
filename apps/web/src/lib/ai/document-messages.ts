@@ -83,6 +83,8 @@ export function buildHumanSummary(params: {
   clientName?: string;
   containsPaymentInstructions?: boolean;
   reasonsForReview?: string[];
+  /** When set to "file_multimodal" / "full_document_vision" we prefer the vision-phrased blurb. */
+  extractionSourceKind?: string;
 }): string {
   const {
     primaryType,
@@ -95,6 +97,7 @@ export function buildHumanSummary(params: {
     contractNumber,
     containsPaymentInstructions,
     reasonsForReview,
+    extractionSourceKind,
   } = params;
 
   const parts: string[] = [];
@@ -146,7 +149,18 @@ export function buildHumanSummary(params: {
 
   // Scan/OCR quality — relevant for all document types
   const modeStr = inputMode as string;
-  if (modeStr === "scanned_pdf" || modeStr === "image_document") {
+  const readViaVision =
+    extractionSourceKind === "file_multimodal" ||
+    extractionSourceKind === "full_document_vision" ||
+    (Array.isArray(reasonsForReview) &&
+      (reasonsForReview.includes("garbled_text_layer_used_vision") ||
+        reasonsForReview.includes("read_via_vision_fallback") ||
+        reasonsForReview.includes("full_document_vision_recovered")));
+  if (readViaVision) {
+    parts.push(
+      "Textová vrstva byla nečitelná (scan), dokument byl přečten přímo ze skenu — údaje ověřte oproti originálu."
+    );
+  } else if (modeStr === "scanned_pdf" || modeStr === "image_document") {
     parts.push("Dokument je scan — údaje je potřeba ručně zkontrolovat oproti originálu.");
   } else if (modeStr === "mixed_pdf") {
     parts.push("Dokument obsahuje scan i textovou vrstvu — některé části mohou vyžadovat kontrolu.");
@@ -183,6 +197,14 @@ function humanizeReviewReasonForAdvisorSummary(code: string): string | null {
     proposal_not_final_contract: "Dokument vypadá jako návrh, ne jako finální smlouva.",
     hybrid_contract_signals_detected: "V dokumentu jsou prvky více typů smluv — ověřte rozpoznaný typ.",
     scan_or_ocr_unusable: "Dokument se nepodařilo spolehlivě přečíst — zkontrolujte všechny údaje.",
+    garbled_text_layer_used_vision:
+      "Textová vrstva PDF byla nečitelná (rozsypané OCR), dokument jsem přečetla přímo ze skenu — ověřte údaje oproti originálu.",
+    read_via_vision_fallback:
+      "Dokument byl přečten přímo ze skenu (vision) — některé hodnoty ověřte oproti originálu.",
+    scan_vision_fallback_used:
+      "Dokument byl doplněn vizuálním čtením ze skenu — doporučujeme údaje ověřit.",
+    full_document_vision_recovered:
+      "Chybějící údaje byly doplněny vizuálním čtením stránek — ověřte je v dokumentu.",
     ambiguous_client_match: "V CRM existuje více možných klientů — vyberte správného.",
     near_match_advisory:
       "Nalezena pravděpodobná shoda s klientem v CRM — ověřte, zda jde o správnou osobu.",

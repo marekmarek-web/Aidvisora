@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth/require-auth";
+import "@/styles/aidvisora-components.css";
 import "@/styles/monday.css";
 
 export default async function BoardLayout({

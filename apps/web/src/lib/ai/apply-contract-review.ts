@@ -1241,9 +1241,22 @@ export async function applyContractReview(
       // LAST `resultPayload.createdContractId`, silently dropping coverage for
       // bundles that produced more than one contract).
       const createdContractIds: string[] = [];
-      const recordCreatedContractId = (id: string | null | undefined) => {
+      // B2.1 (H-09): tracker per-contract segmentu — `upsertCoverageFromAppliedReview`
+      // potřebuje znát segment konkrétní smlouvy (ne review-wide envelope), aby
+      // v bundles (ZP+MAJ+AUTO) správně upsertl coverage pro každou smlouvu
+      // zvlášť. Bez této nápovědy druhá iterace overwritla linkedContractId
+      // coverage prvního contractu, protože envelope coverageList byl aplikován
+      // pro každou smlouvu stejně.
+      const createdContractSegments = new Map<string, string>();
+      const recordCreatedContractId = (
+        id: string | null | undefined,
+        segmentHint?: string | null,
+      ) => {
         if (!id) return;
         if (!createdContractIds.includes(id)) createdContractIds.push(id);
+        if (segmentHint && segmentHint.trim()) {
+          createdContractSegments.set(id, segmentHint.trim());
+        }
         // keep the scalar field pointing at the FIRST processed contract for
         // backward compatibility with older callers (payment setup code below
         // references resultPayload.createdContractId; keeping it stable avoids
@@ -1426,7 +1439,7 @@ export async function applyContractReview(
                 updatedAt: new Date(),
               })
               .where(eq(contracts.id, existingContractId));
-            recordCreatedContractId(existingContractId);
+            recordCreatedContractId(existingContractId, segment);
             resolvedContractNumberForPaymentSync =
               preferExistingValue(existingRow?.contractNumber, contractNumberResolved) ?? null;
             continue;
@@ -1525,7 +1538,7 @@ export async function applyContractReview(
             }
           }
           if (insertedContractId) {
-            recordCreatedContractId(insertedContractId);
+            recordCreatedContractId(insertedContractId, segment);
             resolvedContractNumberForPaymentSync = contractNumberResolved;
           }
         } else if (action.type === "create_task") {
@@ -1674,6 +1687,9 @@ export async function applyContractReview(
             contractId,
             row,
             tx: tx as unknown as typeof db,
+            // B2.1: pass per-contract segment hint so coverage upsert resolves
+            // itemKey proti aktuálnímu segmentu (ne proti review-wide enve).
+            contractSegment: createdContractSegments.get(contractId) ?? null,
           });
         }
 

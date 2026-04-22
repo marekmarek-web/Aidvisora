@@ -40,11 +40,25 @@ export async function evaluateContractReviewScanGate(
   mimeType: string | null | undefined,
   preprocess: Pick<
     PreprocessResult,
-    "markdownContent" | "readabilityScore" | "preprocessStatus" | "preprocessMode"
+    | "markdownContent"
+    | "readabilityScore"
+    | "preprocessStatus"
+    | "preprocessMode"
+    | "textQualityIsGarbage"
   >
 ): Promise<ScanGateResult> {
   const md = preprocess.markdownContent?.trim() ?? "";
   const mime = (mimeType ?? "").toLowerCase();
+  const isPdfMime = mime.includes("pdf");
+  const textIsGarbage = preprocess.textQualityIsGarbage === true;
+
+  // Garbled OCR text (`pdf_parse_fallback_garbage` or textQualityIsGarbage flag)
+  // should NOT be treated as "sufficient text". We still do not defer: we want
+  // the pipeline to run vision/file path. But we explicitly signal that the
+  // text layer is unusable so downstream code routes to the scan branch.
+  if (textIsGarbage && isPdfMime) {
+    return { defer: false, reason: "pdf_parse_fallback_garbage" };
+  }
 
   if (md.length >= USABLE_TEXT_MIN) {
     return { defer: false, reason: "sufficient_text" };

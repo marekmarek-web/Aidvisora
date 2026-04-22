@@ -18,6 +18,10 @@ import {
   sql,
 } from "db";
 import { sendEmail, logNotification } from "@/lib/email/send-email";
+import { resolveFromHeader } from "@/lib/email/resolve-from-header";
+import { personalizeMessage } from "@/lib/email/personalization";
+import { buildListUnsubscribeHeaders } from "@/lib/email/list-unsubscribe";
+import { enqueueCampaignForSending } from "@/lib/email/queue-enqueue";
 import {
   CAMPAIGN_SEGMENTS,
   type CampaignSegment,
@@ -46,28 +50,6 @@ function tagFilterSql(tags: string[]) {
   )`;
 }
 
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-function personalizeHtml(
-  html: string,
-  firstName: string,
-  lastName: string,
-  unsubscribeUrl?: string,
-): string {
-  const name = [firstName, lastName].filter(Boolean).join(" ").trim() || "kliente";
-  const unsub = unsubscribeUrl?.trim() || "";
-  return html
-    .replace(/\{\{jmeno\}\}/gi, escapeHtml(firstName.trim() || name))
-    .replace(/\{\{cele_jmeno\}\}/gi, escapeHtml(name))
-    .replace(/\{\{unsubscribe_url\}\}/gi, unsub);
-}
-
 function makeUnsubscribeToken(): string {
   return crypto.randomUUID().replace(/-/g, "");
 }
@@ -87,7 +69,7 @@ function appBaseUrl(): string {
 async function mintUnsubscribeUrlForContact(
   auth: AuthContext,
   contactId: string,
-): Promise<string | null> {
+): Promise<{ url: string; token: string } | null> {
   try {
     const token = makeUnsubscribeToken();
     await withTenantContextFromAuth(auth, (tx) =>
@@ -97,7 +79,7 @@ async function mintUnsubscribeUrlForContact(
         expiresAt: unsubscribeTokenExpiry(),
       }),
     );
-    return `${appBaseUrl()}/client/unsubscribe?token=${token}`;
+    return { url: `${appBaseUrl()}/client/unsubscribe?token=${token}`, token };
   } catch (e) {
     console.error("[email-campaigns] unsubscribe token mint failed", { contactId, error: e });
     return null;
@@ -114,7 +96,9 @@ export async function listEmailCampaigns(): Promise<EmailCampaignRow[]> {
         id: emailCampaigns.id,
         name: emailCampaigns.name,
         subject: emailCampaigns.subject,
+        preheader: emailCampaigns.preheader,
         status: emailCampaigns.status,
+        scheduledAt: emailCampaigns.scheduledAt,
         createdAt: emailCampaigns.createdAt,
         sentAt: emailCampaigns.sentAt,
       })
@@ -125,7 +109,7 @@ export async function listEmailCampaigns(): Promise<EmailCampaignRow[]> {
   });
 }
 
-/** Rozšířené data pro novou UI (historie + pokračování draftu). */
+/** Rozšířená data pro novou UI (historie + pokračování draftu + analytics). */
 export async function listEmailCampaignsFull(): Promise<CampaignListRow[]> {
   return withAuthContext(async (auth, tx) => {
     if (!hasPermission(auth.roleName, "contacts:read")) {
@@ -136,10 +120,13 @@ export async function listEmailCampaignsFull(): Promise<CampaignListRow[]> {
         id: emailCampaigns.id,
         name: emailCampaigns.name,
         subject: emailCampaigns.subject,
+        preheader: emailCampaigns.preheader,
         status: emailCampaigns.status,
+        scheduledAt: emailCampaigns.scheduledAt,
         createdAt: emailCampaigns.createdAt,
         sentAt: emailCampaigns.sentAt,
         bodyHtml: emailCampaigns.bodyHtml,
+        recipientCount: emailCampaigns.recipientCount,
       })
       .from(emailCampaigns)
       .where(eq(emailCampaigns.tenantId, auth.tenantId))
@@ -152,34 +139,39 @@ export async function listEmailCampaignsFull(): Promise<CampaignListRow[]> {
     const stats = await tx
       .select({
         campaignId: emailCampaignRecipients.campaignId,
-        status: emailCampaignRecipients.status,
-        count: sql<number>`count(*)::int`,
+        sent: sql<number>`count(*) filter (where ${emailCampaignRecipients.status} in ('sent','delivered','opened','clicked'))::int`,
+        failed: sql<number>`count(*) filter (where ${emailCampaignRecipients.status} = 'failed')::int`,
+        opens: sql<number>`count(*) filter (where ${emailCampaignRecipients.openedAt} is not null)::int`,
+        clicks: sql<number>`count(*) filter (where ${emailCampaignRecipients.firstClickAt} is not null)::int`,
+        bounces: sql<number>`count(*) filter (where ${emailCampaignRecipients.bouncedAt} is not null)::int`,
+        unsubscribes: sql<number>`count(*) filter (where ${emailCampaignRecipients.unsubscribedAt} is not null)::int`,
       })
       .from(emailCampaignRecipients)
       .where(
         and(
           eq(emailCampaignRecipients.tenantId, auth.tenantId),
-          sql`${emailCampaignRecipients.campaignId} = ANY(${ids}::uuid[])`
-        )
+          sql`${emailCampaignRecipients.campaignId} = ANY(${ids}::uuid[])`,
+        ),
       )
-      .groupBy(emailCampaignRecipients.campaignId, emailCampaignRecipients.status);
+      .groupBy(emailCampaignRecipients.campaignId);
 
-    const sentMap = new Map<string, number>();
-    const failedMap = new Map<string, number>();
-    for (const s of stats) {
-      if (s.status === "sent") sentMap.set(s.campaignId, s.count);
-      if (s.status === "failed") failedMap.set(s.campaignId, s.count);
-    }
+    const byId = new Map(stats.map((s) => [s.campaignId, s]));
 
-    return rows.map((r) => ({
-      ...r,
-      sentCount: sentMap.get(r.id) ?? 0,
-      failedCount: failedMap.get(r.id) ?? 0,
-    }));
+    return rows.map((r) => {
+      const s = byId.get(r.id);
+      return {
+        ...r,
+        sentCount: s?.sent ?? 0,
+        failedCount: s?.failed ?? 0,
+        openCount: s?.opens ?? 0,
+        clickCount: s?.clicks ?? 0,
+        bounceCount: s?.bounces ?? 0,
+        unsubscribeCount: s?.unsubscribes ?? 0,
+      };
+    });
   });
 }
 
-/** Spočítá počet "eligible" příjemců pro každý segment v aktuálním tenantu. */
 export async function getSegmentCounts(): Promise<SegmentCount[]> {
   return withAuthContext(async (auth, tx) => {
     if (!hasPermission(auth.roleName, "contacts:read")) {
@@ -191,7 +183,7 @@ export async function getSegmentCounts(): Promise<SegmentCount[]> {
       eq(contacts.doNotEmail, false),
       isNull(contacts.notificationUnsubscribedAt),
       isNotNull(contacts.email),
-      sql`trim(${contacts.email}) <> ''`
+      sql`trim(${contacts.email}) <> ''`,
     );
 
     const results: SegmentCount[] = [];
@@ -213,7 +205,13 @@ export async function getSegmentCounts(): Promise<SegmentCount[]> {
 export async function createEmailCampaignDraft(input: {
   name: string;
   subject: string;
+  preheader?: string | null;
   bodyHtml: string;
+  templateId?: string | null;
+  fromNameOverride?: string | null;
+  trackingEnabled?: boolean;
+  segmentId?: string | null;
+  segmentFilter?: Record<string, unknown> | null;
 }): Promise<{ id: string }> {
   return withAuthContext(async (auth, tx) => {
     if (!hasPermission(auth.roleName, "contacts:write")) {
@@ -232,8 +230,16 @@ export async function createEmailCampaignDraft(input: {
         createdByUserId: auth.userId,
         name,
         subject,
+        preheader: input.preheader?.trim() || null,
         bodyHtml,
         status: "draft",
+        templateId: input.templateId ?? null,
+        fromNameOverride: input.fromNameOverride?.trim() || null,
+        trackingEnabled: input.trackingEnabled ?? true,
+        segmentId: input.segmentId ?? null,
+        segmentFilter: (input.segmentFilter ?? null) as unknown as
+          | Record<string, unknown>
+          | null,
       })
       .returning({ id: emailCampaigns.id });
     if (!row) throw new Error("Kampaň se nepodařilo vytvořit.");
@@ -244,14 +250,11 @@ export async function createEmailCampaignDraft(input: {
 /**
  * Odešle draft kampaně způsobilým kontaktům (e-mail, ne do_not_email, ne archiv).
  * Volitelně filtrováno dle segmentu (tagy).
- * Placeholdery v HTML: {{jmeno}}, {{cele_jmeno}}, {{unsubscribe_url}}
- *
- * @param segmentId volitelné — pokud není vyplněno, použije se `all`.
- *                  Pro `test` použijte `sendTestCampaign`.
+ * Personalizace v subjectu i v body: {{jmeno}}, {{cele_jmeno}}, {{unsubscribe_url}}.
  */
 export async function sendEmailCampaign(
   campaignId: string,
-  segmentId?: CampaignSegmentId | null
+  segmentId?: CampaignSegmentId | null,
 ): Promise<SendEmailCampaignResult> {
   const auth = await requireAuthInAction();
   if (!hasPermission(auth.roleName, "contacts:write")) {
@@ -263,10 +266,7 @@ export async function sendEmailCampaign(
     throw new Error("Pro testovací odeslání použijte 'Odeslat test'.");
   }
 
-  /**
-   * Fáze 1 — čistě DB: ověř kampaň, načti publikum, převeď status na `sending`.
-   * Držíme krátkou transakci, abychom nezamykali spojení po dobu externího `sendEmail` loopu.
-   */
+  // Fáze 1 — čistě DB: ověř kampaň, načti publikum, převeď status na `sending`.
   const { campaign, targets, capped } = await withTenantContextFromAuth(auth, async (tx) => {
     const [campaign] = await tx
       .select()
@@ -274,8 +274,8 @@ export async function sendEmailCampaign(
       .where(and(eq(emailCampaigns.id, campaignId), eq(emailCampaigns.tenantId, auth.tenantId)))
       .limit(1);
     if (!campaign) throw new Error("Kampaň nebyla nalezena.");
-    if (campaign.status !== "draft") {
-      throw new Error("Odeslat lze jen koncept (draft).");
+    if (campaign.status !== "draft" && campaign.status !== "scheduled") {
+      throw new Error("Odeslat lze jen koncept (draft) nebo naplánovanou kampaň.");
     }
 
     const audience = await tx
@@ -294,8 +294,8 @@ export async function sendEmailCampaign(
           isNull(contacts.notificationUnsubscribedAt),
           isNotNull(contacts.email),
           sql`trim(${contacts.email}) <> ''`,
-          tagFilterSql(segment.tags)
-        )
+          tagFilterSql(segment.tags),
+        ),
       )
       .limit(MAX_RECIPIENTS_PER_SEND + 1);
 
@@ -304,10 +304,21 @@ export async function sendEmailCampaign(
 
     await tx
       .update(emailCampaigns)
-      .set({ status: "sending", updatedAt: new Date() })
+      .set({
+        status: "sending",
+        updatedAt: new Date(),
+        recipientCount: targets.length,
+      })
       .where(eq(emailCampaigns.id, campaignId));
 
     return { campaign, targets, capped };
+  });
+
+  // Pre-resolve from header jednou (nemění se per-recipient)
+  const fromHeader = await resolveFromHeader({
+    tenantId: auth.tenantId,
+    userId: auth.userId,
+    override: campaign.fromNameOverride,
   });
 
   let sent = 0;
@@ -331,20 +342,29 @@ export async function sendEmailCampaign(
           .where(eq(emailCampaigns.id, campaignId)),
       );
     } catch (e) {
-      console.error("[sendEmailCampaign] failed to write terminal status", { campaignId, error: e });
+      console.error("[sendEmailCampaign] failed to write terminal status", {
+        campaignId,
+        error: e,
+      });
     }
   }
 
   try {
     for (const c of targets) {
       const email = c.email!.trim();
-      const unsubscribeUrl = (await mintUnsubscribeUrlForContact(auth, c.id)) ?? undefined;
-      const html = personalizeHtml(
-        campaign.bodyHtml,
-        c.firstName ?? "",
-        c.lastName ?? "",
-        unsubscribeUrl,
-      );
+      const unsubResult = await mintUnsubscribeUrlForContact(auth, c.id);
+      const unsubscribeUrl = unsubResult?.url;
+
+      const { subject, bodyHtml } = personalizeMessage({
+        subject: campaign.subject,
+        bodyHtml: campaign.bodyHtml,
+        preheader: campaign.preheader,
+        input: {
+          firstName: c.firstName ?? "",
+          lastName: c.lastName ?? "",
+          unsubscribeUrl,
+        },
+      });
 
       const recRow = await withTenantContextFromAuth(auth, async (tx) => {
         const [row] = await tx
@@ -365,10 +385,20 @@ export async function sendEmailCampaign(
         continue;
       }
 
+      const listUnsubHeaders = buildListUnsubscribeHeaders({
+        unsubscribeUrl: unsubscribeUrl ?? null,
+      });
+
       const result = await sendEmail({
         to: email,
-        subject: campaign.subject,
-        html,
+        subject,
+        html: bodyHtml,
+        from: fromHeader,
+        headers: listUnsubHeaders,
+        tags: [
+          { name: "campaign_id", value: campaignId.replace(/-/g, "") },
+          { name: "tenant_id", value: auth.tenantId.replace(/-/g, "") },
+        ],
       });
 
       if (result.ok) {
@@ -387,9 +417,10 @@ export async function sendEmailCampaign(
           tenantId: auth.tenantId,
           contactId: c.id,
           template: CAMPAIGN_TEMPLATE_LOG,
-          subject: campaign.subject,
+          subject,
           recipient: email,
           status: "sent",
+          providerMessageId: result.messageId ?? null,
           meta: { campaignId, campaignName: campaign.name },
         });
       } else {
@@ -407,7 +438,7 @@ export async function sendEmailCampaign(
           tenantId: auth.tenantId,
           contactId: c.id,
           template: CAMPAIGN_TEMPLATE_LOG,
-          subject: campaign.subject,
+          subject,
           recipient: email,
           status: "failed",
           meta: { campaignId, error: result.error },
@@ -487,7 +518,9 @@ export async function reapStuckSendingCampaigns(
 export async function sendTestCampaign(input: {
   campaignId?: string | null;
   subject?: string;
+  preheader?: string | null;
   bodyHtml?: string;
+  fromNameOverride?: string | null;
   /** Volitelně přepsaný příjemce – jinak e-mail přihlášeného poradce. */
   to?: string;
 }): Promise<{ ok: true; to: string } | { ok: false; error: string }> {
@@ -498,19 +531,33 @@ export async function sendTestCampaign(input: {
 
   let subject = input.subject?.trim() ?? "";
   let bodyHtml = input.bodyHtml?.trim() ?? "";
+  let preheader = input.preheader?.trim() ?? null;
+  let fromNameOverride = input.fromNameOverride?.trim() ?? null;
 
   if (input.campaignId) {
     const row = await withTenantContextFromAuth(auth, async (tx) => {
       const [found] = await tx
-        .select({ subject: emailCampaigns.subject, bodyHtml: emailCampaigns.bodyHtml })
+        .select({
+          subject: emailCampaigns.subject,
+          bodyHtml: emailCampaigns.bodyHtml,
+          preheader: emailCampaigns.preheader,
+          fromNameOverride: emailCampaigns.fromNameOverride,
+        })
         .from(emailCampaigns)
-        .where(and(eq(emailCampaigns.id, input.campaignId!), eq(emailCampaigns.tenantId, auth.tenantId)))
+        .where(
+          and(
+            eq(emailCampaigns.id, input.campaignId!),
+            eq(emailCampaigns.tenantId, auth.tenantId),
+          ),
+        )
         .limit(1);
       return found;
     });
     if (!row) return { ok: false, error: "Kampaň nebyla nalezena." };
     if (!subject) subject = row.subject;
     if (!bodyHtml) bodyHtml = row.bodyHtml;
+    if (!preheader) preheader = row.preheader ?? null;
+    if (!fromNameOverride) fromNameOverride = row.fromNameOverride ?? null;
   }
 
   if (!subject || !bodyHtml) {
@@ -533,20 +580,36 @@ export async function sendTestCampaign(input: {
     return { ok: false, error: "Nepodařilo se zjistit váš e-mail. Vyplňte ho ručně." };
   }
 
+  const fromHeader = await resolveFromHeader({
+    tenantId: auth.tenantId,
+    userId: auth.userId,
+    override: fromNameOverride,
+  });
+
   const previewUnsubscribeUrl = `${appBaseUrl()}/client/unsubscribe`;
-  const html = personalizeHtml(bodyHtml, "Jan", "Jan Novák", previewUnsubscribeUrl);
-  const previewSubject = personalizeHtml(subject, "Jan", "Jan Novák", previewUnsubscribeUrl);
+  const { subject: finalSubject, bodyHtml: finalBody } = personalizeMessage({
+    subject,
+    bodyHtml,
+    preheader,
+    input: {
+      firstName: "Jan",
+      lastName: "Novák",
+      unsubscribeUrl: previewUnsubscribeUrl,
+    },
+  });
 
   const result = await sendEmail({
     to,
-    subject: `[TEST] ${previewSubject}`,
-    html,
+    subject: `[TEST] ${finalSubject}`,
+    html: finalBody,
+    from: fromHeader,
+    headers: buildListUnsubscribeHeaders({ unsubscribeUrl: previewUnsubscribeUrl }),
   });
 
   await logNotification({
     tenantId: auth.tenantId,
     template: CAMPAIGN_TEMPLATE_LOG,
-    subject: `[TEST] ${previewSubject}`,
+    subject: `[TEST] ${finalSubject}`,
     recipient: to,
     status: result.ok ? "sent" : "failed",
     meta: {
@@ -569,7 +632,14 @@ export async function updateEmailCampaignDraft(input: {
   id: string;
   name: string;
   subject: string;
+  preheader?: string | null;
   bodyHtml: string;
+  templateId?: string | null;
+  fromNameOverride?: string | null;
+  trackingEnabled?: boolean;
+  segmentId?: string | null;
+  segmentFilter?: Record<string, unknown> | null;
+  scheduledAt?: Date | null;
 }): Promise<{ ok: true }> {
   return withAuthContext(async (auth, tx) => {
     if (!hasPermission(auth.roleName, "contacts:write")) {
@@ -587,15 +657,59 @@ export async function updateEmailCampaignDraft(input: {
       .where(and(eq(emailCampaigns.id, input.id), eq(emailCampaigns.tenantId, auth.tenantId)))
       .limit(1);
     if (!existing) throw new Error("Kampaň nebyla nalezena.");
-    if (existing.status !== "draft") {
-      throw new Error("Upravovat lze jen koncept (draft).");
+    if (existing.status !== "draft" && existing.status !== "scheduled") {
+      throw new Error("Upravovat lze jen koncept (draft) nebo naplánovanou kampaň.");
     }
+    const nextStatus = input.scheduledAt ? "scheduled" : "draft";
     await tx
       .update(emailCampaigns)
-      .set({ name, subject, bodyHtml, updatedAt: new Date() })
+      .set({
+        name,
+        subject,
+        preheader: input.preheader?.trim() || null,
+        bodyHtml,
+        templateId: input.templateId ?? null,
+        fromNameOverride: input.fromNameOverride?.trim() || null,
+        trackingEnabled: input.trackingEnabled ?? true,
+        segmentId: input.segmentId ?? null,
+        segmentFilter: (input.segmentFilter ?? null) as unknown as
+          | Record<string, unknown>
+          | null,
+        scheduledAt: input.scheduledAt ?? null,
+        status: nextStatus,
+        updatedAt: new Date(),
+      })
       .where(eq(emailCampaigns.id, input.id));
     return { ok: true };
   });
+}
+
+/**
+ * F2 — rozsype kampaň do fronty (`email_send_queue`). Odeslání pak zajišťuje cron worker
+ * `/api/cron/email-queue-worker`. Vrací počet příjemců a čas, kdy se začne posílat.
+ */
+export async function queueEmailCampaign(input: {
+  campaignId: string;
+  segmentId?: CampaignSegmentId | null;
+  /** ISO 8601 string nebo Date; null/undefined = ihned. */
+  scheduledFor?: string | Date | null;
+}): Promise<{ ok: true; recipientCount: number; scheduledFor: string }> {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, "contacts:write")) {
+    throw new Error("Nemáte oprávnění odesílat kampaň.");
+  }
+  const scheduledFor = input.scheduledFor
+    ? new Date(input.scheduledFor as string | Date)
+    : null;
+  if (scheduledFor && Number.isNaN(scheduledFor.getTime())) {
+    throw new Error("Neplatné datum naplánování.");
+  }
+  const { recipientCount, scheduledFor: effective } = await enqueueCampaignForSending(auth, {
+    campaignId: input.campaignId,
+    segmentId: input.segmentId ?? null,
+    scheduledFor,
+  });
+  return { ok: true, recipientCount, scheduledFor: effective.toISOString() };
 }
 
 /** Smaže koncept kampaně. */
@@ -610,8 +724,8 @@ export async function deleteEmailCampaignDraft(id: string): Promise<{ ok: true }
       .where(and(eq(emailCampaigns.id, id), eq(emailCampaigns.tenantId, auth.tenantId)))
       .limit(1);
     if (!existing) throw new Error("Kampaň nebyla nalezena.");
-    if (existing.status !== "draft") {
-      throw new Error("Smazat lze jen koncept (draft).");
+    if (existing.status !== "draft" && existing.status !== "scheduled") {
+      throw new Error("Smazat lze jen koncept (draft) nebo naplánovanou kampaň.");
     }
     await tx.delete(emailCampaigns).where(eq(emailCampaigns.id, id));
     return { ok: true };

@@ -1,9 +1,10 @@
 "use client";
 
-import React, { type ButtonHTMLAttributes, type ReactNode, createElement, useEffect, useState } from "react";
+import React, { type ButtonHTMLAttributes, type ReactNode, createElement, useEffect, useRef, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import { X, Plus, AlertCircle, Wifi, WifiOff, PackageOpen, RefreshCw } from "lucide-react";
 import type { DeviceClass } from "@/lib/ui/useDeviceClass";
+import { registerBackHandler } from "@/app/shared/mobile-ui/native-back-stack";
 
 type ClassName = { className?: string };
 
@@ -229,9 +230,17 @@ export function MobileBottomNav({
   );
 }
 
-export function MobileScreen({ children, className }: { children: ReactNode } & ClassName) {
+export function MobileScreen({
+  children,
+  className,
+  ariaLabel,
+  ariaLabelledBy,
+}: { children: ReactNode; ariaLabel?: string; ariaLabelledBy?: string } & ClassName) {
   return (
     <main
+      role="main"
+      aria-label={ariaLabelledBy ? undefined : ariaLabel ?? "Hlavní obsah"}
+      aria-labelledby={ariaLabelledBy}
       className={cx(
         "relative flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-y-auto overscroll-y-none px-4 pt-3 pb-4 space-y-4",
         className
@@ -425,6 +434,21 @@ export function FloatingActionButton({
   );
 }
 
+/** Matches elements that can receive programmatic focus for trap/restore. */
+const FOCUSABLE_SELECTOR = [
+  "a[href]",
+  "area[href]",
+  "button:not([disabled])",
+  "input:not([disabled]):not([type='hidden'])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  "iframe",
+  "object",
+  "embed",
+  "[contenteditable='true']",
+  "[tabindex]:not([tabindex='-1'])",
+].join(",");
+
 function OverlayContainer({
   open,
   onClose,
@@ -441,66 +465,103 @@ function OverlayContainer({
   /** Bottom sheet height: content-hugging with max 60dvh instead of the default 85dvh. */
   compact?: boolean;
 }) {
+  // Stabilní reference na onClose — volající (např. `onClose={() => setX(false)}`)
+  // obvykle předávají novou arrow funkci při každém renderu. Kdybychom tuto
+  // referenci měli v deps efektů (back-stack, Escape, focus trap), teardown
+  // by běžel při každém renderu rodiče a overlay by se nekontrolovaně zavíral.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  const panelRef = useRef<HTMLDivElement | null>(null);
+
   // Lock body scroll when open
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = prev; };
+    return () => {
+      document.body.style.overflow = prev;
+    };
   }, [open]);
 
   // Close on Escape
   useEffect(() => {
     if (!open) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onCloseRef.current();
+    };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [open, onClose]);
+  }, [open]);
 
-  // Integrate with browser history — push a state when opened, close on popstate.
-  // Gives Android hardware back + iOS edge-swipe a way to dismiss sheets.
-  //
-  // Defensive guard (proti „kliknu v sheetu a vrátí mě to zpátky“):
-  // 1. Pokud mezitím router.push přidal další entry (length vzrostla), cleanup
-  //    už nesmí volat `history.back()` — jinak uživatele vrátíme o skutečný
-  //    krok, ne o dummy sheet marker.
-  // 2. Pokud URL sheetu ≠ current URL, také nic nedělat (uživatel navigoval).
-  // 3. Jedině když top entry je pořád `__aidvSheet` a URL/length sedí,
-  //    "uklidíme" dummy entry bezpečně.
+  // Register a back-stack handler instead of manipulating `window.history`.
+  // This is the Track 1 fix for "tapping inside sheet sends me back where I
+  // came from": no dummy history entries to leak.
   useEffect(() => {
     if (!open) return;
-    if (typeof window === "undefined") return;
-    const marker = { __aidvSheet: true };
-    const openedUrl = window.location.href;
-    let historyLenAtPush: number;
-    try {
-      window.history.pushState(marker, "");
-      historyLenAtPush = window.history.length;
-    } catch {
-      return;
-    }
-    let popped = false;
-    const onPop = () => {
-      popped = true;
-      onClose();
+    return registerBackHandler(() => {
+      onCloseRef.current();
+    });
+  }, [open]);
+
+  // Focus management — trap focus inside the overlay while open and restore
+  // the previously focused element on close. Standard dialog a11y pattern.
+  useEffect(() => {
+    if (!open) return;
+    const previouslyFocused =
+      typeof document !== "undefined" ? (document.activeElement as HTMLElement | null) : null;
+
+    const moveInitialFocus = () => {
+      const panel = panelRef.current;
+      if (!panel) return;
+      const target =
+        panel.querySelector<HTMLElement>("[data-autofocus]") ??
+        panel.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+      if (target) target.focus({ preventScroll: true });
+      else panel.focus({ preventScroll: true });
     };
-    window.addEventListener("popstate", onPop);
-    return () => {
-      window.removeEventListener("popstate", onPop);
-      if (popped) return;
-      try {
-        const currentState = window.history.state as { __aidvSheet?: boolean } | null;
-        const stillOnSheetEntry = currentState?.__aidvSheet === true;
-        const didNotNavigateForward = window.history.length === historyLenAtPush;
-        const urlUnchanged = window.location.href === openedUrl;
-        if (stillOnSheetEntry && didNotNavigateForward && urlUnchanged) {
-          window.history.back();
+    const rafId = requestAnimationFrame(moveInitialFocus);
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const panel = panelRef.current;
+      if (!panel) return;
+      const focusables = Array.from(
+        panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+      ).filter((el) => !el.hasAttribute("data-focus-trap-skip"));
+      if (focusables.length === 0) {
+        e.preventDefault();
+        panel.focus({ preventScroll: true });
+        return;
+      }
+      const first = focusables[0]!;
+      const last = focusables[focusables.length - 1]!;
+      const active = document.activeElement as HTMLElement | null;
+      if (e.shiftKey) {
+        if (active === first || !panel.contains(active)) {
+          e.preventDefault();
+          last.focus({ preventScroll: true });
         }
-      } catch {
-        /* ignore */
+      } else if (active === last) {
+        e.preventDefault();
+        first.focus({ preventScroll: true });
       }
     };
-  }, [open, onClose]);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      cancelAnimationFrame(rafId);
+      document.removeEventListener("keydown", onKey);
+      if (previouslyFocused && typeof previouslyFocused.focus === "function") {
+        try {
+          previouslyFocused.focus({ preventScroll: true });
+        } catch {
+          /* ignore */
+        }
+      }
+    };
+  }, [open]);
 
   if (!open) return null;
   return (
@@ -514,13 +575,16 @@ function OverlayContainer({
       <button
         type="button"
         aria-label="Zavřít"
+        data-focus-trap-skip
         className="absolute inset-0 bg-[color:var(--wp-overlay-scrim)] animate-in fade-in duration-200"
         onClick={onClose}
       />
       {/* Panel */}
       <div
+        ref={panelRef}
+        tabIndex={-1}
         className={cx(
-          "absolute left-0 right-0 flex flex-col overflow-hidden border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-2xl",
+          "absolute left-0 right-0 flex flex-col overflow-hidden border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-2xl outline-none",
           "animate-in slide-in-from-bottom duration-300 ease-out",
           fullScreen
             ? "top-0 bottom-0 max-h-[100dvh] min-h-0 rounded-none pt-[var(--safe-area-top)] pb-[var(--safe-area-bottom)]"

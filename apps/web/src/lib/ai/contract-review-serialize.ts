@@ -137,6 +137,74 @@ export function serializeContractReviewDetailResponse(
           sensitivityProfile: row.sensitivityProfile ?? undefined,
           sectionSensitivity: row.sectionSensitivity ?? undefined,
           relationshipInference: row.relationshipInference ?? undefined,
+          /**
+           * Compact "why did we use vision?" block — ties together text-quality
+           * heuristic outputs (Pilíř 1) and the scan-vision fallback activation
+           * flags (Pilíř 3) so operators can debug scan reading without
+           * spelunking the full extractionTrace.
+           */
+          scanReadingDebug: (() => {
+            const t = row.extractionTrace as Record<string, unknown> | undefined;
+            if (!t || typeof t !== "object") return undefined;
+            const payload = row.extractedPayload as Record<string, unknown> | null | undefined;
+            const docMeta =
+              payload && typeof payload === "object"
+                ? (payload.documentMeta as Record<string, unknown> | undefined)
+                : undefined;
+            return {
+              textQualityScore:
+                typeof t.textQualityScore === "number" ? t.textQualityScore : undefined,
+              textQualityIsGarbage:
+                typeof t.textQualityIsGarbage === "boolean"
+                  ? t.textQualityIsGarbage
+                  : undefined,
+              textQualityReasons: Array.isArray(t.textQualityReasons)
+                ? (t.textQualityReasons as unknown[]).filter(
+                    (x): x is string => typeof x === "string"
+                  )
+                : undefined,
+              preprocessMode:
+                typeof t.preprocessMode === "string" ? t.preprocessMode : undefined,
+              textCoverageEstimate:
+                typeof t.textCoverageEstimate === "number"
+                  ? t.textCoverageEstimate
+                  : undefined,
+              readabilityScore:
+                typeof t.readabilityScore === "number" ? t.readabilityScore : undefined,
+              scanVisionFallbackActivated:
+                typeof t.scanVisionFallbackActivated === "boolean"
+                  ? t.scanVisionFallbackActivated
+                  : undefined,
+              visionFallbackReasons: Array.isArray(t.visionFallbackReasons)
+                ? (t.visionFallbackReasons as unknown[]).filter(
+                    (x): x is string => typeof x === "string"
+                  )
+                : undefined,
+              fullVisionPagesUsed:
+                typeof t.fullVisionPagesUsed === "number" ? t.fullVisionPagesUsed : undefined,
+              fullVisionMergedFieldKeys: Array.isArray(t.fullVisionMergedFieldKeys)
+                ? (t.fullVisionMergedFieldKeys as unknown[]).filter(
+                    (x): x is string => typeof x === "string"
+                  )
+                : undefined,
+              pageImageFallbackRecoveries: Array.isArray(t.pageImageFallbackRecoveries)
+                ? (t.pageImageFallbackRecoveries as unknown[]).filter(
+                    (x): x is string => typeof x === "string"
+                  )
+                : undefined,
+              pageImageFallbackFailures:
+                typeof t.pageImageFallbackFailures === "number"
+                  ? t.pageImageFallbackFailures
+                  : undefined,
+              extractionSourceKind:
+                docMeta && typeof docMeta.extractionSourceKind === "string"
+                  ? docMeta.extractionSourceKind
+                  : undefined,
+              extractionSecondPass:
+                typeof t.extractionSecondPass === "string" ? t.extractionSecondPass : undefined,
+              inputMode: row.inputMode ?? undefined,
+            };
+          })(),
           /** Shape-only hints for AI Review UI (no field values). */
           aiReviewPayloadShape: (() => {
             const p = row.extractedPayload as Record<string, unknown> | null | undefined;

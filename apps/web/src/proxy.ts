@@ -7,8 +7,120 @@ import {
   LEGACY_CLIENT_INVITE_QUERY_PARAM,
   parseClientInviteTokenFromUrl,
 } from "@/lib/auth/client-invite-url";
+import { getKillSwitch } from "@/lib/ops/kill-switch";
 
 const PRODUCTION_DOMAIN = "https://www.aidvisora.cz";
+
+/**
+ * B1.7 — maintenance mode gate. When `MAINTENANCE_MODE` kill-switch is on,
+ * every user-facing route returns 503 with a static HTML body except for
+ * ops lifelines (healthcheck, status page). Ops can bypass with
+ * `x-maintenance-bypass: <secret>` header (compared against
+ * `MAINTENANCE_BYPASS_SECRET` env).
+ */
+const MAINTENANCE_ALLOWLIST_EXACT = new Set<string>([
+  "/status",
+  "/api/health",
+  "/api/healthcheck",
+  "/maintenance",
+]);
+
+function isMaintenanceAllowlisted(pathname: string): boolean {
+  if (MAINTENANCE_ALLOWLIST_EXACT.has(pathname)) return true;
+  // Static assets, favicon, robots — leave untouched.
+  if (pathname.startsWith("/_next/")) return true;
+  if (pathname.startsWith("/api/auth/")) return true;
+  if (pathname === "/favicon.ico") return true;
+  if (pathname === "/robots.txt") return true;
+  if (pathname === "/sitemap.xml") return true;
+  return false;
+}
+
+/**
+ * Perf — seznam anonymních marketing rout, které **nepotřebují** Supabase
+ * `auth.getUser()` v proxy. Skip auth path = rychlejší TTFB + statický CDN
+ * cache. Auth gate pro `/portal`, `/client`, `/dashboard`, `/board` dál běží.
+ */
+const MARKETING_ANON_EXACT = new Set<string>([
+  "/",
+  "/pricing",
+  "/bezpecnost",
+  "/o-nas",
+  "/kontakt",
+  "/pro-brokery",
+  "/subprocessors",
+  "/terms",
+  "/privacy",
+  "/cookies",
+  "/demo",
+  "/beta-terms",
+  "/status",
+  "/sitemap.xml",
+  "/robots.txt",
+  "/manifest.webmanifest",
+  "/site.webmanifest",
+  "/favicon.ico",
+  "/favicon.png",
+  "/apple-touch-icon.png",
+  "/aidvisora-logo-big.png",
+  "/gdpr",
+  "/vop",
+  "/dpa",
+]);
+
+function isAnonymousMarketingRoute(pathname: string): boolean {
+  if (MARKETING_ANON_EXACT.has(pathname)) return true;
+  if (pathname.startsWith("/legal/")) return true;
+  if (pathname.startsWith("/logos/")) return true;
+  if (pathname.startsWith("/icons/")) return true;
+  if (pathname.startsWith("/report-assets/")) return true;
+  return false;
+}
+
+function maintenanceResponse(): NextResponse {
+  const body = `<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Aidvisora — údržba</title>
+    <style>
+      body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#060918;color:#e2e8f0;display:flex;min-height:100vh;align-items:center;justify-content:center;padding:24px;text-align:center}
+      main{max-width:520px}
+      h1{font-size:28px;margin:0 0 12px;color:#fff}
+      p{color:#94a3b8;line-height:1.6;font-size:15px}
+      a{color:#6366f1;text-decoration:none}
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Probíhá údržba</h1>
+      <p>Aidvisora je dočasně nedostupná kvůli plánované nebo havarijní údržbě. Omlouváme se — vrátíme se během chvíle. Stav služeb: <a href="/status">status page</a>.</p>
+    </main>
+  </body>
+</html>`;
+  return new NextResponse(body, {
+    status: 503,
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-store",
+      "Retry-After": "300",
+    },
+  });
+}
+
+async function maintenanceGate(request: NextRequest): Promise<NextResponse | null> {
+  const pathname = request.nextUrl.pathname;
+  if (isMaintenanceAllowlisted(pathname)) return null;
+  const secret = process.env.MAINTENANCE_BYPASS_SECRET?.trim();
+  if (secret) {
+    const header = request.headers.get("x-maintenance-bypass")?.trim();
+    if (header && header === secret) return null;
+  }
+  const enabled = await getKillSwitch("MAINTENANCE_MODE", false);
+  if (!enabled) return null;
+  return maintenanceResponse();
+}
 
 /** Legacy Vercel preview hostnames → redirect traffic to canonical production (comma-separated in env). */
 function legacyVercelHosts(): string[] {
@@ -37,6 +149,9 @@ export async function proxy(request: NextRequest) {
     const url = new URL(path + request.nextUrl.search, PRODUCTION_DOMAIN);
     return NextResponse.redirect(url);
   }
+
+  const maintenance = await maintenanceGate(request);
+  if (maintenance) return maintenance;
 
   if (request.nextUrl.pathname === "/" && request.nextUrl.searchParams.get("error_code") === "otp_expired") {
     const url = request.nextUrl.clone();
@@ -68,12 +183,21 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Perf — anonymní marketing routy skip Supabase auth.getUser() (šetří TTFB).
+  // HomePage `page.tsx` se navíc staticky prerendruje (viz `dynamic = "force-static"`),
+  // takže proxy tu má běžet minimálně.
+  if (isAnonymousMarketingRoute(request.nextUrl.pathname)) {
+    return NextResponse.next();
+  }
+
   const pathname = request.nextUrl.pathname;
   const isContractsApi = pathname.startsWith("/api/contracts");
   const isAiAssistantApi =
     pathname.startsWith("/api/ai/assistant") ||
     pathname === "/api/ai/dashboard-summary" ||
-    pathname === "/api/ai/team-summary";
+    pathname === "/api/ai/team-summary" ||
+    pathname === "/api/ai/client-request-brief";
+  const isDocumentsReviewApi = pathname.startsWith("/api/documents/review");
   const isCalendarApi = pathname.startsWith("/api/calendar");
   const isDriveApi = pathname.startsWith("/api/drive");
   const isGmailApi = pathname.startsWith("/api/gmail");
@@ -81,7 +205,17 @@ export async function proxy(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabasePublicKey = getPublicSupabaseKey();
 
-  if ((isContractsApi || isAiAssistantApi || isCalendarApi || isDriveApi || isGmailApi || isIntegrationsApi) && supabaseUrl && supabasePublicKey) {
+  if (
+    (isContractsApi ||
+      isAiAssistantApi ||
+      isDocumentsReviewApi ||
+      isCalendarApi ||
+      isDriveApi ||
+      isGmailApi ||
+      isIntegrationsApi) &&
+    supabaseUrl &&
+    supabasePublicKey
+  ) {
     const response = NextResponse.next({ request });
     const supabase = createServerClient(supabaseUrl, supabasePublicKey, {
       cookies: {
@@ -214,6 +348,9 @@ export const config = {
     "/api/contracts/:path*",
     "/api/ai/assistant/:path*",
     "/api/ai/dashboard-summary",
+    "/api/ai/team-summary",
+    "/api/ai/client-request-brief",
+    "/api/documents/review/:path*",
     "/api/calendar/:path*",
     "/api/drive/:path*",
     "/api/gmail/:path*",

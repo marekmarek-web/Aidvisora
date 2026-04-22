@@ -3,7 +3,7 @@
  * Skutečné Stripe částky řídí Price IDs v env — tato čísla musí s nimi být sladěná.
  */
 
-import { TRIAL_DURATION_DAYS } from "@/lib/billing/plan-catalog";
+import { TRIAL_DURATION_DAYS } from "@/lib/billing/trial-constants";
 import type { PlanTier } from "@/lib/stripe/billing-types";
 
 /** Roční fakturace: sleva oproti součtu 12× měsíční ceny. */

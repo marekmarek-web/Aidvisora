@@ -24,7 +24,9 @@ export type EmailCampaignRow = {
   id: string;
   name: string;
   subject: string;
+  preheader: string | null;
   status: string;
+  scheduledAt: Date | null;
   createdAt: Date;
   sentAt: Date | null;
 };
@@ -35,6 +37,15 @@ export type CampaignListRow = EmailCampaignRow & {
   sentCount: number;
   /** Počet chyb při odeslání. */
   failedCount: number;
+  /** Počet otevření (unique). */
+  openCount: number;
+  /** Počet kliknutí (unique). */
+  clickCount: number;
+  /** Počet hard bounce. */
+  bounceCount: number;
+  /** Počet unsubscribe z kampaně. */
+  unsubscribeCount: number;
+  recipientCount: number;
 };
 
 export type SegmentCount = {

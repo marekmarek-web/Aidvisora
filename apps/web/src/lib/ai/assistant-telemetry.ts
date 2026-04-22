@@ -44,6 +44,12 @@ export const AssistantTelemetryAction = {
    * enrichment, etc.). Lets ops see silent context-degradation trends.
    */
   CONTEXT_LOADER_FAILED: "assistant.context_loader_failed",
+  /**
+   * B3.4 — dedicated event pro prompt-injection detekci. Oddělený event
+   * (dříve jsme to logovali jako meta na `RUN_START`) umožňuje Sentry
+   * alerts a samostatné dashboardy bez šumu RUN_START.
+   */
+  PROMPT_INJECTION_DETECTED: "assistant.prompt_injection_detected",
 } as const;
 
 export type AssistantTelemetryActionType = (typeof AssistantTelemetryAction)[keyof typeof AssistantTelemetryAction];

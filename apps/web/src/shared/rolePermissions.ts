@@ -26,6 +26,7 @@ export type PermissionAction =
   | "ai_review:use"
   | "admin:*"
   | "notifications:read" | "notifications:write"
+  | "communications:read" | "communications:write" | "communications:*"
   | "production:read"
   | "client_zone:*"
   | "*";
@@ -56,6 +57,7 @@ const ROLE_PERMISSIONS: Record<RoleName, string[]> = {
     "ai_review:use",
     "notifications:read",
     "notifications:write",
+    "communications:*",
     "production:read",
   ],
   Manager: [
@@ -77,6 +79,7 @@ const ROLE_PERMISSIONS: Record<RoleName, string[]> = {
     "ai_review:use",
     "notifications:read",
     "notifications:write",
+    "communications:*",
     "production:read",
   ],
   Advisor: [
@@ -95,6 +98,8 @@ const ROLE_PERMISSIONS: Record<RoleName, string[]> = {
     "ai_assistant:use",
     "ai_review:use",
     "notifications:read",
+    "communications:read",
+    "communications:write",
     "production:read",
   ],
   Viewer: [
@@ -107,6 +112,7 @@ const ROLE_PERMISSIONS: Record<RoleName, string[]> = {
     "financial_analyses:read",
     "financial_analyses:write",
     "notifications:read",
+    "communications:read",
   ],
   Client: ["client_zone:*"],
 };

@@ -17,6 +17,7 @@ export async function getSubscriptionState(tenantId: string): Promise<Subscripti
         status: subscriptions.status,
         plan: subscriptions.plan,
         currentPeriodEnd: subscriptions.currentPeriodEnd,
+        gracePeriodEndsAt: subscriptions.gracePeriodEndsAt,
       })
       .from(subscriptions)
       .where(eq(subscriptions.tenantId, tenantId))
@@ -25,18 +26,33 @@ export async function getSubscriptionState(tenantId: string): Promise<Subscripti
   );
 
   if (!latestSub) {
-    return { status: null, plan: null, currentPeriodEnd: null, isActive: false, inGracePeriod: false };
+    return {
+      status: null,
+      plan: null,
+      currentPeriodEnd: null,
+      isActive: false,
+      inGracePeriod: false,
+      graceEndsAt: null,
+    };
   }
 
   const isActive = ACTIVE_STATUSES.has(latestSub.status);
   const isPastDue = PAST_DUE_STATUSES.has(latestSub.status);
 
-  let inGracePeriod = false;
-  if (isPastDue && latestSub.currentPeriodEnd) {
+  // B2.9 — jeden zdroj pravdy pro grace datum. Preferujeme DB column
+  // (nastavený webhookem při `invoice.payment_failed`); pokud webhook
+  // ještě nepřišel nebo běží starší data, fallbackujeme na výpočet
+  // `currentPeriodEnd + admin_setting(grace_period_days)` s defaultem 7.
+  let graceEndsAt: Date | null = latestSub.gracePeriodEndsAt ?? null;
+  if (!graceEndsAt && isPastDue && latestSub.currentPeriodEnd) {
     const graceDays = await getEffectiveSettingValue<number>(tenantId, "billing.grace_period_days");
-    const graceEnd = new Date(latestSub.currentPeriodEnd.getTime() + (graceDays ?? 7) * 86_400_000);
-    inGracePeriod = new Date() < graceEnd;
+    graceEndsAt = new Date(
+      latestSub.currentPeriodEnd.getTime() + (graceDays ?? 7) * 86_400_000,
+    );
   }
+
+  const inGracePeriod =
+    isPastDue && graceEndsAt ? new Date() < graceEndsAt : false;
 
   return {
     status: latestSub.status,
@@ -44,5 +60,6 @@ export async function getSubscriptionState(tenantId: string): Promise<Subscripti
     currentPeriodEnd: latestSub.currentPeriodEnd,
     isActive,
     inGracePeriod,
+    graceEndsAt,
   };
 }

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef, useLayoutEffect, useCallback } from "react";
+import { useState, useRef, useLayoutEffect, useCallback, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, Check, type LucideIcon } from "lucide-react";
+import { ChevronDown, Check, Search, X, type LucideIcon } from "lucide-react";
 
 export type CustomDropdownOption = { id: string; label: string };
 
@@ -68,6 +68,10 @@ export interface CustomDropdownProps {
   lightIsland?: boolean;
   /** Přimíchá se k trigger tlačítku (např. wizard / toolbar). */
   buttonClassName?: string;
+  /** Zobrazí vyhledávací pole v otevřeném menu; filtruje options podle labelu. */
+  searchable?: boolean;
+  /** Placeholder pro vyhledávací pole. */
+  searchPlaceholder?: string;
 }
 
 export function CustomDropdown({
@@ -80,9 +84,13 @@ export function CustomDropdown({
   variant = "input",
   lightIsland = false,
   buttonClassName = "",
+  searchable = false,
+  searchPlaceholder = "Hledat…",
 }: CustomDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [menuPlacement, setMenuPlacement] = useState<{
     left: number;
     top: number;
@@ -92,6 +100,12 @@ export function CustomDropdown({
 
   const selected = options.find((o) => o.id === value);
   const isPlaceholder = !selected || selected.id === "" || selected.id === "none";
+
+  const filteredOptions = useMemo(() => {
+    if (!searchable || !searchQuery.trim()) return options;
+    const q = searchQuery.trim().toLowerCase();
+    return options.filter((opt) => opt.label.toLowerCase().includes(q));
+  }, [options, searchQuery, searchable]);
 
   const isInput = variant === "input";
 
@@ -108,7 +122,16 @@ export function CustomDropdown({
   const closeDropdown = useCallback(() => {
     setIsOpen(false);
     setMenuPlacement(null);
+    setSearchQuery("");
   }, []);
+
+  useEffect(() => {
+    if (!isOpen || !searchable) return;
+    const id = window.setTimeout(() => {
+      searchInputRef.current?.focus();
+    }, 50);
+    return () => window.clearTimeout(id);
+  }, [isOpen, searchable]);
 
   const updatePlacement = useCallback(() => {
     if (!isOpen || !triggerRef.current) return;
@@ -190,7 +213,7 @@ export function CustomDropdown({
             {menuPlacement && (
               <div
                 role="listbox"
-                className={`fixed overflow-y-auto rounded-2xl border border-[color:var(--wp-dropdown-border)] bg-[color:var(--wp-dropdown-surface)] py-2 shadow-xl shadow-indigo-900/10${lightIsland ? "" : " dark:shadow-black/40"} custom-dropdown-scroll animate-in fade-in duration-200 slide-in-from-top-2`}
+                className={`fixed flex flex-col rounded-2xl border border-[color:var(--wp-dropdown-border)] bg-[color:var(--wp-dropdown-surface)] shadow-xl shadow-indigo-900/10${lightIsland ? "" : " dark:shadow-black/40"} animate-in fade-in duration-200 slide-in-from-top-2`}
                 style={{
                   zIndex: Z_MENU,
                   left: menuPlacement.left,
@@ -199,17 +222,58 @@ export function CustomDropdown({
                   maxHeight: menuPlacement.maxHeight,
                 }}
               >
-                {options.map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    role="option"
-                    aria-selected={value === opt.id}
-                    onClick={() => {
-                      onChange(opt.id);
-                      closeDropdown();
-                    }}
-                    className={`flex w-full items-center justify-between px-4 py-2.5 text-left text-sm font-bold transition-colors hover:bg-[color:var(--wp-surface-muted)]
+                {searchable && (
+                  <div className="shrink-0 border-b border-[color:var(--wp-surface-card-border)] p-2">
+                    <div className="relative">
+                      <Search
+                        size={14}
+                        className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[color:var(--wp-text-tertiary)]"
+                      />
+                      <input
+                        ref={searchInputRef}
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder={searchPlaceholder}
+                        className="w-full min-h-[36px] rounded-lg border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-input-bg)] pl-8 pr-8 text-sm font-medium text-[color:var(--wp-text)] placeholder:text-[color:var(--wp-text-tertiary)] focus:outline-none focus:ring-2 focus:ring-[color:var(--wp-header-input-focus-ring)] focus:border-[color:var(--wp-header-input-focus-border)]"
+                        onKeyDown={(e) => {
+                          if (e.key === "Escape") {
+                            e.preventDefault();
+                            if (searchQuery) setSearchQuery("");
+                            else closeDropdown();
+                          }
+                        }}
+                      />
+                      {searchQuery && (
+                        <button
+                          type="button"
+                          onClick={() => setSearchQuery("")}
+                          className="absolute right-1.5 top-1/2 -translate-y-1/2 grid h-6 w-6 place-items-center rounded-full text-[color:var(--wp-text-tertiary)] hover:bg-[color:var(--wp-surface-muted)]"
+                          aria-label="Smazat hledání"
+                        >
+                          <X size={12} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+                <div className="flex-1 min-h-0 overflow-y-auto py-2 custom-dropdown-scroll">
+                  {filteredOptions.length === 0 ? (
+                    <p className="px-4 py-3 text-center text-xs font-semibold text-[color:var(--wp-text-tertiary)]">
+                      Nic nenalezeno
+                    </p>
+                  ) : (
+                    filteredOptions.map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        role="option"
+                        aria-selected={value === opt.id}
+                        onClick={() => {
+                          onChange(opt.id);
+                          closeDropdown();
+                        }}
+                        className={`flex w-full items-center justify-between px-4 py-2.5 text-left text-sm font-bold transition-colors hover:bg-[color:var(--wp-surface-muted)]
                   ${
                     value === opt.id
                       ? lightIsland
@@ -218,13 +282,15 @@ export function CustomDropdown({
                       : "text-[color:var(--wp-text)]"
                   }
                 `}
-                  >
-                    <span className="truncate pr-4">{opt.label}</span>
-                    {value === opt.id && (
-                      <Check size={16} strokeWidth={3} className="shrink-0" />
-                    )}
-                  </button>
-                ))}
+                      >
+                        <span className="truncate pr-4">{opt.label}</span>
+                        {value === opt.id && (
+                          <Check size={16} strokeWidth={3} className="shrink-0" />
+                        )}
+                      </button>
+                    ))
+                  )}
+                </div>
               </div>
             )}
           </>,

@@ -16,6 +16,7 @@ const inactiveSub: SubscriptionState = {
   currentPeriodEnd: null,
   isActive: false,
   inGracePeriod: false,
+  graceEndsAt: null,
 };
 
 const future = new Date(Date.now() + 7 * 86_400_000);
@@ -30,6 +31,7 @@ function ctxStart() {
       currentPeriodEnd: future,
       isActive: true,
       inGracePeriod: false,
+      graceEndsAt: null,
     },
     tenantTrial: null,
   });
@@ -45,6 +47,7 @@ function ctxPro() {
       currentPeriodEnd: future,
       isActive: true,
       inGracePeriod: false,
+      graceEndsAt: null,
     },
     tenantTrial: null,
   });
@@ -60,6 +63,7 @@ function ctxManagement() {
       currentPeriodEnd: future,
       isActive: true,
       inGracePeriod: false,
+      graceEndsAt: null,
     },
     tenantTrial: null,
   });

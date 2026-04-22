@@ -58,9 +58,11 @@ neodchytí session / cookie issue). Doporučený browser: Chrome inkognito
       klikni a ověř redirect. Pak přes Supabase SQL insertni notifikaci
       s `type='foo_unknown'` → klik vrátí toast „Tato akce již není
       dostupná“ (B1.7), NIKOLI tichý dead click.
-- [ ] **13. GDPR export**: klik na JSON → stáhne se JSON. Klik na TXT
-      (B3.11) → stáhne se čitelný textový přehled. Zhoď server a
-      klikni znovu → error card pod tlačítkem (B2.7).
+- [ ] **13. GDPR export**: klik na „Export mých dat (GDPR)" → stáhne se
+      JSON soubor `export-dat-YYYY-MM-DD.json`. Zhoď server a klikni
+      znovu → error card pod tlačítkem (B2.7). (TXT export je post-launch
+      follow-up — pre-launch stačí JSON; rozhodnutí viz
+      Product owner decision #B2.14.)
 - [ ] **14. AI Support**: otevřít, dotaz „Jaký mám zůstatek?“ — musí
       odpovídat lidsky, ne technicky.
 - [ ] **15. Odhlášení**: logout → redirect na `/prihlaseni`.
@@ -75,8 +77,11 @@ zapsat do Linear s PRIORITY blocker a NEPUSHOVAT do production.
 NEEMULUJ. iOS Safari + Chrome Android na dvou fyzických telefonech
 (ideálně iPhone SE malý + iPhone 15 Pro Max velký).
 
-- [ ] **1. Beta cookie**: `document.cookie="clientMobileShell=1"` v
-      DevTools → reload → načte se mobilní shell.
+- [ ] **1. Beta cookie**: `document.cookie="mobile_ui_v1_beta=1"` v
+      DevTools → reload → načte se mobilní shell. (Kanonický název flagy
+      je `mobile_ui_v1_beta` — viz `apps/web/src/app/shared/mobile-ui/feature-flag.ts`.
+      Starší `clientMobileShell` byl přejmenován; pokud jsi ho v prohlížeči
+      měl nastavený, smaž ho.)
 - [ ] **2. Bottom nav ergonomie**: všechna tlačítka dosažitelná
       palcem. FAB nepřekrývá obsah. Safe area respektována (iOS 15 Pro
       Max notch + iPhone SE bez notch).
@@ -181,3 +186,89 @@ WHERE c.visible_to_client = true
 - [ ] Support tickety s klíčovými slovy „nevidím platbu“, „klikám nic“,
       „neposlal se“ → max 3 za den.
 - [ ] Klientská konverze invite → login > 60 %.
+
+---
+
+## Appendix D — Native mobile release (iOS TestFlight + Android Internal)
+
+Tento appendix je přidán po „mobile audit repair plan“ batchi.
+Splň všechny checkboxy před submission do TestFlight / Play Internal Testing.
+
+### D.1 Pre-build asserts (`cd apps/web`)
+
+- [ ] `pnpm assert:fcm-config:release` → všechny checky OK.
+      V CI injektuj `google-services.json` a `GoogleService-Info.plist` z
+      `GOOGLE_SERVICES_JSON_B64` / `GOOGLE_SERVICE_INFO_PLIST_B64` secrets
+      (viz `docs/runbook-push.md`).
+- [ ] `node scripts/ios-preflight.mjs` → 0 failures.
+- [ ] `pnpm build` a `pnpm cap:sync` → bez chyb.
+
+### D.2 Deep-link handshake (real device)
+
+- [ ] GET `https://aidvisora.cz/.well-known/apple-app-site-association`
+      → `Content-Type: application/json`, `applinks.details[0].appIDs` má
+      aspoň jednu hodnotu `<TeamID>.cz.aidvisora.app`.
+- [ ] GET `https://aidvisora.cz/.well-known/assetlinks.json` →
+      pole s aspoň jedním `sha256_cert_fingerprints` (Play App Signing
+      release fingerprint).
+- [ ] GET `/api/health/deep-links` → HTTP 200, `status: "ok"`.
+      V produkci MUSÍ být 200 — jinak je univerzální linky rozbité.
+- [ ] iOS: v Notes napsat `https://aidvisora.cz/portal/today` → tap →
+      otevře se v aplikaci, NE v Safari.
+- [ ] Android: Termux `am start -W -a android.intent.action.VIEW -d
+      "https://aidvisora.cz/portal/today"` → aplikace chytne deep link.
+
+### D.3 Navigation regression (reprodukce hlášeného bugu)
+
+Na reálném zařízení (ne simulátoru):
+
+- [ ] `/portal/pipeline` → kliknout na kartu → `/portal/pipeline/:id`
+      otevře detail. Header back → zpět na `/portal/pipeline`. Znovu
+      otevřít stejnou kartu → stejně, bez skoku o 2 obrazovky.
+- [ ] `/portal/today` → hamburger → otevřít drawer → Android hw-back
+      nebo iOS swipe → zavře drawer. Druhý back → vrátí se o route zpět
+      (ne exit).
+- [ ] `/portal/pipeline/:id` → otevřít bottom sheet (poznámka / akce)
+      → android hw-back → zavře SHEET, ne route. Další back → zavře
+      route → `/portal/pipeline`.
+- [ ] V libovolné modální obrazovce stisknout Escape (BT klávesnice) →
+      zavře overlay (ne route).
+
+### D.4 Keyboard + safe-area
+
+- [ ] Focus do `<input>` v `FullscreenSheet` → klávesnice se objeví
+      bez překryvu pole (iOS `KeyboardResize.Native` + Android
+      `windowSoftInputMode=adjustResize`).
+- [ ] Splash screen se schová do 1 s po first paint.
+- [ ] Status bar má správný kontrast (světlý text na tmavém pozadí
+      v dark mode, obráceně v light mode).
+
+### D.5 Push notifikace
+
+- [ ] iOS: po cold startu se objeví soft prompt modal „Povolit push
+      notifikace?“ — teprve po stisku „Povolit“ systémový dialog.
+- [ ] Android (až bude aktivní): `google-services.json` přibalen do
+      release APK (`unzip -l app-release.apk | grep google-services`
+      nebo `aapt dump`).
+- [ ] Zaslaná testovací notifikace otevře správnou deep-link routu.
+
+### D.6 Pre-submit checklist
+
+- [ ] `pnpm vitest run src/app/shared/mobile-ui src/app/portal/mobile` →
+      všechny testy PASS.
+- [ ] E2E Playwright mobile profile → navigation happy path PASS.
+- [ ] `bash scripts/cap-smoke.sh` (viz `apps/web/scripts/cap-smoke.sh`) →
+      build + sync + warm-start simulátoru + back-button dispatch bez
+      chyb.
+- [ ] Xcode Archive → TestFlight: build se objeví v processingu.
+- [ ] Play Console → Internal testing track: release rollout 100 %.
+
+### D.7 Rollback plán
+
+- [ ] iOS: v App Store Connect → Expedited review nejde sám; pošli
+      hotfix build s incrementem `CFBundleVersion`. Minimum 2 h cesta
+      od commitu k dostupnosti v TestFlight.
+- [ ] Android: Play Console → zrušit internal rollout → vrátit se na
+      předchozí release (preserve install base), nebo halted rollout
+      do 0 %.
+

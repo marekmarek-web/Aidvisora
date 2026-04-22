@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { getMembership } from "@/lib/auth/get-membership";
+import { resolveAuthenticatedApiUser } from "@/lib/auth/api-auth-user";
 import { hasPermission, type RoleName } from "@/lib/auth/permissions";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { createResponseSafe } from "@/lib/openai";
@@ -20,8 +20,6 @@ import { nextResponseFromPlanOrQuotaError } from "@/lib/billing/plan-access-http
 
 export const dynamic = "force-dynamic";
 
-const USER_ID_HEADER = "x-user-id";
-
 export async function GET(request: Request) {
   const start = Date.now();
   try {
@@ -29,13 +27,11 @@ export async function GET(request: Request) {
     const period = (searchParams.get("period") as TeamOverviewPeriod) || "month";
     const requestedScope = (searchParams.get("scope") as TeamOverviewScope | null) ?? null;
 
-    let userId: string | null = request.headers.get(USER_ID_HEADER);
-    if (!userId) {
-      const supabase = await createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      userId = user.id;
+    const auth = await resolveAuthenticatedApiUser(request);
+    if (!auth.ok) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: auth.status });
     }
+    const userId = auth.userId;
 
     const membership = await getMembership(userId);
     if (!membership || !hasPermission(membership.roleName as RoleName, "team_overview:read")) {

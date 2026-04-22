@@ -7,6 +7,9 @@ export const metadata: Metadata = {
     "Podmínky účasti v pilotním programu Aidvisora (Premium Brokers pilot). Informace o stavu produktu, SLA, datech a ochraně.",
 };
 
+export const dynamic = "force-static";
+export const revalidate = 3600;
+
 export default function BetaTermsPage() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-12 text-[color:var(--wp-text)]">

@@ -12,6 +12,9 @@ export const metadata: Metadata = {
   description: `Informace o zpracování osobních údajů v souvislosti se službou Aidvisora. Účinnost od ${LEGAL_EFFECTIVE_CS}.`,
 };
 
+export const dynamic = "force-static";
+export const revalidate = 3600;
+
 function splitAtSection7(blocks: LegalBlock[]) {
   const idx = blocks.findIndex((b) => b.type === "h1" && b.text.startsWith("7. Předání"));
   if (idx === -1) return { head: blocks, tail: [] as LegalBlock[] };

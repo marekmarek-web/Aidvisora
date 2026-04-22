@@ -10,6 +10,9 @@ export const metadata: Metadata = {
   description: `Zpracovatelská smlouva podle čl. 28 GDPR pro provoz platformy Aidvisora. Účinnost dokumentace od ${LEGAL_EFFECTIVE_CS}.`,
 };
 
+export const dynamic = "force-static";
+export const revalidate = 3600;
+
 export default function DpaPage() {
   const blocks = dpaBlocks as LegalBlock[];
 

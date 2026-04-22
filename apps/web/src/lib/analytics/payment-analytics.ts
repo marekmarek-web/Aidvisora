@@ -43,10 +43,14 @@ export async function getPaymentMetrics(
     const windowStart = window?.startDate ?? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
     await withTenantContext({ tenantId }, async (tx) => {
+      // B2.10 — `portalVisibilityRate` odráží realitu portálu.
+      // `applied` zůstává DB stav (`status='active'`), ale `portalReady`
+      // přidává `!needsHumanReview && visibleToClient`.
       const [stats] = await tx.select({
         total: sql<number>`count(*)::int`,
         blocked: sql<number>`count(*) filter (where ${clientPaymentSetups.status} = 'review_required')::int`,
         applied: sql<number>`count(*) filter (where ${clientPaymentSetups.status} = 'active')::int`,
+        portalReady: sql<number>`count(*) filter (where ${clientPaymentSetups.status} = 'active' and ${clientPaymentSetups.needsHumanReview} = false and ${clientPaymentSetups.visibleToClient} = true)::int`,
         awaiting: sql<number>`count(*) filter (where ${clientPaymentSetups.needsHumanReview} = true)::int`,
       }).from(clientPaymentSetups)
         .where(and(eq(clientPaymentSetups.tenantId, tenantId), gte(clientPaymentSetups.createdAt, windowStart)));
@@ -56,7 +60,7 @@ export async function getPaymentMetrics(
         metrics.blocked = stats.blocked;
         metrics.applied = stats.applied;
         metrics.awaitingReview = stats.awaiting;
-        metrics.portalVisibilityRate = stats.total > 0 ? Math.round((stats.applied / stats.total) * 100) / 100 : 0;
+        metrics.portalVisibilityRate = stats.total > 0 ? Math.round((stats.portalReady / stats.total) * 100) / 100 : 0;
       }
     });
   } catch { /* best-effort */ }

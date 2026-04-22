@@ -258,6 +258,20 @@ export type ExtractionTrace = {
   pageImageFallbackRecoveries?: string[];
   /** Count of failed page-image fallback attempts. */
   pageImageFallbackFailures?: number;
+  /** 0..1 text-layer quality score from scoreTextLayerQuality (preprocess). */
+  textQualityScore?: number | null;
+  /** True when the text layer is OCR garbage (see scoreTextLayerQuality). */
+  textQualityIsGarbage?: boolean;
+  /** Reason codes from scoreTextLayerQuality, e.g. ["digit_in_word_0.07", "low_stopwords_0.01"]. */
+  textQualityReasons?: string[];
+  /** True when the AI Review v2 scan-vision fallback was used (file_multimodal path). */
+  scanVisionFallbackActivated?: boolean;
+  /** Reasons why the vision fallback fired (scan_ocr_unusable_early | text_quality_garbage | …). */
+  visionFallbackReasons?: string[];
+  /** How many pages were sent in the full-document vision safety net, if used. */
+  fullVisionPagesUsed?: number;
+  /** Field keys merged from runFullDocumentVisionExtraction. */
+  fullVisionMergedFieldKeys?: string[];
 };
 
 /** Validation warning item. */

@@ -1,3 +1,5 @@
+import "@/styles/aidvisora-components.css";
+
 export const dynamic = "force-dynamic";
 
 /**

@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
 import { getMembership } from "@/lib/auth/get-membership";
+import { resolveAuthenticatedApiUser } from "@/lib/auth/api-auth-user";
 import { getContractReviewById } from "@/lib/ai/review-queue-repository";
 import { expireStaleScanPendingOcrIfNeeded } from "@/lib/contracts/ocr-scan-pending-watchdog";
 import { serializeContractReviewDetailResponse } from "@/lib/ai/contract-review-serialize";
 
 export const dynamic = "force-dynamic";
-
-const USER_ID_HEADER = "x-user-id";
 
 /**
  * Plan 3 §11.3 — alias for contract AI review detail (same payload as GET /api/contracts/review/[id]).
@@ -18,10 +17,11 @@ export async function GET(
   try {
     const { id } = await params;
     const wantsDebug = new URL(request.url).searchParams.get("debug") === "1";
-    const userId = request.headers.get(USER_ID_HEADER);
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const auth = await resolveAuthenticatedApiUser(request);
+    if (!auth.ok) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: auth.status });
     }
+    const userId = auth.userId;
     const membership = await getMembership(userId);
     if (!membership) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });

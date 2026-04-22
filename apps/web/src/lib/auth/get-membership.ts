@@ -1,7 +1,8 @@
 import "server-only";
 
-import { db, memberships, roles, clientContacts, contacts, sql } from "db";
+import { db, memberships, roles, clientContacts, contacts, tenants, sql } from "db";
 import { eq, and, asc } from "db";
+import { cookies } from "next/headers";
 import { withTenantContext } from "@/lib/db/with-tenant-context";
 import type { RoleName } from "@/shared/rolePermissions";
 
@@ -16,6 +17,13 @@ export type MembershipResult = {
 };
 
 /**
+ * B3.10 — cookie, ve které uživatel (nebo `/choose-tenant` page) uloží zvolený
+ * tenant ID. Musí být HttpOnly není třeba (ne-sensitivní; tenant IDs jsou UUID),
+ * ale nastavíme `SameSite=Lax` a `Secure` v produkci. Life je ~30 dní.
+ */
+export const PREFERRED_TENANT_COOKIE = "preferred_tenant_id";
+
+/**
  * Bootstrap lookup klient↔tenant↔role.
  *
  * Běží PŘED `withTenantContext`, takže nastavuje jen `app.user_id` GUC (nikoli
@@ -27,9 +35,9 @@ export type MembershipResult = {
 export async function getMembership(userId: string): Promise<MembershipResult | null> {
   const rows = await db.transaction(async (tx) => {
     await tx.execute(sql`select set_config('app.user_id', ${userId}, true)`);
-    // B2.3: Multi-tenant safeguard — načteme až 2 řádky, abychom detekovali stav
-    // „uživatel má více aktivních memberships". Vrátíme první (nejstarší joinedAt),
-    // ale zalogujeme warning — v Sentry to chceme vidět, než to prorazí RLS.
+    // B2.3: Multi-tenant safeguard — načteme všechny memberships (až 10 stačí;
+    // nechceme bod záseku, ale ani se nám nepotkáme > 10). Vrátíme preferovaný
+    // tenant (pokud uživatel má `preferred_tenant_id` cookie), jinak nejstarší.
     return tx
       .select({
         membershipId: memberships.id,
@@ -46,37 +54,96 @@ export async function getMembership(userId: string): Promise<MembershipResult | 
       )
       .where(eq(memberships.userId, userId))
       .orderBy(asc(memberships.joinedAt))
-      .limit(2);
+      .limit(10);
   });
-  const row = rows[0];
-  if (!row) return null;
+  if (rows.length === 0) return null;
+
+  // B3.10 — pokud má user > 1 membership, honoruj `preferred_tenant_id` cookie
+  // (nastavuje ji `/choose-tenant` page). Pokud cookie není nebo neodpovídá
+  // žádnému membershipu, fallback na první podle `joinedAt`.
+  let chosen = rows[0]!;
   if (rows.length > 1) {
+    try {
+      const jar = await cookies();
+      const preferred = jar.get(PREFERRED_TENANT_COOKIE)?.value;
+      if (preferred) {
+        const match = rows.find((r) => r.tenantId === preferred);
+        if (match) chosen = match;
+      }
+    } catch {
+      // cookies() může selhat v kontextech bez request scope; silentně fallbackneme.
+    }
+
     // eslint-disable-next-line no-console
     console.warn("[getMembership] multi-membership user", {
       userId,
-      chosenTenantId: row.tenantId,
-      otherTenantId: rows[1]?.tenantId,
+      chosenTenantId: chosen.tenantId,
+      totalMemberships: rows.length,
     });
     try {
-      // Fire-and-forget Sentry capture — nesmí nic v auth flow blokovat.
       void import("@sentry/nextjs").then((Sentry) => {
         Sentry.captureMessage("multi_membership_user_detected", {
           level: "warning",
           tags: { area: "auth", type: "multi-membership" },
-          extra: { userId, chosenTenantId: row.tenantId, otherTenantId: rows[1]?.tenantId },
+          extra: {
+            userId,
+            chosenTenantId: chosen.tenantId,
+            totalMemberships: rows.length,
+            tenantIds: rows.map((r) => r.tenantId),
+          },
         });
       }).catch(() => {});
     } catch {
       // no-op
     }
   }
+
   return {
-    membershipId: row.membershipId,
-    tenantId: row.tenantId,
-    roleId: row.roleId,
-    roleName: row.roleName as RoleName,
-    contactId: row.contactId ?? undefined,
+    membershipId: chosen.membershipId,
+    tenantId: chosen.tenantId,
+    roleId: chosen.roleId,
+    roleName: chosen.roleName as RoleName,
+    contactId: chosen.contactId ?? undefined,
   };
+}
+
+/**
+ * B3.10 — vrátí všechny memberships uživatele (pro `/choose-tenant` page).
+ * Bez preferred cookie selekce — vrací seznam v pořadí `joinedAt`.
+ */
+export async function listMembershipsForUser(userId: string): Promise<
+  Array<MembershipResult & { tenantName: string | null }>
+> {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select set_config('app.user_id', ${userId}, true)`);
+    const rows = await tx
+      .select({
+        membershipId: memberships.id,
+        tenantId: memberships.tenantId,
+        roleId: memberships.roleId,
+        roleName: roles.name,
+        contactId: clientContacts.contactId,
+        tenantName: tenants.name,
+      })
+      .from(memberships)
+      .innerJoin(roles, eq(memberships.roleId, roles.id))
+      .leftJoin(tenants, eq(tenants.id, memberships.tenantId))
+      .leftJoin(
+        clientContacts,
+        and(eq(memberships.tenantId, clientContacts.tenantId), eq(memberships.userId, clientContacts.userId))
+      )
+      .where(eq(memberships.userId, userId))
+      .orderBy(asc(memberships.joinedAt))
+      .limit(10);
+    return rows.map((r) => ({
+      membershipId: r.membershipId,
+      tenantId: r.tenantId,
+      roleId: r.roleId,
+      roleName: r.roleName as RoleName,
+      contactId: r.contactId ?? undefined,
+      tenantName: r.tenantName ?? null,
+    }));
+  });
 }
 
 export async function requireMembership(userId: string) {

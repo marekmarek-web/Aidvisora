@@ -1,7 +1,7 @@
 [
   {
     "type": "p",
-    "text": "Tato stránka popisuje, jaké soubory cookie a podobné technologie používá webová prezentace Aidvisora (aidvisora.cz) a portál Aidvisory. Cílem je transparentní informování uživatelů v souladu s § 89 zákona č. 127/2005 Sb., o elektronických komunikacích, nařízením GDPR a doporučeními ÚOOÚ."
+    "text": "Tato stránka popisuje, jaké soubory cookie a podobné technologie používá webová prezentace Aidvisora (aidvisora.cz) a portál Aidvisora. Cílem je transparentní informování uživatelů v souladu s § 89 zákona č. 127/2005 Sb., o elektronických komunikacích, nařízením GDPR a doporučeními ÚOOÚ."
   },
   {
     "type": "p",
@@ -13,7 +13,7 @@
   },
   {
     "type": "p",
-    "text": "Cookies členíme podle funkčního významu. Aktuální výčet odpovídá produkční konfiguraci Aidvisory ke dni účinnosti této stránky. Konkrétní technické názvy položek se mohou lehce lišit verzí platformy; níže uvádíme jejich typ a účel."
+    "text": "Cookies členíme podle funkčního významu. Aktuální výčet odpovídá produkční konfiguraci Aidvisora ke dni účinnosti této stránky. Konkrétní technické názvy položek se mohou lehce lišit verzí platformy; níže uvádíme jejich typ a účel."
   },
   {
     "type": "li",
@@ -21,7 +21,7 @@
   },
   {
     "type": "li",
-    "text": "• Statistické (analytics) — momentálně NENASAZUJEME. V případě, že bychom v budoucnu zapojili produktovou telemetrii pro interní statistiky (např. PostHog, Sentry sampling), uvedeme je v této tabulce a budou závislé na vašem souhlasu přes cookie lištu."
+    "text": "• Statistické (analytics) — momentálně NENASAZUJEME. Pro monitorování chyb a stability aplikace používáme Sentry (sledování výjimek a výkonu), které v produkci NESPOUŠTÍ session replay bez erroru a neukládá pro tento účel cookies na vašem zařízení; zpracování je založeno na oprávněném zájmu provozovatele (čl. 6 odst. 1 písm. f GDPR). Pokud v budoucnu zapojíme produktovou telemetrii nad rámec nezbytné stabilizační detekce (např. PostHog product analytics nebo rozšířený Sentry Session Replay), doplníme je do této tabulky a zpřístupníme přes cookie lištu na základě vašeho souhlasu."
   },
   {
     "type": "li",

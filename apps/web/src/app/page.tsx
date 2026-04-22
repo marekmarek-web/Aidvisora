@@ -1,13 +1,19 @@
 /**
  * Hlavní (landing) stránka Aidvisora – marketingová stránka před přihlášením.
  * Přihlášení/registrace je na /prihlaseni. V demo režimu (NEXT_PUBLIC_SKIP_AUTH=true) přesměruje rovnou na /portal.
+ *
+ * Perf — `dynamic = "force-static"` + `revalidate = 3600` — landing HTML jede
+ * z Vercel CDN (žádné `headers()`, `cookies()`, `getUser()`). Auth-based redirect
+ * pro už přihlášeného uživatele řeší proxy (AIDV header) i `<NativeOAuthDeepLinkBridge />`
+ * – ale na anonymní marketing routě proxy auth path skip, takže static je bezpečné.
  */
 import { redirect } from "next/navigation";
-import dynamic from "next/dynamic";
-import { headers } from "next/headers";
-import { AIDV_PROXY_AUTH_USER_HEADER } from "@/lib/auth/proxy-headers";
+import nextDynamic from "next/dynamic";
 
-const PremiumLandingPage = dynamic(() => import("./components/PremiumLandingPage"), {
+export const dynamic = "force-static";
+export const revalidate = 3600;
+
+const PremiumLandingPage = nextDynamic(() => import("./components/PremiumLandingPage"), {
   loading: () => (
     <div className="min-h-[40vh] flex items-center justify-center text-slate-500 text-sm" aria-busy="true">
       Načítám…
@@ -34,15 +40,9 @@ function LandingFaqJsonLd() {
   );
 }
 
-export default async function HomePage() {
+export default function HomePage() {
   if (process.env.NEXT_PUBLIC_SKIP_AUTH === "true") {
     redirect("/portal");
-  }
-
-  // Session už ověřil proxy.ts — nepoužívat druhé getUser (TTFB).
-  const headerList = await headers();
-  if (headerList.get(AIDV_PROXY_AUTH_USER_HEADER)) {
-    redirect("/register/complete?next=/portal/today");
   }
 
   return (

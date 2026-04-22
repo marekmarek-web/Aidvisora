@@ -15,6 +15,7 @@ import { PortalThemeProvider } from "./PortalThemeProvider";
 import { PORTAL_THEME_STORAGE_PREFLIGHT } from "./theme-storage-preflight";
 import { isMobileUiV1EnabledForRequest } from "@/app/shared/mobile-ui/feature-flag";
 import { shouldOmitPortalMobilePageTree } from "@/app/shared/mobile-ui/omit-portal-mobile-page-tree";
+import "@/styles/aidvisora-components.css";
 import "@/styles/aidvisora-monday.css";
 import "@/styles/board.css";
 import "@/styles/monday.css";
@@ -148,6 +149,12 @@ export default async function PortalLayout({
         </Script>
         <PortalThemeProvider>
           <PortalAppProviders>
+            {/* B3.11 — dunning banner i v mobile shellu. Dříve jsme to vědomě
+                skrývali „málo místa", ale je to přesně ten scénář, kdy poradce
+                přestane fungovat bez vysvětlení. Banner má dostatečně kompaktní
+                layout (flex-col na mobile), takže se nevelocituje ani na iPhone SE. */}
+            <MaintenanceBanner />
+            <PortalDunningBanner state={dunningState} />
             <MobilePortalApp showTeamOverview={showTeamOverview} />
             {/* Nepřimountovávat `page.tsx` pod mobile shellem — duplicitní client stromy (FA, Setup, …) padají. */}
             {!omitMobilePageTree ? (

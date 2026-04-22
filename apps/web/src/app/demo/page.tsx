@@ -19,6 +19,9 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
+export const dynamic = "force-static";
+export const revalidate = 3600;
+
 export default function DemoPage() {
   return (
     <main className="mx-auto min-h-screen max-w-3xl px-4 py-10 sm:py-14">

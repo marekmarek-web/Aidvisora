@@ -3,7 +3,7 @@
  * Tenant-level branding configuration resolved from tenant_settings.
  */
 
-import { tenantSettings, eq, and } from "db";
+import { tenantSettings, memberships, roles, eq, and } from "db";
 import { withTenantContext } from "@/lib/db/with-tenant-context";
 import type { BirthdayEmailTheme } from "@/lib/email/birthday/types";
 
@@ -62,8 +62,29 @@ export async function setBrandingField(
   value: unknown,
   updatedBy: string
 ): Promise<void> {
+  // B3.15 — defense-in-depth role check. Call sites dnes řídí roli sami
+  // (`requireAuthInAction()` + `auth.roleName === "Admin"`), ale `setBrandingField`
+  // je samostatně exportovaný helper, takže může být někde napojený bez
+  // guardu. Ověř si, že `updatedBy` má v tenantu roli `Admin`, jinak odmítni.
   const key = `branding.${field}`;
   await withTenantContext({ tenantId, userId: updatedBy }, async (tx) => {
+    const [role] = await tx
+      .select({ roleName: roles.name })
+      .from(memberships)
+      .innerJoin(roles, eq(memberships.roleId, roles.id))
+      .where(
+        and(
+          eq(memberships.tenantId, tenantId),
+          eq(memberships.userId, updatedBy),
+        ),
+      )
+      .limit(1);
+    if (!role || role.roleName !== "Admin") {
+      throw new Error(
+        "forbidden: setBrandingField vyžaduje roli Admin v tomto workspace.",
+      );
+    }
+
     const existing = await tx
       .select({ id: tenantSettings.id, version: tenantSettings.version })
       .from(tenantSettings)

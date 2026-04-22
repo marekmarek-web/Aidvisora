@@ -32,15 +32,20 @@ export async function resolveDunningBanner(tenantId: string): Promise<DunningBan
   const sub = await getSubscriptionState(tenantId);
   if (!sub.status) return { kind: "none" };
   if (sub.status === "past_due") {
-    if (sub.inGracePeriod && sub.currentPeriodEnd) {
-      const graceEndMs =
-        sub.currentPeriodEnd.getTime() + 7 * 86_400_000; // fallback default grace; state používá admin setting.
-      const days = Math.max(0, Math.ceil((graceEndMs - Date.now()) / 86_400_000));
+    // B2.9 — banner čerpá daysRemaining z `graceEndsAt`, který je unifikovaný
+    // v `getSubscriptionState` (DB column → admin setting → default 7).
+    // Dříve jsme zde počítali `currentPeriodEnd + 7d` hardcoded, což se
+    // mohlo lišit od toho, co viděl cron / audit log.
+    if (sub.inGracePeriod && sub.graceEndsAt) {
+      const days = Math.max(
+        0,
+        Math.ceil((sub.graceEndsAt.getTime() - Date.now()) / 86_400_000),
+      );
       return { kind: "past_due_in_grace", daysRemaining: days };
     }
     return {
       kind: "past_due_expired",
-      expiredAt: sub.currentPeriodEnd ?? new Date(),
+      expiredAt: sub.graceEndsAt ?? sub.currentPeriodEnd ?? new Date(),
     };
   }
   if (sub.status === "unpaid") return { kind: "unpaid" };

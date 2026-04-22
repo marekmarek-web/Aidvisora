@@ -50,7 +50,7 @@ const nextConfig = {
         "https://*.vercel-insights.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' data: https://fonts.gstatic.com",
-      "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https://*.public.blob.vercel-storage.com https://lh3.googleusercontent.com https://i.vimeocdn.com https://i.ytimg.com",
+      "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https://*.public.blob.vercel-storage.com https://lh3.googleusercontent.com https://i.vimeocdn.com https://vumbnail.com https://i.ytimg.com",
       "media-src 'self' blob: https://*.supabase.co https://player.vimeo.com",
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://api.resend.com https://*.sentry.io https://*.ingest.sentry.io https://*.ingest.de.sentry.io https://*.ingest.us.sentry.io https://api.openai.com https://api.anthropic.com https://*.vercel-insights.com",
       "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://player.vimeo.com https://www.youtube.com",
@@ -84,6 +84,15 @@ const nextConfig = {
       { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
     ];
 
+    // Perf — CDN caching pro anonymní marketing routy. `s-maxage` = TTL na
+    // Vercel edge, `stale-while-revalidate` drží teplý cache i během regenerace.
+    // HomePage + legal stránky jsou `force-static`, takže Next vydává statický
+    // HTML z build outputu; tahle hlavička jen zajistí, že se dostane do CDN.
+    const marketingCacheControl = {
+      key: "Cache-Control",
+      value: "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400",
+    };
+
     return [
       {
         source: "/:path*",
@@ -99,6 +108,26 @@ const nextConfig = {
         source: "/.well-known/:path*",
         headers: [{ key: "Cache-Control", value: "public, max-age=300, s-maxage=300" }],
       },
+      // Perf — dlouhý cache pro `/_next/static/*` (Next už defaultně nastavuje,
+      // ale být explicitní pomáhá při custom CDN). Hashované URL = immutable.
+      {
+        source: "/_next/static/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+      },
+      // Perf — marketing routy: jdou do Vercel CDN s hodinovým s-maxage.
+      { source: "/", headers: [marketingCacheControl] },
+      { source: "/pricing", headers: [marketingCacheControl] },
+      { source: "/bezpecnost", headers: [marketingCacheControl] },
+      { source: "/subprocessors", headers: [marketingCacheControl] },
+      { source: "/terms", headers: [marketingCacheControl] },
+      { source: "/privacy", headers: [marketingCacheControl] },
+      { source: "/cookies", headers: [marketingCacheControl] },
+      { source: "/o-nas", headers: [marketingCacheControl] },
+      { source: "/kontakt", headers: [marketingCacheControl] },
+      { source: "/pro-brokery", headers: [marketingCacheControl] },
+      { source: "/demo", headers: [marketingCacheControl] },
+      { source: "/beta-terms", headers: [marketingCacheControl] },
+      { source: "/legal/:path*", headers: [marketingCacheControl] },
     ];
   },
   // Monorepo: lockfile lives at git repo root (project name e.g. aidvisora). A parent folder
@@ -111,7 +140,15 @@ const nextConfig = {
       { protocol: "https", hostname: "*.supabase.co", pathname: "/storage/v1/**" },
       { protocol: "https", hostname: "lh3.googleusercontent.com", pathname: "/**" },
       { protocol: "https", hostname: "*.public.blob.vercel-storage.com", pathname: "/**" },
+      { protocol: "https", hostname: "i.vimeocdn.com", pathname: "/**" },
+      { protocol: "https", hostname: "vumbnail.com", pathname: "/**" },
     ],
+    // Perf — AVIF první (lepší komprese), WebP fallback pro starší browsery.
+    // Next image optimizer vybere nejlepší formát podle `Accept` hlavičky.
+    formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 31536000,
+    deviceSizes: [360, 420, 640, 768, 1024, 1280, 1536],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
   experimental: {
     ...(nextMajor < 15

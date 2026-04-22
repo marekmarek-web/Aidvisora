@@ -573,6 +573,11 @@ export function AiAssistantChatScreen() {
     Record<string, Record<string, Record<string, string>>>
   >({});
   const chatSubmitLockRef = useRef(false);
+  // B3.5 — AbortController parity s `AiAssistantDrawer`. Dříve mobilní chat
+  // nezrušil běžící stream při unmountu ani při přepnutí kontaktu, takže
+  // dokončený request přepsal state už odmountované obrazovky (setState na
+  // unmounted component warning + potenciální data leak mezi kontakty).
+  const chatAbortRef = useRef<AbortController | null>(null);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [planConfirmBusy, setPlanConfirmBusy] = useState(false);
@@ -636,12 +641,33 @@ export function AiAssistantChatScreen() {
     prevRouteContactIdRef.current = routeContactId;
     if (prev == null || routeContactId == null) return;
     if (prev !== routeContactId) {
+      // B3.5 — zrušit běžící stream, jinak nová kontakt-switch dostane
+      // odpověď z předchozího requestu a state se promíchá.
+      try {
+        chatAbortRef.current?.abort();
+      } catch {
+        /* ignore */
+      }
+      chatAbortRef.current = null;
       setMessages([]);
       setPendingImageAssets([]);
       setAssistantSessionId(undefined);
       try { sessionStorage.removeItem(AI_ASSISTANT_API_SESSION_KEY); } catch { /* ignore */ }
     }
   }, [routeContactId]);
+
+  // B3.5 — abort při unmount, aby se dokončený fetch neuložil do
+  // nezamontované obrazovky.
+  useEffect(() => {
+    return () => {
+      try {
+        chatAbortRef.current?.abort();
+      } catch {
+        /* ignore */
+      }
+      chatAbortRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     persistSession(messages);
@@ -863,6 +889,16 @@ export function AiAssistantChatScreen() {
     setIsTyping(true);
     setError(null);
 
+    // B3.5 — čerstvý AbortController; pokud ještě běží předchozí stream,
+    // abortujeme ho (parity s AiAssistantDrawer L622-624).
+    try {
+      chatAbortRef.current?.abort();
+    } catch {
+      /* ignore */
+    }
+    const abort = new AbortController();
+    chatAbortRef.current = abort;
+
     startTransition(async () => {
       try {
         const complete = await postAssistantChatStreaming(
@@ -880,13 +916,16 @@ export function AiAssistantChatScreen() {
             ),
           },
           (chunk) => {
+            if (abort.signal.aborted) return;
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === assistantId ? { ...m, text: m.text + chunk } : m
               )
             );
-          }
+          },
+          abort.signal,
         );
+        if (abort.signal.aborted) return;
         if (complete.sessionId) {
           setAssistantSessionId(complete.sessionId);
           try {
@@ -916,6 +955,10 @@ export function AiAssistantChatScreen() {
         );
         setPendingImageAssets([]);
       } catch (e) {
+        if (abort.signal.aborted) {
+          // B3.5 — tichý abort (unmount / contact switch); nic neukazujeme.
+          return;
+        }
         setError(e instanceof Error ? e.message : "Nepodařilo se kontaktovat asistenta.");
         setMessages((prev) => prev.filter((m) => m.id !== assistantId && m.id !== userMsg.id));
         setInput(trimmed);
@@ -931,6 +974,9 @@ export function AiAssistantChatScreen() {
       } finally {
         setIsTyping(false);
         chatSubmitLockRef.current = false;
+        if (chatAbortRef.current === abort) {
+          chatAbortRef.current = null;
+        }
       }
     });
   }

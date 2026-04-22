@@ -18,6 +18,7 @@ import {
   getHousehold,
   removeHouseholdMember,
   updateHousehold,
+  updateHouseholdMemberRole,
   type HouseholdDetail,
 } from "@/app/actions/households";
 import {
@@ -77,6 +78,14 @@ function getAvatarColor(name: string) {
   return AVATAR_PALETTE[idx];
 }
 
+function getBirthYear(birthDate: string | null): number | null {
+  if (!birthDate) return null;
+  const m = /^(\d{4})/.exec(birthDate);
+  if (!m) return null;
+  const year = Number(m[1]);
+  return Number.isFinite(year) && year > 1900 && year < 2200 ? year : null;
+}
+
 function AnalysisProgressBar({ progress }: { progress?: number }) {
   const pct = Math.max(0, Math.min(100, progress ?? 0));
   return (
@@ -119,6 +128,11 @@ export function HouseholdDetailScreen({
   const [editBusy, setEditBusy] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
+
+  const [memberEditId, setMemberEditId] = useState<string | null>(null);
+  const [memberEditRole, setMemberEditRole] = useState("");
+  const [memberEditBusy, setMemberEditBusy] = useState(false);
+  const [memberEditError, setMemberEditError] = useState<string | null>(null);
 
   const memberContactIds = useMemo(
     () => new Set(detail?.members.map((m) => m.contactId) ?? []),
@@ -174,6 +188,16 @@ export function HouseholdDetailScreen({
   }
 
   async function handleRemoveMember(memberId: string) {
+    if (
+      !(await confirm({
+        title: "Odebrat člena",
+        message: "Opravdu chcete člena odebrat z domácnosti?",
+        confirmLabel: "Odebrat",
+        variant: "destructive",
+      }))
+    ) {
+      return;
+    }
     startTransition(async () => {
       try {
         await removeHouseholdMember(memberId);
@@ -182,6 +206,27 @@ export function HouseholdDetailScreen({
         setError(e instanceof Error ? e.message : "Člena se nepodařilo odebrat.");
       }
     });
+  }
+
+  function openMemberEdit(memberId: string, currentRole: string | null) {
+    setMemberEditId(memberId);
+    setMemberEditRole(currentRole ?? "");
+    setMemberEditError(null);
+  }
+
+  async function handleSaveMemberRole() {
+    if (!memberEditId) return;
+    setMemberEditBusy(true);
+    setMemberEditError(null);
+    try {
+      await updateHouseholdMemberRole(memberEditId, memberEditRole || null);
+      setMemberEditId(null);
+      reload();
+    } catch (e) {
+      setMemberEditError(e instanceof Error ? e.message : "Uložení se nepodařilo.");
+    } finally {
+      setMemberEditBusy(false);
+    }
   }
 
   function openEditSheet() {
@@ -270,23 +315,6 @@ export function HouseholdDetailScreen({
           eyebrow="Domácnost"
           title={householdName}
           icon={<Home size={20} className="text-white" />}
-          actions={
-            <>
-              <HeroAction onClick={openEditSheet} disabled={deleteBusy} aria-label="Upravit domácnost">
-                <Pencil size={12} />
-                Upravit
-              </HeroAction>
-              <HeroAction
-                tone="danger"
-                onClick={handleDeleteHousehold}
-                disabled={deleteBusy}
-                aria-label="Smazat domácnost"
-              >
-                <Trash2 size={12} />
-                {deleteBusy ? "Mažu…" : "Smazat"}
-              </HeroAction>
-            </>
-          }
           meta={
             <>
               <span className="flex items-center gap-1">
@@ -304,13 +332,28 @@ export function HouseholdDetailScreen({
             </>
           }
         >
-          <button
-            type="button"
-            onClick={() => router.push("/portal/documents")}
-            className="text-[11px] font-black uppercase tracking-wide text-white/85 underline-offset-2 hover:text-white hover:underline"
-          >
-            Otevřít knihovnu dokumentů →
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <HeroAction onClick={openEditSheet} disabled={deleteBusy} aria-label="Upravit domácnost">
+              <Pencil size={12} />
+              Upravit
+            </HeroAction>
+            <HeroAction
+              tone="danger"
+              onClick={handleDeleteHousehold}
+              disabled={deleteBusy}
+              aria-label="Smazat domácnost"
+            >
+              <Trash2 size={12} />
+              {deleteBusy ? "Mažu…" : "Smazat"}
+            </HeroAction>
+            <button
+              type="button"
+              onClick={() => router.push("/portal/documents")}
+              className="ml-auto text-[11px] font-black uppercase tracking-wide text-white/85 underline-offset-2 hover:text-white hover:underline"
+            >
+              Otevřít knihovnu →
+            </button>
+          </div>
         </HeroCard>
       </div>
 
@@ -348,6 +391,7 @@ export function HouseholdDetailScreen({
               const fullName = `${member.firstName} ${member.lastName}`;
               const initials = getInitials(member.firstName, member.lastName);
               const avatarColor = getAvatarColor(fullName);
+              const birthYear = getBirthYear(member.birthDate);
               return (
                 <MobileCard key={member.id} className="p-3.5">
                   <div className="flex items-center gap-3">
@@ -360,11 +404,16 @@ export function HouseholdDetailScreen({
                       {initials}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-[color:var(--wp-text)]">{fullName}</p>
+                      <p className="text-sm font-bold text-[color:var(--wp-text)] truncate">{fullName}</p>
                       <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                         {member.role ? (
                           <span className="text-[11px] font-bold text-[color:var(--wp-text-secondary)] bg-[color:var(--wp-surface-muted)] px-1.5 py-0.5 rounded-lg border border-[color:var(--wp-surface-card-border)]">
                             {householdRoleLabel(member.role)}
+                          </span>
+                        ) : null}
+                        {birthYear ? (
+                          <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded-lg">
+                            *{birthYear}
                           </span>
                         ) : null}
                         {member.email ? (
@@ -374,14 +423,26 @@ export function HouseholdDetailScreen({
                         ) : null}
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveMember(member.id)}
-                      className="w-8 h-8 rounded-lg bg-rose-50 border border-rose-200 flex items-center justify-center flex-shrink-0"
-                      aria-label="Odebrat člena"
-                    >
-                      <X size={14} className="text-rose-500" />
-                    </button>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => openMemberEdit(member.id, member.role)}
+                        className="w-9 h-9 rounded-lg bg-indigo-50 border border-indigo-200 flex items-center justify-center active:scale-95 transition-transform"
+                        aria-label="Upravit člena"
+                        title="Upravit roli"
+                      >
+                        <Pencil size={14} className="text-indigo-600" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveMember(member.id)}
+                        className="w-9 h-9 rounded-lg bg-rose-50 border border-rose-200 flex items-center justify-center active:scale-95 transition-transform"
+                        aria-label="Odebrat člena"
+                        title="Odebrat z domácnosti"
+                      >
+                        <X size={14} className="text-rose-500" />
+                      </button>
+                    </div>
                   </div>
                 </MobileCard>
               );
@@ -534,13 +595,12 @@ export function HouseholdDetailScreen({
               value={newMemberContactId}
               onChange={setNewMemberContactId}
               placeholder="Vyberte kontakt"
-              options={[
-                { id: "", label: "Vyberte kontakt" },
-                ...availableContacts.map((contact) => ({
-                  id: contact.id,
-                  label: `${contact.firstName} ${contact.lastName}`,
-                })),
-              ]}
+              searchable
+              searchPlaceholder="Hledat kontakt…"
+              options={availableContacts.map((contact) => ({
+                id: contact.id,
+                label: `${contact.firstName} ${contact.lastName}`,
+              }))}
             />
           </div>
           <div>
@@ -562,6 +622,48 @@ export function HouseholdDetailScreen({
           >
             Přidat člena
           </button>
+        </div>
+      </BottomSheet>
+
+      {/* Edit member role sheet */}
+      <BottomSheet
+        open={memberEditId !== null}
+        onClose={() => !memberEditBusy && setMemberEditId(null)}
+        title="Upravit člena"
+      >
+        <div className="space-y-3">
+          <div>
+            <label className="text-[10px] font-black uppercase tracking-widest text-[color:var(--wp-text-tertiary)] mb-1 block">
+              Rodinná role
+            </label>
+            <CustomDropdown
+              value={memberEditRole}
+              onChange={setMemberEditRole}
+              placeholder="Vyberte roli"
+              options={HOUSEHOLD_ROLES.map((r) => ({ id: r.value, label: r.label }))}
+            />
+          </div>
+          {memberEditError ? (
+            <p className="text-sm text-rose-600 font-semibold">{memberEditError}</p>
+          ) : null}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setMemberEditId(null)}
+              disabled={memberEditBusy}
+              className="flex-1 min-h-[48px] rounded-xl border border-[color:var(--wp-surface-card-border)] text-sm font-bold text-[color:var(--wp-text-secondary)] disabled:opacity-50"
+            >
+              Zrušit
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveMemberRole}
+              disabled={memberEditBusy}
+              className="flex-1 min-h-[48px] rounded-xl bg-indigo-600 text-white text-sm font-bold disabled:opacity-50"
+            >
+              {memberEditBusy ? "Ukládám…" : "Uložit"}
+            </button>
+          </div>
         </div>
       </BottomSheet>
     </>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Network Security Config for the Aidvisora Android WebView shell.
+
+    Production:
+      - HTTPS only for aidvisora.cz (and www subdomain).
+      - No cleartext HTTP anywhere in production.
+
+    Debug build (selected via networkSecurityConfig merging + tools override):
+      - Localhost / 10.0.2.2 (Android emulator loopback) cleartext allowed so
+        developers can run a local Next.js server against the shell.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">aidvisora.cz</domain>
+    </domain-config>
+
+    <!--
+        Emulator loopback & localhost for local `pnpm dev` shells.
+        Capacitor build toolchain may auto-inject debug-only overrides;
+        this base config is safe to ship in release because cleartext is
+        still denied globally.
+    -->
+    <debug-overrides>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </debug-overrides>
+</network-security-config>

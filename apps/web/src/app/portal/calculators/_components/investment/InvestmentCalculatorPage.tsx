@@ -85,9 +85,9 @@ export function InvestmentCalculatorPage({
   const isClientAudience = audience === "client";
 
   return (
-    <div className={isClientAudience ? "pt-0 pb-4" : "pt-0 pb-44 lg:pb-0"}>
+    <div className={isClientAudience ? "pt-0 pb-4" : "pt-0 pb-[240px] lg:pb-0"}>
       <CalculatorPageShell>
-        <div className="mb-3">
+        <div className="mb-3 hidden sm:block">
           <CalculatorPageHeader
             eyebrow="Kalkulačka investic · 2026"
             title="Investiční kalkulačka"
@@ -106,8 +106,17 @@ export function InvestmentCalculatorPage({
           />
         </div>
 
+        {/* Mobile-only PDF button (header itself is hidden because the sheet shows the title) */}
+        <div className="sm:hidden -mt-1 mb-1 flex justify-end">
+          <CalculatorPdfExportButton
+            documentTitle="Investiční kalkulačka – přehled výpočtu"
+            filePrefix="investice"
+            getSections={getPdfSections}
+          />
+        </div>
+
         {/* Strategy switcher */}
-        <div className="rounded-[20px] border-[1.5px] border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm sm:p-6">
+        <div className="rounded-[16px] sm:rounded-[20px] border-[1.5px] border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4 shadow-sm sm:p-6">
           <InvestmentStrategySwitcher
             profiles={INVESTMENT_PROFILES}
             activeIndex={profileIndex}
@@ -143,21 +152,21 @@ export function InvestmentCalculatorPage({
         </div>
 
         {/* Charts */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="rounded-[20px] border-[1.5px] border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm sm:p-6">
+        <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
+          <div className="rounded-[16px] sm:rounded-[20px] border-[1.5px] border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4 shadow-sm sm:p-6">
             <h3 className="mb-1 text-base font-bold text-[color:var(--wp-text)]">Projekce vývoje</h3>
-            <p className="text-xs text-[color:var(--wp-text-secondary)] mb-4">Odhadovaný vývoj hodnoty investice v čase.</p>
+            <p className="text-xs text-[color:var(--wp-text-secondary)] mb-3 sm:mb-4">Odhadovaný vývoj hodnoty investice v čase.</p>
             <InvestmentGrowthChart data={growthChartData} />
           </div>
-          <div className="rounded-[20px] border-[1.5px] border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm sm:p-6">
+          <div className="rounded-[16px] sm:rounded-[20px] border-[1.5px] border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4 shadow-sm sm:p-6">
             <h3 className="mb-1 text-base font-bold text-[color:var(--wp-text)]">Složení portfolia</h3>
-            <p className="text-xs text-[color:var(--wp-text-secondary)] mb-4">Rozdělení strategie podle tříd aktiv.</p>
+            <p className="text-xs text-[color:var(--wp-text-secondary)] mb-3 sm:mb-4">Rozdělení strategie podle tříd aktiv.</p>
             <InvestmentAllocationChart data={allocationChartData} />
           </div>
         </div>
 
         {/* Backtest */}
-        <div className="rounded-[20px] border-[1.5px] border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-5 shadow-sm sm:p-6 md:p-7">
+        <div className="rounded-[16px] sm:rounded-[20px] border-[1.5px] border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] p-4 shadow-sm sm:p-6 md:p-7">
           <InvestmentBacktestChart
             series={backtestSeries}
             monthlyFormatted={formatCurrency(monthly)}

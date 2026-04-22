@@ -1532,6 +1532,12 @@ function buildSummary(
     (extracted.contractNumber as string | undefined) ??
     (ef?.contractNumber?.value != null ? String(ef.contractNumber.value) : undefined);
 
+  const documentMeta = (extracted.documentMeta ?? {}) as Record<string, unknown>;
+  const extractionSourceKind =
+    typeof documentMeta.extractionSourceKind === "string"
+      ? documentMeta.extractionSourceKind
+      : undefined;
+
   const humanSummary = buildHumanSummary({
     primaryType,
     lifecycleStatus: lifecycle as Parameters<typeof buildHumanSummary>[0]["lifecycleStatus"],
@@ -1543,6 +1549,7 @@ function buildSummary(
     clientName: pickClientNameFromPayload(extracted),
     containsPaymentInstructions: contentFlags.containsPaymentInstructions ?? false,
     reasonsForReview: detail.reasonsForReview as string[] | undefined,
+    extractionSourceKind,
   });
   // Removed tech suffix ("AI vytěžila X z Y polí") — diagnostics shown separately v panelu diagnostiky
   return sanitizeAdvisorVisibleText(humanSummary);

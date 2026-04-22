@@ -103,6 +103,63 @@ Zdůvodnění: jedna regrese v AI kódu může za hodinu sežrat měsíční roz
 | Runbook | Analyzovat — obvykle race mezi `checkout.completed` a `subscription.updated`. Akce reaktivní, ne on-call. |
 | Severity | **P2** |
 
+### A8 · Client portal payments load failure (P1)
+
+| Pole | Hodnota |
+|---|---|
+| Název | `A8 · client_portal.payments_load_fail` |
+| Filtr | `message:"client_portal.payments_load_fail" environment:production` |
+| Condition | `count() > 5` za 15 min |
+| Action | E-mail `bezpecnost@aidvisora.cz` |
+| Runbook | 1) DB check na `client_payment_setups` (existuje-li `visible_to_client=true`?). 2) Supabase pool stav. 3) Pokud trvalé → fallback UI na klientském portále (feature flag). |
+| Severity | **P1** |
+
+Zdůvodnění (B3.13): payments list je nejčastější route, kterou klient otevře po přihlášení. Pokud ji systematicky neumíme dotáhnout, ztrácíme důvěru okamžitě.
+
+### A9 · Client portal profile render failure (P2)
+
+| Pole | Hodnota |
+|---|---|
+| Název | `A9 · client_portal.profile_render_fail` |
+| Filtr | `message:"client_portal.profile_render_fail" environment:production` |
+| Condition | `count() > 5` za 30 min |
+| Action | E-mail |
+| Runbook | Profile page padá obvykle na chybějících `contactForClientPortal` prop. Ověř šablonu a feature flag `client_portal_profile_v2`. |
+| Severity | **P2** |
+
+### A10 · Assistant ledger degraded (P1)
+
+| Pole | Hodnota |
+|---|---|
+| Název | `A10 · assistant.ledger_degraded` |
+| Filtr | `message:"assistant.ledger_degraded" environment:production` |
+| Condition | `count() > 3` za 10 min |
+| Action | E-mail |
+| Runbook | 1) Přečíst poslední commit v `apps/web/src/lib/ai/assistant-ledger-*`. 2) Zkontrolovat Redis latency (degraded ledger = in-memory fallback, cross-instance session loss). |
+| Severity | **P1** |
+
+### A11 · Contract review apply failed (P1)
+
+| Pole | Hodnota |
+|---|---|
+| Název | `A11 · contract_review.apply_failed` |
+| Filtr | `message:"contract_review.apply_failed" environment:production` |
+| Condition | `count() > 5` za 30 min |
+| Action | E-mail |
+| Runbook | 1) `SELECT id, tenant_id, processing_status FROM contract_upload_reviews WHERE processing_status = 'failed' AND updated_at > now() - interval '1 hour'`. 2) Pokud 1 tenant → escalace support. 3) Pokud všichni → regrese `apply-contract-review.ts`, rollback. |
+| Severity | **P1** |
+
+### A12 · Prompt injection detected burst (P2)
+
+| Pole | Hodnota |
+|---|---|
+| Název | `A12 · assistant.prompt_injection_detected` |
+| Filtr | `message:"assistant.prompt_injection_detected" environment:production` |
+| Condition | `count() > 20` za 1 h |
+| Action | E-mail |
+| Runbook | 20+ hits/h = buď targeted probe, nebo copy-paste jailbreak viral. 1) Grep `ai_generations` za posledních 60 min + tenant IDs. 2) Pokud 1 tenant → zablokovat dočasně; 3) pokud rozptylený → noise pattern v detektoru, tune heuristics. |
+| Severity | **P2** |
+
 ### A7 · Dunning grace period started (P2)
 
 | Pole | Hodnota |
@@ -139,6 +196,11 @@ Každý alert výše **musí** mít v `incident-runbook.md` dohledatelný postup
 | A5 DB saturation | §5.2 Supabase |
 | A6 webhook skew | retrospective only |
 | A7 dunning | Customer success handoff |
+| A8 client portal payments | Client portal runbook A§3 payments |
+| A9 client portal profile | Client portal runbook A§11 profile |
+| A10 assistant ledger | `docs/assistant-multimodal-crm-live-readiness.md` §ledger |
+| A11 contract review apply | AI review fix plan §apply-failed fallback |
+| A12 prompt injection | security-audit log review + tune heuristics |
 
 ## 6. Review
 
@@ -151,6 +213,7 @@ Každý alert výše **musí** mít v `incident-runbook.md` dohledatelný postup
 | Datum | Změna | Autor |
 |---|---|---|
 | 2026-04-20 | Initial v1 — definováno 7 alertů, mapping na runbook. | Marek |
+| 2026-04-22 | B3.13 — přidáno A8–A12 (client portal payments/profile, assistant ledger, contract review apply, prompt injection burst). | Marek |
 
 ---
 
