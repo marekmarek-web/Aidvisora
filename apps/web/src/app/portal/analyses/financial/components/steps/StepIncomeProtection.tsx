@@ -554,29 +554,29 @@ function PlanCard({
       {/* Risk pills – spread, aligned grid */}
       <div>
         <span className="text-xs font-bold text-[color:var(--wp-text-secondary)] mb-2 block">Rizika</span>
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="flex flex-col gap-2 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:gap-2.5">
           {riskTypes.map((rt) => {
             const entry = risks.find((r) => r.riskType === rt) ?? { riskType: rt, enabled: false };
             return (
               <div
                 key={rt}
-                className={`rounded-xl border p-3 transition-colors ${
+                className={`rounded-lg border px-3 py-2 transition-colors ${
                   entry.enabled
                     ? "border-indigo-300 bg-indigo-50/50"
                     : "border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]"
                 }`}
               >
-                <label className="flex items-center gap-2 min-h-[36px] cursor-pointer mb-2">
+                <label className="flex items-center gap-2.5 min-h-[40px] cursor-pointer">
                   <input
                     type="checkbox"
                     checked={entry.enabled}
                     onChange={(e) => toggleRisk(rt, e.target.checked)}
-                    className="w-4 h-4 rounded border-[color:var(--wp-border-strong)] text-indigo-500"
+                    className="w-4 h-4 rounded border-[color:var(--wp-border-strong)] text-indigo-500 shrink-0"
                   />
-                  <span className="text-sm font-semibold text-[color:var(--wp-text-secondary)]">{getRiskLabel(rt as InsuredRiskType)}</span>
+                  <span className="flex-1 text-sm font-semibold text-[color:var(--wp-text-secondary)] leading-tight">{getRiskLabel(rt as InsuredRiskType)}</span>
                 </label>
                 {entry.enabled && (
-                  <div className="flex flex-col gap-2">
+                  <div className="mt-2 pl-6">
                     <CurrencyCzkInput
                       value={entry.coverageAmount}
                       onChange={(v) => updateRisk(rt, { coverageAmount: v })}
