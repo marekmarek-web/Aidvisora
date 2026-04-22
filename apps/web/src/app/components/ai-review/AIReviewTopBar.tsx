@@ -1,7 +1,8 @@
 "use client";
 
-import { ArrowLeft, BrainCircuit, Check, Loader2, X, Send } from "lucide-react";
+import { ArrowLeft, Check, Loader2, X, Send } from "lucide-react";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
+import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
 import type { ExtractionDocument } from "@/lib/ai-review/types";
 
 type Props = {
@@ -52,7 +53,7 @@ export function AIReviewTopBar({
           <span className="hidden md:inline">AI Extrakce</span>
           <span className="opacity-30 hidden md:inline">/</span>
           <span className="text-indigo-600 flex items-center gap-1.5 truncate">
-            <BrainCircuit size={14} className="shrink-0" />
+            <AiAssistantBrandIcon size={16} className="shrink-0" />
             <span className="truncate">{doc.fileName}</span>
           </span>
         </div>

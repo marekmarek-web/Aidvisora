@@ -270,7 +270,7 @@ export default function ContractReviewListPage() {
           <div className="flex items-start gap-4">
             <AiAssistantBrandIcon size={52} className="flex-shrink-0 self-center" />
             <div>
-              <h1 className="text-3xl font-black text-[color:var(--wp-text)] tracking-tight mb-1">Review smluv</h1>
+              <h1 className="text-3xl font-black text-[color:var(--wp-text)] tracking-tight mb-1">AI Review smluv</h1>
               <p className="text-sm font-medium text-[color:var(--wp-text-secondary)] max-w-xl leading-relaxed">
                 Seznam nahraných a zpracovaných smluv. Otevřete položku pro kontrolu a propsání do Aidvisory.
               </p>

@@ -46,6 +46,7 @@ import {
   useToast,
 } from "@/app/shared/mobile-ui/primitives";
 import type { DeviceClass } from "@/lib/ui/useDeviceClass";
+import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
 import { confidenceToPercentForUi } from "@/lib/ai/review-ui-confidence";
 import { mapApiToExtractionDocument, hasMeaningfulReviewContent } from "@/lib/ai-review/mappers";
 import { labelFieldKey } from "@/lib/ai-review/label-dictionary";
@@ -1045,7 +1046,7 @@ export function ContractsReviewScreen({
       <div className="px-4 py-3 bg-[color:var(--wp-surface-card)] border-b border-[color:var(--wp-surface-card-border)] space-y-2">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <FileSearch size={18} className="text-indigo-600" />
+            <AiAssistantBrandIcon size={22} />
             <h2 className="text-base font-black text-[color:var(--wp-text)]">AI Review smluv</h2>
             {pendingCount > 0 ? (
               <span className="text-[11px] font-black text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-lg">
