@@ -134,7 +134,8 @@ export async function rasterizePdfPageToDataUrl(
     const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
     const bytes = await fetchPdfBytes(fileUrl);
     const task = pdfjs.getDocument({ data: bytes, isEvalSupported: false });
-    doc = (await task.promise) as unknown as PdfJsDocumentLike;
+    const loaded: unknown = await task.promise;
+    doc = loaded as PdfJsDocumentLike;
 
     if (pageNumber > doc.numPages) {
       return null;
