@@ -6,9 +6,11 @@
  * uživatelskou session; slouží ke komunikaci nad rámec routing-level blockování.
  */
 
+import type { ReactElement } from "react";
+
 import { getKillSwitch } from "@/lib/ops/kill-switch";
 
-export async function MaintenanceBanner(): Promise<JSX.Element | null> {
+export async function MaintenanceBanner(): Promise<ReactElement | null> {
   const active = await getKillSwitch("MAINTENANCE_MODE", false);
   if (!active) return null;
 
