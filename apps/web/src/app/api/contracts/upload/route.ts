@@ -171,11 +171,22 @@ export async function POST(request: Request) {
       const pgCode = (dbErr as { code?: string })?.code;
       console.error("[contracts/upload] createContractReview failed", { message: pgMsg, code: pgCode });
       await admin.storage.from("documents").remove([storagePath]).catch(() => {});
+
+      let error =
+        "Nepodařilo se uložit smlouvu do databáze. Zkontroluj migrace (tabulka contract_upload_reviews) a DATABASE_URL.";
+      if (pgCode === "42P01") {
+        error =
+          "V databázi z DATABASE_URL chybí tabulka contract_upload_reviews (typicky čerstvá / nepřepnutá DB). Spusť na ní migrace z repa: pnpm db:migrate (env DATABASE_URL musí ukazovat na stejnou instanci jako aplikace).";
+      } else if (pgCode === "28000" || pgCode === "28P01") {
+        error =
+          "Připojení k Postgresu selhalo (oprávnění nebo heslo). Zkontroluj DATABASE_URL (uživatel, heslo, host).";
+      }
+
       return NextResponse.json(
         {
-          error:
-            "Nepodařilo se uložit smlouvu do databáze. Zkontroluj migrace (tabulka contract_upload_reviews) a DATABASE_URL.",
+          error,
           code: "DB_INSERT_REVIEW",
+          postgresCode: pgCode ?? null,
         },
         { status: 500 }
       );

@@ -113,9 +113,19 @@ export function AddressAutocomplete({
   const [apiBlocked, setApiBlocked] = useState(false);
   const id = useId();
   const apiKey =
-    typeof process !== "undefined" && process.env?.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim() ||
+    (typeof process !== "undefined" ? process.env?.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim() : "") ||
     process.env?.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY?.trim() ||
     "";
+
+  // Legacy Places Autocomplete si háže s plně řízeným <input value={…}> — React přepisuje DOM
+  // a návrhy se nezobrazí / mizí. Synchronizujeme prop `value` jen do .value na prvku.
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    if (el.value !== value) {
+      el.value = value;
+    }
+  }, [value]);
 
   useEffect(() => {
     if (!apiKey || !inputRef.current) {
@@ -145,7 +155,7 @@ export function AddressAutocomplete({
 
         const autocomplete = new g.maps.places.Autocomplete(inputRef.current, {
           types: ["address"],
-          fields: ["address_components"],
+          fields: ["address_components", "formatted_address"],
         });
         autocomplete.addListener("place_changed", () => {
           const place = autocomplete.getPlace();
@@ -159,7 +169,8 @@ export function AddressAutocomplete({
         setReady(true);
         setApiBlocked(false);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error("[AddressAutocomplete] Google Maps script failed", err);
         setReady(false);
       });
 
@@ -188,7 +199,7 @@ export function AddressAutocomplete({
         ref={inputRef}
         id={id}
         type="text"
-        value={value}
+        defaultValue={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={effectivePlaceholder}
         className={`${wizardInputWithIconClass} ${className}`.trim()}

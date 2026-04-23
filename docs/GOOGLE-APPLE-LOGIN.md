@@ -31,6 +31,19 @@ Tento dokument řeší **OAuth konfiguraci a návrat přihlášení**. Pokud se 
 4. **Client Secret (for OAuth):** vlož **Client Secret** z Google.
 5. **Save**.
 
+### OAuth consent screen — z „Testing“ do ostrého režimu
+
+Když je v Google Cloud **APIs & Services → OAuth consent screen** stav **Testing**, může se přihlásit jen **zkušební uživatel** (sekce *Test users*, max. cca 100 účtů). Ostatní uvidí chybu typu *access denied* nebo *app not verified*.
+
+**Postup na produkci:**
+
+1. **OAuth consent screen** → **Publishing status** → **Publish app** (přepnutí do **In production**).
+2. Pokud Google vyžaduje **ověření** (verification): dodrž průvodce v konzoli (zásady ochrany osobních údajů, doména, případně video). U základního přihlášení (email + profil) často stačí publikovat bez dlouhého review; u citlivých scopes může být kontrola delší.
+3. **Authorized domains** musí obsahovat domény, ze kterých běží app (např. `aidvisora.cz`, `vercel.app` podle reality).
+4. Ověř, že **OAuth client (Web)** má v **Authorized JavaScript origins** a **Authorized redirect URIs** produkční URL + Supabase callback (viz výše).
+
+**Maps / našeptávač adres** je **jiný** klíč než OAuth: proměnná `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` a nastavení v Google Cloud → viz komentář u této proměnné v `apps/web/.env.example`.
+
 ### V aplikaci
 
 Přihlášení přes Google už v kódu je (tlačítko „Přihlásit se přes Google“). Po uložení v Supabase bude fungovat.
@@ -80,6 +93,8 @@ Před ostrým náborem ověř v Supabase a Apple Developeru:
 
 | Kontrola | Kde |
 |----------|-----|
+| **OAuth consent** je **In production** (ne jen Testing + test users), pokud má přihlašovat běžné uživatele | Google Cloud → OAuth consent screen → Publishing status |
+| **Maps API key** (`NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`): billing, zapnutá API, referrer = produkční domény | Google Cloud → Credentials + APIs; Vercel env |
 | **Redirect URLs** obsahují produkční URL aplikace (a případně `http://localhost:3000/**` pro lokál) | Supabase → Authentication → URL Configuration |
 | **Services ID** v Apple = stejný řetězec jako v Supabase **Client IDs** | Apple Identifiers → Services IDs vs. Supabase → Apple |
 | U Services ID: **Return URLs** = přesná **Callback URL** z Supabase (Apple provider) | Apple → Sign in with Apple → Web |

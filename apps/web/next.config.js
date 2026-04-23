@@ -47,12 +47,14 @@ const nextConfig = {
         "https://js.stripe.com " +
         "https://player.vimeo.com " +
         "https://www.youtube.com " +
-        "https://*.vercel-insights.com",
+        "https://*.vercel-insights.com " +
+        // Google Maps JS + Places (AddressAutocomplete na klientu)
+        "https://maps.googleapis.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' data: https://fonts.gstatic.com",
-      "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https://*.public.blob.vercel-storage.com https://lh3.googleusercontent.com https://i.vimeocdn.com https://vumbnail.com https://i.ytimg.com",
+      "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https://*.public.blob.vercel-storage.com https://lh3.googleusercontent.com https://i.vimeocdn.com https://vumbnail.com https://i.ytimg.com https://maps.gstatic.com",
       "media-src 'self' blob: https://*.supabase.co https://player.vimeo.com",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://api.resend.com https://*.sentry.io https://*.ingest.sentry.io https://*.ingest.de.sentry.io https://*.ingest.us.sentry.io https://api.openai.com https://api.anthropic.com https://*.vercel-insights.com",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://api.resend.com https://*.sentry.io https://*.ingest.sentry.io https://*.ingest.de.sentry.io https://*.ingest.us.sentry.io https://api.openai.com https://api.anthropic.com https://*.vercel-insights.com https://maps.googleapis.com https://*.googleapis.com https://*.gstatic.com",
       "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://player.vimeo.com https://www.youtube.com",
       "worker-src 'self' blob:",
       "object-src 'none'",
