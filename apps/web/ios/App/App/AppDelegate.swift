@@ -19,12 +19,17 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     let shareStore = ShareStore.store
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Unified FCM push architecture (2026-04-23). FirebaseApp.configure()
-        // must run before any @capacitor-firebase/messaging API. It reads
-        // GoogleService-Info.plist from the app bundle. If the plist is
-        // missing, this call throws at launch — fail-fast on purpose.
-        if FirebaseApp.app() == nil {
-            FirebaseApp.configure()
+        // FCM: configure only when GoogleService-Info.plist is copied into the
+        // app target (see docs/runbook-push.md). The file is gitignored; without
+        // it, FirebaseApp.configure() aborts the process → black screen at launch.
+        if Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") != nil {
+            if FirebaseApp.app() == nil {
+                FirebaseApp.configure()
+            }
+        } else {
+            NSLog(
+                "[Aidvisora] GoogleService-Info.plist missing from bundle — Firebase not configured; push disabled. Add plist to App target Copy Bundle Resources (runbook-push.md)."
+            )
         }
         return true
     }
