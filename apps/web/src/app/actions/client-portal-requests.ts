@@ -651,11 +651,11 @@ export async function setAdvisorPortalRequestHandling(
       .where(and(eq(opportunities.tenantId, auth.tenantId), eq(opportunities.id, opportunityId)));
 
     /**
-     * Když poradce označí portálový požadavek jako vyřešený, nemá smysl držet
-     * "unread" odznak na zvonku. Auto-read příslušné advisor_notifications řádky, aby
-     * se badge vyčistil. Pro ostatní stavy (waiting, null) necháváme status být.
+     * Když není stav „Čeká se“ (vyřešeno / jiný konečný štítek), nemá smysl držet
+     * "unread" na zvonku. Pozn.: nepoužívejte `handling === "x" || handling === "y"`
+     * — TypeScript by po první větě zúžil typ a druhé srovnání by hlásilo chybu.
      */
-    if (handling === "resolved") {
+    if (handling != null && handling !== "waiting") {
       try {
         await tx
           .update(advisorNotifications)
