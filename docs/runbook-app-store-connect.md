@@ -258,7 +258,7 @@ Aidvisora je hybridní aplikace postavená nad platformou Capacitor. Vlastní ob
 
 NATIVNÍ FUNKCE:
 - Kamera a Document Scanner (autocrop, export do PDF).
-- Push notifikace přes APNs (upozornění na zprávy od klientů).
+- Push notifikace přes Firebase Cloud Messaging s APNs jako transportem (upozornění na zprávy od klientů).
 - Share Extension (přijetí PDF nebo obrázku z jiné aplikace).
 - Deep linky s custom schematem aidvisora:// pro návrat z OAuth (Google, Apple).
 - Biometrické přihlášení (Face ID / Touch ID) je připraveno na v1.1.

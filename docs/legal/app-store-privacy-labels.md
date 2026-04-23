@@ -94,7 +94,7 @@ důkaz pro DPA due diligence a pro ověření, že PrivacyInfo.xcprivacy pokrýv
 | `@supabase/supabase-js` | E-mail, UserID, JWT | Auth, data read/write | Contact Info, Identifiers |
 | `@supabase/storage-js` | Soubory (PDF, obrázky) | Ukládání dokumentů | User Content |
 | `@sentry/browser`, `@sentry/capacitor` | Stack traces, breadcrumbs, perf spans, device info | Crash + performance monitoring | Diagnostics |
-| `@capacitor/push-notifications` + FCM | APNs/FCM token | Push delivery | Identifiers (Device ID) |
+| `@capacitor-firebase/messaging` (FCM, iOS i Android v1.1) | FCM registration token | Push delivery (APNs je bezstavový transport pod FCM) | Identifiers (Device ID) |
 | `@capacitor/camera` | Photos (dočasně v paměti před uploadem) | Sken dokumentů | User Content |
 | **Anthropic API** *(server-side)* | Obsah PDF / zpráva | AI review dokumentů | — *(Server-side, ne SDK v appce)* |
 | **OpenAI API** *(server-side)* | Obsah dokumentu při fallback AI run | AI review | — |

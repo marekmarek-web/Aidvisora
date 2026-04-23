@@ -22,7 +22,8 @@ export type AutomationTriggerType =
   | "proposal_accepted"
   | "contract_activated"
   | "analysis_completed"
-  | "referral_ask_after_proposal";
+  | "referral_ask_after_proposal"
+  | "referral_ask_after_anniversary";
 
 export type AutomationRuleRow = {
   id: string;

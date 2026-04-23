@@ -1,6 +1,7 @@
 import UIKit
 import Capacitor
 import SendIntentPlugin
+import FirebaseCore
 
 /*
  Konzolový šum na iOS / simulátoru (často nejde „opravit“ v aplikaci):
@@ -18,6 +19,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     let shareStore = ShareStore.store
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // Unified FCM push architecture (2026-04-23). FirebaseApp.configure()
+        // must run before any @capacitor-firebase/messaging API. It reads
+        // GoogleService-Info.plist from the app bundle. If the plist is
+        // missing, this call throws at launch — fail-fast on purpose.
+        if FirebaseApp.app() == nil {
+            FirebaseApp.configure()
+        }
         return true
     }
 

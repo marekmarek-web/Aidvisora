@@ -20,6 +20,18 @@ import {
   isValidSegmentFilter,
   type SegmentFilter,
 } from "@/lib/email/segment-filter";
+import {
+  filterContactsWithConsent,
+  isConsentEnforcementEnabled,
+  PURPOSE_MARKETING_EMAILS,
+} from "@/lib/compliance/consent-check";
+import { createIncident } from "@/lib/security/incident-service";
+
+/**
+ * Práh, od kterého považujeme kampaň za "mass send" a vytváříme audit
+ * záznam v `incident_logs` (severity = low, jen jako stopa pro compliance).
+ */
+const MASS_SEND_THRESHOLD = 50;
 
 function tagFilterSql(tags: string[]) {
   if (tags.length === 0) return sql`true`;
@@ -100,7 +112,21 @@ export async function enqueueCampaignForSending(
         ),
       );
 
-    if (audience.length === 0) {
+    // GDPR: kontakty bez platného consentu na marketing_emails filtrujeme pryč
+    // (fail-closed). Kill-switch `EMAIL_CONSENT_ENFORCEMENT=false` pro legacy fáze.
+    let consentFilteredAudience = audience;
+    let consentSkipped = 0;
+    if (isConsentEnforcementEnabled() && audience.length > 0) {
+      const consented = await filterContactsWithConsent(tx, {
+        tenantId: auth.tenantId,
+        contactIds: audience.map((c) => c.id),
+        purposeName: PURPOSE_MARKETING_EMAILS,
+      });
+      consentSkipped = audience.length - consented.size;
+      consentFilteredAudience = audience.filter((c) => consented.has(c.id));
+    }
+
+    if (consentFilteredAudience.length === 0) {
       await tx
         .update(emailCampaigns)
         .set({
@@ -110,11 +136,16 @@ export async function enqueueCampaignForSending(
           updatedAt: new Date(),
         })
         .where(eq(emailCampaigns.id, params.campaignId));
+      if (consentSkipped > 0) {
+        console.info(
+          `[queue-enqueue] campaign=${params.campaignId} skipped ${consentSkipped} contacts without marketing_emails consent`,
+        );
+      }
       return { recipientCount: 0, scheduledFor };
     }
 
     // Create recipient rows (with tracking tokens)
-    const recipientValues = audience.map((c) => ({
+    const recipientValues = consentFilteredAudience.map((c) => ({
       tenantId: auth.tenantId,
       campaignId: params.campaignId,
       contactId: c.id,
@@ -132,7 +163,7 @@ export async function enqueueCampaignForSending(
       });
 
     // Enqueue send jobs
-    const contactMap = new Map(audience.map((c) => [c.id, c]));
+    const contactMap = new Map(consentFilteredAudience.map((c) => [c.id, c]));
     const queueValues = recipients
       .map((r) => {
         const c = contactMap.get(r.contactId);
@@ -179,5 +210,30 @@ export async function enqueueCampaignForSending(
       .where(eq(emailCampaigns.id, params.campaignId));
 
     return { recipientCount: recipients.length, scheduledFor };
+  }).then(async (result) => {
+    // B1.3: mass-send audit. Hranice 50 příjemců — vytvoříme incident log
+    // se severity low jako pouhou compliance stopu. Pokud log selže, ticho
+    // — nechceme mass-send failnout kvůli pomocnému audit zápisu.
+    if (result.recipientCount >= MASS_SEND_THRESHOLD) {
+      try {
+        await createIncident({
+          tenantId: auth.tenantId,
+          reportedBy: auth.userId,
+          severity: "low",
+          title: "Mass email send queued",
+          description: `Email campaign ${params.campaignId} queued to ${result.recipientCount} recipients.`,
+          meta: {
+            campaignId: params.campaignId,
+            recipientCount: result.recipientCount,
+            segmentId: params.segmentId ?? null,
+            scheduledFor: result.scheduledFor.toISOString(),
+            source: "queue-enqueue",
+          },
+        });
+      } catch (e) {
+        console.warn("[queue-enqueue] mass-send audit log failed (non-blocking)", e);
+      }
+    }
+    return result;
   });
 }

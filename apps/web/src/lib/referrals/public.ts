@@ -4,11 +4,17 @@ import {
   referralRequests,
   contacts,
   tenants,
+  emailCampaigns,
+  emailCampaignRecipients,
+  emailSendQueue,
+  emailTemplates,
   eq,
   and,
+  isNull,
   sql,
 } from "db";
 import { dbService, withServiceTenantContext } from "@/lib/db/service-db";
+import { mintTrackingToken } from "@/lib/email/queue-enqueue";
 
 export type ReferralTokenContext = {
   tenantId: string;

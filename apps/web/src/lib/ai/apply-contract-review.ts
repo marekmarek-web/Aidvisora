@@ -31,6 +31,7 @@ import {
   type CanonicalPaymentPayload,
 } from "./payment-field-contract";
 import { capturePublishGuardFailure } from "@/lib/observability/portal-sentry";
+import { evaluateVisionGatePublishBlock } from "./apply-vision-gate-publish-block";
 import {
   enforceContactPayload,
   enforceContractPayload,
@@ -1014,6 +1015,21 @@ export async function applyContractReview(
       reviewId,
       reason: `publishHints warning (non-blocking): sensitiveAttachmentOnly=${publishHintsForGate.sensitiveAttachmentOnly}, contractPublishable=${publishHintsForGate.contractPublishable}`,
     });
+  }
+
+  const gatePublishCheck = evaluateVisionGatePublishBlock({
+    extractionTrace: row.extractionTrace as Record<string, unknown> | null | undefined,
+    enforced: process.env.AI_REVIEW_VISION_FALLBACK_GATE_ENFORCE === "true",
+  });
+  if (gatePublishCheck.signal) {
+    capturePublishGuardFailure({
+      tenantId,
+      reviewId,
+      reason: gatePublishCheck.signal,
+    });
+  }
+  if (gatePublishCheck.blocked) {
+    return { ok: false, error: gatePublishCheck.error };
   }
 
   const draftActions = row.draftActions as Array<{

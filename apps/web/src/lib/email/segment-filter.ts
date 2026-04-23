@@ -7,13 +7,46 @@ import { sql, type SQL } from "drizzle-orm";
  */
 export type SegmentOperator = "AND" | "OR";
 
+/** Hodnoty pro `contracts.segment` — viz `packages/db/src/schema/contracts.ts`. */
+export const CONTRACT_SEGMENT_VALUES = [
+  "ZP",
+  "MAJ",
+  "ODP",
+  "ODP_ZAM",
+  "AUTO_PR",
+  "AUTO_HAV",
+  "CEST",
+  "INV",
+  "DIP",
+  "DPS",
+  "HYPO",
+  "UVER",
+  "FIRMA_POJ",
+] as const;
+export type ContractSegmentValue = (typeof CONTRACT_SEGMENT_VALUES)[number];
+
+/** Common lifecycle stages — plynou z onboarding / CRM konvencí. Free text v DB. */
+export const LIFECYCLE_STAGE_VALUES = [
+  "lead",
+  "prospect",
+  "client",
+  "past_client",
+  "vip",
+] as const;
+export type LifecycleStageValue = (typeof LIFECYCLE_STAGE_VALUES)[number];
+
 export type SegmentRule =
   | { field: "tag"; op: "includes" | "excludes"; value: string }
   | { field: "city"; op: "is" | "isNot"; value: string }
   | { field: "birthMonth"; op: "is"; value: number /* 1..12 */ }
   | { field: "createdWithinDays"; op: "lte" | "gte"; value: number }
   | { field: "hasActiveContract"; op: "is"; value: boolean }
-  | { field: "hasEmail"; op: "is"; value: boolean };
+  | { field: "hasEmail"; op: "is"; value: boolean }
+  // B2.2 — nová pole
+  | { field: "lifecycleStage"; op: "is" | "isNot"; value: string }
+  | { field: "contractSegment"; op: "has" | "hasNot"; value: string }
+  | { field: "ageRange"; op: "between"; value: { min: number; max: number } }
+  | { field: "hasOpenOpportunity"; op: "is"; value: boolean };
 
 export type SegmentFilter = {
   operator: SegmentOperator;
@@ -93,6 +126,41 @@ function ruleToSql(rule: SegmentRule): SQL | null {
       const hasEmail = sql`contacts.email IS NOT NULL AND trim(contacts.email) <> ''`;
       return rule.value ? hasEmail : sql`NOT (${hasEmail})`;
     }
+    case "lifecycleStage": {
+      // Hodnoty jsou v DB free-text, porovnáváme case-insensitive.
+      return rule.op === "is"
+        ? sql`lower(coalesce(contacts.lifecycle_stage, '')) = lower(${rule.value})`
+        : sql`lower(coalesce(contacts.lifecycle_stage, '')) <> lower(${rule.value})`;
+    }
+    case "contractSegment": {
+      // „Má alespoň jednu neaktivní smlouvu v daném segmentu."
+      // Povolujeme aktivní i pending, pouze archived vynecháme.
+      if (!CONTRACT_SEGMENT_VALUES.includes(rule.value as ContractSegmentValue)) {
+        return null;
+      }
+      const exists = sql`EXISTS (
+        SELECT 1 FROM contracts ct
+        WHERE ct.client_id = contacts.id
+          AND ct.tenant_id = contacts.tenant_id
+          AND ct.archived_at IS NULL
+          AND ct.segment = ${rule.value}
+      )`;
+      return rule.op === "has" ? exists : sql`NOT (${exists})`;
+    }
+    case "ageRange": {
+      const min = Math.max(0, Math.min(120, Math.floor(Number(rule.value?.min) || 0)));
+      const max = Math.max(min, Math.min(120, Math.floor(Number(rule.value?.max) || 120)));
+      return sql`EXTRACT(YEAR FROM age(contacts.birth_date))::int BETWEEN ${min} AND ${max}`;
+    }
+    case "hasOpenOpportunity": {
+      const exists = sql`EXISTS (
+        SELECT 1 FROM opportunities o
+        WHERE o.contact_id = contacts.id
+          AND o.tenant_id = contacts.tenant_id
+          AND o.closed_at IS NULL
+      )`;
+      return rule.value ? exists : sql`NOT (${exists})`;
+    }
     default:
       return null;
   }
@@ -103,7 +171,7 @@ export const SEGMENT_FIELDS: Array<{
   field: SegmentRule["field"];
   label: string;
   ops: Array<{ id: string; label: string }>;
-  valueType: "text" | "number" | "month" | "boolean";
+  valueType: "text" | "number" | "month" | "boolean" | "ageRange" | "lifecycle" | "contractSegment";
 }> = [
   {
     field: "tag",
@@ -147,6 +215,36 @@ export const SEGMENT_FIELDS: Array<{
   {
     field: "hasEmail",
     label: "Má e-mail",
+    ops: [{ id: "is", label: "je" }],
+    valueType: "boolean",
+  },
+  {
+    field: "lifecycleStage",
+    label: "Fáze vztahu",
+    ops: [
+      { id: "is", label: "je" },
+      { id: "isNot", label: "není" },
+    ],
+    valueType: "lifecycle",
+  },
+  {
+    field: "contractSegment",
+    label: "Má smlouvu v segmentu",
+    ops: [
+      { id: "has", label: "má" },
+      { id: "hasNot", label: "nemá" },
+    ],
+    valueType: "contractSegment",
+  },
+  {
+    field: "ageRange",
+    label: "Věk (roky)",
+    ops: [{ id: "between", label: "mezi" }],
+    valueType: "ageRange",
+  },
+  {
+    field: "hasOpenOpportunity",
+    label: "Má otevřenou příležitost",
     ops: [{ id: "is", label: "je" }],
     valueType: "boolean",
   },

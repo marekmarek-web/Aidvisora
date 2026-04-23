@@ -20,8 +20,8 @@
 | 5 | **Sentry (Functional Software, Inc.)** | Error tracking | EU region (musí být nastaven v projektu!) | ❌ **missing** | [sentry.io/legal/dpa](https://sentry.io/legal/dpa) — u Business planu přes dashboard | Infra owner |
 | 6 | **OpenAI, L.L.C.** | AI (klasifikace, kopilot, shrnutí) | USA | ❌ **missing** | [openai.com/policies/data-processing-addendum](https://openai.com/policies/data-processing-addendum) — **vyžaduje Enterprise / API business account** + aktivace zero data retention (ZDR) pro API | Legal + AI owner |
 | 7 | **Anthropic PBC** | AI Review (Claude) | USA | ❌ **missing** | [anthropic.com/legal/dpa](https://anthropic.com/legal/dpa) — vyžaduje business account; data by default do tréninku **nejdou** pro API customers | Legal + AI owner |
-| 8 | **Google LLC (Firebase FCM)** | Push notifikace | Global | 🟡 click-through | [firebase.google.com/terms/data-processing-terms](https://firebase.google.com/terms/data-processing-terms) — implicit; push payload projde Google | Infra + mobile owner |
-| 9 | **Apple Inc. (APNs)** | Push notifikace iOS | Global | N/A | APNs ToS v rámci Apple Developer Program; nepovažuje se za subprocesor ve striktním smyslu (bezstavové push routing) | Mobile owner |
+| 8 | **Google LLC (Firebase Cloud Messaging)** | Push notifikace **iOS i Android** (unified FCM, 2026-04-23) | Global | 🟡 click-through | [firebase.google.com/terms/data-processing-terms](https://firebase.google.com/terms/data-processing-terms) — implicit; push payload + FCM registration token projdou Google pro obě platformy | Infra + mobile owner |
+| 9 | **Apple Inc. (APNs)** | Bezstavový push transport mezi Google/FCM a iOS zařízením | Global | N/A | APNs ToS v rámci Apple Developer Program; APNs nekoukne do payloadu jako subprocesor, jen ho doručí. Backend Aidvisora APNs přímo nekontaktuje — odesílá přes FCM, který relayuje. | Mobile owner |
 
 ## Akce před first paid user
 

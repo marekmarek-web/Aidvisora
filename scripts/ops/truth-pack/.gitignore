@@ -1,0 +1,4 @@
+.out/
+
+# Local pre-filled KPI runs (obsahují tenant/user UUID — necommitovat)
+01-kpi.local-*.sql

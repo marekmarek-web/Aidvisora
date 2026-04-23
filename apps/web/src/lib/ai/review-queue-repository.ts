@@ -272,7 +272,62 @@ export type ExtractionTrace = {
   fullVisionPagesUsed?: number;
   /** Field keys merged from runFullDocumentVisionExtraction. */
   fullVisionMergedFieldKeys?: string[];
-};
+  /**
+   * Wave 1.3 vision-fallback gate decision — permissive telemetry only. Serialized
+   * for review-queue diagnostics so the 24–48 h observation window can mine
+   * production traces. Shape intentionally loose (`Record<string, unknown>`) to
+   * avoid a cross-module import from `lib/ai` into `lib/ai` types here.
+   */
+    visionFallbackGate?: {
+      runRescue: boolean;
+      runFullVision: boolean;
+      reasons: string[];
+      hardBlockPublish: boolean;
+      publishBlockReasons: string[];
+      recoveredRatio: number;
+      criticalFieldsFromVision: string[];
+      tenantId?: string;
+    };
+    /**
+     * Wave 3 shadow-pass diagnostic. Populated only when
+     * `AI_REVIEW_VISION_PRIMARY_FOR_SCAN=true` and the input is a scan. Never
+     * consumed by the main extraction flow in this PR — used for 24–48 h
+     * diff analysis before flipping primacy.
+     */
+    visionPrimaryShadow?: {
+      ran: boolean;
+      skippedReason?: string;
+      fieldCount?: number;
+      fieldKeys?: string[];
+      /**
+       * Compact key → {value (truncated to 60 chars), confidence} snapshot.
+       * Intentionally lossy (no evidence snippets) to keep row size bounded
+       * for the 24–48 h observation window. Enables offline diff against the
+       * primary envelope's `extractedFields` without storing full field blobs.
+       */
+      fieldValues?: Record<string, { value: string | null; confidence: number | null }>;
+      pagesUsed?: number;
+      durationMs?: number;
+      errorCode?: string | null;
+    };
+    /**
+     * Wave 4.B — detected document boundaries when boundary detection is
+     * enabled. Populated only on scan PDFs ≥ 3 pages with the flag on.
+     */
+    visionBoundaryDetection?: {
+      ran: boolean;
+      skippedReason?: string;
+      boundaries?: Array<{
+        startPage: number;
+        endPage: number;
+        documentType: string;
+        confidence: number | null;
+      }>;
+      pagesUsed?: number;
+      durationMs?: number;
+      errorCode?: string | null;
+    };
+  };
 
 /** Validation warning item. */
 export type ValidationWarning = {

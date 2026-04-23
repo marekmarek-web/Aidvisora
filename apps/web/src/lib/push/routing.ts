@@ -1,4 +1,12 @@
-import type { PushNotificationSchema } from "@capacitor/push-notifications";
+/**
+ * Structural shape compatible with both legacy `@capacitor/push-notifications`
+ * `PushNotificationSchema` and `@capacitor-firebase/messaging` notification
+ * payloads. We only ever read `data`, so we narrow to that here and avoid
+ * coupling this file to a specific plugin package.
+ */
+export type PushRoutingNotification = {
+  data?: Record<string, unknown> | null;
+};
 
 const FALLBACK_ROUTE = "/portal/today";
 
@@ -12,7 +20,7 @@ function pickId(data: NotificationData, keys: string[]): string | null {
   return null;
 }
 
-export function mapPushNotificationToRoute(notification: PushNotificationSchema): string {
+export function mapPushNotificationToRoute(notification: PushRoutingNotification): string {
   const data = (notification.data ?? {}) as NotificationData;
   const type = typeof data.type === "string" ? data.type : "";
 

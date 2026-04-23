@@ -87,7 +87,7 @@
 - [ ] **SL-031** [P0] App Review: demo účty, Review Notes, credentials v 1Password. → [docs/ios/REVIEW-NOTES.md](ios/REVIEW-NOTES.md), [docs/ios/SUBMISSION-CHECKLIST.md](ios/SUBMISSION-CHECKLIST.md)
 - [ ] **SL-032** [P0] Apple Sign-In kompletní (P8, Key ID, Team ID, Supabase provider). → [docs/runbook-apple-signin.md](runbook-apple-signin.md)
 - [ ] **SL-033** [P0] Smoke SIWA na fyzickém iPhonu před TestFlight submit. → [docs/runbook-apple-signin.md](runbook-apple-signin.md) §C
-- [ ] **SL-034** [P0] APNs P8 nahraný; env na Vercelu/push backendu (`APNS_*`). → [docs/runbook-push.md](runbook-push.md) §2, [docs/release-v1-decisions.md](release-v1-decisions.md) §1
+- [ ] **SL-034** [P0] APNs P8 nahrán **do Firebase console** (Project Settings → Cloud Messaging → Apple app configuration). `FCM_SERVICE_ACCOUNT_JSON` na Vercel prod env. `GoogleService-Info.plist` v iOS bundle. Staré `APNS_*` env v produkci NEJSOU. Runtime smoke [docs/ios/push-smoke-checklist.md](ios/push-smoke-checklist.md) prošel. → [docs/runbook-push.md](runbook-push.md) §2–§5, [docs/release-v1-decisions.md](release-v1-decisions.md) §1
 
 ## A.10 Google Play / Android (v1.0 scope)
 

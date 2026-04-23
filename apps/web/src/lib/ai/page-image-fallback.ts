@@ -20,7 +20,12 @@ import { rasterizePdfPageToDataUrl } from "./pdf-page-rasterize";
 import {
   createResponseStructuredWithImage,
   createResponseStructuredWithImages,
+  type OpenAICallRoutingOptions,
 } from "@/lib/openai";
+import {
+  buildUnifiedExtractionCall,
+  isUnifiedInputBuilderEnabled,
+} from "./unified-multimodal-input";
 
 /** Cap applied to any confidence returned by the rescue pass. Even a model-reported 0.99 is not trusted here. */
 const RECOVERED_CONFIDENCE_CAP = 0.7;
@@ -44,6 +49,26 @@ export type PageImageFallbackDeps = {
 const defaultDeps: PageImageFallbackDeps = {
   rasterizePage: rasterizePdfPageToDataUrl,
   callModel: async (imageUrl, textPrompt, jsonSchema, options) => {
+    // Wave 2.B: optionally route through the unified multimodal builder so we
+    // have a single provider-call site for Wave 3 (vision-primary) + Wave 4
+    // (AML/FATCA extract) to target. Default OFF — identical behavior to the
+    // legacy direct call. Flag: `AI_REVIEW_UNIFIED_INPUT_BUILDER=true`.
+    if (isUnifiedInputBuilderEnabled()) {
+      const unified = await buildUnifiedExtractionCall<unknown>({
+        mode: "single_page_rescue",
+        prompt: textPrompt,
+        routing: (options?.routing as OpenAICallRoutingOptions) ?? { category: "ai_review" },
+        schemaName: options?.schemaName,
+        schema: jsonSchema,
+        imageUrl,
+      });
+      if (unified.error) {
+        // Preserve legacy throw-semantics so the per-field `failedAttempts`
+        // counter keeps its meaning.
+        throw new Error(`${unified.error.code}: ${unified.error.message}`);
+      }
+      return { parsed: unified.parsed as never, text: unified.rawText };
+    }
     const res = await createResponseStructuredWithImage<unknown>(
       imageUrl,
       textPrompt,
@@ -470,14 +495,32 @@ export async function runFullDocumentVisionExtraction(
   const prompt = buildFullVisionPrompt(documentType, requiredKeys);
   let parsed: { fields?: Record<string, { value?: unknown; confidence?: number; evidenceSnippet?: string }> } | null = null;
   try {
-    const res = await createResponseStructuredWithImages<{
-      fields?: Record<string, { value?: unknown; confidence?: number; evidenceSnippet?: string }>;
-    }>(pageUrls, prompt, FULL_VISION_JSON_SCHEMA, {
-      schemaName: "full_document_vision_extraction",
-      routing: { category: "ai_review" },
-      maxImages: Math.min(pageUrls.length, 5),
-    });
-    parsed = res.parsed ?? null;
+    if (isUnifiedInputBuilderEnabled()) {
+      const unified = await buildUnifiedExtractionCall<{
+        fields?: Record<string, { value?: unknown; confidence?: number; evidenceSnippet?: string }>;
+      }>({
+        mode: "multi_page_vision",
+        prompt,
+        routing: { category: "ai_review" } as OpenAICallRoutingOptions,
+        schemaName: "full_document_vision_extraction",
+        schema: FULL_VISION_JSON_SCHEMA,
+        pageUrls,
+        maxImages: Math.min(pageUrls.length, 5),
+      });
+      if (unified.error) {
+        throw new Error(`${unified.error.code}: ${unified.error.message}`);
+      }
+      parsed = unified.parsed ?? null;
+    } else {
+      const res = await createResponseStructuredWithImages<{
+        fields?: Record<string, { value?: unknown; confidence?: number; evidenceSnippet?: string }>;
+      }>(pageUrls, prompt, FULL_VISION_JSON_SCHEMA, {
+        schemaName: "full_document_vision_extraction",
+        routing: { category: "ai_review" },
+        maxImages: Math.min(pageUrls.length, 5),
+      });
+      parsed = res.parsed ?? null;
+    }
   } catch (e) {
     console.warn("[full-vision-extraction] model call failed", {
       documentType,

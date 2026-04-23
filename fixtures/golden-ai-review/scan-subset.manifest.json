@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "description": "Scan-only subset of the AI Review golden dataset. Each entry pins a scan-type failure mode + expected recovery envelope. Consumed by apps/web/src/lib/ai/__tests__/golden-scan-subset.eval.test.ts and by the upcoming vision-fallback-gate regression runs. Binary PDFs live next to the main manifest (`Test AI/…`) and are typically NOT git-tracked.",
+  "consumers": [
+    "apps/web/src/lib/ai/__tests__/golden-scan-subset.eval.test.ts",
+    "docs/image-intake-phase12-scan-closeout-wave1.md"
+  ],
+  "expectationFilesDir": "fixtures/golden-ai-review/scan-expectations",
+  "liveEvalEnvFlag": "GOLDEN_SCAN_EVAL",
+  "notes": [
+    "`status: live` = expectation JSON exists + fixture file present + live pipeline expected to run.",
+    "`status: pending_fixture` = anchor listed for roadmap alignment, but fixture PDF is NOT yet in `Test AI/`. Live eval skips these with a warning.",
+    "Never add a new live entry without shipping its expectation file in scan-expectations/."
+  ],
+  "entries": [
+    {
+      "id": "S01",
+      "anchor": "Test AI/Komisionářská smlouva scan.pdf",
+      "failureMode": "bundle_mixed_contract_aml_dotaznik",
+      "expectationFile": "S01.json",
+      "status": "live",
+      "maxLatencyMs": 25000,
+      "corpusNote": "Primary scan anchor case. Scan PDF with garbled text layer; bundle includes commission contract + AML/FATCA annex + health-style questionnaire. Coverage signal for vision-primary path and AML/FATCA split."
+    },
+    {
+      "id": "S02",
+      "anchor": "Test AI/IŽP - Generali (scan).pdf",
+      "failureMode": "scan_garbled_text_layer",
+      "expectationFile": "S02.json",
+      "status": "pending_fixture",
+      "maxLatencyMs": 25000,
+      "corpusNote": "Placeholder — needs a scan variant of a life insurance final contract with only a garbled text layer. Track down a real advisor scan before flipping status=live."
+    },
+    {
+      "id": "S03",
+      "anchor": "Test AI/Plachý KB DPS (scan).pdf",
+      "failureMode": "photo_skew_low_contrast",
+      "expectationFile": "S03.json",
+      "status": "pending_fixture",
+      "maxLatencyMs": 25000,
+      "corpusNote": "Placeholder for a phone-photo DPS scan with skew / low contrast. Blocks evaluation of photo-grade inputs until a real fixture is captured."
+    },
+    {
+      "id": "S04",
+      "anchor": "Test AI/DPS scan multi-page.pdf",
+      "failureMode": "pdf_form_layer_empty_scan_overlay",
+      "expectationFile": "S04.json",
+      "status": "pending_fixture",
+      "maxLatencyMs": 25000,
+      "corpusNote": "Placeholder — multi-page DPS with empty AcroForm layer + scanned overlay."
+    },
+    {
+      "id": "S05",
+      "anchor": "Test AI/ČPP DOMEX+ scan.pdf",
+      "failureMode": "rotated_page",
+      "expectationFile": "S05.json",
+      "status": "pending_fixture",
+      "maxLatencyMs": 25000,
+      "corpusNote": "Placeholder — rotated-page scan, tests rasterize + vision orientation handling."
+    }
+  ]
+}

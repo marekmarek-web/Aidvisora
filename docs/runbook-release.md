@@ -4,7 +4,7 @@ Ucelený postup od `git main` až po schválení v App Store + Google Play. Pře
 
 - [`release-v1-decisions.md`](release-v1-decisions.md) — scope v1.0.
 - [`runbook-apple-signin.md`](runbook-apple-signin.md) — Apple Sign-in aktivní v Supabase.
-- [`runbook-push.md`](runbook-push.md) — APNs P8 uploadnutý v push backendu.
+- [`runbook-push.md`](runbook-push.md) — APNs P8 uploadnutý do Firebase console, `FCM_SERVICE_ACCOUNT_JSON` ve Vercel prod env, `GoogleService-Info.plist` v iOS bundle.
 - [`runbook-signing.md`](runbook-signing.md) — Android upload keystore + iOS Development Team.
 - [`runbook-app-store-connect.md`](runbook-app-store-connect.md) — ASC record vytvořený, Privacy Labels vyplněné.
 - [`runbook-play-console.md`](runbook-play-console.md) — Play Console app vytvořená, Data Safety vyplněná.

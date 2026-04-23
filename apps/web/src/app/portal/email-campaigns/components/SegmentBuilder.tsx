@@ -2,7 +2,11 @@
 
 import { useEffect, useState, useTransition } from "react";
 import type { SegmentFilter, SegmentRule } from "@/lib/email/segment-filter";
-import { SEGMENT_FIELDS } from "@/lib/email/segment-filter";
+import {
+  CONTRACT_SEGMENT_VALUES,
+  LIFECYCLE_STAGE_VALUES,
+  SEGMENT_FIELDS,
+} from "@/lib/email/segment-filter";
 import { previewSegmentCount } from "@/app/actions/email-segments";
 
 type Props = {
@@ -139,6 +143,9 @@ function RuleRow({
     let val: unknown = "";
     if (nextDef.valueType === "boolean") val = true;
     else if (nextDef.valueType === "number" || nextDef.valueType === "month") val = 1;
+    else if (nextDef.valueType === "ageRange") val = { min: 25, max: 65 };
+    else if (nextDef.valueType === "lifecycle") val = LIFECYCLE_STAGE_VALUES[0];
+    else if (nextDef.valueType === "contractSegment") val = CONTRACT_SEGMENT_VALUES[0];
     onChange({ field: nextField, op: firstOp, value: val } as SegmentRule);
   };
 
@@ -192,8 +199,79 @@ function RuleValueInput({
 }: {
   rule: SegmentRule;
   onChange: (next: SegmentRule) => void;
-  valueType: "text" | "number" | "month" | "boolean";
+  valueType: "text" | "number" | "month" | "boolean" | "ageRange" | "lifecycle" | "contractSegment";
 }) {
+  if (valueType === "lifecycle") {
+    const labels: Record<string, string> = {
+      lead: "Lead",
+      prospect: "Zájemce",
+      client: "Klient",
+      past_client: "Bývalý klient",
+      vip: "VIP",
+    };
+    return (
+      <select
+        value={String(rule.value ?? LIFECYCLE_STAGE_VALUES[0])}
+        onChange={(e) => onChange({ ...rule, value: e.target.value } as SegmentRule)}
+        className="rounded-lg border border-[color:var(--wp-surface-card-border)] bg-white px-2 py-1 text-xs font-bold"
+      >
+        {LIFECYCLE_STAGE_VALUES.map((v) => (
+          <option key={v} value={v}>
+            {labels[v] ?? v}
+          </option>
+        ))}
+      </select>
+    );
+  }
+  if (valueType === "contractSegment") {
+    return (
+      <select
+        value={String(rule.value ?? CONTRACT_SEGMENT_VALUES[0])}
+        onChange={(e) => onChange({ ...rule, value: e.target.value } as SegmentRule)}
+        className="rounded-lg border border-[color:var(--wp-surface-card-border)] bg-white px-2 py-1 text-xs font-bold"
+      >
+        {CONTRACT_SEGMENT_VALUES.map((v) => (
+          <option key={v} value={v}>
+            {v}
+          </option>
+        ))}
+      </select>
+    );
+  }
+  if (valueType === "ageRange") {
+    const v = (rule.value ?? { min: 25, max: 65 }) as { min: number; max: number };
+    return (
+      <div className="flex items-center gap-1">
+        <input
+          type="number"
+          min={0}
+          max={120}
+          value={v.min}
+          onChange={(e) =>
+            onChange({
+              ...rule,
+              value: { min: Number(e.target.value), max: v.max },
+            } as SegmentRule)
+          }
+          className="w-16 rounded-lg border border-[color:var(--wp-surface-card-border)] bg-white px-2 py-1 text-xs font-bold"
+        />
+        <span className="text-xs text-[color:var(--wp-text-tertiary)]">–</span>
+        <input
+          type="number"
+          min={0}
+          max={120}
+          value={v.max}
+          onChange={(e) =>
+            onChange({
+              ...rule,
+              value: { min: v.min, max: Number(e.target.value) },
+            } as SegmentRule)
+          }
+          className="w-16 rounded-lg border border-[color:var(--wp-surface-card-border)] bg-white px-2 py-1 text-xs font-bold"
+        />
+      </div>
+    );
+  }
   if (valueType === "boolean") {
     return (
       <select

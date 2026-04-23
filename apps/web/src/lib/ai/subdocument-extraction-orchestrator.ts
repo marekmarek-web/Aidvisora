@@ -51,6 +51,9 @@ import {
   buildInvestmentSectionExtractionPrompt,
   INVESTMENT_SECTION_EXTRACTION_SCHEMA,
   type InvestmentSectionExtractionOutput,
+  buildAmlSectionExtractionPrompt,
+  AML_SECTION_EXTRACTION_SCHEMA,
+  type AmlSectionExtractionOutput,
 } from "./subdocument-section-prompts";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -58,6 +61,12 @@ import {
 export type SubdocumentSectionOutcome =
   | { type: "health_questionnaire"; result: HealthSectionExtractionOutput; confidence: number; fidelity?: SectionFidelitySummary | null }
   | { type: "aml_fatca_heuristic"; detected: boolean; pepFlag: boolean | null; confidence: number }
+  | {
+      type: "aml_fatca_llm_extraction";
+      result: AmlSectionExtractionOutput;
+      confidence: number;
+      fidelity?: SectionFidelitySummary | null;
+    }
   | { type: "modelation_lifecycle_patch"; previousLifecycle: string | null | undefined; patched: boolean }
   | { type: "payment_section_detected"; confidence: number }
   | { type: "investment_section"; result: InvestmentSectionExtractionOutput; confidence: number; fidelity?: SectionFidelitySummary | null }
@@ -313,6 +322,119 @@ function runAmlHeuristicDetection(
   });
 
   return { type: "aml_fatca_heuristic", detected: true, pepFlag: null, confidence };
+}
+
+/**
+ * Wave 4.A — dedicated LLM extraction for AML/FATCA sections.
+ *
+ * Flag-gated behind `AI_REVIEW_AML_FATCA_EXTRACT=true`. Default OFF — today the
+ * pipeline only emits the heuristic warning (`aml_fatca_section_detected`) and
+ * publishHints correction. When flag is on, a narrow section-only LLM pass is
+ * run with the `AML_SECTION_EXTRACTION_SCHEMA` to extract PEP / FATCA / tax
+ * residency / beneficial owners / source-of-funds data.
+ *
+ * Additive by design — the output is attached as a section outcome and
+ * serialized on the envelope for later review-queue diagnostics, but it does
+ * NOT mutate `envelope.publishHints` or `envelope.reviewWarnings` (the
+ * heuristic pass already does that). This keeps the blast radius to a single
+ * new outcome entry until Wave 4.B (split-doc) and Wave 5 (enforce) land.
+ */
+export function isAmlFatcaExtractEnabled(): boolean {
+  return process.env.AI_REVIEW_AML_FATCA_EXTRACT === "true";
+}
+
+async function runAmlFatcaSectionExtractionPass(
+  markdownText: string,
+  candidates: PacketSubdocumentCandidate[],
+  envelope: DocumentReviewEnvelope,
+  warnings: string[],
+  totalPages?: number | null,
+  pageTextMap?: Record<number, string> | null,
+  structuredResult?: AdobeStructuredResult | null,
+): Promise<SubdocumentSectionOutcome> {
+  if (!isAmlFatcaExtractEnabled()) {
+    return { type: "skipped", reason: "aml_fatca_extract_flag_off" };
+  }
+  const amlCandidates = candidatesByType(candidates, "aml_fatca_form", 0.4);
+  if (amlCandidates.length === 0) {
+    return { type: "skipped", reason: "no_aml_candidates_above_threshold" };
+  }
+
+  const sectionWindow: SectionTextWindow = sliceSectionTextForType(
+    markdownText,
+    candidates,
+    "aml_fatca_form",
+    totalPages,
+    pageTextMap,
+    structuredResult,
+  );
+  const extractionText = sectionWindow.text;
+  const confidence = Math.max(...amlCandidates.map((c) => c.confidence));
+
+  try {
+    const prompt = buildAmlSectionExtractionPrompt(extractionText);
+    const response = await createResponseStructured<AmlSectionExtractionOutput>(
+      prompt,
+      AML_SECTION_EXTRACTION_SCHEMA,
+      {
+        routing: { category: "ai_review" },
+        schemaName: "aml_section_extraction",
+      },
+    );
+    const output = response.parsed as AmlSectionExtractionOutput | null;
+    if (!output || !output.amlSectionPresent) {
+      return {
+        type: "aml_fatca_llm_extraction",
+        result: output ?? {
+          amlSectionPresent: false,
+          declarationPresent: false,
+          complianceFlags: [],
+        },
+        confidence,
+        fidelity: buildSectionFidelitySummary(sectionWindow, markdownText.length, 0, 0),
+      };
+    }
+
+    // Normalize legacy `politicallyExposedPerson` → `pepFlag` when the model
+    // returned the deprecated field only.
+    if (output.pepFlag === undefined && output.politicallyExposedPerson !== undefined) {
+      output.pepFlag = output.politicallyExposedPerson ?? null;
+    }
+
+    // Attach to envelope additively — does not mutate publishHints /
+    // reviewWarnings (the heuristic path owns those). Reviewers see the
+    // extracted data via the review-queue trace in Wave 4.B.
+    const envelopeAny = envelope as unknown as Record<string, unknown>;
+    envelopeAny.amlFatcaExtraction = {
+      pepFlag: output.pepFlag ?? null,
+      pepReason: output.pepReason ?? null,
+      usPerson: output.usPerson ?? null,
+      taxResidencies: output.taxResidencies ?? [],
+      beneficialOwners: output.beneficialOwners ?? [],
+      sourceOfFunds: output.sourceOfFunds ?? null,
+      purpose: output.purpose ?? null,
+      complianceFlags: output.complianceFlags ?? [],
+      participantName: output.participantName ?? null,
+    };
+
+    const fidelity = buildSectionFidelitySummary(
+      sectionWindow,
+      markdownText.length,
+      1,
+      0,
+    );
+    if (sectionWindow.narrowed) {
+      warnings.push(
+        `aml_section_narrowed:method=${sectionWindow.method},coverage=${Math.round(fidelity.coverageRatio * 100)}%`,
+      );
+    }
+
+    return { type: "aml_fatca_llm_extraction", result: output, confidence, fidelity };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    warnings.push(`aml_section_extraction_failed: ${msg.slice(0, 100)}`);
+    return { type: "skipped", reason: `aml_extraction_error: ${msg.slice(0, 50)}` };
+  }
 }
 
 // ─── Modelation lifecycle correction ─────────────────────────────────────────
@@ -734,6 +856,20 @@ export async function orchestrateSubdocumentExtraction(
   // 2. AML/FATCA heuristic detection (synchronous, cheap)
   const amlOutcome = runAmlHeuristicDetection(candidates, envelope);
   outcomes.push(amlOutcome);
+
+  // 2b. Wave 4.A — optional dedicated AML/FATCA LLM extraction (flag-gated,
+  // default OFF). Runs narrow section-only pass to extract PEP / FATCA /
+  // beneficial owners. Does not mutate publishHints; additive only.
+  const amlLlmOutcome = await runAmlFatcaSectionExtractionPass(
+    markdownText,
+    candidates,
+    envelope,
+    warnings,
+    totalPages,
+    resolvedPageTextMap,
+    structuredResult,
+  );
+  outcomes.push(amlLlmOutcome);
 
   // 3. Payment section detection (synchronous, cheap)
   const paymentOutcome = runPaymentSectionDetection(candidates, envelope);

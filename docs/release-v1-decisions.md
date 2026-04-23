@@ -10,8 +10,8 @@ Odpovídá auditnímu plánu `release_readiness_audit_aidvisora_974071d1.plan.md
 |--------|------|-------|
 | Platforma — iOS | **ANO** | TestFlight + App Review |
 | Platforma — Android | **ANO** | Internal → Closed → Production |
-| Push iOS | **ANO** | APNs entitlement už v repu (`App.release.entitlements`), doplnit P8 klíč do backendu |
-| Push Android | **NE (odloženo na v1.1)** | Vyhnout se Firebase setupu, `google-services.json` a runtime crashi při chybějícím FCM |
+| Push iOS | **ANO** | Unified FCM (2026-04-23). APNs entitlement v repu (`App.release.entitlements`), APNs P8 se uploaduje do Firebase console, backend posílá přes FCM HTTP v1. |
+| Push Android | **NE (odloženo na v1.1)** | Vyhnout se dodání `google-services.json` pro Android; backend FCM cesta je již připravená a Android se zapne jen shozením gate v `usePushNotifications.ts`. |
 | Stripe Checkout / Upgrade v native | **SKRYTO** | App Store 3.1.1 + Play Payments policy |
 | Stripe Customer Portal v native | **SKRYTO** | Safe side — reviewer často blokuje i portal; management přes web |
 | Apple Sign-in | **ANO** | Guideline 4.8 (Google login je nabízen → Apple vyžaduje) |
@@ -27,11 +27,13 @@ Odpovídá auditnímu plánu `release_readiness_audit_aidvisora_974071d1.plan.md
 
 ## 1. Push notifications
 
-### iOS: zapnuto
+### iOS: zapnuto (unified FCM)
 - Entitlement `aps-environment = production` je v [`apps/web/ios/App/App/App.release.entitlements`](../apps/web/ios/App/App/App.release.entitlements).
 - `UIBackgroundModes` obsahuje `remote-notification` v [`Info.plist`](../apps/web/ios/App/App/Info.plist).
-- JS vrstva ([`usePushNotifications.ts`](../apps/web/src/lib/push/usePushNotifications.ts)) zavolá `PushNotifications.register()` po udělení povolení.
-- **Manuální krok před release:** nahrát Production APNs P8 klíč do push backendu (Supabase Functions / vlastní server). Viz [`runbook-release.md`](runbook-release.md) sekce iOS.
+- `AppDelegate.swift` volá `FirebaseApp.configure()`.
+- JS vrstva ([`usePushNotifications.ts`](../apps/web/src/lib/push/usePushNotifications.ts)) používá `@capacitor-firebase/messaging` a ukládá **FCM registration token** (ne APNs device token) do `/api/push/devices`.
+- Backend ([`apps/web/src/lib/push/send.ts`](../apps/web/src/lib/push/send.ts)) posílá přes FCM HTTP v1.
+- **Manuální kroky před release:** (1) nahrát APNs P8 do Firebase console (Project Settings → Cloud Messaging → Apple app config), (2) umístit `GoogleService-Info.plist` do iOS bundle, (3) nastavit `FCM_SERVICE_ACCOUNT_JSON` ve Vercel prod env. Viz [`runbook-push.md`](runbook-push.md).
 
 ### Android: vypnuto pro v1.0
 - `apps/web/android/app/google-services.json` **neexistuje** a nebude pro v1.0 dodán.
@@ -50,12 +52,12 @@ Odpovídá auditnímu plánu `release_readiness_audit_aidvisora_974071d1.plan.md
 ## 3. Legal texty
 
 - `/privacy` a `/terms` obsahují sekci "Mobilní aplikace Aidvisora" se:
-  - push tokeny (iOS APNs token),
+  - push tokeny (FCM registration token, iOS i Android — APNs funguje jen jako bezstavový transport mezi Applem a Firebase),
   - device identifiers (platform, model, OS verze — pro push routing),
   - crash reporting přes Sentry,
   - Supabase jako primární backend,
   - AI providery (Anthropic, OpenAI) jako subprocesory obsahu dokumentů,
-  - kategorie "Optional SDK" pro Firebase Cloud Messaging (aktivní v budoucí verzi).
+  - Google LLC / Firebase Cloud Messaging jako subprocesor push notifikací (iOS už teď, Android v1.1).
 
 ## 4. Metadata a review
 

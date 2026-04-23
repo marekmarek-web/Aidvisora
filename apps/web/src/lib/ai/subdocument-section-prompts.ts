@@ -124,7 +124,37 @@ export const AML_SECTION_EXTRACTION_SCHEMA: Record<string, unknown> = {
   properties: {
     amlSectionPresent: { type: "boolean" },
     declarationPresent: { type: "boolean" },
+    /** @deprecated — use `pepFlag` (Wave 4.A). Kept for backwards-compat parsing. */
     politicallyExposedPerson: { type: ["boolean", "null"] },
+    /** Wave 4.A — canonical PEP flag. */
+    pepFlag: { type: ["boolean", "null"] },
+    /** Wave 4.A — reason / evidence text when PEP flag is true. */
+    pepReason: { type: ["string", "null"] },
+    /** Wave 4.A — FATCA US person declaration. */
+    usPerson: { type: ["boolean", "null"] },
+    /** Wave 4.A — list of declared tax residencies (ISO country codes or names). */
+    taxResidencies: {
+      type: "array",
+      items: { type: "string" },
+    },
+    /** Wave 4.A — beneficial owners declared in the form (name + role, no PII deep-dive). */
+    beneficialOwners: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["name"],
+        properties: {
+          name: { type: "string" },
+          role: { type: "string" },
+          ownershipPercent: { type: ["number", "null"] },
+        },
+      },
+    },
+    /** Wave 4.A — stated source of funds (e.g. salary, business income, inheritance). */
+    sourceOfFunds: { type: ["string", "null"] },
+    /** Wave 4.A — stated purpose of the business relationship / contract. */
+    purpose: { type: ["string", "null"] },
     complianceFlags: {
       type: "array",
       items: { type: "string" },
@@ -136,7 +166,15 @@ export const AML_SECTION_EXTRACTION_SCHEMA: Record<string, unknown> = {
 export type AmlSectionExtractionOutput = {
   amlSectionPresent: boolean;
   declarationPresent: boolean;
+  /** @deprecated — use `pepFlag`. */
   politicallyExposedPerson?: boolean | null;
+  pepFlag?: boolean | null;
+  pepReason?: string | null;
+  usPerson?: boolean | null;
+  taxResidencies?: string[];
+  beneficialOwners?: Array<{ name: string; role?: string; ownershipPercent?: number | null }>;
+  sourceOfFunds?: string | null;
+  purpose?: string | null;
   complianceFlags: string[];
   participantName?: string;
 };
@@ -154,9 +192,19 @@ Ignoruj smlouvu, zdravotní dotazníky a platební instrukce.
 Extrahuj:
 - amlSectionPresent: true pokud je AML/FATCA sekce přítomna
 - declarationPresent: true pokud obsahuje prohlášení o původu prostředků
-- politicallyExposedPerson: true/false/null dle obsahu (null pokud neuveden)
+- pepFlag: true/false/null (politicky exponovaná osoba — uveď null pokud dotaz není v textu)
+- pepReason: krátký text (důvod nebo funkce) pokud pepFlag=true, jinak null
+- usPerson: true/false/null (FATCA — US daňový rezident/občan)
+- taxResidencies: pole zemí daňové rezidence (ISO kódy nebo názvy), pokud jsou uvedeny
+- beneficialOwners: skuteční majitelé uvedení ve formuláři — jméno, role, případně % podíl
+- sourceOfFunds: deklarovaný původ prostředků (mzda, podnikání, dědictví, ...) nebo null
+- purpose: deklarovaný účel obchodního vztahu / smlouvy nebo null
 - complianceFlags: seznam relevantních compliance příznaků (max 5)
 - participantName: jméno deklarující osoby, pokud je uvedeno
+
+PRAVIDLO EVIDENCE: Uváděj POUZE hodnoty explicitně přítomné v textu. Null/prázdné pole je
+platná odpověď. NEHÁDEJ PEP status ani rezidenci z jiných sekcí (adresa na smlouvě ≠
+prohlášená daňová rezidence v AML sekci).
 
 Vrátíš pouze JSON dle schema. Žádný markdown, žádný komentář.
 

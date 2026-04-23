@@ -1,6 +1,10 @@
 # AI Review page-image fallback — runbook
 
-Feature flag: **`AI_REVIEW_PAGE_IMAGE_FALLBACK`** (boolean, default **off**).
+Feature flag: **`AI_REVIEW_PAGE_IMAGE_FALLBACK`** (boolean). Code default = **on**
+(`process.env.AI_REVIEW_PAGE_IMAGE_FALLBACK !== "false"`). Set env to the literal
+string `false` to disable. This runbook used to say "default off"; that was the
+pre-2026-04 shipping default before the flag was flipped — keep the env pinned
+to `true` in production so the behaviour is explicit.
 
 Když je zapnutý, AI Review pipeline (`ai-review-pipeline-v2.ts`) po primární extrakci
 zjistí required pole, která mají `value == null` nebo `confidence < 0.5`, rasterizuje
@@ -102,3 +106,192 @@ Odhad na 1 scan s 3 missing required fields:
 
 Pro 100 scanů/den = max **$6/den** dodatečných nákladů. Pro 1000 scanů/den by stálo
 zvážit zúžení `MAX_RESCUES_PER_RUN` nebo zvýšit práh `confidence < 0.3` místo `< 0.5`.
+
+## 6. Vision-fallback gate (Wave 1.3)
+
+Od Wave 1.3 Premium Scan Closeout máme jednotnou decision vrstvu nad rescue +
+full-vision — modul
+[`apps/web/src/lib/ai/vision-fallback-gate.ts`](../apps/web/src/lib/ai/vision-fallback-gate.ts).
+Gate je **pure** (bez side-effects, bez network) a dnes běží v **permissive
+módu** — pouze emituje Sentry breadcrumb, nemění control flow, nikdy neblokuje
+publish.
+
+### Co gate reportuje
+
+Per AI Review run, breadcrumb category `ai_review.vision_fallback_gate`:
+
+| Pole | Význam |
+|---|---|
+| `runRescue` | Mirror dnešní rescue podmínky (env flag + PDF k dispozici). |
+| `runFullVision` | Mirror dnešní full-vision podmínky (scan-vision branch active). |
+| `reasons` | Proč rescue/full-vision běžel / neběžel. |
+| `recoveredRatio` | `#fields v recovered_from_image/recovered_from_full_vision / #fields s hodnotou`. |
+| `criticalFieldsFromVision` | IBAN / accountNumber / personalId / policyAmount / contractNumber pokud landly v recovered tieru. |
+| `publishBlockReasons` | Heuristika, která BY blokovala publish v enforce módu (permissive ji jen loguje). |
+| `hardBlockPublish` | V 1.3 VŽDY `false`. |
+
+Sentry level:
+- `info` — gate OK (žádné block reasons).
+- `warning` — `publishBlockReasons.length > 0` (kritické pole z vision, nebo recoveredRatio > 0.5, nebo scan + low confidence). Ještě to nic neblokuje.
+- `error` — `hardBlockPublish === true` (Wave 5).
+
+### Env flag
+
+**`AI_REVIEW_VISION_FALLBACK_GATE_ENFORCE`** — viz sekce 10 (Wave 5) níže.
+Flag je nyní skutečně napojený do gate i do `apply-contract-review.ts`, ale
+default je **OFF**. Nenastavovat v produkci, dokud není hotový W1.3 observation
+burn (24–48 h Sentry data).
+
+### Co sledovat v 24–48 h observation window
+
+Cíl — získat baseline pro Wave 5 enforcement rozhodnutí:
+
+1. Jaká frekvence scanů má `publishBlockReasons.length > 0`? (= co by W5 zablokoval.)
+2. Jaká frekvence má kritické pole z visionu? (= blast radius IBAN/RČ bloku.)
+3. Recovered ratio distribution — dá se > 0.5 threshold přiblížit, nebo je to
+   signál, že primární text path u scanů nedělá skoro nic?
+4. Korelace `low_confidence_scan` s reálnou halucinací (spot-check advisor review).
+
+### Rollback
+
+Gate nemá rollback flag — je pure a defaultně permissive. Odstranění se dělá
+reverzí PR, který ho integroval. Runtime rollback není potřeba (žádné
+publish-breaking chování v 1.3).
+
+---
+
+## 7. Unified multimodal input builder (Wave 2)
+
+Modul [`apps/web/src/lib/ai/unified-multimodal-input.ts`](../apps/web/src/lib/ai/unified-multimodal-input.ts)
+sjednocuje tři dosud oddělené multimodal cesty:
+
+| Mode | Legacy caller | Použití |
+|---|---|---|
+| `hybrid_pdf_file` | `createResponseWithFile` | Text-first PDF + prompt. |
+| `single_page_rescue` | `createResponseStructuredWithImage` | Rescue chybějících polí. |
+| `multi_page_vision` | `createResponseStructuredWithImages` | Full-doc vision, boundary detect (W4.B), vision-primary (W3). |
+
+**Env flag:** `AI_REVIEW_UNIFIED_INPUT_BUILDER` — default `false`. Když zapnutý,
+`page-image-fallback.ts` routuje rescue + full-vision cesty přes builder místo
+přímých `createResponseStructured*` volání. Chování je funkčně ekvivalentní;
+flag existuje, aby bylo možné na stagingu 24 h porovnat `trace.pageImageFallbackRecoveries`
+před a po flipu.
+
+**Sentry:** builder emituje `ai_review.unified_extraction` breadcrumb (level
+`info` na úspěch, `warning` na chybu) **pouze když je flag on** — vypnutý stav
+nedělá žádné nové telemetrie.
+
+**Rollback:** flipnout `AI_REVIEW_UNIFIED_INPUT_BUILDER=false`. Builder je
+side-effect-free; zbytek kódu spadne zpět na legacy direct calls.
+
+---
+
+## 8. Vision-primary shadow pass (Wave 3)
+
+Modul [`apps/web/src/lib/ai/vision-primary-extraction.ts`](../apps/web/src/lib/ai/vision-primary-extraction.ts).
+
+**Problém:** u scanů je dnes text-first + rescue suboptimální. Vision-first
+(rasterizace → multi_page_vision) má nižší hallucination rate, ale flip primacy
+v pipeline je nebezpečný — rozbiju text-first integrace.
+
+**Tento PR ships shadow mode:** když je flag on a inputMode ∈ {scanned_pdf,
+mixed_pdf, image_document}, pipeline spustí vision-primary paralelně s
+text-first a zapíše výsledek na `trace.visionPrimaryShadow` (field count +
+field keys + pagesUsed + durationMs + errorCode). Primary výstup pipeline se
+NEMĚNÍ.
+
+**Env flag:** `AI_REVIEW_VISION_PRIMARY_FOR_SCAN` — default `false`.
+
+**Co observovat před flipem primacy:**
+1. Kolik % scanů vůbec dojde do shadow (ran=true vs skippedReason).
+2. `fieldCount` shadow vs. `totalFieldsWithValue` v primary envelope — shadow
+   by měl být ≥ 80 % primary, aby flip dával smysl.
+3. Field-key overlap s `extractedFields` v primary — klíčová pole
+   (`iban`, `personalId`, `contractNumber`) musí být v shadow přítomná.
+4. Durační overhead — shadow běží sériově za inputMode detekcí, takže je to
+   čistá latence navíc.
+
+**Sentry:** `ai_review.vision_primary` breadcrumb (info na úspěch, warning na
+provider error).
+
+**Rollback:** flipnout na `false`. Shadow-pass pak short-circuituje na
+`skippedReason="flag_off"` bez nákladu.
+
+---
+
+## 9. AML/FATCA dedicated extraction + vision boundary detection (Wave 4)
+
+### 9.A AML/FATCA LLM extrakce
+
+Dnes je AML/FATCA detekce jen heuristická (`runAmlHeuristicDetection`).
+Wave 4.A přidává dedicated narrow-section LLM pass
+(`runAmlFatcaSectionExtractionPass` v
+[`subdocument-extraction-orchestrator.ts`](../apps/web/src/lib/ai/subdocument-extraction-orchestrator.ts))
+s rozšířeným schema: `pepFlag`, `pepReason`, `usPerson`, `taxResidencies[]`,
+`beneficialOwners[]`, `sourceOfFunds`, `purpose`.
+
+Výstup se připojuje **additivně** na `envelope.amlFatcaExtraction` — nemění
+`publishHints` / `reviewWarnings` (ty už heuristická cesta obsluhuje).
+
+**Env flag:** `AI_REVIEW_AML_FATCA_EXTRACT` — default `false`. Flag zapnout až
+na stagingu s real AML bundlem (např. S03 z golden scan subsetu, jakmile bude
+anonymizovaný).
+
+### 9.B Vision boundary detection
+
+Modul [`apps/web/src/lib/ai/detect-document-boundaries-vision.ts`](../apps/web/src/lib/ai/detect-document-boundaries-vision.ts).
+Poslouží pro multi-doc scany: pošle prvních N stran do `multi_page_vision`
+režimu builderu a dostane zpět `{ startPage, endPage, documentType }[]` hranice
+subdokumentů. Pure function, nikdy nethrowí.
+
+**Env flag:** `AI_REVIEW_VISION_BOUNDARY_DETECT` — default `false`. Minimum
+`pageCount >= 3`, cap `maxPages=8`.
+
+**Pipeline integrace:** boundary výsledek se po volání zapíše na
+`trace.visionBoundaryDetection`. Konzumace (split envelope per subdokument)
+je další iterace — zatím je to diagnostika.
+
+**Sentry:** `ai_review.vision_boundary_detect` breadcrumb.
+
+---
+
+## 10. Publish safety enforcement (Wave 5)
+
+Modul [`apps/web/src/lib/ai/apply-vision-gate-publish-block.ts`](../apps/web/src/lib/ai/apply-vision-gate-publish-block.ts) — pure
+helper zapojený do [`apply-contract-review.ts`](../apps/web/src/lib/ai/apply-contract-review.ts).
+
+**Env flag:** `AI_REVIEW_VISION_FALLBACK_GATE_ENFORCE`.
+
+Chování:
+
+| Flag | Gate `publishBlockReasons` | Výsledek apply |
+|---|---|---|
+| OFF (default) | any | Sentry `capturePublishGuardFailure` + pokračuje. |
+| OFF | none | no-op. |
+| ON | `critical_field_recovered_from_image` nebo `hardBlockPublish=true` | Sentry signal + `{ ok: false, error }` — advisor musí hodnotu potvrdit ručně. |
+| ON | none | no-op. |
+
+Zapnutí flagu současně flipne `enforceMode: true` v gate volání uvnitř
+pipeline (`ai-review-pipeline-v2.ts`), takže `hardBlockPublish` přestane být
+hardcoded `false`.
+
+**Prerequisites před flipem:**
+1. W1.3 observation burn proběhl (24–48 h produkční data `ai_review.vision_fallback_gate`).
+2. `% runů s publishBlockReasons > 0` je << 10 % (jinak zablokujeme běžný traffic).
+3. Advisor UI má clear error message a umožňuje re-edit pole → re-apply.
+
+**Rollback:** `AI_REVIEW_VISION_FALLBACK_GATE_ENFORCE=false`.
+
+---
+
+## 11. Flag matrix — cheatsheet
+
+| Flag | Wave | Default | Zapnout když |
+|---|---|---|---|
+| `AI_REVIEW_PAGE_IMAGE_FALLBACK` | baseline | **on** | (pinovat `true` v prod) |
+| `AI_REVIEW_UNIFIED_INPUT_BUILDER` | W2 | off | Staging canary, po 24 h bez diffu → prod. |
+| `AI_REVIEW_VISION_PRIMARY_FOR_SCAN` | W3 | off | Shadow-mode opt-in pro měření. |
+| `AI_REVIEW_AML_FATCA_EXTRACT` | W4.A | off | Staging s live AML bundlem. |
+| `AI_REVIEW_VISION_BOUNDARY_DETECT` | W4.B | off | Staging s multi-doc scan bundlem. |
+| `AI_REVIEW_VISION_FALLBACK_GATE_ENFORCE` | W5 | off | **Nikdy** před W1.3 observation. |
+| `GOLDEN_SCAN_EVAL` | dev | off | Lokální `GOLDEN_SCAN_EVAL=1 vitest` pro baseline report. |

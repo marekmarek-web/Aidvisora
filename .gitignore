@@ -15,6 +15,10 @@ dist
 client_secret*.json
 # Firebase Android config (API keys); keep under android/app/ per docs
 apps/web/google-services.json
+apps/web/android/app/google-services.json
+# Firebase iOS config (bundle-id/API keys); CI injects from
+# GOOGLE_SERVICE_INFO_PLIST_B64 before `xcodebuild archive`.
+apps/web/ios/App/App/GoogleService-Info.plist
 # Playwright / local E2E artifacts
 apps/web/test-results/
 

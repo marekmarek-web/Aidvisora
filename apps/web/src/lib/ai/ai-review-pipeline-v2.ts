@@ -91,8 +91,19 @@ import {
 } from "./page-image-fallback";
 import {
   breadcrumbPageImageFallbackRecovery,
+  breadcrumbVisionFallbackGateDecision,
   capturePageImageFallbackError,
 } from "@/lib/observability/scan-sentry";
+import { evaluateVisionFallbackGate } from "./vision-fallback-gate";
+import {
+  runVisionPrimaryExtraction,
+  isVisionPrimaryForScanEnabled,
+} from "./vision-primary-extraction";
+import {
+  detectDocumentBoundariesVision,
+  isVisionBoundaryDetectEnabled,
+} from "./detect-document-boundaries-vision";
+import { rasterizePdfPageToDataUrl } from "./pdf-page-rasterize";
 
 /**
  * Returns true when none of the required fields for this document type have a non-empty extracted value.
@@ -816,6 +827,93 @@ export async function runAiReviewV2Pipeline(
   trace.pageCount =
     inputModeResult.pageCount ?? options?.preprocessMeta?.pageCountEstimate ?? trace.pageCount;
   trace.warnings = [...(trace.warnings ?? []), ...inputModeResult.extractionWarnings];
+
+  // Wave 3 — vision-primary shadow pass. Flag-gated (default OFF). When the
+  // flag is on AND we're in a scan/mixed/image mode, we run vision-first
+  // extraction IN PARALLEL with the text-first pipeline and write the result
+  // to `trace.visionPrimaryShadow`. We intentionally do NOT switch primacy
+  // yet — that is a follow-up PR once shadow-diff confirms quality.
+  if (
+    isVisionPrimaryForScanEnabled() &&
+    (inputModeResult.inputMode === "scanned_pdf" ||
+      inputModeResult.inputMode === "mixed_pdf" ||
+      inputModeResult.inputMode === "image_document")
+  ) {
+    try {
+      const shadowResult = await runVisionPrimaryExtraction({
+        fileUrl,
+        pageCount: inputModeResult.pageCount ?? trace.pageCount ?? 0,
+      });
+      const fieldValues: Record<string, { value: string | null; confidence: number | null }> = {};
+      for (const [k, f] of Object.entries(shadowResult.fields).slice(0, 20)) {
+        const v = f?.value;
+        const stringified =
+          v === null || v === undefined
+            ? null
+            : typeof v === "string"
+              ? v.slice(0, 60)
+              : String(v).slice(0, 60);
+        fieldValues[k] = {
+          value: stringified,
+          confidence: typeof f?.confidence === "number" ? f.confidence : null,
+        };
+      }
+      trace.visionPrimaryShadow = {
+        ran: shadowResult.ran,
+        skippedReason: shadowResult.skippedReason,
+        fieldCount: Object.keys(shadowResult.fields).length,
+        fieldKeys: Object.keys(shadowResult.fields).slice(0, 20),
+        fieldValues,
+        pagesUsed: shadowResult.pagesUsed,
+        durationMs: shadowResult.durationMs,
+        errorCode: shadowResult.errorCode ?? null,
+      };
+    } catch {
+      /* shadow pass must never break the main pipeline */
+    }
+  }
+
+  // Wave 4.B — vision-based document boundary detection. Flag-gated, default
+  // OFF. Runs only on scan-like inputs ≥ 3 pages. Pure diagnostic — the
+  // boundaries are written to trace and a breadcrumb is emitted; no envelope
+  // mutation in this PR (split-doc consumption is a follow-up).
+  const boundaryPageCount = inputModeResult.pageCount ?? trace.pageCount ?? 0;
+  if (
+    isVisionBoundaryDetectEnabled() &&
+    boundaryPageCount >= 3 &&
+    (inputModeResult.inputMode === "scanned_pdf" ||
+      inputModeResult.inputMode === "mixed_pdf" ||
+      inputModeResult.inputMode === "image_document")
+  ) {
+    try {
+      const urls: string[] = [];
+      const cap = Math.min(8, boundaryPageCount);
+      for (let p = 1; p <= cap; p += 1) {
+        const r = await rasterizePdfPageToDataUrl(fileUrl, p);
+        if (!r?.dataUrl) break;
+        urls.push(r.dataUrl);
+      }
+      const boundaryResult = await detectDocumentBoundariesVision({
+        pageImageUrls: urls,
+        pageCount: boundaryPageCount,
+      });
+      trace.visionBoundaryDetection = {
+        ran: boundaryResult.ran,
+        skippedReason: boundaryResult.skippedReason,
+        boundaries: boundaryResult.boundaries.map((b) => ({
+          startPage: b.startPage,
+          endPage: b.endPage,
+          documentType: b.documentType,
+          confidence: b.confidence ?? null,
+        })),
+        pagesUsed: boundaryResult.pagesUsed,
+        durationMs: boundaryResult.durationMs,
+        errorCode: boundaryResult.errorCode ?? null,
+      };
+    } catch {
+      /* boundary detect must never break the main pipeline */
+    }
+  }
 
   const textCov =
     typeof trace.textCoverageEstimate === "number"
@@ -1996,6 +2094,43 @@ export async function runAiReviewV2Pipeline(
         `full_document_vision_error:${e instanceof Error ? e.message : String(e)}`,
       ];
     }
+  }
+
+  // Wave 1.3: vision-fallback gate — permissive (breadcrumb only, never blocks).
+  // Reads already-populated trace + envelope, emits a single Sentry breadcrumb,
+  // and stores the decision on the trace for review-queue serialization. Does
+  // NOT change control flow; enforceMode is hardcoded false until Wave 5.
+  try {
+    const gateDecision = evaluateVisionFallbackGate({
+      scanVisionFallbackActivated: scanVisionFallbackWasActive,
+      pageImageFallbackEnabled,
+      hasPdfFileForVisionFallback,
+      pageCount: inputModeResult.pageCount ?? trace.pageCount ?? null,
+      envelope: validated.data,
+      recoveredFieldKeys: (trace.pageImageFallbackRecoveries as string[] | undefined) ?? [],
+      fullVisionMergedFieldKeys:
+        ((trace as Record<string, unknown>).fullVisionMergedFieldKeys as string[] | undefined) ?? [],
+      overallConfidence:
+        typeof validated.data.documentMeta?.overallConfidence === "number"
+          ? validated.data.documentMeta.overallConfidence
+          : null,
+      // Wave 5: flip `enforceMode` when env flag is true. Default OFF keeps
+      // W1.3 permissive behavior — `hardBlockPublish` stays false regardless
+      // of publish-block reasons.
+      enforceMode: process.env.AI_REVIEW_VISION_FALLBACK_GATE_ENFORCE === "true",
+    });
+    trace.visionFallbackGate = gateDecision;
+    breadcrumbVisionFallbackGateDecision({
+      documentType: resolvedDocumentType,
+      decision: gateDecision,
+      overallConfidence:
+        typeof validated.data.documentMeta?.overallConfidence === "number"
+          ? validated.data.documentMeta.overallConfidence
+          : null,
+      pageCount: inputModeResult.pageCount ?? trace.pageCount ?? null,
+    });
+  } catch {
+    /* gate is pure — errors here are unexpected and MUST never break the pipeline */
   }
 
   const finalized = finalizeContractPayload({

@@ -53,7 +53,7 @@
 - [ ] App ID `cz.aidvisora.app.share` (share extension) + stejná App Group `group.cz.aidvisora.app`.
 - [ ] **Services ID** `cz.aidvisora.app.signinwithapple` s Return URL = `https://<project-ref>.supabase.co/auth/v1/callback`.
 - [ ] **SIWA P8 private key** vygenerován, staženo jednou, v 1Password.
-- [ ] **APNs P8 Auth Key** vygenerován (druhý klíč!), v 1Password; Key ID + Team ID poznamenány.
+- [ ] **APNs P8 Auth Key** vygenerován (druhý klíč!), v 1Password; Key ID + Team ID poznamenány. **Destinace: Firebase console** (APNs → FCM relay), NE Vercel env. Detaily [docs/runbook-push.md](../runbook-push.md) §2.
 - [ ] Distribuční certifikát + provisioning profil (App Store) platné ≥ 60 dní.
 
 **I.A.2 App Store Connect record** (MANUAL — appstoreconnect.apple.com)
@@ -228,7 +228,7 @@ Postup v ASC (copy-paste):
 
 ### III.C Repo-side privacy gaps (FIX PŘED SUBMIT)
 
-- [ ] **`/privacy` sekce „Mobilní aplikace Aidvisora"** musí aktuálně obsahovat: APNs push token, device identifiers, Sentry crash reporting, Supabase backend, Anthropic + OpenAI jako subprocessory, „Optional SDK" = FCM pro v1.1 — ověřit před submitem (SL-041).
+- [ ] **`/privacy` sekce „Mobilní aplikace Aidvisora"** musí aktuálně obsahovat: FCM push registration token (iOS i Android), device identifiers, Sentry crash reporting, Supabase backend, Anthropic + OpenAI jako subprocessory, Google LLC (Firebase FCM) jako subprocesor pro push routing (iOS i Android — APNs běží jako bezstavový transport mezi Applem a Firebase) — ověřit před submitem (SL-041). Stará formulace „APNs token + FCM Optional pro v1.1" je zastaralá.
 - [ ] **Cookie banner + CMP:** Sentry Replay v prod = off (D7=A), cookie banner to musí reflektovat — spot-check na homepage (SL-065, SL-014 z pre-launch checklist §14).
 - [ ] **DPA register** (SL-039): Resend, Sentry (EU + DPA signed), OpenAI, Anthropic zapsat **před** prvním placeným zákazníkem.
 - [ ] Landing: **žádný nezakrytý** „AES-256-GCM" claim bez kontextu „pro citlivé sloupce, nová data cipher; backfill historických dat probíhá" (pokud D2 PII backfill ještě neběžel — jinak lze claim zesílit).
@@ -293,32 +293,38 @@ MANUAL:
 - [ ] Redirect URI = Supabase callback (`https://<ref>.supabase.co/auth/v1/callback`).
 - [ ] Ověřit na Androidu (Internal build) — consent screen česky, redirect funguje.
 
-### IV.E APNs (iOS push, v1.0 ANO)
+### IV.E Push (iOS v1.0 ANO, Android v1.1) — unified FCM
 
-MANUAL ([docs/runbook-push.md](../runbook-push.md)):
-- [ ] APNs P8 Auth Key vygenerován (jiný než SIWA key!), Key ID + Team ID.
-- [ ] Vercel prod env:
+**Truth of record:** iOS i Android jdou přes Firebase Cloud Messaging HTTP v1. APNs P8 se nahrává **do Firebase console**, NE do Vercel env. Plná dokumentace: [docs/runbook-push.md](../runbook-push.md).
+
+MANUAL kroky:
+- [ ] Firebase project `Aidvisora Mobile` existuje; iOS app s Bundle ID `cz.aidvisora.app` přidaná.
+- [ ] APNs P8 Auth Key vygenerován (jiný klíč než SIWA!), Key ID + Team ID v 1Password.
+- [ ] P8 **nahrán do Firebase console** → Project Settings → Cloud Messaging → Apple app configuration → APNs Authentication Key.
+- [ ] `GoogleService-Info.plist` stažen z Firebase → `apps/web/ios/App/App/GoogleService-Info.plist` (mimo git, CI secret `GOOGLE_SERVICE_INFO_PLIST_B64`).
+- [ ] Firebase service account JSON vygenerován (Project Settings → Service accounts → Generate new private key).
+- [ ] Vercel production env:
   ```
-  APNS_AUTH_KEY=<obsah P8 vč. BEGIN/END>
-  APNS_KEY_ID=<10 znaků>
-  APNS_TEAM_ID=<10 znaků>
-  APNS_BUNDLE_ID=cz.aidvisora.app
-  APNS_ENVIRONMENT=production
+  FCM_SERVICE_ACCOUNT_JSON=<celý JSON service accountu>
+  # Volitelně ops kill-switch:
+  # PUSH_KILL_SWITCH=0
   ```
+- [ ] **Ověř, že v produkci NEJSOU** staré proměnné `APNS_AUTH_KEY`, `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID`, `APNS_ENVIRONMENT` — backend je nečte. Pokud jsou, smaž: `vercel env rm APNS_AUTH_KEY production` atd.
 - [ ] Redeploy production.
-- [ ] TF build na iPhonu → accept push dialog → `/api/push/devices` má záznam → trigger push (nová zpráva klienta) → doručeno popředí i zamčená obrazovka.
-- [ ] **Častá chyba:** `BadDeviceToken` = mismatch sandbox/production (TF = production).
+- [ ] `node apps/web/scripts/assert-fcm-config.mjs --require-release --platform=ios` projde.
+- [ ] **Runtime smoke:** [docs/ios/push-smoke-checklist.md](../ios/push-smoke-checklist.md) — A + B + C + D zelené na fyzickém iPhonu s TestFlight buildem.
+- [ ] **Častá chyba:** klient ukládá APNs hex token místo FCM registration tokenu → FCM vrací `INVALID_ARGUMENT` (config). Toto byl bug opravený v Batch 1+2; regression check přes [docs/ios/push-smoke-checklist.md](../ios/push-smoke-checklist.md) A.3.
 
-### IV.F FCM / Firebase (Android push = v1.0 NE)
+### IV.F Android push (v1.0 NE, v1.1 ANO)
 
-**Rozhodnutí:** Odloženo na v1.1 (SL-118). Dokud není `google-services.json`, `usePushNotifications.ts` Android gate držet ON (jinak `IllegalStateException`).
+**Rozhodnutí:** Odloženo na v1.1 (SL-118). Dokud není `google-services.json`, `usePushNotifications.ts` Android gate (`isSupportedPlatform = platform === "ios"`) držet, jinak FirebaseMessaging vyhodí při register.
 
 Pro v1.1:
-- [ ] Firebase Console → nový project → Android app `cz.aidvisora.app`.
-- [ ] `google-services.json` do `apps/web/android/app/` (mimo git, gitignore přes `.example` template).
-- [ ] FCM Server Key nebo Admin SDK service account JSON do push backendu env.
-- [ ] Odebrat `isAndroidPlatform()` gate v `usePushNotifications.ts`.
-- [ ] Re-build AAB → Internal → smoke test → Production.
+- [ ] Firebase console → přidat Android app `cz.aidvisora.app` do **stejného** projektu.
+- [ ] `google-services.json` do `apps/web/android/app/` (mimo git, CI secret `GOOGLE_SERVICES_JSON_B64`).
+- [ ] Backend env **beze změn** — tentýž `FCM_SERVICE_ACCOUNT_JSON` obsluhuje obě platformy.
+- [ ] V `usePushNotifications.ts` změnit gate na `platform === "ios" || platform === "android"`.
+- [ ] Re-build AAB → Internal → smoke checklist varianta Android → Production.
 
 ### IV.G Universal Links / App Links (v1.0 NE, v1.1+)
 
@@ -462,7 +468,7 @@ Pokud cokoliv červené → hold, patch release, re-test.
 #### iOS App Store
 1. Apple Developer Team + App ID + Services ID + distribuční profil aktivní.
 2. **Sign in with Apple** funkčně nakonfigurován v Supabase + Apple Developer (IV.C). Bez toho auto-reject 4.8.
-3. **APNs P8 key** v Vercel env + production entitlement (push v release entitlements).
+3. **APNs P8** uploadnutý do Firebase console + `FCM_SERVICE_ACCOUNT_JSON` ve Vercel prod env + `GoogleService-Info.plist` v iOS bundle + production `aps-environment` entitlement. Staré `APNS_*` env v produkci neexistují.
 4. **Privacy Nutrition Labels** vyplněné, matchují `PrivacyInfo.xcprivacy` (III.A).
 5. **Review demo accounts** funkční, naplněné daty, credentials v ASC (II).
 6. **Review Notes** text o reader-style / no IAP vložen.

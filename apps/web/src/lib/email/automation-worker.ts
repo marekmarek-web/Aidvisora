@@ -14,6 +14,11 @@ import {
 } from "db";
 import { dbService, withServiceTenantContext } from "@/lib/db/service-db";
 import { mintTrackingToken } from "@/lib/email/queue-enqueue";
+import {
+  hasValidConsent,
+  isConsentEnforcementEnabled,
+  PURPOSE_MARKETING_EMAILS,
+} from "@/lib/compliance/consent-check";
 
 /**
  * F4 — denní worker automatizací. Prochází všechna `email_automation_rules`
@@ -184,7 +189,13 @@ async function runSingleRule(rule: {
         await recordRun(rule, cand.contactId, campaignId, "queued", null);
       } else {
         result.skipped += 1;
-        await recordRun(rule, cand.contactId, null, "skipped", "no_email_or_unsubscribed");
+        await recordRun(
+          rule,
+          cand.contactId,
+          null,
+          "skipped",
+          "no_email_unsubscribed_or_no_consent",
+        );
       }
     } catch (e) {
       console.error("[automation-worker] failed to queue", rule.id, cand.contactId, e);
@@ -200,7 +211,8 @@ function isAnnualTrigger(triggerType: string): boolean {
   return (
     triggerType === "birthday" ||
     triggerType === "contract_anniversary" ||
-    triggerType === "year_in_review"
+    triggerType === "year_in_review" ||
+    triggerType === "referral_ask_after_anniversary"
   );
 }
 
@@ -233,11 +245,14 @@ async function resolveCandidates(rule: {
   switch (rule.triggerType) {
     case "birthday": {
       // Match contacts whose birthday (month/day) is exactly N days from today.
+      // B1.4: respektuj `birth_greeting_opt_out` — klient si může vyžádat, že
+      // o přání k narozeninám nestojí.
       query = sql`
         SELECT id AS "contactId", email, first_name AS "firstName", last_name AS "lastName"
         FROM contacts
         WHERE ${tenantFilter}
           AND ${base}
+          AND (birth_greeting_opt_out IS NULL OR birth_greeting_opt_out = false)
           AND birth_date IS NOT NULL
           AND to_char(birth_date, 'MM-DD') = to_char((now() + (${offset}::int || ' days')::interval), 'MM-DD')
       `;
@@ -271,16 +286,121 @@ async function resolveCandidates(rule: {
       `;
       break;
     }
-    case "contract_anniversary":
-    case "service_due":
-    case "proposal_accepted":
-    case "contract_activated":
-    case "analysis_completed":
-    case "referral_ask_after_proposal":
+    case "contract_anniversary": {
+      // B2.1: smlouvy s anniversary_date odpovídající dnes + offset (MM-DD match,
+      // roční opakování). DISTINCT ON zajišťuje 1 kontakt × 1 kampaň (ne 1 smlouva).
+      query = sql`
+        SELECT DISTINCT ON (c.id)
+               c.id AS "contactId", c.email,
+               c.first_name AS "firstName", c.last_name AS "lastName"
+        FROM contacts c
+        JOIN contracts ct ON ct.client_id = c.id AND ct.tenant_id = c.tenant_id
+        WHERE c.${sql.raw("tenant_id")} = ${rule.tenantId}::uuid
+          AND ${base}
+          AND ct.archived_at IS NULL
+          AND ct.anniversary_date IS NOT NULL
+          AND to_char(ct.anniversary_date, 'MM-DD') = to_char((now() + (${offset}::int || ' days')::interval), 'MM-DD')
+      `;
+      break;
+    }
+    case "service_due": {
+      // B2.1: contacts.next_service_due = today + offset (servisní pipeline).
+      query = sql`
+        SELECT id AS "contactId", email, first_name AS "firstName", last_name AS "lastName"
+        FROM contacts
+        WHERE ${tenantFilter}
+          AND ${base}
+          AND next_service_due IS NOT NULL
+          AND next_service_due::date = (now() + (${offset}::int || ' days')::interval)::date
+      `;
+      break;
+    }
+    case "proposal_accepted": {
+      // B2.1: advisor_proposals.status='accepted' a responded_at::date = today + offset.
+      query = sql`
+        SELECT DISTINCT ON (c.id)
+               c.id AS "contactId", c.email,
+               c.first_name AS "firstName", c.last_name AS "lastName"
+        FROM contacts c
+        JOIN advisor_proposals p ON p.contact_id = c.id AND p.tenant_id = c.tenant_id
+        WHERE c.${sql.raw("tenant_id")} = ${rule.tenantId}::uuid
+          AND ${base}
+          AND p.status = 'accepted'
+          AND p.responded_at IS NOT NULL
+          AND p.responded_at::date = (now() + (${offset}::int || ' days')::interval)::date
+      `;
+      break;
+    }
+    case "contract_activated": {
+      // B2.1: aktivní smlouvy s (advisor_confirmed_at, jinak created_at)::date = dnes + offset.
+      query = sql`
+        SELECT DISTINCT ON (c.id)
+               c.id AS "contactId", c.email,
+               c.first_name AS "firstName", c.last_name AS "lastName"
+        FROM contacts c
+        JOIN contracts ct ON ct.client_id = c.id AND ct.tenant_id = c.tenant_id
+        WHERE c.${sql.raw("tenant_id")} = ${rule.tenantId}::uuid
+          AND ${base}
+          AND ct.archived_at IS NULL
+          AND ct.portfolio_status = 'active'
+          AND COALESCE(ct.advisor_confirmed_at, ct.created_at)::date
+              = (now() + (${offset}::int || ' days')::interval)::date
+      `;
+      break;
+    }
+    case "analysis_completed": {
+      // B2.1: financial_analyses.sale_status IN ('sold_partial','sold_full')
+      //       AND sold_at::date = today + offset (pozn.: schéma používá 'sold_*',
+      //       ne legacy 'won').
+      query = sql`
+        SELECT DISTINCT ON (c.id)
+               c.id AS "contactId", c.email,
+               c.first_name AS "firstName", c.last_name AS "lastName"
+        FROM contacts c
+        JOIN financial_analyses fa ON fa.contact_id = c.id AND fa.tenant_id = c.tenant_id
+        WHERE c.${sql.raw("tenant_id")} = ${rule.tenantId}::uuid
+          AND ${base}
+          AND fa.sale_status IN ('sold_partial', 'sold_full')
+          AND fa.sold_at IS NOT NULL
+          AND fa.sold_at::date = (now() + (${offset}::int || ' days')::interval)::date
+      `;
+      break;
+    }
+    case "referral_ask_after_proposal": {
+      // B3.3: po 14 dnech od accepted proposal s úsporou > 0 → příležitost
+      //       požádat o doporučení. Offset z triggerConfig.days (default 14).
+      const days = Number(
+        (rule.triggerConfig as { days?: number } | null)?.days ?? 14,
+      );
+      query = sql`
+        SELECT DISTINCT ON (c.id)
+               c.id AS "contactId", c.email,
+               c.first_name AS "firstName", c.last_name AS "lastName"
+        FROM contacts c
+        JOIN advisor_proposals p ON p.contact_id = c.id AND p.tenant_id = c.tenant_id
+        WHERE c.${sql.raw("tenant_id")} = ${rule.tenantId}::uuid
+          AND ${base}
+          AND p.status = 'accepted'
+          AND COALESCE(p.savings_annual, 0) > 0
+          AND p.responded_at IS NOT NULL
+          AND p.responded_at::date = (now() - (${days}::int || ' days')::interval)::date
+      `;
+      break;
+    }
+    case "referral_ask_after_anniversary": {
+      // B3.3: výročí spolupráce (client_since jinak created_at) MM-DD = today.
+      query = sql`
+        SELECT id AS "contactId", email, first_name AS "firstName", last_name AS "lastName"
+        FROM contacts
+        WHERE ${tenantFilter}
+          AND ${base}
+          AND to_char(COALESCE(client_since, created_at), 'MM-DD')
+              = to_char((now() + (${offset}::int || ' days')::interval), 'MM-DD')
+      `;
+      break;
+    }
     default: {
-      // MVP: zatím vyřešíme jen birthday / inactive_client / year_in_review.
-      // Ostatní triggery vyžadují napojení na doménové události (contracts, proposals).
-      // Tyto zatím no-op – nechť UI je ukazuje jako "připravováno".
+      console.warn(`[automation-worker] unknown trigger type: ${rule.triggerType}`);
       return [];
     }
   }
@@ -313,6 +433,17 @@ async function createAutomationCampaign(
       .where(and(eq(contacts.id, cand.contactId), eq(contacts.tenantId, rule.tenantId)))
       .limit(1);
     if (!c || !c.email || c.doNotEmail) return null;
+
+    // B1.2: GDPR consent gate. Automation-triggered sendy jsou marketingové
+    // komunikace a musejí mít platný souhlas. Fail-closed pokud není consent.
+    if (isConsentEnforcementEnabled()) {
+      const ok = await hasValidConsent(tx, {
+        tenantId: rule.tenantId,
+        contactId: cand.contactId,
+        purposeName: PURPOSE_MARKETING_EMAILS,
+      });
+      if (!ok) return null;
+    }
 
     const [created] = await tx
       .insert(emailCampaigns)

@@ -149,6 +149,68 @@ export function breadcrumbPageImageFallbackRecovery(ctx: {
 }
 
 /**
+ * Emit a Sentry breadcrumb for every vision-fallback gate decision. Wave 1.3
+ * ships permissive — `decision.hardBlockPublish` is always `false`. Wave 5
+ * will flip that; the breadcrumb level (info/warning/error) is already
+ * differentiated so dashboards don't need to change when enforcement lands.
+ */
+export function breadcrumbVisionFallbackGateDecision(ctx: {
+  reviewId?: string;
+  tenantId?: string;
+  documentType?: string;
+  /** Minimal decision shape — depends on `apps/web/src/lib/ai/vision-fallback-gate.ts`. */
+  decision: {
+    runRescue: boolean;
+    runFullVision: boolean;
+    reasons: string[];
+    hardBlockPublish: boolean;
+    publishBlockReasons: string[];
+    recoveredRatio: number;
+    criticalFieldsFromVision: string[];
+  };
+  overallConfidence?: number | null;
+  pageCount?: number | null;
+}): void {
+  try {
+    const { decision } = ctx;
+    const level: "info" | "warning" | "error" = decision.hardBlockPublish
+      ? "error"
+      : decision.publishBlockReasons.length > 0
+        ? "warning"
+        : "info";
+    Sentry.addBreadcrumb({
+      category: "ai_review.vision_fallback_gate",
+      type: "default",
+      level,
+      message: decision.hardBlockPublish
+        ? "vision_fallback_gate_hard_block"
+        : decision.publishBlockReasons.length > 0
+          ? "vision_fallback_gate_block_candidate"
+          : "vision_fallback_gate_ok",
+      data: {
+        reviewId: ctx.reviewId?.slice(0, 36),
+        tenantId: ctx.tenantId?.slice(0, 36),
+        documentType: ctx.documentType,
+        runRescue: decision.runRescue,
+        runFullVision: decision.runFullVision,
+        reasons: decision.reasons.slice(0, 8),
+        publishBlockReasons: decision.publishBlockReasons.slice(0, 8),
+        recoveredRatio: Math.round(decision.recoveredRatio * 1000) / 1000,
+        criticalFieldsFromVision: decision.criticalFieldsFromVision.slice(0, 8),
+        overallConfidence: ctx.overallConfidence ?? null,
+        pageCount: ctx.pageCount ?? null,
+      },
+    });
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * Called when the whole fallback block throws. Contrast with per-field failures — those
+ * are counted in `failedAttempts` and don't get their own capture.
+ */
+/**
  * Called when the whole fallback block throws. Contrast with per-field failures — those
  * are counted in `failedAttempts` and don't get their own capture.
  */

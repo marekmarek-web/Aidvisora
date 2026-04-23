@@ -92,7 +92,8 @@ třetí stranou (Google). Setup: `docs/runbook-apple-signin.md`. Ověř:
 - `docs/runbook-signing.md` — certifikáty, provisioning, notarizace.
 - `docs/runbook-app-store-connect.md` — ASC metadata + Privacy Labels.
 - `docs/runbook-apple-signin.md` — Sign-In with Apple setup.
-- `docs/runbook-push.md` — APNs + notifikace.
+- `docs/runbook-push.md` — unified FCM (APNs → FCM relay) + notifikace.
+- `docs/ios/push-smoke-checklist.md` — minimální runtime smoke na fyzickém iPhonu.
 - `docs/billing/stripe-tax-cz-setup.md` — DPH + IČO/DIČ.
 - `docs/security/audit-log-coverage.md` — compliance audit trail.
 - `docs/ios/REVIEW-NOTES.md` — demo účty + text pro reviewera.
