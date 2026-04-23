@@ -10,6 +10,7 @@ import {
 } from "@/app/actions/email-content-sources";
 import type { ArticleMetadata } from "@/lib/email/article-fetcher";
 import { ARTICLE_FETCHER_ALLOWED_DOMAINS } from "@/lib/email/article-fetcher";
+import { useConfirm } from "@/app/components/ConfirmDialog";
 
 type Props = {
   initialSources: ContentSourceRow[];
@@ -17,11 +18,19 @@ type Props = {
 
 export default function ContentSourcesClient({ initialSources }: Props) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [creating, setCreating] = useState(false);
 
-  const handleDelete = (id: string) => {
-    if (!confirm("Opravdu smazat tento zdroj?")) return;
-    deleteContentSource(id).then(() => router.refresh());
+  const handleDelete = async (id: string) => {
+    const ok = await confirm({
+      title: "Smazat zdroj",
+      message: "Opravdu smazat tento zdroj?",
+      confirmLabel: "Smazat",
+      variant: "destructive",
+    });
+    if (!ok) return;
+    await deleteContentSource(id);
+    router.refresh();
   };
 
   return (
