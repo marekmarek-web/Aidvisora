@@ -30,6 +30,8 @@ import {
   Info,
   Code,
   Type,
+  Wand2,
+  SplitSquareHorizontal,
 } from "lucide-react";
 import {
   createEmailCampaignDraft,
@@ -48,6 +50,9 @@ import { CAMPAIGN_TEMPLATES, findTemplate } from "@/lib/email/campaign-templates
 import { useToast } from "@/app/components/Toast";
 import { useConfirm } from "@/app/components/ConfirmDialog";
 import { PortalPageShell } from "@/app/components/layout/PortalPageShell";
+import InsertArticleModal from "./components/InsertArticleModal";
+import AiDraftModal from "./components/AiDraftModal";
+import AbTestModal from "./components/AbTestModal";
 import { formatInTimeZone } from "date-fns-tz";
 
 const PRAGUE = "Europe/Prague";
@@ -138,6 +143,9 @@ export function EmailCampaignsClient({ initialRows, initialSegments, fromName }:
   const [mobileView, setMobileView] = useState<ViewMode>("editor");
   const [previewDevice, setPreviewDevice] = useState<PreviewDevice>("desktop");
   const [editorMode, setEditorMode] = useState<EditorMode>("visual");
+  const [articleModalOpen, setArticleModalOpen] = useState(false);
+  const [aiDraftModalOpen, setAiDraftModalOpen] = useState(false);
+  const [abTestModalOpen, setAbTestModalOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const visualRef = useRef<HTMLDivElement | null>(null);
   const fromLabel = (fromName && fromName.trim()) || "Vy (Aidvisora)";
@@ -258,6 +266,47 @@ export function EmailCampaignsClient({ initialRows, initialSegments, fromName }:
       wrapSelection(`<img src="${url}" alt="" style="max-width:100%;border-radius:8px;"/>`);
     }
   }, [editorMode, execCmd, wrapSelection]);
+
+  const handleInsertArticles = useCallback(
+    (articlesHtml: string) => {
+      setForm((prev) => {
+        const current = prev.bodyHtml;
+        const hasMarkers =
+          current.includes("<!-- articles:start -->") &&
+          current.includes("<!-- articles:end -->");
+        let next: string;
+        if (hasMarkers) {
+          next = current.replace(
+            /<!-- articles:start -->[\s\S]*?<!-- articles:end -->/,
+            `<!-- articles:start -->\n${articlesHtml}\n<!-- articles:end -->`,
+          );
+        } else {
+          next = `${current}\n${articlesHtml}`;
+        }
+        return { ...prev, bodyHtml: next };
+      });
+      toast.showToast("Články vloženy do e-mailu.", "success");
+    },
+    [toast],
+  );
+
+  const handleApplyAiDraft = useCallback(
+    (draft: { subject: string; preheader: string; bodyHtml: string }) => {
+      setForm((prev) => {
+        const preheaderHtml = draft.preheader
+          ? `<span style="display:none !important;visibility:hidden;opacity:0;color:transparent;height:0;max-height:0;overflow:hidden;">${draft.preheader}</span>`
+          : "";
+        const nextBody = `${preheaderHtml}${draft.bodyHtml}`;
+        return {
+          ...prev,
+          subject: draft.subject,
+          bodyHtml: nextBody,
+        };
+      });
+      toast.showToast("AI návrh aplikován.", "success");
+    },
+    [toast],
+  );
 
   /** Synchronizuje vizuální editor s aktuálním bodyHtml (např. po loadDraft/loadTemplate/reset). */
   useEffect(() => {
@@ -638,6 +687,50 @@ Odeslání nelze vrátit zpět.`,
             </ToolbarBtn>
             <ToolbarBtn onClick={insertImage} label="Obrázek">
               <ImageIcon size={16} />
+            </ToolbarBtn>
+            <div className="mx-1 h-5 w-px bg-[color:var(--wp-surface-card-border)]" />
+            <ToolbarBtn
+              onClick={() => setArticleModalOpen(true)}
+              label="Vložit článek z kurátorovaných zdrojů"
+            >
+              <Newspaper size={16} />
+            </ToolbarBtn>
+            <ToolbarBtn
+              onClick={async () => {
+                if (form.bodyHtml && form.bodyHtml.trim().length > 0) {
+                  const ok = await confirm({
+                    title: "Přepsat editor AI návrhem?",
+                    message:
+                      "Aktuální obsah editoru bude nahrazen AI vygenerovaným návrhem. Pokračovat?",
+                    confirmLabel: "Ano, vygenerovat",
+                    cancelLabel: "Zrušit",
+                  });
+                  if (!ok) return;
+                }
+                setAiDraftModalOpen(true);
+              }}
+              label="Vygenerovat návrh AI asistentem"
+            >
+              <Wand2 size={16} />
+            </ToolbarBtn>
+            <ToolbarBtn
+              onClick={() => {
+                if (!form.draftId) {
+                  toast.showToast(
+                    "A/B test lze spustit jen u uloženého konceptu – nejdříve klikněte na „Uložit koncept“.",
+                    "info",
+                  );
+                  return;
+                }
+                setAbTestModalOpen(true);
+              }}
+              label={
+                form.draftId
+                  ? "Spustit A/B test (varianta B)"
+                  : "A/B test – nejprve uložte koncept"
+              }
+            >
+              <SplitSquareHorizontal size={16} />
             </ToolbarBtn>
           </div>
           {editorMode === "visual" ? (
@@ -1065,6 +1158,12 @@ Odeslání nelze vrátit zpět.`,
               Automatizace →
             </a>
             <a
+              href="/portal/email-campaigns/content-sources"
+              className="inline-flex items-center gap-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-white px-4 py-2 text-sm font-bold text-[color:var(--wp-text)] shadow-sm hover:bg-[color:var(--wp-main-scroll-bg)]"
+            >
+              Zdroje obsahu →
+            </a>
+            <a
               href="/portal/email-campaigns/referrals"
               className="inline-flex items-center gap-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-white px-4 py-2 text-sm font-bold text-[color:var(--wp-text)] shadow-sm hover:bg-[color:var(--wp-main-scroll-bg)]"
             >
@@ -1142,6 +1241,32 @@ Odeslání nelze vrátit zpět.`,
           </div>
         </div>
       )}
+      {articleModalOpen ? (
+        <InsertArticleModal
+          onClose={() => setArticleModalOpen(false)}
+          onInsert={(html) => handleInsertArticles(html)}
+        />
+      ) : null}
+      {aiDraftModalOpen ? (
+        <AiDraftModal
+          editorHasContent={Boolean(form.bodyHtml && form.bodyHtml.trim().length > 0)}
+          campaignId={form.draftId}
+          onClose={() => setAiDraftModalOpen(false)}
+          onApply={handleApplyAiDraft}
+        />
+      ) : null}
+      {abTestModalOpen && form.draftId ? (
+        <AbTestModal
+          parentCampaignId={form.draftId}
+          originalSubject={form.subject}
+          originalPreheader=""
+          onClose={() => setAbTestModalOpen(false)}
+          onLaunched={(parentId) => {
+            setAbTestModalOpen(false);
+            router.push(`/portal/email-campaigns/${parentId}`);
+          }}
+        />
+      ) : null}
     </PortalPageShell>
   );
 }

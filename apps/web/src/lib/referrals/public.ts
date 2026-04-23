@@ -106,13 +106,15 @@ export async function submitReferral(
 
   // Najdi request
   const rows = (await dbService.execute(sql`
-    SELECT id, tenant_id AS "tenantId", submitted_at AS "submittedAt", expires_at AS "expiresAt"
+    SELECT id, tenant_id AS "tenantId", contact_id AS "referringContactId",
+           submitted_at AS "submittedAt", expires_at AS "expiresAt"
     FROM referral_requests
     WHERE token = ${cleaned}
     LIMIT 1
   `)) as unknown as Array<{
     id: string;
     tenantId: string;
+    referringContactId: string;
     submittedAt: Date | null;
     expiresAt: Date;
   }>;
@@ -148,5 +150,110 @@ export async function submitReferral(
       .where(and(eq(referralRequests.token, cleaned)));
   });
 
+  // B3.2: pošli thank-you email původnímu kontaktu. Nefailovat submit pokud
+  // thank-you selže (kampaň je nice-to-have, ne blokující).
+  try {
+    await enqueueReferralThankYou({
+      tenantId: row.tenantId,
+      referringContactId: row.referringContactId,
+    });
+  } catch (e) {
+    console.warn("[referral] thank-you email enqueue failed (non-blocking)", e);
+  }
+
   return { ok: true };
+}
+
+/**
+ * B3.2 — najde kontakt, který referral vyvolal, a zařadí mu do fronty single-recipient
+ * kampaň na bázi šablony `referral_thank_you`. Přeskočí pokud kontakt nemá email
+ * / do_not_email / je unsubscribed. (Tady vědomě neprovádíme consent check —
+ * transactional potvrzovací email je opodstatněný na právním základě plnění.)
+ */
+async function enqueueReferralThankYou(params: {
+  tenantId: string;
+  referringContactId: string;
+}): Promise<void> {
+  await withServiceTenantContext({ tenantId: params.tenantId }, async (tx) => {
+    const [contact] = await tx
+      .select({
+        id: contacts.id,
+        email: contacts.email,
+        firstName: contacts.firstName,
+        lastName: contacts.lastName,
+        doNotEmail: contacts.doNotEmail,
+        notificationUnsubscribedAt: contacts.notificationUnsubscribedAt,
+      })
+      .from(contacts)
+      .where(
+        and(
+          eq(contacts.id, params.referringContactId),
+          eq(contacts.tenantId, params.tenantId),
+        ),
+      )
+      .limit(1);
+    if (!contact || !contact.email || contact.doNotEmail) return;
+    if (contact.notificationUnsubscribedAt) return;
+
+    const [template] = await tx
+      .select({
+        subject: emailTemplates.subject,
+        preheader: emailTemplates.preheader,
+        bodyHtml: emailTemplates.bodyHtml,
+      })
+      .from(emailTemplates)
+      .where(
+        and(
+          eq(emailTemplates.kind, "referral_thank_you"),
+          eq(emailTemplates.isArchived, false),
+          isNull(emailTemplates.tenantId),
+        ),
+      )
+      .limit(1);
+    if (!template) return;
+
+    const scheduledFor = new Date();
+    const [created] = await tx
+      .insert(emailCampaigns)
+      .values({
+        tenantId: params.tenantId,
+        createdByUserId: "system:referral",
+        name: `Poděkování za doporučení — ${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim(),
+        subject: template.subject,
+        preheader: template.preheader,
+        bodyHtml: template.bodyHtml,
+        status: "queued",
+        scheduledAt: scheduledFor,
+        queuedAt: new Date(),
+        recipientCount: 1,
+      })
+      .returning({ id: emailCampaigns.id });
+    const campaignId = created!.id;
+
+    const [recipientRow] = await tx
+      .insert(emailCampaignRecipients)
+      .values({
+        tenantId: params.tenantId,
+        campaignId,
+        contactId: contact.id,
+        email: contact.email,
+        trackingToken: mintTrackingToken(),
+        status: "queued",
+      })
+      .returning({ id: emailCampaignRecipients.id });
+
+    await tx.insert(emailSendQueue).values({
+      tenantId: params.tenantId,
+      campaignId,
+      recipientId: recipientRow!.id,
+      scheduledFor,
+      nextAttemptAt: scheduledFor,
+      status: "pending",
+      payload: {
+        firstName: contact.firstName ?? "",
+        lastName: contact.lastName ?? "",
+        email: contact.email.trim(),
+      },
+    });
+  });
 }
