@@ -19,14 +19,23 @@ function logNativeOAuthDebug(...args: unknown[]) {
 
 const CONSUMED_CODE_KEY = "aidv.native_oauth.consumed_code";
 const CONSUMED_CODE_OUTCOME_KEY = "aidv.native_oauth.consumed_code_outcome";
+const PROCESSED_LAUNCH_URL_KEY = "aidv.native_oauth.processed_launch_url";
 const LAST_INCOMING_URL_KEY = "aidvisora.lastIncomingURL";
 
 type ConsumedOutcome = { outcome: "ok" | "error"; message?: string };
 
+/**
+ * Persistujeme přes localStorage (ne sessionStorage), protože WKWebView se po
+ * `window.location.replace(...)` může u některých navigací chovat jako fresh
+ * page-load a sessionStorage znovu vyrobit prázdné. Důsledek byl ošklivý loop:
+ * `App.getLaunchUrl()` vždy vrací OAuth callback URL, dedup v sessionStorage
+ * zmizel → znovu se zavolal exchange → middleware bez session vyhodil zpět na
+ * `/prihlaseni` → nový mount → znovu launch URL → atd.
+ */
 function readConsumedCode(): string | null {
   if (typeof window === "undefined") return null;
   try {
-    return window.sessionStorage.getItem(CONSUMED_CODE_KEY);
+    return window.localStorage.getItem(CONSUMED_CODE_KEY);
   } catch {
     return null;
   }
@@ -35,8 +44,8 @@ function readConsumedCode(): string | null {
 function writeConsumedCode(code: string, outcome: ConsumedOutcome) {
   if (typeof window === "undefined") return;
   try {
-    window.sessionStorage.setItem(CONSUMED_CODE_KEY, code);
-    window.sessionStorage.setItem(CONSUMED_CODE_OUTCOME_KEY, JSON.stringify(outcome));
+    window.localStorage.setItem(CONSUMED_CODE_KEY, code);
+    window.localStorage.setItem(CONSUMED_CODE_OUTCOME_KEY, JSON.stringify(outcome));
   } catch {
     /* ignore */
   }
@@ -45,11 +54,36 @@ function writeConsumedCode(code: string, outcome: ConsumedOutcome) {
 function readConsumedOutcome(): ConsumedOutcome | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = window.sessionStorage.getItem(CONSUMED_CODE_OUTCOME_KEY);
+    const raw = window.localStorage.getItem(CONSUMED_CODE_OUTCOME_KEY);
     if (!raw) return null;
     return JSON.parse(raw) as ConsumedOutcome;
   } catch {
     return null;
+  }
+}
+
+/**
+ * iOS si pamatuje launch URL appky po celý život procesu — každý nový mount
+ * `NativeOAuthDeepLinkBridge` (po každé navigaci ve WebView) dostane z
+ * `App.getLaunchUrl()` tu samou OAuth callback URL znovu. Pamatujeme si tedy
+ * launch URL, kterou jsme už začali zpracovávat, a v dalších mountech ji
+ * ignorujeme, jinak se zacyklíme.
+ */
+function readProcessedLaunchUrl(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage.getItem(PROCESSED_LAUNCH_URL_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writeProcessedLaunchUrl(url: string) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(PROCESSED_LAUNCH_URL_KEY, url);
+  } catch {
+    /* ignore */
   }
 }
 
@@ -249,10 +283,26 @@ export function NativeOAuthDeepLinkBridge() {
                     const supabase = createClient();
                     const { data } = await supabase.auth.getSession();
                     if (data?.session) {
+                      // Session existuje — pokud zrovna trčíme na /prihlaseni
+                      // (proxy.ts nás tam mohla po refreshi vrátit), poslat na portál.
+                      if (
+                        typeof window !== "undefined" &&
+                        /\/prihlaseni(\b|$|\/)/.test(window.location.pathname)
+                      ) {
+                        safeReplaceLocation(`${origin}/portal/today`);
+                      }
                       return;
                     }
                   } catch {}
-                  safeReplaceLocation(`${origin}/portal/today`);
+                  // Tady končí předchozí infinite loop: dedup říká „kód byl
+                  // úspěšně vyměněný“, ale `getSession()` nic nemá a my jsme
+                  // dříve vždy znovu navigovali na /portal/today, kde nás
+                  // middleware bez cookies poslal zpět na /prihlaseni → mount →
+                  // znovu launch URL → atd. Místo toho zůstaneme na místě a
+                  // necháme uživatele přihlásit znovu.
+                  console.warn(
+                    "[NativeOAuthDeepLinkBridge] consumed code without active session, staying put to avoid loop",
+                  );
                 } else if (outcome?.outcome === "error") {
                   safeReplaceLocation(
                     `${origin}/prihlaseni?error=${encodeURIComponent(outcome.message ?? "auth_failed")}`,
@@ -437,7 +487,17 @@ export function NativeOAuthDeepLinkBridge() {
 
         const launchUrl = await App.getLaunchUrl();
         logNativeOAuthDebug("[NativeOAuthDeepLinkBridge] launch URL:", launchUrl?.url ?? "(none)");
-        if (launchUrl?.url) await handleOpenUrl(launchUrl.url);
+        if (launchUrl?.url) {
+          const alreadyProcessed = readProcessedLaunchUrl();
+          if (alreadyProcessed === launchUrl.url) {
+            logNativeOAuthDebug(
+              "[NativeOAuthDeepLinkBridge] launch URL already processed in a previous mount, skipping",
+            );
+          } else {
+            writeProcessedLaunchUrl(launchUrl.url);
+            await handleOpenUrl(launchUrl.url);
+          }
+        }
         await consumePersistedIncomingUrl("init");
 
         const appStateListener = await App.addListener("appStateChange", (state) => {
