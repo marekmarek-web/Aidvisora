@@ -17,6 +17,7 @@ import FirebaseCore
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     let shareStore = ShareStore.store
+    private let lastIncomingURLPreferencesKey = "CapacitorStorage.aidvisora.lastIncomingURL"
 
     @discardableResult
     func handleIncomingURL(
@@ -24,6 +25,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         app: UIApplication,
         options: [UIApplication.OpenURLOptionsKey: Any] = [:]
     ) -> Bool {
+        persistIncomingURLForWebBridge(url)
         let success = ApplicationDelegateProxy.shared.application(app, open: url, options: options)
         processSharedItems(from: url)
         return success
@@ -79,7 +81,28 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Called when the app was launched with an activity, including Universal Links.
         // Feel free to add additional processing here, but if you want the App API to support
         // tracking app url opens, make sure to keep this call
+        if let url = userActivity.webpageURL {
+            persistIncomingURLForWebBridge(url)
+        }
         return ApplicationDelegateProxy.shared.application(application, continue: userActivity, restorationHandler: restorationHandler)
+    }
+
+    private func persistIncomingURLForWebBridge(_ url: URL) {
+        guard shouldPersistIncomingURL(url) else { return }
+        UserDefaults.standard.set(url.absoluteString, forKey: lastIncomingURLPreferencesKey)
+        UserDefaults.standard.synchronize()
+    }
+
+    private func shouldPersistIncomingURL(_ url: URL) -> Bool {
+        if url.scheme == "aidvisor" || url.scheme == "aidvisora" {
+            return true
+        }
+        if (url.scheme == "https" || url.scheme == "http"),
+           let host = url.host,
+           host == "aidvisora.cz" || host == "www.aidvisora.cz" {
+            return true
+        }
+        return false
     }
 
     private func processSharedItems(from url: URL) {

@@ -19,6 +19,7 @@ function logNativeOAuthDebug(...args: unknown[]) {
 
 const CONSUMED_CODE_KEY = "aidv.native_oauth.consumed_code";
 const CONSUMED_CODE_OUTCOME_KEY = "aidv.native_oauth.consumed_code_outcome";
+const LAST_INCOMING_URL_KEY = "aidvisora.lastIncomingURL";
 
 type ConsumedOutcome = { outcome: "ok" | "error"; message?: string };
 
@@ -126,13 +127,15 @@ export function NativeOAuthDeepLinkBridge() {
     let handlerInFlight = false;
     let lastHandledUrl = "";
     let lastHandledAt = 0;
+    let cleanupPersistedUrlListeners: (() => void) | null = null;
     const DEDUPE_MS = 900;
 
     (async () => {
       // Dynamic import — tenhle kód poběží jen na iOS/Android WebView.
-      const [{ App }, { Browser }, { createClient }, { getNativeWebAppBaseUrl }] = await Promise.all([
+      const [{ App }, { Browser }, { Preferences }, { createClient }, { getNativeWebAppBaseUrl }] = await Promise.all([
         import("@capacitor/app"),
         import("@capacitor/browser"),
+        import("@capacitor/preferences"),
         import("@/lib/supabase/client"),
         import("@/lib/url/native-web-app-base"),
       ]);
@@ -399,17 +402,63 @@ export function NativeOAuthDeepLinkBridge() {
         }
       };
 
-      try {
-        const launchUrl = await App.getLaunchUrl();
-        logNativeOAuthDebug("[NativeOAuthDeepLinkBridge] launch URL:", launchUrl?.url ?? "(none)");
-        if (launchUrl?.url) await handleOpenUrl(launchUrl.url);
+      const consumePersistedIncomingUrl = async (reason: string) => {
+        if (disposed) return;
+        let rawUrl: string | null | undefined;
+        try {
+          const result = await Preferences.get({ key: LAST_INCOMING_URL_KEY });
+          rawUrl = result.value;
+        } catch (e) {
+          logNativeOAuthDebug("[NativeOAuthDeepLinkBridge] failed to read persisted incoming URL:", e);
+          return;
+        }
+        if (!rawUrl) return;
+        if (handlerInFlight) {
+          logNativeOAuthDebug(
+            "[NativeOAuthDeepLinkBridge] persisted incoming URL found, waiting for in-flight handler:",
+            reason,
+          );
+          return;
+        }
+        logNativeOAuthDebug("[NativeOAuthDeepLinkBridge] consuming persisted incoming URL:", reason, rawUrl);
+        try {
+          await Preferences.remove({ key: LAST_INCOMING_URL_KEY });
+        } catch {}
+        await handleOpenUrl(rawUrl);
+      };
 
+      try {
         const listener = await App.addListener("appUrlOpen", (event) => {
           void handleOpenUrl(event.url);
         });
 
         if (disposed) listener.remove();
         else removeListener = () => listener.remove();
+
+        const launchUrl = await App.getLaunchUrl();
+        logNativeOAuthDebug("[NativeOAuthDeepLinkBridge] launch URL:", launchUrl?.url ?? "(none)");
+        if (launchUrl?.url) await handleOpenUrl(launchUrl.url);
+        await consumePersistedIncomingUrl("init");
+
+        const appStateListener = await App.addListener("appStateChange", (state) => {
+          if (state.isActive) void consumePersistedIncomingUrl("appStateChange");
+        });
+        const onFocus = () => void consumePersistedIncomingUrl("focus");
+        const onPageshow = () => void consumePersistedIncomingUrl("pageshow");
+        const onVisibilityChange = () => {
+          if (document.visibilityState === "visible") {
+            void consumePersistedIncomingUrl("visibilitychange");
+          }
+        };
+        window.addEventListener("focus", onFocus);
+        window.addEventListener("pageshow", onPageshow);
+        document.addEventListener("visibilitychange", onVisibilityChange);
+        cleanupPersistedUrlListeners = () => {
+          void appStateListener.remove();
+          window.removeEventListener("focus", onFocus);
+          window.removeEventListener("pageshow", onPageshow);
+          document.removeEventListener("visibilitychange", onVisibilityChange);
+        };
       } catch (e) {
         console.error("[NativeOAuthDeepLinkBridge] init failed", e);
       }
@@ -418,6 +467,7 @@ export function NativeOAuthDeepLinkBridge() {
     return () => {
       disposed = true;
       if (removeListener) removeListener();
+      if (cleanupPersistedUrlListeners) cleanupPersistedUrlListeners();
     };
   }, []);
 
