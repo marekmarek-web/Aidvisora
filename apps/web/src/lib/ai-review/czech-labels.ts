@@ -210,6 +210,10 @@ export function sanitizeAdvisorVisibleText(raw: string): string {
     [/\bfundStrategy\b/gi, "investiční strategie"],
     [/\binvestmentStrategy\b/gi, "investiční strategie"],
     [/\bpolicyholder\b/gi, "pojistník"],
+    [/\bIntermediary Email\b/gi, "E-mail zprostředkovatele"],
+    [/\bIntermediary Phone\b/gi, "Telefon zprostředkovatele"],
+    [/\bintermediaryEmail\b/gi, "E-mail zprostředkovatele"],
+    [/\bintermediaryPhone\b/gi, "Telefon zprostředkovatele"],
   ];
   for (const [re, rep] of ORDERED) {
     t = t.replace(re, rep);
@@ -296,9 +300,9 @@ export function humanizeReviewReasonLine(raw: string): string {
       if (r) return r;
       const nk = normalizeReasonKey(s);
       const msg = getReasonMessage(nk);
-      return msg !== nk ? msg : "Podrobnost ke kontrole";
-    });
-    return sanitizeAdvisorVisibleText(`${leftLabel}: ${rightBits.join(", ")}`);
+      return msg !== nk ? msg : null;
+    }).filter((s): s is string => Boolean(s));
+    return sanitizeAdvisorVisibleText(rightBits.length ? `${leftLabel}: ${rightBits.join(", ")}` : leftLabel);
   }
 
   const stripped = stripInternalPathPrefixes(t);

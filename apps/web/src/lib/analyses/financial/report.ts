@@ -1081,6 +1081,8 @@ export interface BuildReportHTMLOptions {
   linkedCompanyName?: string | null;
   branding?: PdfReportBranding;
   theme?: 'elegant' | 'modern';
+  /** Náhled vložený v aplikaci: bez reportového sidebaru, aby nekolidoval s CRM chrome. */
+  embedded?: boolean;
   /** Stejný přehled jako v UI shrnutí — kanonický read model + sdílený FV kalkulátor. */
   canonicalInvestmentOverview?: FaCanonicalInvestmentOverviewRow[];
 }
@@ -1216,6 +1218,7 @@ export function buildReportHTML(data: FinancialAnalysisData, options?: BuildRepo
       advisorEmail: options.branding.reportContactEmail?.trim() || undefined,
     } : undefined,
     includeCompany: data.includeCompany,
+    embedded: options?.embedded,
     canonicalInvestmentOverview: options?.canonicalInvestmentOverview,
   });
 }

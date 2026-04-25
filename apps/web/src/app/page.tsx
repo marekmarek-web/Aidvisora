@@ -2,25 +2,20 @@
  * Hlavní (landing) stránka Aidvisora – marketingová stránka před přihlášením.
  * Přihlášení/registrace je na /prihlaseni. V demo režimu (NEXT_PUBLIC_SKIP_AUTH=true) přesměruje rovnou na /portal.
  *
- * Perf — `dynamic = "force-static"` + `revalidate = 3600` — landing HTML jede
- * z Vercel CDN (žádné `headers()`, `cookies()`, `getUser()`). Auth-based redirect
- * pro už přihlášeného uživatele řeší proxy (AIDV header) i `<NativeOAuthDeepLinkBridge />`
- * – ale na anonymní marketing routě proxy auth path skip, takže static je bezpečné.
+ * Auth-based redirect pro už přihlášeného uživatele řeší proxy (AIDV header)
+ * i `<NativeOAuthDeepLinkBridge />`. Landing route zůstává bez auth dat a bez
+ * request-time závislostí, aby byla jednoduchá a stabilní i v dev režimu.
  */
 import { redirect } from "next/navigation";
-import nextDynamic from "next/dynamic";
-
-export const dynamic = "force-static";
-export const revalidate = 3600;
-
-const PremiumLandingPage = nextDynamic(() => import("./components/PremiumLandingPage"), {
-  loading: () => (
-    <div className="min-h-[40vh] flex items-center justify-center text-slate-500 text-sm" aria-busy="true">
-      Načítám…
-    </div>
-  ),
-});
+import PremiumLandingPage from "./components/PremiumLandingPage";
 import { LANDING_FAQS } from "@/data/landing-faq";
+
+/**
+ * Dev: `force-dynamic` — vždy aktuální markup z editoru (žádné „zaseknuté“ statické HTML).
+ * Prod: ISR; kratší interval, ať se po deployi rychle projeví změny na doméně.
+ */
+export const dynamic = process.env.NODE_ENV === "development" ? "force-dynamic" : "force-static";
+export const revalidate = process.env.NODE_ENV === "development" ? 0 : 300;
 
 function LandingFaqJsonLd() {
   const schema = {

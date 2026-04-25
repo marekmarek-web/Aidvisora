@@ -1,205 +1,274 @@
 "use client";
 
 import React from "react";
-import { Plus, Pencil, GripVertical, Sparkles } from "lucide-react";
-import { DemoFrame } from "./DemoFrame";
-import { DEMO_NOTES, type DemoNote } from "./demo-data";
+import {
+  Briefcase,
+  Calendar,
+  CheckCircle2,
+  Edit2,
+  FileText,
+  GripHorizontal,
+  LayoutGrid,
+  Pin,
+  Plus,
+  Sparkles,
+  User,
+} from "lucide-react";
 
-const ACCENT: Record<string, { dot: string; chip: string; border: string }> = {
-  emerald: {
-    dot: "bg-emerald-400",
-    chip: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
-    border: "hover:border-emerald-400/50",
-  },
-  rose: {
-    dot: "bg-rose-400",
-    chip: "bg-rose-500/15 text-rose-300 border-rose-500/30",
-    border: "hover:border-rose-400/50",
-  },
-  indigo: {
-    dot: "bg-indigo-400",
-    chip: "bg-indigo-500/15 text-indigo-300 border-indigo-500/30",
-    border: "hover:border-indigo-400/50",
-  },
+import { LandingMockCanvas } from "./LandingMockCanvas";
+import { LandingProductFrame } from "./LandingProductFrame";
+
+type NoteCard = {
+  id: number;
+  type: string;
+  typeColor: "blue" | "purple" | "rose" | "emerald" | "amber";
+  title: string;
+  client: string;
+  date: string;
+  content: string;
+  nextSteps: string | null;
+  isPinned: boolean;
 };
 
-/**
- * Zápisky — interaktivní mini board. Tři ukázkové zápisky z různých domén
- * (Investice / ZP / Penzijní spoření) + dlaždice „Přidat nový".
- * Cíl: ukázat, že zápisky nejsou mrtvý seznam, ale živé karty s quick edit.
- */
-export function NotesBoardDemo() {
-  const [activeId, setActiveId] = React.useState<string | null>(null);
-  const [editingId, setEditingId] = React.useState<string | null>(null);
-  const [drafts, setDrafts] = React.useState<Record<string, string>>({});
+const INITIAL_NOTES: NoteCard[] = [
+  {
+    id: 1,
+    type: "HYPOTÉKA",
+    typeColor: "blue",
+    title: "Žádost o úvěr - Zíta",
+    client: "Tomáš Zíta",
+    date: "24. 4. 2026",
+    content: "LTV 80 %, max. ručení nemovitostí rodičů. Klient má 1 500 000 Kč vlastní zdroje. Probrali jsme fixaci na 3 roky.",
+    nextSteps: "Poslat podklady do KB ke schválení. Založit složku.",
+    isPinned: true,
+  },
+  {
+    id: 2,
+    type: "JINÉ",
+    typeColor: "purple",
+    title: "Příprava na audit",
+    client: "Obecný zápisek",
+    date: "25. 4. 2026",
+    content: "Doplnit chybějící AML dotazníky u top 10 klientů. Zkontrolovat platnost občanek.",
+    nextSteps: null,
+    isPinned: false,
+  },
+  {
+    id: 3,
+    type: "ŽIVOTNÍ POJIŠTĚNÍ",
+    typeColor: "rose",
+    title: "Návrh krytí pro rodinu",
+    client: "Marek Marek",
+    date: "22. 4. 2026",
+    content: "Chybí invalidita 3. stupně. Navrhnout navýšení v rámci stávajícího IŽP.",
+    nextSteps: "Ověřit zdravotní dotazník před schůzkou.",
+    isPinned: false,
+  },
+  {
+    id: 4,
+    type: "INVESTICE",
+    typeColor: "emerald",
+    title: "Rebalancování portfolia",
+    client: "Lucie Bílá",
+    date: "20. 4. 2026",
+    content: "Klientka chce přejít na konzervativnější strategii (blíží se důchodový věk). Přesun z akciového do dluhopisového fondu.",
+    nextSteps: null,
+    isPinned: false,
+  },
+  {
+    id: 5,
+    type: "PENZIJNÍ SPOŘENÍ",
+    typeColor: "amber",
+    title: "Založení DIPu",
+    client: "Jan Novák",
+    date: "18. 4. 2026",
+    content: "Připravit srovnání DIP a klasického DPS. Daňová úspora 48 000 Kč ročně.",
+    nextSteps: "Zavolat v pátek a potvrdit založení.",
+    isPinned: false,
+  },
+];
 
-  const handleSaveDraft = (id: string) => {
-    setEditingId(null);
+function getTagColors(color: NoteCard["typeColor"]) {
+  const colors = {
+    blue: "border-blue-100 bg-blue-50 text-blue-600",
+    purple: "border-purple-100 bg-purple-50 text-purple-600",
+    rose: "border-rose-100 bg-rose-50 text-rose-600",
+    emerald: "border-emerald-100 bg-emerald-50 text-emerald-600",
+    amber: "border-amber-100 bg-amber-50 text-amber-600",
+  } as const;
+
+  return colors[color] ?? colors.blue;
+}
+
+export function NotesBoardDemo() {
+  const [notes, setNotes] = React.useState(INITIAL_NOTES);
+  const [draggedNoteId, setDraggedNoteId] = React.useState<number | null>(null);
+
+  const handleDragStart = (event: React.DragEvent<HTMLDivElement>, id: number) => {
+    setDraggedNoteId(id);
+    event.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragEnd = () => {
+    setDraggedNoteId(null);
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>, targetId: number) => {
+    event.preventDefault();
+    if (draggedNoteId === null || draggedNoteId === targetId) return;
+
+    setNotes((current) => {
+      const draggedIndex = current.findIndex((note) => note.id === draggedNoteId);
+      const targetIndex = current.findIndex((note) => note.id === targetId);
+      if (draggedIndex === -1 || targetIndex === -1) return current;
+
+      const next = [...current];
+      const temp = next[draggedIndex];
+      next[draggedIndex] = next[targetIndex];
+      next[targetIndex] = temp;
+      return next;
+    });
+    setDraggedNoteId(null);
   };
 
   return (
-    <DemoFrame label="Zápisky · Board" status={`${DEMO_NOTES.length} karty`} statusTone="indigo">
-      <div className="p-4 md:p-5 bg-[#0a0f29]/40">
-        <div className="flex flex-wrap items-center gap-2 mb-4">
-          {(["Vše", "Investice", "Životní pojištění", "Penzijní sp."] as const).map((c, i) => (
-            <span
-              key={c}
-              className={`text-[11px] font-bold px-3 py-1 rounded-full border ${
-                i === 0
-                  ? "bg-white/10 text-white border-white/20"
-                  : "bg-transparent text-slate-400 border-white/10"
-              }`}
-            >
-              {c}
-            </span>
-          ))}
-          <span className="ml-auto inline-flex items-center gap-1 text-[11px] text-slate-500">
-            <Sparkles size={12} className="text-indigo-300" /> Živý board
-          </span>
-        </div>
+    <LandingProductFrame label="Zápisky · nástěnka" status={`${notes.length} zápisků`} statusTone="indigo">
+      <LandingMockCanvas className="bg-[#F8FAFC]">
+        <div className="min-h-full bg-[#F8FAFC] pb-20 font-inter text-slate-800">
+          <style>{`
+            .font-jakarta { font-family: var(--font-jakarta), var(--font-primary), -apple-system, BlinkMacSystemFont, sans-serif; }
+            .font-inter { font-family: var(--font-primary), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+            .custom-dots {
+              background-image: radial-gradient(#CBD5E1 1px, transparent 1px);
+              background-size: 32px 32px;
+              background-position: -16px -16px;
+            }
+            .masonry-grid {
+              column-count: 1;
+              column-gap: 1.5rem;
+            }
+            @media (min-width: 768px) {
+              .masonry-grid { column-count: 2; }
+            }
+            @media (min-width: 1024px) {
+              .masonry-grid { column-count: 3; }
+            }
+            .masonry-item {
+              break-inside: avoid;
+              margin-bottom: 1.5rem;
+            }
+            .note-card {
+              transition: all 0.2s ease;
+            }
+            .note-card.dragging {
+              transform: scale(0.98);
+              box-shadow: 0 0 0 2px #5A4BFF;
+            }
+          `}</style>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {DEMO_NOTES.map((note) => (
-            <NoteCard
-              key={note.id}
-              note={note}
-              active={activeId === note.id}
-              editing={editingId === note.id}
-              draft={drafts[note.id] ?? note.preview}
-              onDraftChange={(v) => setDrafts((p) => ({ ...p, [note.id]: v }))}
-              onActivate={() => setActiveId(note.id)}
-              onDeactivate={() => setActiveId((curr) => (curr === note.id ? null : curr))}
-              onStartEdit={() => {
-                setEditingId(note.id);
-                setActiveId(note.id);
-              }}
-              onSave={() => handleSaveDraft(note.id)}
-              onCancelEdit={() => setEditingId(null)}
-            />
-          ))}
-          <AddNewTile />
-        </div>
-      </div>
-    </DemoFrame>
-  );
-}
+          <div className="custom-dots h-full px-6 pt-8 lg:px-10">
+            <div className="mx-auto max-w-[1600px]">
+              <header className="sticky top-4 z-50 mb-10 flex items-center justify-between gap-6 rounded-[24px] border border-slate-200/60 bg-white/50 p-4 shadow-sm backdrop-blur-xl">
+                <div className="flex items-center gap-4 pl-2">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-indigo-100/50 bg-indigo-50 text-indigo-600">
+                    <FileText size={24} />
+                  </div>
+                  <div>
+                    <h1 className="font-jakarta text-xl font-extrabold leading-tight text-[#0B1021]">Zápisky</h1>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Nástěnka zápisků</p>
+                  </div>
+                </div>
 
-function NoteCard({
-  note,
-  active,
-  editing,
-  draft,
-  onDraftChange,
-  onActivate,
-  onDeactivate,
-  onStartEdit,
-  onSave,
-  onCancelEdit,
-}: {
-  note: DemoNote;
-  active: boolean;
-  editing: boolean;
-  draft: string;
-  onDraftChange: (v: string) => void;
-  onActivate: () => void;
-  onDeactivate: () => void;
-  onStartEdit: () => void;
-  onSave: () => void;
-  onCancelEdit: () => void;
-}) {
-  const accent = ACCENT[note.accent] ?? ACCENT.indigo;
+                <div className="flex items-center gap-3">
+                  <button className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-jakarta font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50">
+                    <LayoutGrid size={16} className="text-slate-400" /> Uspořádat
+                  </button>
+                  <button className="group flex items-center gap-2 rounded-xl border border-fuchsia-100 bg-fuchsia-50 px-5 py-3 text-sm font-jakarta font-bold text-fuchsia-700 shadow-sm transition-all hover:bg-fuchsia-100">
+                    <Sparkles size={16} className="text-fuchsia-500 transition-transform group-hover:rotate-12" /> AI Sumarizace
+                  </button>
+                  <button className="flex items-center gap-2 rounded-xl bg-[#0B1021] px-6 py-3 text-sm font-jakarta font-bold text-white shadow-md transition-all hover:-translate-y-0.5 hover:bg-black hover:shadow-lg">
+                    <Plus size={18} strokeWidth={2.5} /> NOVÝ ZÁPIS
+                  </button>
+                </div>
+              </header>
 
-  return (
-    <div
-      onMouseEnter={onActivate}
-      onFocus={onActivate}
-      onMouseLeave={onDeactivate}
-      onBlur={onDeactivate}
-      tabIndex={0}
-      className={`group relative rounded-2xl border bg-white/[0.04] border-white/10 p-4 transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/60 ${accent.border} ${
-        active ? "translate-y-[-2px] shadow-[0_14px_40px_-20px_rgba(99,102,241,0.45)] bg-white/[0.06]" : ""
-      }`}
-    >
-      <div className="flex items-center justify-between mb-2">
-        <span
-          className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border ${accent.chip}`}
-        >
-          <span className={`w-1.5 h-1.5 rounded-full ${accent.dot}`} />
-          {note.domainLabel}
-        </span>
-        <div
-          className={`flex items-center gap-1 transition-opacity ${
-            active ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-          }`}
-        >
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onStartEdit();
-            }}
-            className="p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-white/10"
-            aria-label="Upravit zápisek"
-          >
-            <Pencil size={12} />
-          </button>
-          <span className="p-1.5 text-slate-500" aria-hidden>
-            <GripVertical size={12} />
-          </span>
-        </div>
-      </div>
+              <div className="masonry-grid pb-20">
+                {notes.map((note) => (
+                  <div
+                    key={note.id}
+                    draggable
+                    onDragStart={(event) => handleDragStart(event, note.id)}
+                    onDragEnd={handleDragEnd}
+                    onDragOver={handleDragOver}
+                    onDrop={(event) => handleDrop(event, note.id)}
+                    className={`masonry-item note-card cursor-grab rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:shadow-md active:cursor-grabbing ${
+                      draggedNoteId === note.id ? "dragging" : ""
+                    }`}
+                  >
+                    <div className="flex items-center justify-between border-b border-slate-50 px-4 py-3">
+                      <GripHorizontal size={16} className="text-slate-300 transition-colors hover:text-slate-500" />
+                      <div className="flex items-center gap-1.5">
+                        <button className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-indigo-50 hover:text-indigo-600" title="Navázat na obchod">
+                          <Briefcase size={14} />
+                        </button>
+                        <button className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-indigo-50 hover:text-indigo-600" title="Upravit">
+                          <Edit2 size={14} />
+                        </button>
+                        <button
+                          className={`rounded-md p-1.5 transition-colors ${
+                            note.isPinned ? "bg-amber-50 text-amber-500 hover:bg-amber-100" : "text-slate-400 hover:bg-indigo-50 hover:text-indigo-600"
+                          }`}
+                          title="Připnout"
+                        >
+                          <Pin size={14} className={note.isPinned ? "fill-amber-500" : ""} />
+                        </button>
+                      </div>
+                    </div>
 
-      <h4 className="text-sm font-bold text-white mb-1.5 leading-snug">{note.title}</h4>
+                    <div className="p-5">
+                      <div className="mb-4 flex items-center justify-between">
+                        <span
+                          className={`flex items-center gap-1 rounded-md border px-2.5 py-1 text-[9px] font-black uppercase tracking-widest ${getTagColors(note.typeColor)}`}
+                        >
+                          <LayoutGrid size={10} /> {note.type}
+                        </span>
+                        <span className="flex items-center gap-1 text-[11px] font-semibold text-slate-400">
+                          <Calendar size={12} /> {note.date}
+                        </span>
+                      </div>
 
-      {editing ? (
-        <div className="space-y-2">
-          <textarea
-            value={draft}
-            onChange={(e) => onDraftChange(e.target.value)}
-            rows={3}
-            className="w-full text-xs text-slate-200 bg-[#0a0f29]/70 border border-white/10 rounded-lg p-2 focus:outline-none focus:border-indigo-400/60 resize-none"
-            autoFocus
-          />
-          <div className="flex items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={onCancelEdit}
-              className="text-[11px] font-semibold text-slate-500 hover:text-slate-300 px-2 py-1"
-            >
-              Zrušit
-            </button>
-            <button
-              type="button"
-              onClick={onSave}
-              className="text-[11px] font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-md px-2.5 py-1"
-            >
-              Uložit
-            </button>
+                      <div className="mb-4">
+                        <h3 className="mb-2 font-jakarta text-[17px] font-extrabold leading-snug text-[#0B1021]">{note.title}</h3>
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+                          <User size={12} /> {note.client}
+                        </div>
+                      </div>
+
+                      <p className="mb-4 text-[13px] font-medium leading-relaxed text-slate-600">{note.content}</p>
+
+                      {note.nextSteps ? (
+                        <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50/60 p-3.5">
+                          <div className="mb-1.5 flex items-center gap-1.5">
+                            <CheckCircle2 size={12} className="text-amber-500" />
+                            <span className="text-[9px] font-extrabold uppercase tracking-widest text-amber-600">Další kroky</span>
+                          </div>
+                          <p className="text-[12px] font-semibold leading-snug text-amber-900/80">{note.nextSteps}</p>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
-      ) : (
-        <p className="text-xs text-slate-400 leading-relaxed line-clamp-3">{draft}</p>
-      )}
-
-      <div className="mt-3 text-[10px] text-slate-500 uppercase tracking-wider font-bold">
-        Upraveno {note.updatedLabel}
-      </div>
-    </div>
-  );
-}
-
-function AddNewTile() {
-  return (
-    <button
-      type="button"
-      className="group rounded-2xl border border-dashed border-white/15 bg-white/[0.02] p-4 flex flex-col items-center justify-center text-center min-h-[140px] hover:border-indigo-400/50 hover:bg-indigo-500/5 transition-colors"
-    >
-      <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 group-hover:border-indigo-400/40 flex items-center justify-center mb-2">
-        <Plus size={18} className="text-slate-400 group-hover:text-indigo-300" />
-      </div>
-      <span className="text-sm font-bold text-slate-300 group-hover:text-white">Přidat zápisek</span>
-      <span className="text-[11px] text-slate-500 mt-1">Investice, ZP, penze, jiná doména…</span>
-    </button>
+      </LandingMockCanvas>
+    </LandingProductFrame>
   );
 }
 

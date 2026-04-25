@@ -20,6 +20,8 @@ export interface BuildPremiumReportOptions {
   theme?: ReportTheme;
   branding?: ReportBranding;
   includeCompany?: boolean;
+  /** Náhled vložený v aplikaci: bez reportového sidebaru, aby nekolidoval s CRM chrome. */
+  embedded?: boolean;
   /** Přehled investic z CRM — stejný kanonický model a FV jako portál. */
   canonicalInvestmentOverview?: FaCanonicalInvestmentOverviewRow[];
 }

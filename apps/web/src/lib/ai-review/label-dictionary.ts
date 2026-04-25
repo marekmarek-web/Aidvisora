@@ -94,6 +94,8 @@ const FIELD_KEY_LABELS: Record<string, string> = {
   coverageLines: "Přehled krytí",
   sumInsured: "Pojistná částka",
   deductible: "Spoluúčast",
+  intermediaryEmail: "E-mail zprostředkovatele",
+  intermediaryPhone: "Telefon zprostředkovatele",
 
   // Vozidlo / Majetek
   vehicleRegistration: "Registrační značka",

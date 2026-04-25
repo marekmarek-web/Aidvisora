@@ -91,8 +91,9 @@ Postup po `git pull`:
 
 1. Z kořene monorepa: `pnpm install` (aplikuje patch).
 2. Z `apps/web`: `pnpm cap:sync`.
-3. V Xcode: **File → Packages → Reset Package Caches**, pak **File → Packages → Resolve Package Versions**.
-4. Znovu **Product → Clean Build Folder** (`Shift + Cmd + K`) a build (`Cmd + B`).
+3. Při chybě kolem **grpc.zip** / extrakce `grpc`: `pnpm --filter web run ios:reset-spm` (vyčistí Swift PM artifact cache), potom znovu kroky 4–5.
+4. V Xcode: **File → Packages → Reset Package Caches**, pak **File → Packages → Resolve Package Versions**.
+5. Znovu **Product → Clean Build Folder** (`Shift + Cmd + K`) a build (`Cmd + B`).
 
 ## 9. Scan smoke test (před každým TestFlight buildem)
 

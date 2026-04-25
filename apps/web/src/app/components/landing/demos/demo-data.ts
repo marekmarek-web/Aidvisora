@@ -3,12 +3,41 @@
  *
  * Pravidla:
  * - žádná produkční data,
- * - jména, instituce a částky jsou fiktivní nebo ilustrativní,
+ * - částky, čísla smluv a poznámky jsou ilustrativní,
  * - žádné fake statistiky ani přepálené claimy.
  *
- * Loga institucí záměrně nepoužíváme — stačí text / monogram v kartě,
- * aby demo nevytvářelo dojem partnerství, které nemáme smluvně potvrzené.
+ * Instituce: používáme veřejně známé české hráče (Allianz, Generali ČP, ČSOB,
+ * NN, Conseq, ŠkoFIN). Místo kopírování proprietárních log renderujeme monogram
+ * v přibližné brand barvě — dojem „reálné finanční aplikace" bez nároku na
+ * partnerství či právní konflikt. `brand` → mapping v `INSTITUTION_BRANDS`.
  */
+
+export type InstitutionBrand = {
+  /** zkratka zobrazená v chipu (2–3 znaky) */
+  label: string;
+  /** tailwind třídy pro pozadí chipu (nasycená brand barva) */
+  bg: string;
+  /** tailwind třídy pro barvu textu uvnitř chipu */
+  fg: string;
+};
+
+export const INSTITUTION_BRANDS: Record<string, InstitutionBrand> = {
+  allianz: { label: "AZ", bg: "bg-[#003781]", fg: "text-white" },
+  amundi: { label: "AM", bg: "bg-[#061B4E]", fg: "text-white" },
+  atris: { label: "AT", bg: "bg-[#111827]", fg: "text-white" },
+  csob: { label: "ČSOB", bg: "bg-[#004890]", fg: "text-white" },
+  efekta: { label: "EO", bg: "bg-[#F4F1EA]", fg: "text-[#3A322A]" },
+  /** iShares (BlackRock) — ETF značka pro landing dema */
+  ishares: { label: "iS", bg: "bg-[#0B0B0B]", fg: "text-white" },
+  generali: { label: "G", bg: "bg-[#C21B17]", fg: "text-white" },
+  kooperativa: { label: "K", bg: "bg-[#3C008C]", fg: "text-white" },
+  nn: { label: "NN", bg: "bg-[#EE7F00]", fg: "text-white" },
+  conseq: { label: "CQ", bg: "bg-[#0B1F3A]", fg: "text-white" },
+  raiffeisen: { label: "RB", bg: "bg-[#F8C300]", fg: "text-black" },
+  skofin: { label: "ŠF", bg: "bg-[#4BA82E]", fg: "text-white" },
+  uniqa: { label: "UQ", bg: "bg-[#005CA9]", fg: "text-white" },
+  kb: { label: "KB", bg: "bg-[#C8102E]", fg: "text-white" },
+};
 
 export type DemoNote = {
   id: string;
@@ -161,7 +190,8 @@ export type DemoProduct = {
   kind: "zp" | "investice" | "penzijni" | "hypoteka" | "leasing";
   kindLabel: string;
   institution: string;
-  institutionInitials: string;
+  /** klíč do `INSTITUTION_BRANDS` — řídí barvu log-chipu */
+  brand: keyof typeof INSTITUTION_BRANDS;
   contractNumber: string;
   amountLabel: string;
   frequencyLabel: string;
@@ -191,58 +221,61 @@ export const DEMO_CLIENT: DemoClient = {
       id: "p-zp",
       kind: "zp",
       kindLabel: "Životní pojištění",
-      institution: "Pojišťovna A (ukázka)",
-      institutionInitials: "PA",
-      contractNumber: "ZP-2026-004821",
-      amountLabel: "1 850 Kč",
+      institution: "Kooperativa životní pojišťovna",
+      brand: "kooperativa",
+      contractNumber: "KOO-852014-22",
+      amountLabel: "2 442 Kč",
       frequencyLabel: "měsíčně",
       accent: "rose",
-      note: "Krytí invalidity 2. a 3. stupně · rezerva 320 000 Kč",
+      note: "UNIQA Life? No — zde čistě Kooperativa. Invalidita 2. a 3. stupně, pracovní neschopnost.",
     },
     {
       id: "p-inv",
       kind: "investice",
       kindLabel: "Investice",
-      institution: "Broker B (ukázka)",
-      institutionInitials: "BB",
-      contractNumber: "INV-7142-11",
-      amountLabel: "5 000 Kč",
-      frequencyLabel: "pravidelně měsíčně",
+      institution: "Amundi Czech Republic Asset Management",
+      brand: "amundi",
+      contractNumber: "AM-2240-2401",
+      amountLabel: "3 000 Kč",
+      frequencyLabel: "měsíčně",
       accent: "emerald",
-      note: "Globální akciový fond · horizont 15+ let",
+      note: "Fondy a ETF (Amundi) · pravidelná investice, horizont 15+ let",
     },
     {
       id: "p-pen",
       kind: "penzijni",
       kindLabel: "Penzijní spoření",
-      institution: "Fond C (ukázka)",
-      institutionInitials: "FC",
-      contractNumber: "DPS-00912-5",
+      institution: "Conseq penzijní společnost",
+      brand: "conseq",
+      contractNumber: "CQ-2403-1208",
       amountLabel: "1 000 Kč",
       frequencyLabel: "měsíčně + státní příspěvek",
       accent: "indigo",
+      note: "DIP / DPS přehled, dynamická strategie, daňové zvýhodnění.",
     },
     {
       id: "p-hypo",
       kind: "hypoteka",
       kindLabel: "Hypotéka",
-      institution: "Banka D (ukázka)",
-      institutionInitials: "BD",
-      contractNumber: "HU-2023-554201",
+      institution: "Raiffeisenbank hypotéka",
+      brand: "raiffeisen",
+      contractNumber: "RB-1124-331",
       amountLabel: "3 800 000 Kč",
       frequencyLabel: "fixace do 2028 · 14 200 Kč / měs.",
       accent: "blue",
+      note: "Anuita 14 200 Kč měsíčně · sazba fixovaná do 2028.",
     },
     {
       id: "p-leas",
       kind: "leasing",
       kindLabel: "Leasing na auto",
-      institution: "Leasing E (ukázka)",
-      institutionInitials: "LE",
+      institution: "ČSOB Leasing",
+      brand: "csob",
       contractNumber: "LE-0042-89",
-      amountLabel: "8 900 Kč",
+      amountLabel: "4 959 Kč",
       frequencyLabel: "měsíčně · doba 48 měsíců",
       accent: "amber",
+      note: "Majetek a odpovědnost / leasing vozidla · splatnost 48 měsíců.",
     },
   ],
 };
@@ -269,6 +302,7 @@ export type DemoPayment = {
   id: string;
   productLabel: string;
   institution: string;
+  brand: keyof typeof INSTITUTION_BRANDS;
   accountNumber: string;
   variableSymbol: string;
   amountLabel: string;
@@ -279,27 +313,30 @@ export const DEMO_PAYMENTS: readonly DemoPayment[] = [
   {
     id: "pay-zp",
     productLabel: "Životní pojištění",
-    institution: "Pojišťovna A (ukázka)",
-    accountNumber: "2400123456 / 2010",
-    variableSymbol: "4821004821",
-    amountLabel: "1 850 Kč",
+    institution: "Kooperativa životní pojišťovna",
+    brand: "kooperativa",
+    accountNumber: "1071801005 / 5500",
+    variableSymbol: "8801955412",
+    amountLabel: "2 442 Kč",
     dueLabel: "15. v měsíci",
   },
   {
     id: "pay-inv",
     productLabel: "Investice — pravidelná",
-    institution: "Broker B (ukázka)",
-    accountNumber: "1035529007 / 6100",
-    variableSymbol: "714211",
-    amountLabel: "5 000 Kč",
+    institution: "Amundi Czech Republic Asset Management",
+    brand: "amundi",
+    accountNumber: "138769176 / 2700",
+    variableSymbol: "7023398569",
+    amountLabel: "3 000 Kč",
     dueLabel: "10. v měsíci",
   },
   {
     id: "pay-pen",
     productLabel: "Penzijní spoření",
-    institution: "Fond C (ukázka)",
-    accountNumber: "5500001122 / 0800",
-    variableSymbol: "91250009",
+    institution: "Conseq penzijní společnost",
+    brand: "conseq",
+    accountNumber: "626111626 / 0300",
+    variableSymbol: "371748",
     amountLabel: "1 000 Kč",
     dueLabel: "20. v měsíci",
   },

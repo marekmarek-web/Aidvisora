@@ -31,11 +31,21 @@ const { mockChainable } = vi.hoisted(() => {
   const chainable = () => {
     const chain: Record<string, unknown> = {};
     const self = () => chain;
-    chain.select = vi.fn().mockImplementation(self);
+    chain.select = vi.fn().mockImplementation((selection?: Record<string, unknown>) => {
+      chain.__lastSelect = selection;
+      return chain;
+    });
     chain.from = vi.fn().mockImplementation(self);
     chain.where = vi.fn().mockImplementation(self);
-    chain.limit = vi.fn().mockResolvedValue([]);
+    chain.limit = vi.fn().mockImplementation(async () => {
+      const selection = chain.__lastSelect as Record<string, unknown> | undefined;
+      if (selection && "reviewStatus" in selection && "applyResultPayload" in selection) {
+        return [{ reviewStatus: "approved", applyResultPayload: null }];
+      }
+      return [];
+    });
     chain.orderBy = vi.fn().mockImplementation(self);
+    chain.execute = vi.fn().mockResolvedValue(undefined);
     chain.insert = vi.fn().mockImplementation(self);
     chain.values = vi.fn().mockImplementation(self);
     chain.returning = vi.fn().mockResolvedValue([{ id: "mock-contract-id" }]);
@@ -70,6 +80,7 @@ vi.mock("db", () => ({
   tasks: {},
   auditLog: {},
   clientPaymentSetups: {},
+  contactCoverage: {},
   contractReviewCorrections: {},
   userProfiles: { userId: "user_id" },
   contractSegments: ["ZP", "IP", "INV", "UV", "HYPO", "PEN", "MAJ", "ODV", "POV", "AUTO"],
@@ -99,7 +110,9 @@ import { applyContractReview } from "../apply-contract-review";
 import { capturePublishGuardFailure } from "@/lib/observability/portal-sentry";
 import { segmentDocumentPacket } from "../document-packet-segmentation";
 import { normalizeLifeInsuranceCanonical } from "../life-insurance-canonical-normalizer";
-import { mapApiToExtractionDocument } from "../../ai-review/mappers";
+import { advisorFieldLabelForKey, formatExtractedValue, mapApiToExtractionDocument } from "../../ai-review/mappers";
+import { humanizeReviewReasonLine } from "../../ai-review/czech-labels";
+import { deriveFieldApplyPolicy } from "../../ai-review/field-apply-policy";
 import type { ContractReviewRow } from "../review-queue-repository";
 import type { DocumentReviewEnvelope } from "../document-review-types";
 
@@ -390,7 +403,7 @@ describe("GH08 — applyContractReview: publishHints/sensitive flags never block
       reasons: ["bundle_not_split"],
     };
     const result = await applyContractReview({ reviewId: BASE_REVIEW_ID, tenantId: TENANT_ID, userId: USER_ID, row });
-    expect(result.ok).toBe(true);
+    expect(result.ok, result.ok ? undefined : result.error).toBe(true);
     if (result.ok) {
       expect(result.payload.createdContractId).toBeTruthy();
     }
@@ -402,7 +415,7 @@ describe("GH08 — applyContractReview: publishHints/sensitive flags never block
       primarySubdocumentType: "health_questionnaire",
     };
     const result = await applyContractReview({ reviewId: BASE_REVIEW_ID, tenantId: TENANT_ID, userId: USER_ID, row });
-    expect(result.ok).toBe(true);
+    expect(result.ok, result.ok ? undefined : result.error).toBe(true);
     if (result.ok) {
       expect(result.payload.createdContractId).toBeTruthy();
     }
@@ -415,7 +428,7 @@ describe("GH08 — applyContractReview: publishHints/sensitive flags never block
       sensitiveAttachmentOnly: true,
     };
     const result = await applyContractReview({ reviewId: BASE_REVIEW_ID, tenantId: TENANT_ID, userId: USER_ID, row });
-    expect(result.ok).toBe(true);
+    expect(result.ok, result.ok ? undefined : result.error).toBe(true);
     if (result.ok) {
       expect(result.payload.createdContractId).toBeTruthy();
     }
@@ -558,6 +571,114 @@ describe("GH11 — normalizeLifeInsuranceCanonical: parties → participants", (
     expect(names.some((n) => n.includes("Karel"))).toBe(true);
     // Should not merge into one record
     expect(result.participants.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("UNIQA Život & radost — návrh pojistné smlouvy regression", () => {
+  it("keeps proposal publishable after advisor approval and normalizes object risks/persons", () => {
+    const env = baseEnvelope("life_insurance_proposal", "proposal");
+    env.extractedFields = {
+      ...env.extractedFields,
+      proposalNumber: { value: "UNIQA-2026-001", status: "extracted", confidence: 0.91 },
+      totalMonthlyPremium: { value: "1 250", status: "extracted", confidence: 0.88 },
+      paymentFrequency: { value: "měsíčně", status: "extracted", confidence: 0.87 },
+      insuredPersons: {
+        value: [
+          { fullName: "Jiří Chlumecký", role: "insured" },
+          { fullName: "Jana Chlumecká", role: "second_insured" },
+        ],
+        status: "extracted",
+        confidence: 0.84,
+      },
+      insuredRisks: {
+        value: [
+          { riskLabel: "Pojistná částka pro případ smrti", insuredAmount: "1 000 000 Kč", parameter: "jednorázově" },
+          { riskLabel: "Úrazové pojištění", insuredAmount: "500 000 Kč", premium: "120 Kč" },
+          { riskLabel: "Invalidita", insuredAmount: "750 000 Kč", notes: "ověřit variantu plnění" },
+        ],
+        status: "extracted",
+        confidence: 0.82,
+      },
+      intermediaryEmail: { value: "poradce@example.cz", status: "extracted", confidence: 0.9 },
+      intermediaryPhone: { value: "+420 777 111 222", status: "extracted", confidence: 0.9 },
+    };
+
+    const result = normalizeLifeInsuranceCanonical(env);
+
+    expect(result.publishHints.contractPublishable).toBe(true);
+    expect(result.publishHints.needsManualValidation).toBe(true);
+    expect(result.publishHints.reasons).toContain("proposal_treated_as_final_contract");
+    expect(result.participants.map((p) => p.fullName)).toEqual(
+      expect.arrayContaining(["Jiří Chlumecký", "Jana Chlumecká"]),
+    );
+    expect(result.insuredRisks).toHaveLength(3);
+    expect(result.insuredRisks.map((r) => r.riskLabel)).toEqual(
+      expect.arrayContaining(["Pojistná částka pro případ smrti", "Úrazové pojištění", "Invalidita"]),
+    );
+    expect(formatExtractedValue(env.extractedFields.insuredRisks?.value)).not.toContain("[object Object]");
+    expect(advisorFieldLabelForKey("intermediaryEmail")).toBe("E-mail zprostředkovatele");
+    expect(advisorFieldLabelForKey("intermediaryPhone")).toBe("Telefon zprostředkovatele");
+  });
+
+  it("supports array, object wrapper and JSON string variants for insured persons", () => {
+    const env = baseEnvelope("life_insurance_proposal", "proposal");
+    env.extractedFields = {
+      ...env.extractedFields,
+      insuredPersons: {
+        value: JSON.stringify([{ fullName: "Jiří Chlumecký", role: "insured" }]),
+        status: "extracted",
+        confidence: 0.8,
+      },
+      insuredPeople: {
+        value: {
+          mainInsured: { fullName: "Jana Chlumecká", role: "insured" },
+          additionalInsured: [{ firstName: "Petr", lastName: "Chlumecký", role: "second_insured" }],
+        },
+        status: "extracted",
+        confidence: 0.78,
+      },
+    };
+
+    const result = normalizeLifeInsuranceCanonical(env);
+
+    expect(result.participants.map((p) => p.fullName)).toEqual(
+      expect.arrayContaining(["Jiří Chlumecký", "Jana Chlumecká", "Petr Chlumecký"]),
+    );
+  });
+
+  it("supports vendor coverage aliases and never renders object risks as object strings", () => {
+    const env = baseEnvelope("life_insurance_proposal", "proposal");
+    env.extractedFields = {
+      ...env.extractedFields,
+      coverageLines: {
+        value: {
+          benefits: [
+            { name: "Invalidita", benefitAmount: "20 000 Kč měsíčně", waitingPeriod: "od 3. stupně" },
+            { name: "Závažná onemocnění", limit: "300 000 Kč", deductible: "bez spoluúčasti" },
+          ],
+        },
+        status: "extracted",
+        confidence: 0.8,
+      },
+    };
+
+    const result = normalizeLifeInsuranceCanonical(env);
+    const rendered = formatExtractedValue(env.extractedFields.coverageLines?.value);
+
+    expect(result.insuredRisks.map((r) => r.riskLabel)).toEqual(
+      expect.arrayContaining(["Invalidita", "Závažná onemocnění"]),
+    );
+    expect(result.insuredRisks.find((r) => r.riskLabel === "Invalidita")?.parameter).toBe("od 3. stupně");
+    expect(rendered).not.toContain("[object Object]");
+  });
+
+  it("keeps proposal fields applicable and warning labels clean", () => {
+    const decision = deriveFieldApplyPolicy("contractNumber", "Nalezeno", "signature_ready_proposal");
+    const warning = humanizeReviewReasonLine("Upload obsahuje více logických dokumentů. Typy: Podrobnost ke kontrole");
+
+    expect(decision.policy).not.toBe("do_not_apply");
+    expect(warning).not.toContain("Podrobnost ke kontrole");
+    expect(warning).not.toContain("Intermediary Email");
   });
 });
 

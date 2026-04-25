@@ -319,7 +319,9 @@ describe("Preflight validation (8A)", () => {
       ...emptyCanonicalIntent(),
       intentType: "multi_action",
       requestedActions: ["create_opportunity", "schedule_meeting"],
-      extractedFacts: [],
+      // hypo vyžaduje amount pro ready preflight; schůzka záměrně bez startAt,
+      // aby vznikla kombinace „jeden ready + jeden incomplete".
+      extractedFacts: [{ key: "amount", value: "4000000" }],
       temporalExpressions: [],
       productDomain: "hypo",
     };
@@ -342,7 +344,7 @@ describe("Preflight validation (8A)", () => {
       ...emptyCanonicalIntent(),
       intentType: "multi_action",
       requestedActions: ["create_opportunity", "schedule_meeting"],
-      extractedFacts: [],
+      extractedFacts: [{ key: "amount", value: "4000000" }],
       temporalExpressions: [],
       productDomain: "hypo",
     };
@@ -368,7 +370,7 @@ describe("Preflight validation (8A)", () => {
       ...emptyCanonicalIntent(),
       intentType: "multi_action",
       requestedActions: ["create_opportunity", "schedule_meeting"],
-      extractedFacts: [],
+      extractedFacts: [{ key: "amount", value: "4000000" }],
       temporalExpressions: [],
       productDomain: "hypo",
     };

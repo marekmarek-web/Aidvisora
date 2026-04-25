@@ -122,6 +122,10 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const enableSpeedInsights =
+    process.env.NODE_ENV === "production" &&
+    process.env.NEXT_PUBLIC_ENABLE_SPEED_INSIGHTS === "true";
+
   return (
     <html lang="cs" suppressHydrationWarning>
       <head>
@@ -163,7 +167,7 @@ export default function RootLayout({
         */}
         <DeferredIdleMount>
           <CookieNoticeBanner />
-          <SpeedInsights />
+          {enableSpeedInsights ? <SpeedInsights /> : null}
         </DeferredIdleMount>
       </body>
     </html>

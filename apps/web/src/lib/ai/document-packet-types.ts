@@ -147,6 +147,8 @@ export interface InsuredRiskRecord {
   /** Human-readable Czech label from the document. */
   riskLabel: string;
   insuredAmount?: string | number | null;
+  /** Frequency, percentage, waiting period or another rider-specific parameter. */
+  parameter?: string | number | null;
   /** End date of this specific risk rider. */
   termEnd?: string | null;
   premium?: string | number | null;

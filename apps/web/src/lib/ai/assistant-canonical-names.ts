@@ -218,18 +218,21 @@ export function canonicalTaskTitle(params: {
 
 // ─── Client request subject ───────────────────────────────────────────────────
 
+// 16I-3: literární čeština, imperativ („Doložit …") místo korporátního
+// „Požadavek na …". Tenhle subject vidí klient ve svém portálu/e-mailu, ať
+// zní jako věta, ne jako systémový štítek. Test suite v 16I-3 + 12E to drží.
 const CLIENT_REQUEST_BY_DOMAIN: Partial<Record<string, string>> = {
-  hypo: "Požadavek na podklady k hypotéce",
-  uver: "Požadavek na podklady k úvěru",
-  leasing: "Požadavek na podklady k leasingu",
-  stavebni_sporeni: "Požadavek na podklady ke stavebnímu spoření",
-  investice: "Požadavek na investiční podklady",
-  dip: "Požadavek na podklady k DIP",
-  dps: "Požadavek na podklady k penzijnímu spoření",
-  zivotni_pojisteni: "Požadavek na zdravotní a identifikační podklady",
-  majetek: "Požadavek na podklady k nemovitosti a stávající smlouvu",
-  auto: "Požadavek na technický průkaz a stávající smlouvu",
-  firma_pojisteni: "Požadavek na podklady k firemnímu pojištění",
+  hypo: "Doložit podklady k hypotéce",
+  uver: "Doložit podklady k úvěru",
+  leasing: "Doložit podklady k leasingu",
+  stavebni_sporeni: "Doložit podklady ke stavebnímu spoření",
+  investice: "Doložit investiční podklady",
+  dip: "Doložit podklady k DIP",
+  dps: "Doložit podklady k penzijnímu spoření",
+  zivotni_pojisteni: "Doložit zdravotní a identifikační podklady",
+  majetek: "Doložit podklady k nemovitosti a stávající smlouvě",
+  auto: "Doložit technický průkaz a stávající smlouvu",
+  firma_pojisteni: "Doložit podklady k firemnímu pojištění",
 };
 
 export function canonicalClientRequestSubject(params: {

@@ -35,7 +35,7 @@ const LOGO_MAP: { keywords: string[]; logo: LogoEntry }[] = [
   { keywords: ["atris"], logo: { file: "atris.png", alt: "Atris" } },
   { keywords: ["penta"], logo: { file: "Penta.png", alt: "Penta" } },
   { keywords: ["fidelity"], logo: { file: "fidelity.png", alt: "Fidelity" } },
-  { keywords: ["ishares", "blackrock"], logo: { file: "ishares.png", alt: "iShares" } },
+  { keywords: ["ishares", "blackrock"], logo: { file: "funds/ishares_brand.png", alt: "iShares" } },
 ];
 
 function escapeRegex(value: string): string {

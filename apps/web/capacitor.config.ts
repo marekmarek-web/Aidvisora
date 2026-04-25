@@ -40,12 +40,12 @@ const config: CapacitorConfig = {
      */
     scrollEnabled: false,
     /**
-     * App-Bound Domains: extra security layer (iOS 14+). Only URLs whose host
-     * is listed in Info.plist's `WKAppBoundDomains` will load in the WKWebView
-     * when this is on. Off in dev so `CAPACITOR_SERVER_URL=http://localhost:3000`
-     * still works.
+     * Keep App-Bound Domains disabled. With a remotely hosted Capacitor app,
+     * iOS can otherwise refuse Capacitor's user-script injection ("frame is not
+     * in an app-bound domain"), which breaks plugin calls and OAuth deep-link
+     * handling in the Google sign-in flow.
      */
-    limitsNavigationsToAppBoundDomains: isProduction,
+    limitsNavigationsToAppBoundDomains: false,
   },
   android: {
     allowMixedContent: isHttpServer,

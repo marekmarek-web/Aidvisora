@@ -42,6 +42,7 @@
     "assert:fcm-config:release": "node scripts/assert-fcm-config.mjs --require-release",
     "cap:sync": "npx cap sync",
     "cap:open:ios": "npx cap open ios",
+    "ios:reset-spm": "bash ios/scripts/reset-ios-spm-caches.sh",
     "cap:open:android": "npx cap open android",
     "cap:dev": "cross-env CAPACITOR_SERVER_URL=http://localhost:3000/prihlaseni?native=1 npx cap sync",
     "cap:dev:android": "cross-env CAPACITOR_SERVER_URL=http://10.0.2.2:3000/prihlaseni?native=1 npx cap sync",

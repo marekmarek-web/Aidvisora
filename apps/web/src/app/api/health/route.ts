@@ -15,6 +15,10 @@ import { checkRateLimit } from "@/lib/security/rate-limit";
  * - No heavy work (only `select 1` on DB — must stay under ~500 ms).
  * - Rate-limited per IP so it cannot be used to probe infra.
  * - No internal secrets / build metadata leaked (only commit SHA + env name).
+ *
+ * Pokud potřebuješ full-dependency status (Stripe, Resend, Supabase Auth,
+ * OpenAI), použij `/api/healthcheck` — tenhle endpoint je úmyslně minimal,
+ * aby ho šlo strčit pod externí uptime monitor bez rizika flapu z OpenAI.
  */
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

@@ -304,9 +304,40 @@ function ClassificationBadges({ doc }: { doc: ExtractionDocument }) {
 
 /* ─── Executive Summary ─────────────────────────────────────────── */
 
-function AdvisorOverviewCard({ doc }: { doc: ExtractionDocument }) {
+function manualReviewStateFromDoc(doc: ExtractionDocument, item: string): "confirmed" | "ignored" | undefined {
+  const clean = item.trim().replace(/\s+/g, " ");
+  const reasons = doc.applyGate?.overriddenReasons ?? [];
+  if (reasons.includes(`manual_review:confirmed:${clean}`)) return "confirmed";
+  if (reasons.includes(`manual_review:ignored:${clean}`)) return "ignored";
+  return undefined;
+}
+
+function AdvisorOverviewCard({
+  doc,
+  onManualReviewWarningState,
+}: {
+  doc: ExtractionDocument;
+  onManualReviewWarningState?: (warningText: string, state: "confirmed" | "ignored") => void | Promise<void>;
+}) {
   const ar = doc.advisorReview;
+  const [manualCheckState, setManualCheckState] = useState<Record<string, "confirmed" | "ignored">>({});
   if (!ar) return null;
+  const manualChecks = ar.manualChecklist
+    .map((item) => item.trim())
+    .filter((item, index, arr) => item && arr.findIndex((x) => x.toLowerCase() === item.toLowerCase()) === index);
+  const manualCheckMeta = (item: string) => {
+    const lower = item.toLowerCase();
+    const severity = lower.includes("chyb") || lower.includes("nepodař") ? "Vyšší" : "Střední";
+    const section =
+      lower.includes("plat") || lower.includes("účet") || lower.includes("iban")
+        ? "Platby"
+        : lower.includes("pojist") || lower.includes("rizik") || lower.includes("produkt")
+          ? "Produkt / smlouva"
+          : lower.includes("klient") || lower.includes("pojistník") || lower.includes("pojištěn")
+            ? "Klient / osoby"
+            : "Celý review";
+    return { severity, section };
+  };
   const row = (icon: React.ReactNode, title: string, body: string) => (
     <div className="flex gap-3 py-3 border-b border-[color:var(--wp-surface-card-border)] last:border-0">
       <div className="shrink-0 mt-0.5 text-indigo-500">{icon}</div>
@@ -350,18 +381,58 @@ function AdvisorOverviewCard({ doc }: { doc: ExtractionDocument }) {
         <PaymentSyncPreviewCard preview={ar.paymentSyncPreview} />
       ) : null}
       <PaymentManualFillCard doc={doc} />
-      {ar.manualChecklist.length > 0 ? (
+      {manualChecks.length > 0 ? (
         <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/60 p-4">
           <p className="text-[10px] font-black uppercase tracking-widest text-amber-900 mb-2 flex items-center gap-2">
             <AlertTriangle size={14} /> Ruční kontrola
           </p>
-          <ul className="text-sm text-amber-950 space-y-2 list-disc pl-4">
-            {ar.manualChecklist.map((item, i) => (
-              <li key={i} className="leading-snug">
-                {item}
-              </li>
-            ))}
-          </ul>
+          <div className="space-y-2">
+            {manualChecks.map((item, i) => {
+              const meta = manualCheckMeta(item);
+              const state = manualCheckState[item] ?? manualReviewStateFromDoc(doc, item);
+              const persistState = (nextState: "confirmed" | "ignored") => {
+                setManualCheckState((s) => ({ ...s, [item]: nextState }));
+                void onManualReviewWarningState?.(item, nextState);
+              };
+              return (
+                <div key={`${item}-${i}`} className="rounded-lg border border-amber-200 bg-white/65 p-3">
+                  <div className="flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-widest text-amber-800">
+                    <span>Závažnost: {meta.severity}</span>
+                    <span>Část: {meta.section}</span>
+                    {state && (
+                      <span className={state === "confirmed" ? "text-emerald-700" : "text-slate-500"}>
+                        {state === "confirmed" ? "Potvrzeno" : "Ignorováno"}
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1 text-sm font-semibold leading-snug text-amber-950">{item}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => persistState("confirmed")}
+                      className="min-h-9 rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-xs font-bold text-emerald-800"
+                    >
+                      Potvrdit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => persistState("ignored")}
+                      className="min-h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700"
+                    >
+                      Ignorovat
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => document.querySelector('[data-section="data"]')?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                      className="min-h-9 rounded-lg border border-amber-300 bg-amber-100 px-3 text-xs font-bold text-amber-900"
+                    >
+                      Opravit v polích
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       ) : null}
     </div>
@@ -2376,6 +2447,7 @@ type LeftPanelProps = {
   onConfirmAllPendingFields?: () => Promise<void>;
   /** Fáze 1 fix: propagate create/apply callbacks for WorkActionsCard */
   onConfirmCreateNew?: () => void;
+  onManualReviewWarningState?: (warningText: string, state: "confirmed" | "ignored") => void | Promise<void>;
   onApproveAndApply?: (editedFields: Record<string, string>, options?: { overrideGateReasons?: string[]; overrideReason?: string }) => void | Promise<void>;
   onSelectClient?: (clientId: string) => void | Promise<void>;
   editedFields?: Record<string, string>;
@@ -2395,6 +2467,7 @@ export function ExtractionLeftPanel({
   onConfirmManualField,
   onConfirmAllPendingFields,
   onConfirmCreateNew,
+  onManualReviewWarningState,
   onApproveAndApply,
   onSelectClient,
   editedFields,
@@ -2430,7 +2503,7 @@ export function ExtractionLeftPanel({
           {/* 4C: AdvisorOverviewCard – structured AI review summary with payment sync preview */}
           {doc.advisorReview ? (
             <div data-section="advisor">
-              <AdvisorOverviewCard doc={doc} />
+              <AdvisorOverviewCard doc={doc} onManualReviewWarningState={onManualReviewWarningState} />
             </div>
           ) : null}
 

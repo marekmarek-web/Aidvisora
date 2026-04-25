@@ -621,7 +621,9 @@ export function derivePublishHintsFromPacket(
 
   if (needsSplit) {
     reasons.push("bundle_contains_non_publishable_sections");
-    contractPublishable = false;
+    if (!isActiveProposal) {
+      contractPublishable = false;
+    }
   }
 
   if (hasSensitiveAttachment) reasons.push("sensitive_attachment_present");

@@ -108,6 +108,16 @@ Pak v Xcode:
 
 Poznamka: repo uz obsahuje patch pro `@supernotes/capacitor-send-intent`, takze po `pnpm install` musi byt Swift dependencies konzistentni.
 
+### 6.1. „failed extracting … grpc.zip“ / `fatalError` u balíčku `grpc` (CapApp-SPM)
+
+Firebase iOS SDK tahá **binární** `gRPC` (`grpc-binary`); stažení je ~100 MB. Když se zip stáhne dočasně do polovičního stavu, Swift PM při extrakci spadne a v Issue Navigatoru uvidíš **Missing package product CapApp-SPM** (následek, ne příčina).
+
+1. V kořeni monorepa: `pnpm --filter web run ios:reset-spm` (smaže hlavně `~/Library/Caches/org.swift.swiftpm/artifacts`).
+2. `pnpm install` a z `apps/web`: `pnpm cap:sync`.
+3. V Xcode: **File → Packages → Reset Package Caches** → **Resolve Package Versions** → **Clean Build Folder** → build.
+
+Kdyby to pořád nešlo, agresivně: zavři Xcode, `rm -rf ~/Library/Caches/org.swift.swiftpm`, znovu otevři projekt a nech znovu stáhnout balíčky. Ověř také **dost místa na disku** a stabilní síť (VPN/firewall občas kouše `dl.google.com`).
+
 ## 7. Kriticka env promenna na Vercelu
 
 Pro spravny beh OAuth a nativniho navratoveho flow **musi byt na Vercelu nastavena** tato promenna:

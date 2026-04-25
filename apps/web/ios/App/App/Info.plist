@@ -109,10 +109,10 @@
 	<key>UIStatusBarStyle</key>
 	<string>UIStatusBarStyleDarkContent</string>
 	<!--
-	    WKAppBoundDomains: paired with Capacitor's
-	    `ios.limitsNavigationsToAppBoundDomains` (release only). Limits the
-	    WKWebView to this allow-list of hosts — a mitigation against
-	    third-party JS / iframe exfiltration attempts.
+	    WKAppBoundDomains remains documented for future App-Bound Domains use,
+	    but `ios.limitsNavigationsToAppBoundDomains` is intentionally disabled:
+	    Google OAuth relies on Capacitor JS bridge injection after the Safari
+	    callback, and iOS can block that injection in App-Bound mode.
 	-->
 	<key>WKAppBoundDomains</key>
 	<array>
