@@ -1,14 +1,72 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  HANDLED_MOBILE_SHELL_ROUTE_PREFIXES,
+  WEB_ONLY_MOBILE_PORTAL_ROUTES,
+  classifyMobilePortalRoute,
   decideHeaderBackAction,
   isDetailRoute,
+  normalizePortalPathname,
   parseContactIdFromPath,
   parseHouseholdIdFromPath,
   parseOpportunityIdFromPath,
   pathnameToBottomTab,
+  portalPathStartsWith,
   resolveParentRoute,
 } from "../route-helpers";
+
+describe("normalizePortalPathname", () => {
+  it("strips trailing slash and trivial query/hash", () => {
+    expect(normalizePortalPathname("/portal/today/")).toBe("/portal/today");
+    expect(normalizePortalPathname("/portal/tasks?x=1")).toBe("/portal/tasks");
+    expect(normalizePortalPathname("/portal/contacts#a")).toBe("/portal/contacts");
+  });
+
+  it("keeps bare /portal root", () => {
+    expect(normalizePortalPathname("/portal")).toBe("/portal");
+  });
+});
+
+describe("portalPathStartsWith", () => {
+  it("requires exact leaf or nesting", () => {
+    expect(portalPathStartsWith("/portal/contracts/review/foo", "/portal/contracts")).toBe(true);
+    expect(portalPathStartsWith("/portal/contracts-extra", "/portal/contracts")).toBe(false);
+  });
+});
+
+describe("classifyMobilePortalRoute", () => {
+  it("matches web-only rules before handled prefixes", () => {
+    const r = classifyMobilePortalRoute("/portal/calculators/mortgage");
+    expect(r.kind).toBe("web_only");
+    if (r.kind === "web_only") {
+      expect(r.openPath).toBe("/portal/calculators/mortgage");
+      expect(r.title.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("does not classify /portal as unsupported", () => {
+    expect(classifyMobilePortalRoute("/portal").kind).toBe("shell_resolver");
+  });
+
+  it("handles core mobile prefixes as shell_resolver", () => {
+    expect(classifyMobilePortalRoute("/portal/today").kind).toBe("shell_resolver");
+    expect(classifyMobilePortalRoute("/portal/documents/uploads").kind).toBe("shell_resolver");
+    expect(classifyMobilePortalRoute("/portal/contracts/review/job-123").kind).toBe("shell_resolver");
+    expect(classifyMobilePortalRoute("/portal/ai/thread").kind).toBe("shell_resolver");
+  });
+
+  it("surfaces unsupported portal slugs", () => {
+    const r = classifyMobilePortalRoute("/portal/v2-experimental/feature");
+    expect(r.kind).toBe("unsupported");
+    if (r.kind === "unsupported") expect(r.path).toBe("/portal/v2-experimental/feature");
+    expect(classifyMobilePortalRoute("/portal/profile").kind).toBe("unsupported");
+  });
+
+  it("documents web-only table stays aligned with product copy", () => {
+    expect(WEB_ONLY_MOBILE_PORTAL_ROUTES.every((row) => row.prefix.startsWith("/portal"))).toBe(true);
+    expect(HANDLED_MOBILE_SHELL_ROUTE_PREFIXES.every((p) => p.startsWith("/portal/"))).toBe(true);
+  });
+});
 
 describe("pathnameToBottomTab", () => {
   it("maps primary tabs correctly", () => {
@@ -20,6 +78,7 @@ describe("pathnameToBottomTab", () => {
     expect(pathnameToBottomTab("/portal/contacts/abc-123")).toBe("clients");
     expect(pathnameToBottomTab("/portal/pipeline")).toBe("pipeline");
     expect(pathnameToBottomTab("/portal/pipeline/deal-7")).toBe("pipeline");
+    expect(pathnameToBottomTab("/portal")).toBe("home");
   });
 
   it("returns none for non-primary routes", () => {
@@ -27,6 +86,7 @@ describe("pathnameToBottomTab", () => {
     expect(pathnameToBottomTab("/portal/calendar")).toBe("none");
     expect(pathnameToBottomTab("/portal/ai")).toBe("none");
     expect(pathnameToBottomTab("/portal/households")).toBe("none");
+    expect(pathnameToBottomTab("/portal/email-campaigns")).toBe("none");
     expect(pathnameToBottomTab("/client/messages")).toBe("none");
     expect(pathnameToBottomTab("/prihlaseni")).toBe("none");
   });

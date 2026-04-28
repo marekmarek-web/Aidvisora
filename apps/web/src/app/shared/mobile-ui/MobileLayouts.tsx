@@ -10,6 +10,7 @@ function cx(...classes: Array<string | false | null | undefined>) {
 /**
  * Consistent horizontal padding and max-width per device class.
  * Use inside MobileScreen / MobileAppShell to constrain content width on tablet.
+ * Aligns with premium mobile canvas (narrow phones ~390–430px readable column).
  */
 export function MobilePageLayout({
   children,
@@ -23,8 +24,8 @@ export function MobilePageLayout({
   return (
     <div
       className={cx(
-        "w-full mx-auto",
-        deviceClass === "phone" && "max-w-lg px-0",
+        "mx-auto w-full",
+        deviceClass === "phone" && "max-w-lg px-0 sm:max-w-xl",
         deviceClass === "tablet" && "max-w-3xl px-2",
         className
       )}

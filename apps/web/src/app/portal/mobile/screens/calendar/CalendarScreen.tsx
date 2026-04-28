@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Plus } from "lucide-react";
 import type { ContactRow } from "@/app/actions/contacts";
 import {
   createEvent,
@@ -20,12 +19,21 @@ import {
   localDateTimeInputToUtcIso,
   reminderIsoBeforeStartUtc,
 } from "@/app/portal/calendar/date-utils";
+import { formatDisplayDateCs } from "@/lib/date/format-display-cs";
 import {
   DEFAULT_SETTINGS,
   saveCalendarSettings,
 } from "@/app/portal/calendar/calendar-settings";
 import type { DeviceClass } from "@/lib/ui/useDeviceClass";
-import { ErrorState, FloatingActionButton, Toast, useToast } from "@/app/shared/mobile-ui/primitives";
+import {
+  BottomSheet,
+  ErrorState,
+  FloatingActionButton,
+  MobileCard,
+  Toast,
+  useToast,
+} from "@/app/shared/mobile-ui/primitives";
+import { Check, Plus } from "lucide-react";
 import { CalendarAgendaView } from "./CalendarAgendaView";
 import { CalendarDayTasksStrip } from "./CalendarDayTasksStrip";
 import { CalendarDrawer } from "./CalendarDrawer";
@@ -37,13 +45,16 @@ import {
   type OpportunityOption,
 } from "./CalendarEventForm";
 import { CalendarGridSkeleton } from "./CalendarGridSkeleton";
+import { CalendarMiniMonth } from "./CalendarMiniMonth";
 import { CalendarSearch } from "./CalendarSearch";
 import { CalendarSettingsWizard } from "./CalendarSettingsWizard";
-import { CalendarHeader } from "./CalendarHeader";
+import { CalendarMobileToolbar } from "./CalendarMobileToolbar";
+import { CalendarWeekDayStrip } from "./CalendarWeekDayStrip";
 import { CalendarTimeGrid } from "./CalendarTimeGrid";
 import {
   buildEventsByDate,
   filterEventsByDateMap,
+  formatMonthYear,
   startOfDayLocal,
 } from "./calendar-utils";
 import { useCalendarEvents } from "./useCalendarEvents";
@@ -194,6 +205,17 @@ export function CalendarScreen({
     const built = buildEventsByDate(eventsFilteredByContact);
     return filterEventsByDateMap(built, hiddenEventTypes);
   }, [eventsFilteredByContact, hiddenEventTypes]);
+
+  const eventDotsByDay = useMemo(() => {
+    const out: Record<string, number> = {};
+    for (const [day, arr] of eventsByDate.entries()) out[day] = arr.length;
+    return out;
+  }, [eventsByDate]);
+
+  const agendaDayItemsForAnchor = useMemo(() => {
+    const arr = eventsByDate.get(formatDateLocal(anchorDate));
+    return (arr ?? []).slice().sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+  }, [anchorDate, eventsByDate]);
 
   const visibleDayKeys = useMemo(() => visibleDays.map((d) => formatDateLocal(d)), [visibleDays]);
 
@@ -608,16 +630,19 @@ export function CalendarScreen({
     [reload, showToast, canWriteCalendar],
   );
 
-  const skeletonCols = view === "agenda" ? 7 : visibleDays.length;
+  const segmentedWeekMonth = view === "month" ? "month" : "week";
+  const showTimeGridUi = view !== "agenda" && view !== "month";
+  const skeletonCols = view === "agenda" || view === "month" ? 7 : visibleDays.length;
   const skeletonTimeW = dc === "phone" ? 44 : 52;
 
-  const showGrid = view !== "agenda";
-
   return (
-    <div className="flex min-h-[50vh] flex-1 flex-col pb-20">
-      <CalendarHeader
+    <div className="flex min-h-[50vh] w-full min-w-0 flex-1 flex-col overflow-x-hidden pb-[var(--aidv-mobile-screen-pad-bottom)]">
+      <CalendarMobileToolbar
         anchorDate={anchorDate}
-        view={view}
+        segmentedValue={segmentedWeekMonth}
+        onSegmentChange={(seg) => {
+          setView(seg);
+        }}
         onOpenDrawer={() => setDrawerOpen(true)}
         onOpenSearch={() => setSearchOpen(true)}
         onPrev={goPrev}
@@ -652,10 +677,21 @@ export function CalendarScreen({
         onOpenTasks={() => router.push("/portal/tasks")}
       />
 
+      {view !== "month" && view !== "agenda" ? (
+        <div className="mb-3">
+          <CalendarWeekDayStrip
+            weekDays={visibleDays}
+            anchorDate={anchorDate}
+            todayStr={todayStr}
+            onPickDay={handleSelectDayFromHeader}
+          />
+        </div>
+      ) : null}
+
       {error ? <ErrorState title={error} onRetry={reload} /> : null}
 
       {loading ? (
-        showGrid ? (
+        showTimeGridUi || view === "month" ? (
           <CalendarGridSkeleton columnCount={skeletonCols} timeColWidth={skeletonTimeW} />
         ) : (
           <div className="flex min-h-[200px] flex-1 items-center justify-center text-sm text-[color:var(--wp-text-secondary)]">
@@ -668,23 +704,72 @@ export function CalendarScreen({
             refreshing && !loading ? "opacity-50 transition-opacity duration-200" : "transition-opacity duration-200"
           }
         >
-          {showGrid ? (
-            <CalendarTimeGrid
-              visibleDays={visibleDays}
-              eventsByDate={eventsByDate}
-              todayStr={todayStr}
-              firstDayOfWeek={firstDayOfWeek}
-              deviceClass={dc}
-              settings={settings}
-              selectedEventId={selectedEventId}
-              onSlotClick={onSlotClick}
-              onEventClick={onEventClick}
-              onEventMove={handleEventMove}
-              onEventResize={handleEventResize}
-              onDragCreate={handleDragCreate}
-              scrollSignal={scrollSignal}
-            />
-          ) : (
+          {showTimeGridUi ? (
+            <div className="-mx-4 mb-4 w-[calc(100%+2rem)] max-w-none sm:mx-0 sm:mb-0 sm:w-auto">
+              <CalendarTimeGrid
+                visibleDays={visibleDays}
+                eventsByDate={eventsByDate}
+                todayStr={todayStr}
+                firstDayOfWeek={firstDayOfWeek}
+                deviceClass={dc}
+                settings={settings}
+                selectedEventId={selectedEventId}
+                onSlotClick={onSlotClick}
+                onEventClick={onEventClick}
+                onEventMove={handleEventMove}
+                onEventResize={handleEventResize}
+                onDragCreate={handleDragCreate}
+                scrollSignal={scrollSignal}
+              />
+            </div>
+          ) : null}
+          {view === "month" ? (
+            <div className="space-y-3">
+              <CalendarMiniMonth
+                anchorDate={anchorDate}
+                firstDayOfWeek={firstDayOfWeek}
+                todayStr={todayStr}
+                eventDotsByDay={eventDotsByDay}
+                onPickDay={(d) => handleSelectDayFromHeader(d)}
+              />
+              <MobileCard className="p-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[color:var(--wp-text-tertiary)]">
+                  Aktivity ({formatMonthYear(anchorDate)})
+                </p>
+                <p className="mt-1 text-xs font-semibold text-[color:var(--wp-text-secondary)]">
+                  Den {formatDisplayDateCs(formatDateLocal(anchorDate)) ?? formatDateLocal(anchorDate)}
+                </p>
+                {agendaDayItemsForAnchor.length === 0 ? (
+                  <p className="mt-3 text-sm text-[color:var(--wp-text-secondary)]">
+                    Žádné položky dle načtených dat CRM.
+                  </p>
+                ) : (
+                  <ul className="mt-3 space-y-2">
+                    {agendaDayItemsForAnchor.map((ev) => (
+                      <li key={ev.id}>
+                        <button
+                          type="button"
+                          className="w-full rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/40 px-3 py-2.5 text-left transition-colors active:bg-[color:var(--wp-surface-muted)]"
+                          onClick={() => onEventClick(ev)}
+                        >
+                          <span className="text-[11px] font-black uppercase tracking-wide text-indigo-700">
+                            {new Date(ev.startAt).toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                          <span className="mt-1 block text-sm font-bold text-[color:var(--wp-text)]">{ev.title}</span>
+                          {ev.contactName ? (
+                            <span className="mt-0.5 block text-xs text-[color:var(--wp-text-secondary)]">
+                              {ev.contactName}
+                            </span>
+                          ) : null}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </MobileCard>
+            </div>
+          ) : null}
+          {view === "agenda" ? (
             <CalendarAgendaView
               visibleDays={visibleDays}
               eventsByDate={eventsByDate}
@@ -693,7 +778,7 @@ export function CalendarScreen({
               settings={settings}
               onEventClick={onEventClick}
             />
-          )}
+          ) : null}
         </div>
       )}
 
@@ -774,20 +859,86 @@ export function CalendarScreen({
       ) : null}
 
       {formOpen && formInitial ? (
-        <CalendarEventForm
-          deviceClass={dc}
-          initial={formInitial}
-          contacts={contacts}
-          opportunities={opportunities}
-          eventTypeColors={settings?.eventTypeColors}
-          saving={saving}
-          saveError={saveError}
-          onSave={handleSave}
-          onClose={() => {
-            setFormOpen(false);
-            setFormInitial(null);
-          }}
-        />
+        dc === "phone" ? (
+          <BottomSheet
+            open
+            compact={false}
+            reserveMobileBottomNav
+            title={formInitial.id ? "Upravit aktivitu" : "Nová aktivita"}
+            onClose={() => {
+              if (!saving) {
+                setFormOpen(false);
+                setFormInitial(null);
+              }
+            }}
+            footer={
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  disabled={saving}
+                  className="min-h-[48px] rounded-xl border border-[color:var(--wp-surface-card-border)] text-sm font-bold text-[color:var(--wp-text-secondary)]"
+                  onClick={() => {
+                    if (!saving) {
+                      setFormOpen(false);
+                      setFormInitial(null);
+                    }
+                  }}
+                >
+                  Zrušit
+                </button>
+                <button
+                  type="button"
+                  disabled={saving || !canWriteCalendar}
+                  className="flex min-h-[48px] items-center justify-center gap-2 rounded-xl bg-indigo-600 text-sm font-black text-white disabled:opacity-50"
+                  onClick={() => {
+                    const el = document.getElementById("portal-calendar-event-form") as HTMLFormElement | null;
+                    el?.requestSubmit();
+                  }}
+                >
+                  {saving ? (
+                    "Ukládám…"
+                  ) : (
+                    <>
+                      <Check size={16} aria-hidden />
+                      Uložit
+                    </>
+                  )}
+                </button>
+              </div>
+            }
+          >
+            <CalendarEventForm
+              presentation="sheet"
+              deviceClass={dc}
+              initial={formInitial}
+              contacts={contacts}
+              opportunities={opportunities}
+              eventTypeColors={settings?.eventTypeColors}
+              saving={saving}
+              saveError={saveError}
+              onSave={handleSave}
+              onClose={() => {
+                setFormOpen(false);
+                setFormInitial(null);
+              }}
+            />
+          </BottomSheet>
+        ) : (
+          <CalendarEventForm
+            deviceClass={dc}
+            initial={formInitial}
+            contacts={contacts}
+            opportunities={opportunities}
+            eventTypeColors={settings?.eventTypeColors}
+            saving={saving}
+            saveError={saveError}
+            onSave={handleSave}
+            onClose={() => {
+              setFormOpen(false);
+              setFormInitial(null);
+            }}
+          />
+        )
       ) : null}
 
       {toast ? (

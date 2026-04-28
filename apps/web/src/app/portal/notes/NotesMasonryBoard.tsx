@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import type { MeetingNoteForBoard } from "@/app/actions/meeting-notes";
 import { CreateActionButton } from "@/app/components/ui/CreateActionButton";
+import { formatMeetingNoteDomainLabel } from "@/lib/meeting-notes/domain-labels";
 import {
   contentBody,
   contentRecommendation,
@@ -44,18 +45,6 @@ const DOMAINS = [
   { value: "komplex", label: "Komplex" },
   { value: "jine", label: "Jiné" },
 ];
-
-const DOMAIN_FULL_LABEL: Record<string, string> = {
-  hypo: "Hypotéka",
-  investice: "Investice",
-  "zivotni-pojisteni": "Životní pojištění",
-  "majetkove-pojisteni": "Majetkové pojištění",
-  dps: "Penzijní spoření",
-  uvery: "Úvěry",
-  komplex: "Komplexní plán",
-  jine: "Jiné",
-  pojisteni: "Pojištění",
-};
 
 type DomainDesign = {
   icon: React.ReactElement<{ size?: number | string }>;
@@ -532,7 +521,7 @@ function MasonryCard({
   onTogglePin: () => void;
 }) {
   const design = getProductDesign(note.domain);
-  const domainLabel = DOMAIN_FULL_LABEL[note.domain] ?? note.domain;
+  const domainLabel = formatMeetingNoteDomainLabel(note.domain);
   return (
     <div
       ref={registerRef}
@@ -732,7 +721,7 @@ function NotesMobileSheet({
   };
 
   const design = getProductDesign(note.domain);
-  const domainLabel = DOMAIN_FULL_LABEL[note.domain] ?? note.domain;
+  const domainLabel = formatMeetingNoteDomainLabel(note.domain);
   const body = contentBody(note.content);
   const rec = contentRecommendation(note.content);
   const meetingAt = note.meetingAt instanceof Date ? note.meetingAt : new Date(note.meetingAt);

@@ -4,20 +4,14 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { Pin, GripVertical, Plus, FileText, ChevronRight } from "lucide-react";
 import type { MeetingNoteForBoard } from "@/app/actions/meeting-notes";
+import { formatMeetingNoteDomainLabel } from "@/lib/meeting-notes/domain-labels";
+import { meetingNoteContentTitle as contentTitle } from "@/lib/meeting-notes/meeting-note-content";
 import { migrateLocalStorageKey } from "@/lib/storage/migrate-weplan-local-storage";
 
 const STORAGE_POSITIONS_KEY = "aidvisora_dashboard_mini_notes_positions";
 const STORAGE_PINNED_KEY = "aidvisora_dashboard_mini_notes_pinned";
 
 type Position = { x: number; y: number; z: number };
-
-function contentTitle(c: Record<string, unknown> | null): string {
-  if (!c) return "Zápisek";
-  if (typeof c.title === "string" && c.title.trim()) return c.title;
-  const obsah = c.obsah;
-  if (typeof obsah === "string" && obsah.trim()) return obsah.split("\n")[0].slice(0, 80) || "Zápisek";
-  return "Zápisek";
-}
 
 function contentBodyPreview(c: Record<string, unknown> | null, maxLen: number): string {
   if (!c) return "";
@@ -30,6 +24,11 @@ const DOMAIN_STYLES: Record<string, string> = {
   hypo: "text-blue-600 bg-blue-100 border-blue-200",
   investice: "text-emerald-600 bg-emerald-100 border-emerald-200",
   pojisteni: "text-rose-600 bg-rose-100 border-rose-200",
+  "zivotni-pojisteni": "text-rose-600 bg-rose-100 border-rose-200",
+  "majetkove-pojisteni": "text-rose-600 bg-rose-100 border-rose-200",
+  dps: "text-amber-700 bg-amber-100 border-amber-200",
+  uvery: "text-[color:var(--wp-text)] bg-[color:var(--wp-surface-muted)] border-[color:var(--wp-surface-card-border)]",
+  jine: "text-violet-700 bg-violet-100 border-violet-200",
   komplex: "text-purple-600 bg-purple-100 border-purple-200",
 };
 
@@ -220,11 +219,13 @@ export function DashboardMiniNotes({ initialNotes }: { initialNotes: MeetingNote
                 </div>
                 <Link href={`/portal/notes?note=${note.id}`} className="block p-2 text-inherit no-underline">
                   <span className={`inline-block px-1.5 py-0.5 rounded-lg text-[9px] font-bold uppercase border mb-1 ${domainStyle}`}>
-                    {note.domain ?? "jiné"}
+                    {formatMeetingNoteDomainLabel(note.domain ?? "jine")}
                   </span>
                   <h4 className="font-semibold text-[color:var(--wp-text)] text-xs leading-tight mb-0.5 line-clamp-2">{title}</h4>
                   {preview && <p className="text-[10px] text-[color:var(--wp-text-secondary)] line-clamp-2">{preview}</p>}
-                  {note.contactName && <p className="text-[10px] text-[color:var(--wp-text-tertiary)] mt-1 truncate">{note.contactName}</p>}
+                  {note.contactName && note.contactName !== "Obecný zápisek" ? (
+                    <p className="text-[10px] text-[color:var(--wp-text-tertiary)] mt-1 truncate">{note.contactName}</p>
+                  ) : null}
                 </Link>
               </div>
             );
@@ -279,11 +280,13 @@ export function DashboardMiniNotes({ initialNotes }: { initialNotes: MeetingNote
                 </div>
                 <Link href={`/portal/notes?note=${note.id}`} className="block p-2 text-inherit no-underline" onClick={(e) => isDragging && e.preventDefault()}>
                   <span className={`inline-block px-1.5 py-0.5 rounded-lg text-[9px] font-bold uppercase border mb-1 ${domainStyle}`}>
-                    {note.domain ?? "jiné"}
+                    {formatMeetingNoteDomainLabel(note.domain ?? "jine")}
                   </span>
                   <h4 className="font-semibold text-[color:var(--wp-text)] text-xs leading-tight mb-0.5 line-clamp-2">{title}</h4>
                   {preview && <p className="text-[10px] text-[color:var(--wp-text-secondary)] line-clamp-2">{preview}</p>}
-                  {note.contactName && <p className="text-[10px] text-[color:var(--wp-text-tertiary)] mt-1 truncate">{note.contactName}</p>}
+                  {note.contactName && note.contactName !== "Obecný zápisek" ? (
+                    <p className="text-[10px] text-[color:var(--wp-text-tertiary)] mt-1 truncate">{note.contactName}</p>
+                  ) : null}
                 </Link>
               </div>
             );

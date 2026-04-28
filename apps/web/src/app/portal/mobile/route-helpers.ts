@@ -8,12 +8,150 @@
 
 export type TabId = "home" | "tasks" | "clients" | "pipeline" | "none";
 
+/** Strip query/hash and trailing slash (except `/`). */
+export function normalizePortalPathname(pathname: string): string {
+  let p = pathname.split("?")[0]?.split("#")[0] ?? pathname;
+  if (p.length > 1 && p.endsWith("/")) p = p.slice(0, -1);
+  return p;
+}
+
+/** True when `pathname` is exactly `base` or a nested path under `base`. */
+export function portalPathStartsWith(pathname: string, base: string): boolean {
+  if (pathname === base) return true;
+  return pathname.startsWith(`${base}/`);
+}
+
+/**
+ * Routes that are intentionally web / desktop first in the mobile shell.
+ * Checked before the generic “handled shell” prefix list — order matters for
+ * overlapping prefixes (longest / most specific rules should appear first).
+ */
+export const WEB_ONLY_MOBILE_PORTAL_ROUTES: readonly {
+  prefix: string;
+  title: string;
+  description: string;
+}[] = [
+  {
+    prefix: "/portal/email-campaigns",
+    title: "E‑mail kampaně",
+    description:
+      "Editor kampaní, segmentace a hromadné rozesílky jsou optimalizované pro velký displej. Otevřete tuto sekci v webové verzi Aidvisory na počítači.",
+  },
+  {
+    prefix: "/portal/admin",
+    title: "Administrace workspace",
+    description:
+      "Správcovské funkce (kill switch, AI kvalita, …) vyžadují šířší rozhraní. Použijte webový portál.",
+  },
+  {
+    prefix: "/portal/settings",
+    title: "Účet a rozšířené nastavení",
+    description:
+      "Fakturační údaje, auditní log oznámení a související správu účtu otevřete v prohlížeči na počítači.",
+  },
+  {
+    prefix: "/portal/share",
+    title: "Import a export dat",
+    description:
+      "Hromadné importy a exporty adresářů se spouští z desktopového CRM kvůli rozsahu a kontrole průběhu.",
+  },
+  {
+    prefix: "/portal/team-overview",
+    title: "Týmový přehled",
+    description:
+      "Manažerské přehledy, srovnání týmu a detailní KPI jsou dostupné v desktopové verzi aplikace.",
+  },
+  {
+    prefix: "/portal/calculators",
+    title: "Kalkulačky",
+    description:
+      "Investiční a provizní kalkulačky s více vstupy a grafy jsme v mobilní aplikaci nenahradili celoplošnou obrazovkou — použijte webové CRM.",
+  },
+];
+
+/**
+ * Prefixes backed by explicit branches inside `MobilePortalClient.resolveActiveScreen`.
+ * Must NOT contain a naked `/portal` entry (everything would match). `/portal`
+ * alone is handled separately in classification.
+ *
+ * Keep in sync when adding new advisor mobile shells.
+ */
+export const HANDLED_MOBILE_SHELL_ROUTE_PREFIXES: readonly string[] = [
+  "/portal/today",
+  "/portal/tasks",
+  "/portal/contacts",
+  "/portal/pipeline",
+  "/portal/households",
+  "/portal/mindmap",
+  "/portal/messages",
+  "/portal/notes",
+  "/portal/board",
+  "/portal/cold-contacts",
+  "/portal/contracts",
+  "/portal/analyses",
+  "/portal/business-plan",
+  "/portal/production",
+  "/portal/notifications",
+  "/portal/setup",
+  "/portal/calendar",
+  "/portal/ai",
+  "/portal/documents",
+  "/portal/scan",
+  "/portal/tools",
+];
+
+export type MobilePortalRouteClassification =
+  | { kind: "shell_resolver" }
+  | { kind: "web_only"; title: string; description: string; openPath: string }
+  | { kind: "unsupported"; path: string };
+
+/**
+ * Classifies a portal path before the imperative screen resolver runs.
+ *
+ * — `shell_resolver`: continue with the existing nested `resolveActiveScreen` chain.
+ * — `web_only`: show `MobileWebOnlyRoutePlaceholder`.
+ * — `unsupported`: unknown `/portal/**` slug — must not silently fall through to Dashboard.
+ */
+export function classifyMobilePortalRoute(normalizedPath: string): MobilePortalRouteClassification {
+  const p = normalizedPath;
+
+  for (const rule of WEB_ONLY_MOBILE_PORTAL_ROUTES) {
+    if (portalPathStartsWith(p, rule.prefix)) {
+      return {
+        kind: "web_only",
+        title: rule.title,
+        description: rule.description,
+        openPath: p,
+      };
+    }
+  }
+
+  if (p === "/portal") {
+    return { kind: "shell_resolver" };
+  }
+
+  for (const prefix of HANDLED_MOBILE_SHELL_ROUTE_PREFIXES) {
+    if (portalPathStartsWith(p, prefix)) {
+      return { kind: "shell_resolver" };
+    }
+  }
+
+  if (portalPathStartsWith(p, "/portal")) {
+    return { kind: "unsupported", path: p };
+  }
+
+  /* Outside `/portal/**` — should not normally mount inside advisor mobile shell */
+  return { kind: "unsupported", path: p };
+}
+
 /** Bottom navigation highlight only for primary tabs; other routes use "none". */
 export function pathnameToBottomTab(pathname: string): TabId {
-  if (pathname.startsWith("/portal/today")) return "home";
-  if (pathname.startsWith("/portal/tasks")) return "tasks";
-  if (pathname.startsWith("/portal/contacts")) return "clients";
-  if (pathname.startsWith("/portal/pipeline")) return "pipeline";
+  const p = normalizePortalPathname(pathname);
+  if (p === "/portal") return "home";
+  if (p.startsWith("/portal/today")) return "home";
+  if (p.startsWith("/portal/tasks")) return "tasks";
+  if (p.startsWith("/portal/contacts")) return "clients";
+  if (p.startsWith("/portal/pipeline")) return "pipeline";
   return "none";
 }
 

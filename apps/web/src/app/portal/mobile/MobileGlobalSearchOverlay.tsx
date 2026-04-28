@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { X, Loader2, Search } from "lucide-react";
 import { globalSearch, type SearchResult } from "@/app/actions/search";
+import { formatMeetingNoteDomainLabel } from "@/lib/meeting-notes/domain-labels";
 
 const EMPTY: SearchResult = { contacts: [], contracts: [], opportunities: [], events: [], households: [], notes: [], docs: [] };
 
@@ -224,7 +225,7 @@ export function MobileGlobalSearchOverlay({
                     onClick={() => go(`/portal/notes?noteId=${n.id}`)}
                     className="w-full text-left min-h-[44px] px-3 py-2 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] text-sm font-bold text-[color:var(--wp-text)] active:bg-[color:var(--wp-surface-muted)]"
                   >
-                    {n.domain}
+                    {formatMeetingNoteDomainLabel(n.domain)}
                     <span className="block text-xs font-normal text-[color:var(--wp-text-secondary)]">
                       {new Date(n.meetingAt).toLocaleDateString("cs-CZ")}
                     </span>

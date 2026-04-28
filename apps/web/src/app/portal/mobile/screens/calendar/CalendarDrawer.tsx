@@ -80,6 +80,7 @@ export function CalendarDrawer({
     { id: "day", label: "1 den" },
     { id: "3day", label: "3 dny" },
     { id: "week", label: "Týden" },
+    { id: "month", label: "Měsíc" },
     { id: "agenda", label: "Agenda (týden)" },
   ];
 

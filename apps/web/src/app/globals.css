@@ -51,6 +51,25 @@
     */
     --aidv-mobile-card-border: color-mix(in srgb, var(--wp-surface-card-border) 70%, transparent);
 
+    /* Premium mobile shell (Aidvisora mobile foundation — light canvas, navy + indigo accents) */
+    --aidv-mobile-canvas-bg: #f6f8fb;
+    --aidv-mobile-canvas-bg-gradient: linear-gradient(
+      180deg,
+      #f6f8fb 0%,
+      color-mix(in srgb, #f6f8fb 88%, #e8eef7 100%) 100%
+    );
+    --aidv-mobile-shell-blob-a: color-mix(in srgb, #6366f1 16%, transparent);
+    --aidv-mobile-shell-blob-b: color-mix(in srgb, #a855f7 12%, transparent);
+    --aidv-mobile-nav-glass-bg: color-mix(in srgb, #ffffff 78%, rgba(255, 255, 255, 0) 100%);
+    --aidv-mobile-nav-glass-border: color-mix(in srgb, #0a0f29 8%, transparent);
+    --aidv-mobile-nav-shadow: 0 -10px 40px rgba(10, 15, 41, 0.07), 0 -1px 0 rgba(255, 255, 255, 0.7) inset;
+    --aidv-mobile-header-glass-bg: color-mix(in srgb, #ffffff 82%, rgba(255, 255, 255, 0) 100%);
+    --aidv-mobile-card-radius-lg: 1.625rem;
+    --aidv-mobile-card-radius-xl: 2rem;
+    --aidv-mobile-shadow-card-premium: 0 1px 2px rgba(15, 23, 42, 0.05), 0 8px 28px rgba(10, 15, 41, 0.07);
+    --aidv-mobile-fab-gradient: linear-gradient(135deg, #0a0f29 0%, #312e81 55%, #4f46e5 100%);
+    --aidv-mobile-screen-pad-bottom: max(1.25rem, calc(var(--safe-area-bottom, 0px) + 0.5rem));
+
     /*
       Portal UI 2026 – design tokeny pro novou primitives vrstvu
       (HeroCard, KpiCard, SegmentPills, StepHeader, SheetChrome, InlineAlert).

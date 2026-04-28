@@ -6,8 +6,7 @@ import type { CalendarViewMode } from "./calendar-utils";
 import { navigateAnchor, startOfDayLocal } from "./calendar-utils";
 
 function initialViewMode(): CalendarViewMode {
-  if (typeof window === "undefined") return "3day";
-  return window.innerWidth >= 768 ? "week" : "3day";
+  return "week";
 }
 
 export function useCalendarState() {

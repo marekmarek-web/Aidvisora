@@ -21,27 +21,33 @@ import {
   StickyNote,
   CheckCircle2,
   LayoutDashboard,
-  Square,
+  ListTodo,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
 import type { DashboardKpis } from "@/app/actions/dashboard";
 import type { ServiceRecommendationWithContact } from "@/app/actions/service-engine";
 import type { MeetingNoteForBoard } from "@/app/actions/meeting-notes";
+import { formatMeetingNoteDomainLabel } from "@/lib/meeting-notes/domain-labels";
+import { meetingNoteContentTitle as noteContentTitle } from "@/lib/meeting-notes/meeting-note-content";
 import type { FinancialAnalysisListItem } from "@/app/actions/financial-analyses";
 import type { ProductionSummary } from "@/app/actions/production";
 import type { BusinessPlanWidgetData } from "@/app/portal/today/DashboardEditable";
 import { TodayInCalendarWidget } from "@/app/components/dashboard/TodayInCalendarWidget";
 import { getServiceCtaHref } from "@/lib/service-engine/cta";
-import { MobileCard, MobileSection, MetricCard } from "@/app/shared/mobile-ui/primitives";
+import {
+  MobileCard,
+  MobileSection,
+  MobileSectionHeader,
+  MetricCard,
+  StatusBadge,
+  MobileLoadingState,
+  ErrorState,
+} from "@/app/shared/mobile-ui/primitives";
 import { formatDisplayDateCs } from "@/lib/date/format-display-cs";
 import type { DeviceClass } from "@/lib/ui/useDeviceClass";
-import type {
-  DashboardSummary,
-  SuggestedAction,
-  TaskDueItem,
-  UrgentItem,
-} from "@/lib/ai/dashboard-types";
+import type { DashboardSummary, SuggestedAction } from "@/lib/ai/dashboard-types";
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -127,36 +133,11 @@ function suggestedActionHref(a: SuggestedAction): string {
   }
 }
 
-function urgentSeverityClass(s: UrgentItem["severity"]): string {
-  switch (s) {
-    case "high":
-      return "border-l-rose-400 bg-rose-500/[0.12]";
-    case "medium":
-      return "border-l-amber-400 bg-amber-500/[0.12]";
-    default:
-      return "border-l-indigo-400/70 bg-[color:var(--wp-surface-card)]/[0.08]";
-  }
-}
-
-function taskDueHref(_t: TaskDueItem): string {
-  return "/portal/tasks";
-}
-
-function mergeTaskRows(overdue: TaskDueItem[], dueToday: TaskDueItem[], limit: number): TaskDueItem[] {
-  const seen = new Set<string>();
-  const out: TaskDueItem[] = [];
-  for (const t of [...overdue, ...dueToday]) {
-    if (seen.has(t.id)) continue;
-    seen.add(t.id);
-    out.push(t);
-    if (out.length >= limit) break;
-  }
-  return out;
-}
-
-function AiAssistantWidget() {
+function useAIDashboardSummary() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [retryNonce, setRetryNonce] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -165,11 +146,23 @@ function AiAssistantWidget() {
       if (cancelled || started) return;
       started = true;
       fetch("/api/ai/dashboard-summary")
-        .then((r) => (r.ok ? r.json() : null))
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
         .then((d) => {
-          if (!cancelled && d && !d.error) setSummary(d as DashboardSummary);
+          if (cancelled) return;
+          if (d?.error) {
+            setFetchError(typeof d.error === "string" ? d.error : "Interní náhled se nepodařilo načíst.");
+            setSummary(null);
+          } else {
+            setFetchError(null);
+            setSummary(d as DashboardSummary);
+          }
         })
-        .catch(() => null)
+        .catch(() => {
+          if (!cancelled) {
+            setFetchError("Interní náhled se nepodařilo načíst.");
+            setSummary(null);
+          }
+        })
         .finally(() => {
           if (!cancelled) setLoading(false);
         });
@@ -184,140 +177,342 @@ function AiAssistantWidget() {
       window.clearTimeout(t);
       if (idleId !== undefined && typeof cancelIdleCallback !== "undefined") cancelIdleCallback(idleId);
     };
-  }, []);
+  }, [retryNonce]);
 
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const taskRows = summary
-    ? mergeTaskRows(summary.overdueTasks ?? [], summary.tasksDueToday ?? [], 6)
-    : [];
-  const urgentRows = (summary?.urgentItems ?? []).slice(0, 6);
-  const suggested = (summary?.suggestedActions ?? []).slice(0, 5);
+  const retry = () => {
+    setLoading(true);
+    setFetchError(null);
+    setSummary(null);
+    setRetryNonce((n) => n + 1);
+  };
+
+  return { summary, loading, fetchError, retry };
+}
+
+function HeroDashboardCard() {
+  return (
+    <div
+      className={cx(
+        "relative overflow-hidden rounded-[1.35rem] border border-white/10 px-5 py-5 text-white shadow-[0_20px_50px_rgba(10,15,41,0.35)]",
+        "bg-gradient-to-br from-[#060a1c] via-[#0a0f29] to-indigo-950",
+      )}
+    >
+      <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-violet-500/20 blur-3xl" aria-hidden />
+      <div className="pointer-events-none absolute -left-8 bottom-0 h-32 w-32 rounded-full bg-indigo-400/15 blur-2xl" aria-hidden />
+      <div className="relative">
+        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-indigo-200/90">Přehled</p>
+        <p className="mt-2 text-lg font-black leading-snug tracking-tight">Tady je váš prioritní přehled.</p>
+        <p className="mt-2 text-xs font-medium leading-relaxed text-indigo-100/75">
+          Interní souhrn úkolů, AI kontroly a nadcházející agendy — pouze pro vás, nikoli doporučení klientovi.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function QuickSignalTile({
+  label,
+  value,
+  href,
+  loading,
+  valueTone = "default",
+}: {
+  label: string;
+  value: string | number;
+  href: string;
+  loading?: boolean;
+  valueTone?: "default" | "danger" | "warning";
+}) {
+  const inner = (
+    <>
+      <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[color:var(--wp-text-secondary)] leading-tight line-clamp-2">
+        {label}
+      </p>
+      {loading ? (
+        <div className="mt-2 h-7 w-10 animate-pulse rounded-lg bg-[color:var(--wp-surface-muted)]" />
+      ) : (
+        <p
+          className={cx(
+            "mt-1.5 text-xl font-black tabular-nums tracking-tight",
+            valueTone === "danger" && "text-rose-600",
+            valueTone === "warning" && "text-amber-600",
+            valueTone === "default" && "text-[color:var(--wp-text)]",
+          )}
+        >
+          {value}
+        </p>
+      )}
+    </>
+  );
+  return (
+    <MobileCard className="min-w-0 p-3">
+      <Link href={href} className="block min-h-[44px] min-w-0 active:opacity-90">
+        {inner}
+      </Link>
+    </MobileCard>
+  );
+}
+
+function PriorityLinkRow({
+  href,
+  title,
+  description,
+  badge,
+  icon: Icon,
+}: {
+  href: string;
+  title: string;
+  description?: string;
+  badge: ReactNode;
+  icon: LucideIcon;
+}) {
+  return (
+    <MobileCard className="overflow-hidden p-0 shadow-[var(--aidv-mobile-shadow-card-premium,var(--aidv-shadow-card-sm))]">
+      <Link href={href} className="flex min-h-[44px] items-start gap-3 px-4 py-3.5 active:bg-black/[0.025]">
+        <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 ring-1 ring-indigo-100/80">
+          <Icon size={18} className="text-[#0a0f29]" strokeWidth={2} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-bold text-[15px] leading-snug text-[color:var(--wp-text)]">{title}</span>
+            {badge}
+          </div>
+          {description ? (
+            <p className="mt-1 text-sm leading-snug text-[color:var(--wp-text-secondary)] line-clamp-2">{description}</p>
+          ) : null}
+        </div>
+        <ChevronRight size={18} className="mt-1 shrink-0 text-[color:var(--wp-text-tertiary)]" aria-hidden />
+      </Link>
+    </MobileCard>
+  );
+}
+
+function buildPriorityRows(
+  kpis: DashboardKpis,
+  summary: DashboardSummary | null,
+  reviewHref: (id: string) => string,
+) {
+  type Row = {
+    key: string;
+    href: string;
+    title: string;
+    description?: string;
+    badge: ReactNode;
+    icon: LucideIcon;
+  };
+  const rows: Row[] = [];
+
+  for (const t of kpis.overdueTasks.slice(0, 4)) {
+    rows.push({
+      key: `task-${t.id}`,
+      href: "/portal/tasks?filter=overdue",
+      title: t.title,
+      description: t.contactName ? `${t.contactName} · po termínu` : "Po termínu",
+      badge: <StatusBadge tone="danger">Po termínu</StatusBadge>,
+      icon: ListTodo,
+    });
+  }
+
+  for (const c of (summary?.contractsWaitingForReview ?? []).slice(0, 4)) {
+    rows.push({
+      key: `rev-${c.id}`,
+      href: reviewHref(c.id),
+      title: c.fileName || "Soubor ke kontrole",
+      description: "Čeká na interní kontrolu",
+      badge: (
+        <span className="inline-flex items-center gap-1 rounded-lg border border-violet-200 bg-violet-50 px-2 py-0.5">
+          <AiAssistantBrandIcon size={12} className="shrink-0 opacity-90" />
+          <span className="text-[10px] font-black uppercase tracking-wide text-violet-800">AI kontrola</span>
+        </span>
+      ),
+      icon: FileText,
+    });
+  }
+
+  for (const row of kpis.sidePanelAgendaTimeline.slice(0, 5)) {
+    const href =
+      row.kind === "event"
+        ? "/portal/calendar"
+        : row.kind === "task"
+          ? "/portal/tasks?filter=today"
+          : "/portal/tasks";
+    rows.push({
+      key: row.id,
+      href,
+      title: row.title,
+      description: `${row.relativeLabel ? row.relativeLabel.charAt(0).toUpperCase() + row.relativeLabel.slice(1) : "—"} · ${row.time}${row.sub ? ` · ${row.sub}` : ""}`,
+      badge: <StatusBadge tone="info">{row.kind === "event" ? "Událost" : "Úkol"}</StatusBadge>,
+      icon: row.kind === "event" ? Calendar : CheckSquare,
+    });
+  }
+
+  const seen = new Set<string>();
+  const deduped: Row[] = [];
+  for (const r of rows) {
+    if (seen.has(r.key)) continue;
+    seen.add(r.key);
+    deduped.push(r);
+    if (deduped.length >= 10) break;
+  }
+
+  const pragueHoliday = kpis.czPublicHolidayToday;
+  if (deduped.length === 0 && pragueHoliday) {
+    deduped.push({
+      key: "holiday",
+      href: "/portal/calendar",
+      title: pragueHoliday,
+      description: "Státní svátek — zkontrolujte plán.",
+      badge: <StatusBadge tone="neutral">Svátek</StatusBadge>,
+      icon: Sparkles,
+    });
+  }
+
+  return deduped;
+}
+
+function KpiClientsStrip({
+  serviceRecommendations,
+  kpis,
+}: {
+  serviceRecommendations: ServiceRecommendationWithContact[];
+  kpis: DashboardKpis;
+}) {
+  const chips: { key: string; label: string; href: string }[] = [];
+  for (const r of serviceRecommendations.slice(0, 6)) {
+    const name = [r.contactFirstName, r.contactLastName].filter(Boolean).join(" ").trim() || "Klient";
+    const cta = getServiceCtaHref(r, r.contactId);
+    chips.push({ key: `rec-${r.id}`, label: name, href: cta.href });
+  }
+  if (chips.length === 0) {
+    for (const c of kpis.serviceDueContacts.slice(0, 6)) {
+      chips.push({
+        key: `svc-${c.id}`,
+        label: `${c.firstName} ${c.lastName}`.trim(),
+        href: `/portal/contacts/${c.id}`,
+      });
+    }
+  }
+  if (chips.length === 0) {
+    return (
+      <p className="text-[11px] font-medium leading-relaxed text-[color:var(--wp-text-secondary)]">
+        Žádná aktivní péče ani servisní termín v tomto výřezu.
+      </p>
+    );
+  }
+  return (
+    <div className="flex flex-wrap gap-2">
+      {chips.map((c) => (
+        <Link
+          key={c.key}
+          href={c.href}
+          className="max-w-full truncate rounded-full border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-3 py-1.5 text-[11px] font-bold text-[color:var(--wp-text-secondary)] shadow-sm active:scale-[0.99]"
+        >
+          {c.label}
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+function AiInsightsPanel({
+  summary,
+  loading,
+  fetchError,
+  onRetry,
+}: {
+  summary: DashboardSummary | null;
+  loading: boolean;
+  fetchError: string | null;
+  onRetry: () => void;
+}) {
+  const suggested = (summary?.suggestedActions ?? []).slice(0, 4);
   const prose = summary?.assistantSummaryText?.trim();
 
+  if (loading) {
+    return (
+      <MobileCard className="border-indigo-100/80">
+        <MobileLoadingState rows={3} variant="row" label="Načítám interní AI náhled" />
+      </MobileCard>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <ErrorState
+        title="Interní AI náhled"
+        description={fetchError}
+        onRetry={onRetry}
+        homeHref={false}
+      />
+    );
+  }
+
+  if (!summary) {
+    return (
+      <MobileCard>
+        <p className="text-sm text-[color:var(--wp-text-secondary)]">Interní náhled není k dispozici.</p>
+      </MobileCard>
+    );
+  }
+
+  const hasBody = suggested.length > 0 || Boolean(prose);
+  if (!hasBody) {
+    return (
+      <MobileCard className="border-indigo-50 bg-gradient-to-br from-white to-indigo-50/30">
+        <div className="flex items-center gap-2">
+          <AiAssistantBrandIcon size={22} className="shrink-0" />
+          <p className="text-sm font-medium text-[color:var(--wp-text-secondary)]">
+            Pro tento den nejsou další interní podněty z AI náhledu.
+          </p>
+        </div>
+        <Link
+          href="/portal/contracts/review"
+          className="mt-3 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 text-sm font-bold text-white"
+        >
+          <AiAssistantBrandIcon size={16} /> AI Smlouvy <ArrowRight size={14} />
+        </Link>
+      </MobileCard>
+    );
+  }
+
   return (
-    <MobileCard className="overflow-hidden border-white/20 bg-gradient-to-br from-[#0a0f29] to-indigo-950 text-white">
+    <MobileCard className="border-indigo-100/80 bg-gradient-to-br from-white to-violet-50/25">
       <div className="flex items-center gap-2 mb-3">
-        <div className="w-8 h-8 rounded-lg bg-[color:var(--wp-surface-card)]/10 flex items-center justify-center p-1">
-          <AiAssistantBrandIcon size={22} className="max-w-full max-h-full" />
-        </div>
-        <h3 className="text-xs font-black uppercase tracking-widest text-indigo-200">AI Asistent</h3>
+        <AiAssistantBrandIcon size={22} className="shrink-0" />
+        <h3 className="text-sm font-black tracking-tight text-[#0a0f29]">Interní AI náhled</h3>
       </div>
-
-      {loading ? (
-        <div className="animate-pulse space-y-2 min-h-[72px]">
-          <div className="h-4 bg-[color:var(--wp-surface-card)]/10 rounded w-3/4" />
-          <div className="h-4 bg-[color:var(--wp-surface-card)]/10 rounded w-1/2" />
-          <div className="h-4 bg-[color:var(--wp-surface-card)]/10 rounded w-5/6" />
+      {suggested.length > 0 ? (
+        <div className="space-y-2">
+          <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[color:var(--wp-text-tertiary)]">
+            Podněty k prověření
+          </p>
+          <div className="space-y-1.5">
+            {suggested.map((a, i) => (
+              <Link
+                key={`${a.type}-${i}`}
+                href={suggestedActionHref(a)}
+                className="flex min-h-[44px] items-center justify-between gap-2 rounded-xl border border-violet-100 bg-violet-50/40 px-3 py-2.5 text-sm font-semibold text-[color:var(--wp-text)] active:scale-[0.99]"
+              >
+                <span className="min-w-0 flex-1 truncate">{a.label}</span>
+                <ArrowRight size={14} className="shrink-0 text-violet-500" />
+              </Link>
+            ))}
+          </div>
         </div>
-      ) : summary ? (
-        <div className="space-y-3">
-          {taskRows.length > 0 ? (
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-indigo-300/90 mb-2">
-                Úkoly dnes a po termínu
-              </p>
-              <div className="space-y-1.5">
-                {taskRows.map((t) => {
-                  const overdue = t.dueDate < todayStr;
-                  return (
-                    <Link
-                      key={t.id}
-                      href={taskDueHref(t)}
-                      className={cx(
-                        "flex items-start gap-2 w-full px-3 py-2.5 rounded-xl border border-white/10 border-l-4 text-left min-h-[44px]",
-                        overdue ? "border-l-rose-400 bg-rose-500/10" : "border-l-emerald-400/90 bg-emerald-500/10",
-                      )}
-                    >
-                      <Square size={16} className="shrink-0 mt-0.5 text-white/50" strokeWidth={2} />
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-semibold text-white/95 leading-snug">{t.title}</span>
-                        <span className="text-[10px] font-bold uppercase tracking-wide text-indigo-200/90">
-                          {overdue ? "Po termínu" : "Dnes"}
-                          {t.contactName ? ` · ${t.contactName}` : ""}
-                        </span>
-                      </span>
-                      <ArrowRight size={14} className="shrink-0 text-indigo-300 mt-1" />
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          ) : null}
-
-          {urgentRows.length > 0 ? (
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-indigo-300/90 mb-2">
-                Interní priority
-              </p>
-              <div className="space-y-1.5">
-                {urgentRows.map((u) => (
-                  <Link
-                    key={`${u.type}-${u.entityId}`}
-                    href={
-                      u.type === "review"
-                        ? `/portal/contracts/review/${u.entityId}`
-                        : u.type === "task"
-                          ? "/portal/tasks"
-                          : u.type === "client"
-                            ? `/portal/contacts/${u.entityId}`
-                            : "/portal/today"
-                    }
-                    className={cx(
-                      "flex items-center justify-between gap-2 w-full px-3 py-2.5 rounded-xl border border-white/10 border-l-4 text-sm text-white/90 min-h-[44px]",
-                      urgentSeverityClass(u.severity),
-                    )}
-                  >
-                    <span className="truncate flex-1 font-medium">{u.title}</span>
-                    <ArrowRight size={12} className="shrink-0 text-indigo-200" />
-                  </Link>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
-          {suggested.length > 0 ? (
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-indigo-300/90 mb-2">
-                Rychlé akce
-              </p>
-              <div className="space-y-1.5">
-                {suggested.map((a, i) => (
-                  <Link
-                    key={`${a.type}-${i}`}
-                    href={suggestedActionHref(a)}
-                    className="flex items-center justify-between w-full px-3 py-2 rounded-xl bg-violet-500/15 border border-violet-400/25 text-sm text-violet-100 min-h-[40px]"
-                  >
-                    <span className="truncate flex-1 pr-2">{a.label}</span>
-                    <ArrowRight size={12} className="shrink-0 text-violet-200" />
-                  </Link>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
-          {prose ? (
-            <details className="rounded-xl border border-white/10 bg-black/20 px-3 py-2">
-              <summary className="text-xs font-bold text-indigo-200 cursor-pointer list-none flex items-center justify-between gap-2">
-                Textový souhrn
-                <ChevronRight size={14} className="text-indigo-300 shrink-0" />
-              </summary>
-              <p className="text-xs text-white/80 leading-relaxed mt-2 pb-1">{prose}</p>
-            </details>
-          ) : null}
-
-          {!taskRows.length && !urgentRows.length && !suggested.length && !prose ? (
-            <p className="text-sm text-indigo-200">Dnes nemáte urgentní položky v náhledu AI.</p>
-          ) : null}
-        </div>
-      ) : (
-        <p className="text-sm text-indigo-200">Načítám interní podněty pro dnešek…</p>
-      )}
-
+      ) : null}
+      {prose ? (
+        <details className="mt-3 rounded-xl border border-indigo-100 bg-white/80 px-3 py-2">
+          <summary className="cursor-pointer list-none text-xs font-bold text-indigo-800">
+            Textový souhrn (interní)
+          </summary>
+          <p className="mt-2 text-xs leading-relaxed text-[color:var(--wp-text-secondary)]">{prose}</p>
+        </details>
+      ) : null}
       <Link
         href="/portal/contracts/review"
-        className="mt-3 flex items-center justify-center gap-2 w-full min-h-[44px] rounded-xl bg-indigo-600 text-white text-sm font-bold"
+        className="mt-4 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 text-sm font-bold text-white"
       >
-        <AiAssistantBrandIcon size={16} /> AI Smlouvy <ArrowRight size={14} />
+        <AiAssistantBrandIcon size={16} /> Otevřít AI Smlouvy <ArrowRight size={14} />
       </Link>
     </MobileCard>
   );
@@ -763,24 +958,33 @@ function NotesWidget({ notes }: { notes: MeetingNoteForBoard[] }) {
 
   return (
     <div className="space-y-2">
-      {notes.slice(0, 4).map((n) => (
-        <div
-          key={n.id}
-          className="p-2.5 rounded-xl border border-amber-100 bg-amber-50/30"
-        >
-          <div className="flex justify-between items-start">
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-[color:var(--wp-text)] truncate">
-                {n.contactName || "Zápis"}
-              </p>
-              <p className="text-xs text-[color:var(--wp-text-secondary)] mt-0.5">
-                {n.domain} · {new Date(n.meetingAt).toLocaleDateString("cs-CZ")}
-              </p>
+      {notes.slice(0, 4).map((n) => {
+        const title = noteContentTitle(n.content);
+        const domainLabel = formatMeetingNoteDomainLabel(n.domain);
+        const contact =
+          n.contactName && n.contactName !== "Obecný zápisek" ? n.contactName : null;
+        const meta = contact
+          ? `${domainLabel} · ${new Date(n.meetingAt).toLocaleDateString("cs-CZ")} · ${contact}`
+          : `${domainLabel} · ${new Date(n.meetingAt).toLocaleDateString("cs-CZ")}`;
+        return (
+          <div
+            key={n.id}
+            className="p-2.5 rounded-xl border border-amber-100 bg-amber-50/30"
+          >
+            <div className="flex justify-between items-start gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-[color:var(--wp-text)] truncate">
+                  {title}
+                </p>
+                <p className="text-xs text-[color:var(--wp-text-secondary)] mt-0.5 line-clamp-2">
+                  {meta}
+                </p>
+              </div>
+              <StickyNote size={14} className="text-amber-400 shrink-0 mt-0.5" />
             </div>
-            <StickyNote size={14} className="text-amber-400 shrink-0 mt-0.5" />
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -818,6 +1022,7 @@ export function DashboardScreen({
   onNewClient,
   onNewOpportunity,
 }: DashboardScreenProps) {
+  const ai = useAIDashboardSummary();
   const dateLabel = new Date().toLocaleDateString("cs-CZ", {
     weekday: "long",
     day: "numeric",
@@ -839,46 +1044,182 @@ export function DashboardScreen({
     newOpportunity: onNewOpportunity,
   };
 
-  return (
-    <div className="space-y-4">
-      <style>{`
-        .dash-scroll-strip::-webkit-scrollbar { display: none; }
-        .dash-scroll-strip { -ms-overflow-style: none; scrollbar-width: none; }
-      `}</style>
+  const reviewHref = (id: string) => `/portal/contracts/review/${encodeURIComponent(id)}`;
+  const priorityRows = buildPriorityRows(kpis, ai.summary, reviewHref);
 
-      {/* Greeting */}
-      <MobileSection>
-        <h1 className="text-xl font-black text-[color:var(--wp-text)] tracking-tight">
-          Dobrý den, {advisorName.split(" ")[0]} 👋
-        </h1>
-        <p className="text-xs text-[color:var(--wp-text-secondary)] font-medium mt-0.5 first-letter:uppercase">
+  const formatPremiumShort = (n: number) => {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")} mil.`;
+    if (n >= 1000) return `${Math.round(n / 1000)} tis.`;
+    return `${n}`;
+  };
+
+  return (
+    <div className="w-full min-w-0 overflow-x-hidden space-y-5">
+      {/* Datum + greeting — premium hierarchie */}
+      <div className="space-y-1">
+        <p className="text-[11px] font-black uppercase tracking-[0.12em] text-[color:var(--wp-text-secondary)] first-letter:uppercase">
           {dateLabel}
         </p>
-      </MobileSection>
+        <h1 className="text-[1.65rem] font-black leading-[1.15] tracking-tight text-[#0a0f29]">
+          Dobrý den, {advisorName.split(" ")[0]}
+        </h1>
+      </div>
 
-      {/* KPI + AI first (poradce vidí priority dřív než svátky) */}
-      <MobileSection title="Přehled">
-        <div className={cx("grid gap-2", isTablet ? "grid-cols-4" : "grid-cols-2")}>
-          <MetricCard label="Schůzky dnes" value={kpis.meetingsToday} />
+      <HeroDashboardCard />
+
+      {/* Rychlé signály — bez horizontálního scrollu */}
+      <div className="grid grid-cols-3 gap-2 min-w-0">
+        <QuickSignalTile
+          label="AI kontrola čeká"
+          value={
+            ai.loading ? 0 : ai.fetchError ? "—" : (ai.summary?.contractsWaitingForReview?.length ?? 0)
+          }
+          href="/portal/contracts/review"
+          loading={ai.loading}
+          valueTone={
+            !ai.loading && !ai.fetchError && (ai.summary?.contractsWaitingForReview?.length ?? 0) > 0
+              ? "warning"
+              : "default"
+          }
+        />
+        <QuickSignalTile
+          label="Po termínu"
+          value={kpis.overdueTasks.length}
+          href="/portal/tasks?filter=overdue"
+          valueTone={kpis.overdueTasks.length > 0 ? "danger" : "default"}
+        />
+        <QuickSignalTile
+          label="Dnes v agendě"
+          value={todayAgendaCount}
+          href="/portal/calendar"
+        />
+      </div>
+
+      {/* KPI dlaždice — Produkce / Úkoly / AI Review */}
+      <MobileSectionHeader
+        title="Klíčové metriky"
+        subtitle="Z produkčních dat CRM — interní přehled pro poradce."
+      />
+      <div className="grid grid-cols-3 gap-2 min-w-0">
+        {productionError ? (
+          <MobileCard className="min-w-0 p-3 border-rose-200/90 bg-rose-50/40">
+            <p className="text-[9px] font-black uppercase tracking-wide text-rose-800">Produkce</p>
+            <p className="mt-2 text-[11px] font-semibold leading-snug text-rose-700 line-clamp-3">Nepodařilo se načíst produkci.</p>
+            <Link href="/portal/production" className="mt-2 inline-flex text-[11px] font-black text-indigo-700">
+              Otevřít →
+            </Link>
+          </MobileCard>
+        ) : !productionSummary ? (
+          <MobileCard className="min-w-0 p-3">
+            <p className="text-[9px] font-black uppercase text-[color:var(--wp-text-secondary)]">Produkce</p>
+            <div className="mt-3">
+              <MobileLoadingState rows={2} variant="row" />
+            </div>
+          </MobileCard>
+        ) : productionSummary.totalCount === 0 ? (
+          <Link href="/portal/production" className="block min-w-0">
+            <MetricCard label="Produkce" value="—" tone="default" />
+          </Link>
+        ) : (
+          <Link href="/portal/production" className="block min-w-0 [&_.text-xl]:text-lg [&_.text-xl]:truncate">
+            <MetricCard
+              label="Produkce"
+              value={`${formatPremiumShort(productionSummary.totalPremium)} Kč`}
+              tone="default"
+            />
+          </Link>
+        )}
+        <Link href="/portal/tasks" className="block min-w-0 [&_.text-xl]:text-lg">
           <MetricCard
-            label="Otevřené úkoly"
+            label="Úkoly"
             value={kpis.tasksOpen}
             tone={kpis.overdueTasks.length > 0 ? "warning" : "default"}
           />
-          <MetricCard label="Otevřené případy" value={kpis.opportunitiesOpen} />
-          <MetricCard label="Kontakty" value={kpis.totalContacts} />
-        </div>
-      </MobileSection>
-
-      <div className={cx("min-h-[140px]", isTablet ? "max-w-3xl mx-auto w-full" : "")}>
-        <AiAssistantWidget />
+        </Link>
+        <Link href="/portal/contracts/review" className="block min-w-0 [&_.text-xl]:text-lg">
+          {ai.loading ? (
+            <MobileCard className="p-3">
+              <p className="text-[9px] font-black uppercase text-[color:var(--wp-text-secondary)]">AI Review</p>
+              <div className="mt-3">
+                <MobileLoadingState rows={1} variant="row" />
+              </div>
+            </MobileCard>
+          ) : ai.fetchError ? (
+            <MobileCard className="p-3 border-amber-100 bg-amber-50/40">
+              <p className="text-[9px] font-black uppercase text-amber-900">AI Review</p>
+              <p className="mt-2 text-[11px] font-medium text-amber-900/90">Nepodařilo se načíst stav.</p>
+              <span className="mt-2 block text-xl font-black text-[color:var(--wp-text)]">—</span>
+            </MobileCard>
+          ) : (
+            <MetricCard
+              label="AI Review"
+              value={ai.summary?.contractsWaitingForReview?.length ?? 0}
+              tone={(ai.summary?.contractsWaitingForReview?.length ?? 0) > 0 ? "warning" : "default"}
+            />
+          )}
+        </Link>
       </div>
 
-      {/* Quick Actions -- horizontal scroll, 8 pills */}
-      <div className="dash-scroll-strip flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
+      {/* Klienti / péče — strip */}
+      <MobileSection title="Klienti v záběru">
+        <MobileCard className="pt-4">
+          <KpiClientsStrip serviceRecommendations={serviceRecommendations} kpis={kpis} />
+        </MobileCard>
+      </MobileSection>
+
+      {/* Priority list */}
+      <MobileSectionHeader
+        title="Priority"
+        subtitle="Interní práce podle CRM — ověřte detaily před sdělením klientovi."
+        action={
+          <Link href="/portal/tasks" className="text-[11px] font-black uppercase tracking-wide text-indigo-600">
+            Úkoly →
+          </Link>
+        }
+      />
+      {priorityRows.length === 0 ? (
+        <MobileCard className="text-center py-10">
+          <p className="text-sm font-medium text-[color:var(--wp-text-secondary)]">
+            Žádné položky v prioritní frontě podle výřezu právě teď — obnovte úkoly nebo kalendář.
+          </p>
+          <div className="mt-5 flex flex-wrap justify-center gap-2">
+            <Link
+              href="/portal/tasks"
+              className="inline-flex min-h-[44px] items-center rounded-xl bg-indigo-600 px-5 text-xs font-black uppercase tracking-wide text-white"
+            >
+              Úkoly
+            </Link>
+            <Link
+              href="/portal/calendar"
+              className="inline-flex min-h-[44px] items-center rounded-xl border border-[color:var(--wp-surface-card-border)] px-5 text-xs font-bold text-[color:var(--wp-text-secondary)]"
+            >
+              Kalendář
+            </Link>
+          </div>
+        </MobileCard>
+      ) : (
+        <div className="space-y-2">
+          {priorityRows.map((row) => (
+            <PriorityLinkRow
+              key={row.key}
+              href={row.href}
+              title={row.title}
+              description={row.description}
+              badge={row.badge}
+              icon={row.icon}
+            />
+          ))}
+        </div>
+      )}
+
+      <AiInsightsPanel summary={ai.summary} loading={ai.loading} fetchError={ai.fetchError} onRetry={ai.retry} />
+
+      {/* Quick Actions — pouze wrap, žádný horizontální scroll */}
+      <MobileSection title="Rychlé akce">
+        <div className="flex flex-wrap gap-2">
         {QUICK_ACTIONS.map((qa, i) => {
           const cls =
-            "flex items-center gap-1.5 px-3 py-2 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-xs font-bold text-[color:var(--wp-text-secondary)] whitespace-nowrap shrink-0 min-h-[40px] active:scale-95 transition-transform";
+            "flex items-center gap-1.5 px-3 py-2 bg-[color:var(--wp-surface-card)] border border-[color:var(--wp-surface-card-border)] rounded-xl text-xs font-bold text-[color:var(--wp-text-secondary)] min-h-[40px] active:scale-95 transition-transform max-w-[100%]";
           const iconEl =
             "brandAi" in qa && qa.brandAi ? (
               <AiAssistantBrandIcon size={14} className="opacity-70 shrink-0" />
@@ -908,7 +1249,8 @@ export function DashboardScreen({
             </button>
           );
         })}
-      </div>
+        </div>
+      </MobileSection>
 
       <TodayInCalendarWidget
         czPublicHolidayToday={kpis.czPublicHolidayToday}

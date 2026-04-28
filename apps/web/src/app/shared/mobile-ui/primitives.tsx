@@ -1,8 +1,20 @@
 "use client";
 
 import React, { type ButtonHTMLAttributes, type ReactNode, createElement, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Capacitor } from "@capacitor/core";
-import { X, Plus, AlertCircle, Wifi, WifiOff, PackageOpen, RefreshCw } from "lucide-react";
+import {
+  X,
+  Plus,
+  AlertCircle,
+  Wifi,
+  WifiOff,
+  PackageOpen,
+  RefreshCw,
+  Laptop,
+  AlertTriangle,
+} from "lucide-react";
+import { portalPrimaryButtonClassName } from "@/lib/ui/create-action-button-styles";
 import type { DeviceClass } from "@/lib/ui/useDeviceClass";
 import { registerBackHandler } from "@/app/shared/mobile-ui/native-back-stack";
 
@@ -20,10 +32,11 @@ export function MobileAppShell({
   children: ReactNode;
   deviceClass?: DeviceClass;
 } & ClassName) {
+  const isCompact = deviceClass === "phone" || deviceClass === "tablet";
   return (
     <div
       className={cx(
-        "flex flex-col bg-[color:var(--wp-bg)] text-[color:var(--wp-text)]",
+        "aidv-mobile-premium-shell flex flex-col text-[color:var(--wp-text)]",
         /* Phone/tablet: fill visual viewport so document/body never scrolls or rubber-bands behind the shell. */
         deviceClass === "phone" &&
           "fixed inset-0 z-[1] min-h-0 overflow-hidden pb-[calc(var(--aidv-mobile-tabbar-inner-h-phone)+var(--safe-area-bottom,0px))]",
@@ -33,7 +46,22 @@ export function MobileAppShell({
         className
       )}
     >
-      {children}
+      {isCompact ? (
+        <>
+          <div
+            className="pointer-events-none absolute inset-0 z-0 bg-[color:var(--aidv-mobile-canvas-bg)]"
+            style={{ backgroundImage: "var(--aidv-mobile-canvas-bg-gradient)" }}
+            aria-hidden
+          />
+          <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden>
+            <div className="absolute -right-16 -top-20 h-60 w-60 rounded-full blur-3xl opacity-90 [background:radial-gradient(circle_at_center,var(--aidv-mobile-shell-blob-a)_0%,transparent_68%)]" />
+            <div className="absolute -left-24 top-1/3 h-52 w-52 rounded-full blur-3xl opacity-80 [background:radial-gradient(circle_at_center,var(--aidv-mobile-shell-blob-b)_0%,transparent_68%)]" />
+          </div>
+          <div className="relative z-[1] flex min-h-0 min-w-0 flex-1 flex-col">{children}</div>
+        </>
+      ) : (
+        <div className="flex min-h-0 flex-1 flex-col bg-[color:var(--wp-bg)]">{children}</div>
+      )}
     </div>
   );
 }
@@ -55,8 +83,9 @@ export function MobileHeader({
   return (
     <header
       className={cx(
-        "z-40 shrink-0 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/90 backdrop-blur",
-        "pt-[calc(var(--safe-area-top)+0.125rem)] pb-2",
+        "z-40 shrink-0 border-b border-slate-200/70 shadow-[0_4px_24px_rgba(10,15,41,0.06)] backdrop-blur-xl",
+        "bg-white/80 supports-[backdrop-filter]:bg-white/70",
+        "pt-[calc(var(--safe-area-top)+0.25rem)] pb-2.5 rounded-b-[1.25rem]",
         deviceClass === "phone" && "px-4",
         deviceClass === "tablet" && "px-6",
         className
@@ -100,13 +129,13 @@ function NavTabButton({
       aria-label={item.label}
       aria-current={active ? "page" : undefined}
       className={cx(
-        "min-h-[44px] rounded-xl transition-colors duration-150",
+        "min-h-[44px] rounded-2xl transition-all duration-200",
         deviceClass === "tablet"
           ? "flex items-center gap-2 px-4 py-1.5 text-sm font-bold"
           : "flex flex-col items-center justify-center gap-1 text-[10px] font-bold",
         active
-          ? "bg-indigo-500/15 text-indigo-700 dark:text-indigo-200"
-          : "text-[color:var(--wp-text-secondary)] hover:text-[color:var(--wp-text)]"
+          ? "bg-gradient-to-b from-indigo-50 to-violet-50/90 text-[#0a0f29] shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] ring-1 ring-indigo-200/80"
+          : "text-[color:var(--wp-text-secondary)] hover:text-[color:var(--wp-text)] hover:bg-white/40"
       )}
     >
       <div className="relative flex-shrink-0">
@@ -147,18 +176,22 @@ export function MobileBottomNav({
       onClick={centerFab.onClick}
       aria-label={centerFab.ariaLabel ?? "Nový – rychlé akce"}
       className={cx(
-        "flex shrink-0 items-center justify-center rounded-full border-[3px] border-[color:var(--wp-surface-card)] bg-aidv-create text-white shadow-md shadow-indigo-950/15 transition-transform active:scale-95",
-        deviceClass === "tablet" ? "w-11 h-11 -translate-y-0.5" : "w-12 h-12 -translate-y-1"
+        "flex shrink-0 items-center justify-center rounded-full border-[3px] border-white/90 text-white shadow-xl shadow-indigo-950/25 transition-transform active:scale-95",
+        "[background-image:var(--aidv-mobile-fab-gradient)]",
+        deviceClass === "tablet" ? "w-11 h-11 -translate-y-0.5" : "w-[3.35rem] h-[3.35rem] -translate-y-1"
       )}
     >
-      <Plus size={deviceClass === "tablet" ? 20 : 22} strokeWidth={2.5} className="shrink-0" />
+      <Plus size={deviceClass === "tablet" ? 20 : 23} strokeWidth={2.5} className="shrink-0 drop-shadow-sm" />
     </button>
   ) : null;
 
   return (
     <nav
       className={cx(
-        "fixed inset-x-0 bottom-0 z-50 border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]",
+        "fixed inset-x-0 bottom-0 z-50",
+        "border-t border-[color:var(--aidv-mobile-nav-glass-border)]",
+        "bg-[color:var(--aidv-mobile-nav-glass-bg)] backdrop-blur-2xl backdrop-saturate-150",
+        "shadow-[var(--aidv-mobile-nav-shadow)]",
         "pb-[var(--safe-area-bottom,0px)]",
         "pl-[env(safe-area-inset-left,0px)] pr-[env(safe-area-inset-right,0px)]"
       )}
@@ -242,7 +275,9 @@ export function MobileScreen({
       aria-label={ariaLabelledBy ? undefined : ariaLabel ?? "Hlavní obsah"}
       aria-labelledby={ariaLabelledBy}
       className={cx(
-        "relative flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-y-auto overscroll-y-none px-4 pt-3 pb-4 space-y-4",
+        "relative flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-y-auto overscroll-y-none",
+        "px-4 pt-3 space-y-4",
+        "pb-[var(--aidv-mobile-screen-pad-bottom)]",
         className
       )}
     >
@@ -256,12 +291,95 @@ export function MobileSection({ title, action, children, className }: { title?: 
     <section className={cx("space-y-2", className)}>
       {title ? (
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-xs uppercase tracking-wider text-[color:var(--wp-text-secondary)] font-black">{title}</h2>
+          <h2 className="text-[11px] font-black uppercase tracking-[0.08em] text-[color:var(--wp-text-secondary)]">{title}</h2>
           {action}
         </div>
       ) : null}
       {children}
     </section>
+  );
+}
+
+/** Premium section title row — optional subtitle + trailing action (filters, odkaz „všechny“). */
+export function MobileSectionHeader({
+  title,
+  subtitle,
+  action,
+  className,
+}: {
+  title: string;
+  subtitle?: ReactNode;
+  action?: ReactNode;
+} & ClassName) {
+  return (
+    <div className={cx("mb-1 flex items-start justify-between gap-3", className)}>
+      <div className="min-w-0">
+        <h2 className="text-sm font-black tracking-tight text-[#0a0f29]">{title}</h2>
+        {subtitle ? (
+          <div className="mt-0.5 text-[11px] font-medium leading-snug text-[color:var(--wp-text-secondary)]">{subtitle}</div>
+        ) : null}
+      </div>
+      {action ? <div className="shrink-0 pt-0.5">{action}</div> : null}
+    </div>
+  );
+}
+
+/** List řádek jako karta — použití místo tabulek na mobilu. `compact` hustší řádek, `roomy` čitelnější. */
+export function MobileListItem({
+  leading,
+  title,
+  description,
+  meta,
+  trailing,
+  onClick,
+  variant = "roomy",
+  className,
+}: {
+  leading?: ReactNode;
+  title: ReactNode;
+  description?: ReactNode;
+  meta?: ReactNode;
+  trailing?: ReactNode;
+  onClick?: () => void;
+  variant?: "compact" | "roomy";
+} & ClassName) {
+  const pad = variant === "compact" ? "py-2.5" : "py-3.5";
+  const body = (
+    <div className={cx("flex min-h-[44px] items-center gap-3", pad)}>
+      {leading ? <div className="flex shrink-0 items-center justify-center">{leading}</div> : null}
+      <div className="min-w-0 flex-1">
+        <div
+          className={cx(
+            "font-bold text-[color:var(--wp-text)]",
+            variant === "compact" ? "text-sm leading-tight" : "text-[15px] leading-snug"
+          )}
+        >
+          {title}
+        </div>
+        {description ? (
+          <div className={cx("text-[color:var(--wp-text-secondary)]", variant === "compact" ? "mt-0.5 text-xs" : "mt-1 text-sm")}>
+            {description}
+          </div>
+        ) : null}
+        {meta ? <div className="mt-1.5">{meta}</div> : null}
+      </div>
+      {trailing ? <div className="flex shrink-0 items-center">{trailing}</div> : null}
+    </div>
+  );
+
+  if (onClick) {
+    return (
+      <MobileCard pressable className={cx("p-0 overflow-hidden", className)}>
+        <button type="button" className="block w-full px-4 text-left" onClick={onClick}>
+          {body}
+        </button>
+      </MobileCard>
+    );
+  }
+  return (
+    <MobileCard className={cx("overflow-hidden px-4 py-0", className)}>
+      {body}
+    </MobileCard>
   );
 }
 
@@ -275,8 +393,8 @@ export function MobileCard({ children, className, pressable }: { children: React
       )}
       style={{
         borderColor: "var(--aidv-mobile-card-border)",
-        borderRadius: "var(--aidv-card-radius, 1.25rem)",
-        boxShadow: "var(--aidv-shadow-card-sm, 0 1px 2px rgba(15,23,42,0.04), 0 2px 8px rgba(15,23,42,0.03))",
+        borderRadius: "var(--aidv-mobile-card-radius-lg, var(--aidv-card-radius, 1.25rem))",
+        boxShadow: "var(--aidv-mobile-shadow-card-premium, var(--aidv-shadow-card-sm))",
       }}
     >
       {children}
@@ -405,7 +523,7 @@ export function StickyActionBar({ children }: { children: ReactNode }) {
         "pointer-events-none"
       )}
     >
-      <div className="pointer-events-auto rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)]/95 p-3 shadow-lg backdrop-blur">
+      <div className="pointer-events-auto rounded-[var(--aidv-mobile-card-radius-lg)] border border-slate-200/80 bg-white/90 p-3 shadow-[var(--aidv-mobile-shadow-card-premium,var(--aidv-shadow-card-md))] backdrop-blur-xl">
         {children}
       </div>
     </div>
@@ -425,11 +543,16 @@ export function FloatingActionButton({
     <button
       type="button"
       onClick={onClick}
-      className="fixed z-40 flex min-h-[52px] min-w-[52px] items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg transition-transform active:scale-95 bottom-[calc(var(--aidv-mobile-tabbar-inner-h-phone)+var(--aidv-mobile-fab-above-tabbar)+var(--safe-area-bottom,0px))] right-[max(1rem,env(safe-area-inset-right,0px))]"
+      className={cx(
+        "fixed z-40 flex min-h-[52px] min-w-[52px] items-center justify-center rounded-full border border-white/20 text-white shadow-xl shadow-indigo-950/35 transition-transform active:scale-95",
+        "[background-image:var(--aidv-mobile-fab-gradient)]",
+        "bottom-[calc(var(--aidv-mobile-tabbar-inner-h-phone)+var(--aidv-mobile-fab-above-tabbar)+var(--safe-area-bottom,0px))]",
+        "right-[max(1rem,env(safe-area-inset-right,0px))]"
+      )}
       aria-label={label}
       title={label}
     >
-      {createElement(Icon, { size: 22 })}
+      {createElement(Icon, { size: 22, className: "drop-shadow-sm" })}
     </button>
   );
 }
@@ -584,13 +707,13 @@ function OverlayContainer({
         ref={panelRef}
         tabIndex={-1}
         className={cx(
-          "absolute left-0 right-0 flex flex-col overflow-hidden border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] shadow-2xl outline-none",
+          "absolute left-0 right-0 flex flex-col overflow-hidden border-t border-white/70 bg-[color:var(--wp-surface-card)] outline-none shadow-[var(--aidv-mobile-shadow-card-premium,0_12px_40px_rgba(10,15,41,0.14))]",
           "animate-in slide-in-from-bottom duration-300 ease-out",
           fullScreen
             ? "top-0 bottom-0 max-h-[100dvh] min-h-0 rounded-none pt-[var(--safe-area-top)] pb-[var(--safe-area-bottom)]"
             : compact
-              ? "bottom-0 max-h-[min(60dvh,60vh)] rounded-t-3xl pb-0"
-              : "bottom-0 max-h-[min(85dvh,85vh)] rounded-t-3xl pb-0"
+              ? "bottom-0 max-h-[min(60dvh,60vh)] rounded-t-[1.625rem] pb-0"
+              : "bottom-0 max-h-[min(85dvh,85vh)] rounded-t-[1.75rem] pb-0"
         )}
       >
         {children}
@@ -661,7 +784,7 @@ function SheetDragHandle({ onClose }: { onClose: () => void }) {
       }}
       className="flex h-6 w-full shrink-0 cursor-grab touch-none select-none items-center justify-center active:cursor-grabbing"
     >
-      <span className="pointer-events-none h-1 w-9 rounded-full bg-[color:var(--wp-surface-card-border)]" />
+      <span className="pointer-events-none h-1.5 w-10 rounded-full bg-slate-300/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]" />
     </div>
   );
 }
@@ -671,6 +794,8 @@ export function BottomSheet({
   onClose,
   title,
   children,
+  /** Sticky primary/secondary actions — tap-safe min 44px inside footer. */
+  footer,
   /** Spodní navigace portálu (~104px) + FAB — aby šly odkliknout poslední akce v listu. */
   reserveMobileBottomNav = false,
   /** Hug the content (max 60dvh) instead of the default 85dvh tall sheet. */
@@ -680,33 +805,39 @@ export function BottomSheet({
   onClose: () => void;
   title: string;
   children: ReactNode;
+  footer?: ReactNode;
   reserveMobileBottomNav?: boolean;
   compact?: boolean;
 }) {
   const labelId = `bs-title-${title.replace(/\s+/g, "-").toLowerCase()}`;
-  const scrollPad = reserveMobileBottomNav
-    ? "pb-[max(1.25rem,calc(var(--aidv-mobile-tabbar-inner-h-phone)+max(0.5rem,var(--safe-area-bottom))+1.25rem))]"
-    : "pb-[max(1rem,calc(var(--safe-area-bottom)+0.5rem))]";
+  const scrollPad = footer
+    ? "pb-3"
+    : reserveMobileBottomNav
+      ? "pb-[max(1.25rem,calc(var(--aidv-mobile-tabbar-inner-h-phone)+max(0.5rem,var(--safe-area-bottom))+1.25rem))]"
+      : "pb-[max(1rem,calc(var(--safe-area-bottom)+0.5rem))]";
   return (
     <OverlayContainer open={open} onClose={onClose} labelId={labelId} compact={compact}>
       <div className="flex min-h-0 flex-1 flex-col">
         <SheetDragHandle onClose={onClose} />
-        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[color:var(--wp-surface-card-border)] px-4 py-3">
-          <h3 id={labelId} className="min-w-0 flex-1 font-black text-sm">
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-200/80 bg-white/95 px-4 py-3">
+          <h3 id={labelId} className="min-w-0 flex-1 text-[15px] font-black tracking-tight text-[#0a0f29]">
             {title}
           </h3>
           <button
             type="button"
             onClick={onClose}
             aria-label="Zavřít panel"
-            className="grid min-h-[44px] min-w-[44px] shrink-0 place-items-center rounded-full bg-[color:var(--wp-surface-muted)] text-[color:var(--wp-text)] transition-colors hover:bg-[color:var(--wp-surface-card-border)]"
+            className="grid min-h-[44px] min-w-[44px] shrink-0 place-items-center rounded-full bg-slate-100 text-[color:var(--wp-text)] transition-colors hover:bg-slate-200/90"
           >
             <X size={18} />
           </button>
         </div>
-        <div className={cx("min-h-0 flex-1 overflow-y-auto overscroll-contain p-4", scrollPad)}>
-          {children}
-        </div>
+        <div className={cx("min-h-0 flex-1 overflow-y-auto overscroll-contain p-4", scrollPad)}>{children}</div>
+        {footer ? (
+          <div className="shrink-0 border-t border-slate-200/80 bg-white/95 px-4 py-3 shadow-[0_-6px_20px_rgba(10,15,41,0.05)]">
+            <div className="pb-[max(0.25rem,var(--safe-area-bottom))]">{footer}</div>
+          </div>
+        ) : null}
       </div>
     </OverlayContainer>
   );
@@ -798,15 +929,15 @@ export function EmptyState({
   icon?: React.ElementType;
 }) {
   return (
-    <MobileCard className="text-center py-10">
+    <MobileCard className="overflow-hidden py-10 text-center [box-shadow:var(--aidv-mobile-shadow-card-premium,var(--aidv-shadow-card-sm))]">
       <div className="flex justify-center mb-3">
-        <div className="w-12 h-12 rounded-2xl bg-[color:var(--wp-surface-muted)] flex items-center justify-center">
-          {createElement(Icon, { size: 22, className: "text-[color:var(--wp-text-tertiary)]" })}
+        <div className="grid h-[3.25rem] w-[3.25rem] place-items-center rounded-2xl bg-gradient-to-br from-indigo-50 to-violet-50 ring-1 ring-indigo-100/90 shadow-inner">
+          {createElement(Icon, { size: 22, className: "text-indigo-600" })}
         </div>
       </div>
-      <p className="font-black text-[color:var(--wp-text)]">{title}</p>
-      {description ? <p className="text-sm text-[color:var(--wp-text-secondary)] mt-1.5 leading-relaxed">{description}</p> : null}
-      {action ? <div className="mt-4">{action}</div> : null}
+      <p className="font-black tracking-tight text-[#0a0f29]">{title}</p>
+      {description ? <p className="mt-2 text-sm leading-relaxed text-[color:var(--wp-text-secondary)]">{description}</p> : null}
+      {action ? <div className="mt-5">{action}</div> : null}
     </MobileCard>
   );
 }
@@ -826,7 +957,7 @@ export function ErrorState({
   homeLabel?: string;
 }) {
   return (
-    <MobileCard className="border-rose-200 bg-rose-50/50 px-4">
+    <MobileCard className="border-rose-200/90 bg-gradient-to-b from-rose-50/90 to-white px-4">
       <div className="flex items-start gap-3">
         <div className="w-9 h-9 rounded-xl bg-rose-100 flex items-center justify-center flex-shrink-0 mt-0.5">
           <AlertCircle size={16} className="text-rose-600" />
@@ -870,11 +1001,14 @@ export function LoadingSkeleton({ rows = 4, variant = "card" }: { rows?: number;
         ? ["h-14", "h-14", "h-14", "h-14", "h-14"]
         : ["h-20", "h-16", "h-24", "h-16", "h-20", "h-18"];
   return (
-    <div className="space-y-2 px-4 py-3">
+    <div className="space-y-2.5 px-1 py-2" role="status" aria-busy="true" aria-label="Načítání">
       {Array.from({ length: rows }).map((_, idx) => (
         <div
           key={idx}
-          className={cx("rounded-2xl bg-[color:var(--wp-surface-card-border)]/70 animate-pulse", heights[idx % heights.length])}
+          className={cx(
+            "animate-pulse rounded-[var(--aidv-mobile-card-radius-lg,1.25rem)] bg-slate-200/60",
+            heights[idx % heights.length]
+          )}
         />
       ))}
     </div>
@@ -1299,6 +1433,99 @@ export function ProfileFieldRow({
 }
 
 /* ------------------------------------------------------------------ */
+/*  Mobile CRM route placeholders (web-only vs unknown URL)           */
+/* ------------------------------------------------------------------ */
+
+/** Opens the same pathname in the system/browser tab — intended for desktop-width CRM. */
+function buildAbsoluteAidvisoraUrl(portalPath: string): string {
+  if (typeof window === "undefined") return portalPath;
+  return `${window.location.origin}${portalPath}`;
+}
+
+/** Web-only desktop sections — keep copy internal / administrative (Aidvisora is advisor SaaS CRM). */
+export function MobileWebOnlyRoutePlaceholder({
+  title,
+  description,
+  pathnameForWeb,
+}: {
+  title: string;
+  description: string;
+  pathnameForWeb: string;
+}) {
+  const router = useRouter();
+
+  function openDesktopWebSegment() {
+    const url = buildAbsoluteAidvisoraUrl(pathnameForWeb || "/portal/today");
+    try {
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch {
+      router.push(pathnameForWeb);
+    }
+  }
+
+  return (
+    <div className="space-y-4 pt-2">
+      <MobileCard className="space-y-4 overflow-hidden rounded-[var(--aidv-mobile-card-radius-xl,2rem)] p-6 [box-shadow:var(--aidv-mobile-shadow-card-premium)]">
+        <h2 className="text-center text-base font-black tracking-tight text-[#0a0f29]">{title}</h2>
+        <div className="mx-auto grid h-[3.75rem] w-[3.75rem] place-items-center rounded-3xl border border-indigo-100/90 bg-gradient-to-br from-white to-indigo-50 shadow-[var(--aidv-mobile-shadow-card-premium)]">
+          <Laptop className="h-8 w-8 text-indigo-600 drop-shadow-sm" aria-hidden />
+        </div>
+        <p className="text-center text-[11px] font-black uppercase tracking-wider text-[color:var(--wp-text-tertiary)]">
+          Tato část je dostupná na webu
+        </p>
+        <p className="text-center text-sm leading-relaxed text-[color:var(--wp-text-secondary)]">{description}</p>
+        <div className="flex flex-col gap-2 pt-2">
+          <button
+            type="button"
+            className={cx(portalPrimaryButtonClassName, "w-full min-h-[48px] text-sm font-black")}
+            onClick={openDesktopWebSegment}
+          >
+            Otevřít webovou verzi
+          </button>
+          <button
+            type="button"
+            onClick={() => router.replace("/portal/today")}
+            className="min-h-[44px] rounded-xl border border-[color:var(--wp-surface-card-border)] text-sm font-bold text-[color:var(--wp-text-secondary)] active:scale-[0.99] transition-transform"
+          >
+            Zpět na Přehled
+          </button>
+        </div>
+      </MobileCard>
+    </div>
+  );
+}
+
+export function MobileUnsupportedRouteScreen({
+  pathname,
+}: {
+  pathname: string;
+}) {
+  const router = useRouter();
+
+  return (
+    <div className="space-y-4 pt-2">
+      <MobileCard className="space-y-4 overflow-hidden rounded-[var(--aidv-mobile-card-radius-xl,2rem)] p-6 [box-shadow:var(--aidv-mobile-shadow-card-premium)]">
+        <h2 className="text-center text-base font-black tracking-tight text-[#0a0f29]">Nepodporovaná cesta</h2>
+        <div className="mx-auto grid h-[3.75rem] w-[3.75rem] place-items-center rounded-3xl border border-amber-200/90 bg-gradient-to-br from-amber-50 to-white shadow-inner">
+          <AlertTriangle className="h-8 w-8 text-amber-700" aria-hidden />
+        </div>
+        <p className="text-sm text-[color:var(--wp-text-secondary)] leading-relaxed">
+          Tuto adresu mobilní aplikace v tomto rozhraní neobsahuje. Použijte Přehled nebo adresu zkontrolujte v desktopovém
+          CRM — aktuální cesta:{pathname ? <span className="break-all font-mono text-xs text-[color:var(--wp-text)]"> {pathname}</span> : null}.
+        </p>
+        <button
+          type="button"
+          className={cx(portalPrimaryButtonClassName, "w-full min-h-[48px] text-sm font-black")}
+          onClick={() => router.replace("/portal/today")}
+        >
+          Zpět na Přehled
+        </button>
+      </MobileCard>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  OfflineBanner – shows when browser has no network connection       */
 /* ------------------------------------------------------------------ */
 
@@ -1508,6 +1735,44 @@ export function useToast() {
   function showToast(message: string, variant: ToastVariant = "info") {
     setToast({ message, variant });
   }
-  function dismissToast() { setToast(null); }
+  function dismissToast() {
+    setToast(null);
+  }
   return { toast, showToast, dismissToast };
 }
+
+/* ------------------------------------------------------------------ */
+/*  Stable aliases — product naming (masterplan) × backwards compat    */
+/* ------------------------------------------------------------------ */
+
+/** @alias {@link MobileHeader} premium top bar */
+export const MobileTopBar = MobileHeader;
+
+export const MobileBottomSheet = BottomSheet;
+
+/** Same interaction model as BottomSheet — quick secondary panels / action lists. */
+export const MobileActionSheet = BottomSheet;
+
+/** KPI dlaždice — stejná data API jako {@link MetricCard}. */
+export const MobileKpiCard = MetricCard;
+
+export const MobileEmptyState = EmptyState;
+export const MobileErrorState = ErrorState;
+
+/** WCAG label + shimmer — preferuje se pro blokové skeletony nad obrazovkou. */
+export function MobileLoadingState(props: {
+  rows?: number;
+  variant?: "card" | "row" | "list";
+  /** Popis dočasného stavu pro screen readery */
+  label?: string;
+}) {
+  return (
+    <>
+      {props.label ? <span className="sr-only">{props.label}</span> : null}
+      <LoadingSkeleton rows={props.rows} variant={props.variant} />
+    </>
+  );
+}
+
+/** @alias {@link MobileWebOnlyRoutePlaceholder} — fáze 0.5 route cleanup */
+export const MobileWebOnlyPlaceholder = MobileWebOnlyRoutePlaceholder;

@@ -1,7 +1,7 @@
 import type { EventRow } from "@/app/actions/events";
 import { formatDateLocal } from "@/app/portal/calendar/date-utils";
 
-export type CalendarViewMode = "day" | "3day" | "week" | "agenda";
+export type CalendarViewMode = "day" | "3day" | "week" | "agenda" | "month";
 
 export const MONTH_NAMES = [
   "Leden",
@@ -56,6 +56,10 @@ export function startOfWeekLocal(d: Date, firstDayOfWeek: 0 | 1): Date {
 }
 
 export function getVisibleDays(anchor: Date, view: CalendarViewMode, firstDayOfWeek: 0 | 1): Date[] {
+  if (view === "month") {
+    /** V měsíčním pohledu pro strip / kontext použij týden kolem kotvy. */
+    return getVisibleDays(anchor, "week", firstDayOfWeek);
+  }
   if (view === "day") return [startOfDayLocal(anchor)];
   if (view === "3day") {
     const base = startOfDayLocal(anchor);
@@ -101,7 +105,26 @@ export function buildEventsByDate(events: EventRow[]): Map<string, EventRow[]> {
   return map;
 }
 
+/** Rozsah načítání pro měsíční síť (~6 řádků) + rámeček přes půlnoc při načítání. */
+export function computeMonthFetchRange(anchor: Date, firstDayOfWeek: 0 | 1): { startIso: string; endIso: string } {
+  const monthFirst = startOfDayLocal(new Date(anchor.getFullYear(), anchor.getMonth(), 1));
+  const gridStart = startOfWeekLocal(monthFirst, firstDayOfWeek);
+  const gridEnd = addDaysLocal(gridStart, 42);
+  return {
+    startIso: addDaysLocal(gridStart, -1).toISOString(),
+    endIso: addDaysLocal(gridEnd, 1).toISOString(),
+  };
+}
+
 export function navigateAnchor(anchor: Date, view: CalendarViewMode, direction: -1 | 1): Date {
+  if (view === "month") {
+    const y = anchor.getFullYear();
+    const m = anchor.getMonth();
+    const d = anchor.getDate();
+    const nextM = m + direction;
+    const ld = new Date(y, nextM + 1, 0).getDate();
+    return startOfDayLocal(new Date(y, nextM, Math.min(d, ld)));
+  }
   if (view === "day") return addDaysLocal(anchor, direction);
   if (view === "3day") return addDaysLocal(anchor, direction * 3);
   if (view === "agenda") return addDaysLocal(anchor, direction * 7);
@@ -116,6 +139,7 @@ export function viewModeLabel(view: CalendarViewMode): string {
   if (view === "day") return "Den";
   if (view === "3day") return "3 dny";
   if (view === "agenda") return "Agenda";
+  if (view === "month") return "Měsíc";
   return "Týden";
 }
 

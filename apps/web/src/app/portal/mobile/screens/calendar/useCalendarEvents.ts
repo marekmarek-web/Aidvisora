@@ -5,6 +5,7 @@ import { listEvents, type EventRow } from "@/app/actions/events";
 import {
   buildEventsByDate,
   computeFetchRange,
+  computeMonthFetchRange,
   getVisibleDays,
   type CalendarViewMode,
 } from "./calendar-utils";
@@ -23,7 +24,10 @@ export function useCalendarEvents(
     [anchorDate, view, firstDayOfWeek],
   );
 
-  const { startIso, endIso } = useMemo(() => computeFetchRange(visibleDays), [visibleDays]);
+  const { startIso, endIso } = useMemo(() => {
+    if (view === "month") return computeMonthFetchRange(anchorDate, firstDayOfWeek);
+    return computeFetchRange(visibleDays);
+  }, [view, anchorDate, firstDayOfWeek, visibleDays]);
 
   const reload = useCallback(() => {
     startTransition(async () => {

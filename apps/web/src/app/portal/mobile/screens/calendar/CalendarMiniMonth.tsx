@@ -8,11 +8,14 @@ export function CalendarMiniMonth({
   firstDayOfWeek,
   todayStr,
   onPickDay,
+  eventDotsByDay,
 }: {
   anchorDate: Date;
   firstDayOfWeek: 0 | 1;
   todayStr: string;
   onPickDay: (d: Date) => void;
+  /** počet aktivit daného kalendářního dne (pro vizuální tečky) */
+  eventDotsByDay?: Record<string, number>;
 }) {
   const monthStart = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), 1);
   const gridStart = startOfWeekLocal(monthStart, firstDayOfWeek);
@@ -23,7 +26,7 @@ export function CalendarMiniMonth({
   const cells = Array.from({ length: 42 }, (_, i) => addDaysLocal(gridStart, i));
 
   return (
-    <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 p-3">
+    <div className="rounded-2xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-muted)]/50 p-3 shadow-[var(--aidv-mobile-shadow-card-premium,var(--aidv-shadow-card-sm))]">
       <p className="mb-2 text-center text-xs font-black uppercase tracking-widest text-[color:var(--wp-text-secondary)]">{label}</p>
       <div className="mb-1 grid grid-cols-7 gap-0.5 text-center text-[9px] font-bold text-[color:var(--wp-text-tertiary)]">
         {dayLabels.map((d) => (
@@ -36,12 +39,14 @@ export function CalendarMiniMonth({
           const inMonth = d.getMonth() === anchorDate.getMonth();
           const isToday = ds === todayStr;
           const isAnchor = ds === formatDateLocal(startOfDayLocal(anchorDate));
+          const n = eventDotsByDay?.[ds] ?? 0;
+          const dots = Math.min(Math.max(n, 0), 4);
           return (
             <button
               key={ds}
               type="button"
               onClick={() => onPickDay(startOfDayLocal(d))}
-              className={`flex h-9 min-h-[36px] items-center justify-center rounded-lg text-xs font-bold transition-colors active:scale-95 ${
+              className={`relative flex min-h-[2.65rem] flex-col items-center justify-center gap-0.5 rounded-lg pt-1 text-xs font-bold transition-colors active:scale-95 ${
                 !inMonth ? "text-[color:var(--wp-text-tertiary)]" : "text-[color:var(--wp-text-secondary)]"
               } ${
                 isToday
@@ -54,6 +59,18 @@ export function CalendarMiniMonth({
               }`}
             >
               {d.getDate()}
+              {dots > 0 ? (
+                <span className="flex h-3 items-center gap-px" aria-hidden>
+                  {Array.from({ length: dots }).map((_, i) => (
+                    <span
+                      key={`${ds}-${i}`}
+                      className="h-1.5 w-1.5 rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 opacity-95"
+                    />
+                  ))}
+                </span>
+              ) : (
+                <span className="h-3" aria-hidden />
+              )}
             </button>
           );
         })}

@@ -62,6 +62,8 @@ import {
   MobileHeader,
   MobileScreen,
   MobileSection,
+  MobileUnsupportedRouteScreen,
+  MobileWebOnlyRoutePlaceholder,
   OfflineBanner,
   StatusBadge,
   StepWizard,
@@ -137,16 +139,8 @@ const AnalysesHubScreen = dynamic(
   () => import("./screens/AnalysesHubScreen").then((m) => m.AnalysesHubScreen),
   { loading: () => <RouteLoadingSkeleton /> },
 );
-const CalculatorsHubScreen = dynamic(
-  () => import("./screens/CalculatorsHubScreen").then((m) => m.CalculatorsHubScreen),
-  { loading: () => <RouteLoadingSkeleton /> },
-);
 const BusinessPlanScreen = dynamic(
   () => import("./screens/BusinessPlanScreen").then((m) => m.BusinessPlanScreen),
-  { loading: () => <RouteLoadingSkeleton /> },
-);
-const TeamOverviewScreen = dynamic(
-  () => import("./screens/TeamOverviewScreen").then((m) => m.TeamOverviewScreen),
   { loading: () => <RouteLoadingSkeleton /> },
 );
 const SettingsProfileScreen = dynamic(
@@ -191,9 +185,10 @@ const ColdContactsMobileScreen = dynamic(
 // that unit tests and this client stay in sync.
 import {
   type TabId,
+  classifyMobilePortalRoute,
   pathnameToBottomTab,
+  normalizePortalPathname,
   isDetailRoute,
-  resolveParentRoute,
   decideHeaderBackAction,
   parseContactIdFromPath,
   parseOpportunityIdFromPath,
@@ -204,11 +199,6 @@ type TaskFilter = "all" | "today" | "week" | "overdue" | "completed";
 
 function parseContractReviewIdFromPath(pathname: string): string | null {
   const m = pathname.match(/^\/portal\/contracts\/review\/([^/]+)/);
-  return m?.[1] ?? null;
-}
-
-function parseCalculatorSlugFromPath(pathname: string): string | null {
-  const m = pathname.match(/^\/portal\/calculators\/([^/]+)/);
   return m?.[1] ?? null;
 }
 
@@ -426,7 +416,6 @@ export function MobilePortalClient({
   const selectedOpportunityPathId = parseOpportunityIdFromPath(pathname);
   const selectedHouseholdId = parseHouseholdIdFromPath(pathname);
   const selectedContractReviewId = parseContractReviewIdFromPath(pathname);
-  const selectedCalculatorSlug = parseCalculatorSlugFromPath(pathname);
   const selectedAnalysisIdFromQuery = searchParams.get("id");
   const onContractsRoute = pathname.startsWith("/portal/contracts/review");
   const onContractsOtherRoute =
@@ -434,9 +423,7 @@ export function MobilePortalClient({
   const onAnalysesRoute = pathname.startsWith("/portal/analyses");
   const onAnalysesFinancialRoute = pathname.startsWith("/portal/analyses/financial");
   const onAnalysesCompanyRoute = pathname.startsWith("/portal/analyses/company");
-  const onCalculatorsRoute = pathname.startsWith("/portal/calculators");
   const onBusinessPlanRoute = pathname.startsWith("/portal/business-plan");
-  const onTeamOverviewRoute = pathname.startsWith("/portal/team-overview");
   const onSetupRoute = pathname.startsWith("/portal/setup");
   const onNotificationsRoute = pathname.startsWith("/portal/notifications");
   const onCalendarRoute = pathname.startsWith("/portal/calendar");
@@ -781,6 +768,21 @@ export function MobilePortalClient({
 
   /** Exactly one screen mounts per render — no more overlapping conditionals. */
   function resolveActiveScreen(): React.ReactNode {
+    const normalizedPath = normalizePortalPathname(pathname);
+    const routeTier = classifyMobilePortalRoute(normalizedPath);
+    if (routeTier.kind === "web_only") {
+      return (
+        <MobileWebOnlyRoutePlaceholder
+          title={routeTier.title}
+          description={routeTier.description}
+          pathnameForWeb={routeTier.openPath}
+        />
+      );
+    }
+    if (routeTier.kind === "unsupported") {
+      return <MobileUnsupportedRouteScreen pathname={routeTier.path} />;
+    }
+
     // Detail routes (dynamic segment) — check before their parent hub
     if (selectedHouseholdId) {
       return <HouseholdDetailScreen householdId={selectedHouseholdId} contacts={contacts} />;
@@ -809,25 +811,7 @@ export function MobilePortalClient({
       return <PlaceholderScreen title="Firemní analýza" description="Firemní finanční analýza je optimalizovaná pro desktop. Otevřete ji na počítači pro plnou funkcionalitu." icon={Briefcase} />;
     }
     if (onAnalysesRoute) return <AnalysesHubScreen detailIdFromPath={selectedAnalysisIdFromQuery} deviceClass={deviceClass} />;
-    if (onCalculatorsRoute) {
-      return (
-        <CalculatorsHubScreen
-          detailSlugFromPath={selectedCalculatorSlug}
-          onCreateTaskFromResult={(title) => {
-            setTaskDraft((prev) => ({ ...prev, title, dueDate: prev.dueDate || defaultTaskDueDateYmd() }));
-            setTaskCreateOpen(true);
-          }}
-          onCreateOpportunityFromResult={(title) => {
-            setOpportunityDraft((prev) => ({ ...prev, title }));
-            setOpportunityCreateOpen(true);
-          }}
-          onOpenAnalyses={() => router.push("/portal/analyses")}
-          deviceClass={deviceClass}
-        />
-      );
-    }
     if (onBusinessPlanRoute) return <BusinessPlanScreen deviceClass={deviceClass} />;
-    if (onTeamOverviewRoute) return <TeamOverviewScreen deviceClass={deviceClass} />;
     if (onSetupRoute) return <SettingsProfileScreen advisorName={advisorName} roleName={roleName} />;
     if (onNotificationsRoute) return <ClientPortalRequestsInboxLoader />;
     if (onCalendarRoute)

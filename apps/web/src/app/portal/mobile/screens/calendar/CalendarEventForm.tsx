@@ -76,6 +76,9 @@ const SECONDARY_TYPES: EventCategoryId[] = CALENDAR_EVENT_CATEGORIES.filter(
   (t) => !PRIMARY_TYPE_IDS.has(t.id),
 ).map((t) => t.id);
 
+/** Mobilní BottomSheet — jen čtyři primární pill typy dle prototypu. */
+const COMPACT_MOBILE_PRIMARY_TYPES = ["schuzka", "telefonat", "kafe", "ukol"] as const;
+
 export type OpportunityOption = { id: string; title: string; contactId: string | null };
 
 export function CalendarEventForm({
@@ -88,6 +91,7 @@ export function CalendarEventForm({
   saveError,
   onSave,
   onClose,
+  presentation = "fullscreen",
 }: {
   deviceClass?: DeviceClass;
   initial: EventFormData & { id?: string };
@@ -98,6 +102,8 @@ export function CalendarEventForm({
   saveError: string | null;
   onSave: (form: EventFormData, id?: string) => void;
   onClose: () => void;
+  /** Hodnotu `sheet` používá `BottomSheet`; bez vlastního full-screen rámu — patičku CTA řeší nadřazený panel. */
+  presentation?: "fullscreen" | "sheet";
 }) {
   const [form, setForm] = useState<EventFormData>(() => {
     if (!initial.startAt) {
@@ -118,11 +124,18 @@ export function CalendarEventForm({
   );
   const { keyboardInset } = useKeyboardAware();
   const largeScreen = deviceClass === "tablet" || deviceClass === "desktop";
+  const chromelessMobileSheet = presentation === "sheet" && !largeScreen;
+  const primaryIds: readonly string[] = chromelessMobileSheet
+    ? COMPACT_MOBILE_PRIMARY_TYPES
+    : EVENT_FORM_PRIMARY_TYPE_ORDER;
 
   useEffect(() => {
+    if (chromelessMobileSheet) return;
     document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = ""; };
-  }, []);
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [chromelessMobileSheet]);
 
   useEffect(() => {
     setShowMoreTypes(SECONDARY_TYPES.includes(initial.eventType as EventCategoryId));
@@ -149,25 +162,41 @@ export function CalendarEventForm({
     (o) => !form.contactId || o.contactId === form.contactId,
   );
 
+  const scrollPadStyle =
+    chromelessMobileSheet
+      ? { paddingBottom: `${(keyboardInset ?? 0) + 12}px` }
+      : largeScreen
+        ? keyboardInset
+          ? { paddingBottom: `${keyboardInset + 80}px` }
+          : undefined
+        : {
+            paddingBottom: `max(calc(104px + var(--safe-area-bottom) + 1.25rem), ${(keyboardInset ?? 0) + 88}px)`,
+          };
+
   return (
     <div
       className={
-        largeScreen
-          ? "fixed inset-0 z-[100] flex items-end justify-center bg-[color:var(--wp-overlay-scrim)] p-0 sm:items-center sm:p-4"
-          : "fixed inset-0 z-[100] flex min-h-0 flex-col bg-[color:var(--wp-surface-card)] max-h-[100dvh] pt-[env(safe-area-inset-top,0px)]"
+        chromelessMobileSheet
+          ? "relative flex min-h-0 flex-1 flex-col"
+          : largeScreen
+            ? "fixed inset-0 z-[100] flex items-end justify-center bg-[color:var(--wp-overlay-scrim)] p-0 sm:items-center sm:p-4"
+            : "fixed inset-0 z-[100] flex min-h-0 flex-col bg-[color:var(--wp-surface-card)] max-h-[100dvh] pt-[env(safe-area-inset-top,0px)]"
       }
       role="presentation"
-      onClick={largeScreen ? onClose : undefined}
+      onClick={largeScreen && !chromelessMobileSheet ? onClose : undefined}
     >
       <div
         className={
-          largeScreen
-            ? "flex max-h-[min(92vh,820px)] w-full max-w-[520px] flex-col overflow-hidden rounded-t-[24px] bg-[color:var(--wp-surface-card)] shadow-2xl sm:rounded-2xl"
-            : "flex min-h-0 max-h-full flex-1 flex-col overflow-hidden"
+          chromelessMobileSheet
+            ? "flex min-h-0 flex-1 flex-col overflow-hidden"
+            : largeScreen
+              ? "flex max-h-[min(92vh,820px)] w-full max-w-[520px] flex-col overflow-hidden rounded-t-[24px] bg-[color:var(--wp-surface-card)] shadow-2xl sm:rounded-2xl"
+              : "flex min-h-0 max-h-full flex-1 flex-col overflow-hidden"
         }
         onClick={(e) => e.stopPropagation()}
       >
-      <form onSubmit={handleSubmit} className="flex min-h-0 max-h-full flex-1 flex-col overflow-hidden">
+      <form onSubmit={handleSubmit} id="portal-calendar-event-form" className="flex min-h-0 max-h-full flex-1 flex-col overflow-hidden">
+        {!chromelessMobileSheet ? (
         <div className="flex items-center justify-between border-b border-[color:var(--wp-surface-card-border)] px-4 py-3">
           <h2 className="text-sm font-black text-[color:var(--wp-text)]">
             {initial.id ? "Upravit aktivitu" : "Nová aktivita"}
@@ -181,21 +210,16 @@ export function CalendarEventForm({
             <X size={16} className="text-[color:var(--wp-text-secondary)]" />
           </button>
         </div>
+        ) : null}
 
         <div
-          className="flex-1 min-h-0 space-y-4 overflow-y-auto overscroll-y-contain px-3 py-4"
-          style={
-            largeScreen
-              ? keyboardInset
-                ? { paddingBottom: `${keyboardInset + 80}px` }
-                : undefined
-              : {
-                  paddingBottom: `max(calc(104px + var(--safe-area-bottom) + 1.25rem), ${(keyboardInset ?? 0) + 88}px)`,
-                }
-          }
+          className={`flex-1 min-h-0 space-y-4 overflow-y-auto overscroll-y-contain px-3 py-4 ${chromelessMobileSheet ? "pb-safe" : ""}`}
+          style={scrollPadStyle}
         >
-          <div className="grid grid-cols-3 gap-2">
-            {EVENT_FORM_PRIMARY_TYPE_ORDER.map((id) => {
+          <div
+            className={chromelessMobileSheet ? "grid grid-cols-2 gap-2" : "grid grid-cols-3 gap-2"}
+          >
+            {primaryIds.map((id) => {
               const t = getEventCategory(id);
               const isActive = form.eventType === t.id;
               const colorOverride = eventTypeColors?.[t.id];
@@ -418,6 +442,7 @@ export function CalendarEventForm({
           ) : null}
         </div>
 
+        {!chromelessMobileSheet ? (
         <div className="flex shrink-0 items-center gap-3 border-t border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-4 py-3 pb-[max(0.75rem,calc(var(--safe-area-bottom)+0.5rem))] pt-3">
           <button
             type="button"
@@ -436,6 +461,7 @@ export function CalendarEventForm({
             {saving ? "Ukládám…" : initial.id ? "Uložit" : "Vytvořit"}
           </CreateActionButton>
         </div>
+        ) : null}
       </form>
       </div>
     </div>
