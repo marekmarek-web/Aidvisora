@@ -49,7 +49,7 @@ export function ClientPortalTopbar({
 
   return (
     <header className="sticky top-0 z-20 bg-white/85 backdrop-blur-md border-b border-[color:var(--wp-surface-card-border)] px-4 sm:px-5 lg:px-6 py-3 sm:py-3 shadow-sm">
-      <div className="mx-auto w-full max-w-[1400px] flex items-center justify-between gap-3 sm:gap-4">
+      <div className="flex w-full items-center justify-between gap-3 sm:gap-4">
         <h1 className="text-lg sm:text-xl font-display font-black text-[color:var(--wp-text)] tracking-tight">
           {pageTitle}
         </h1>

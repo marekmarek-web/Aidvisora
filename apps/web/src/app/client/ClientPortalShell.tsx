@@ -57,7 +57,7 @@ export function ClientPortalShell({
           </div>
         )}
         <main className="flex-1 min-h-0 client-dot-grid client-custom-scrollbar overflow-y-auto">
-          <div className="relative z-10 p-4 sm:p-5 lg:p-6 max-w-[1400px] mx-auto w-full flex flex-col min-h-[calc(100dvh-theme(spacing.16))]">{children}</div>
+          <div className="relative z-10 flex w-full min-h-[calc(100dvh-theme(spacing.16))] flex-col p-4 sm:p-5 lg:p-6">{children}</div>
           <ClientMaterialRequestToastStack />
         </main>
       </div>

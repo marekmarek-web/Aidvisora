@@ -139,6 +139,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				91A1000012ABCDEF00000017 /* PBXTargetDependency */,
 			);
 			name = App;
 			packageProductDependencies = (
@@ -168,6 +169,24 @@
 			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
+
+/* Begin PBXContainerItemProxy section */
+		91A1000012ABCDEF00000016 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 91A1000012ABCDEF00000010;
+			remoteInfo = AidvisorShareExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXTargetDependency section */
+		91A1000012ABCDEF00000017 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 91A1000012ABCDEF00000010 /* AidvisorShareExtension */;
+			targetProxy = 91A1000012ABCDEF00000016 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXProject section */
 		504EC2FC1FED79650016851F /* Project object */ = {

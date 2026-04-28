@@ -67,6 +67,7 @@ import { ClientPortalDemo } from "@/app/components/landing/demos/ClientPortalDem
 import { ClientRequestDemo } from "@/app/components/landing/demos/ClientRequestDemo";
 import { EmailCampaignDemo } from "@/app/components/landing/demos/EmailCampaignDemo";
 import { NotesBoardDemo } from "@/app/components/landing/demos/NotesBoardDemo";
+import { LANDING_MOCK_CANVAS_WIDTH } from "@/app/components/landing/demos/LandingMockCanvas";
 import { AiAssistantBrandIcon } from "@/app/components/AiAssistantBrandIcon";
 
 /**
@@ -255,7 +256,6 @@ type CoverageItem = {
   logoAlt?: string;
   /** Více log na bílém podkladu (např. Google: Kalendář, Gmail, Drive) */
   logos?: readonly CoverageLogo[];
-  iconSurface?: "dark" | "white";
 };
 
 const COVERAGE_BADGE_CLASS: Record<CoverageBadge, string> = {
@@ -273,7 +273,6 @@ const COVERAGE_ITEMS: readonly CoverageItem[] = [
     badge: "Připravujeme",
     logoSrc: "/logos/bankid-logo.png",
     logoAlt: "BankID",
-    iconSurface: "white",
     bullets: [
       "ověřená identita pro klientský portál",
       "pohodlnější přístup bez dalšího hesla",
@@ -285,7 +284,6 @@ const COVERAGE_ITEMS: readonly CoverageItem[] = [
     title: "Google Kalendář, Gmail a Drive",
     icon: Calendar,
     badge: "Dostupné",
-    iconSurface: "white",
     logos: [
       { src: "/logos/google-calendar.svg", alt: "Google Kalendář" },
       { src: "/logos/gmail.svg", alt: "Gmail" },
@@ -382,6 +380,133 @@ const HERO_CHECKLIST = [
   { text: "Smlouvy, PDF a podklady", icon: FileText, color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20" },
   { text: "Požadavky z klientské zóny", icon: Bell, color: "text-rose-400", bg: "bg-rose-500/10", border: "border-rose-500/20" },
   { text: "Schůzky, follow-upy a e-maily", icon: Calendar, color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20" },
+] as const;
+
+type AdvisorWorkflowStep = {
+  title: string;
+  eyebrow: string;
+  description: string;
+  bullets: readonly string[];
+  icon: React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>;
+  panelTitle: string;
+  panelRows: readonly [string, string][];
+  panelFooter: string;
+  tone: "indigo" | "emerald" | "amber" | "blue" | "rose";
+};
+
+const ADVISOR_WORKFLOW_STEPS: readonly AdvisorWorkflowStep[] = [
+  {
+    title: "První schůzka s klientem",
+    eyebrow: "Zjištění situace",
+    description: "Poradce zaznamená cíle, příjmy, výdaje, závazky, rezervy a stávající smlouvy.",
+    bullets: ["cíle", "příjmy a výdaje", "závazky", "rezervy", "stávající smlouvy"],
+    icon: User,
+    panelTitle: "Zápis ze schůzky",
+    panelRows: [
+      ["Cíl klienta", "rezerva + bydlení"],
+      ["Příjem domácnosti", "82 000 Kč"],
+      ["Výdaje", "49 000 Kč"],
+      ["Smlouvy k revizi", "4 dokumenty"],
+    ],
+    panelFooter: "Vstup pro analýzu",
+    tone: "indigo",
+  },
+  {
+    title: "AI Review smluv",
+    eyebrow: "Dokumenty na data",
+    description: "Smlouvy lze nahrát do AI Review, kde Aidvisora připraví extrahovaná pole ke kontrole.",
+    bullets: ["nahrání dokumentů", "produkt a instituce", "částky a frekvence", "místa k ověření"],
+    icon: FileText,
+    panelTitle: "AI Review — smlouva",
+    panelRows: [
+      ["Produkt", "Životní pojištění"],
+      ["Instituce", "UNIQA"],
+      ["Pojistné", "2 142 Kč / měs."],
+      ["Frekvence", "měsíčně"],
+    ],
+    panelFooter: "Výstup kontroluje poradce",
+    tone: "blue",
+  },
+  {
+    title: "Návrh dalšího kroku",
+    eyebrow: "Interní akce",
+    description: "Pokud poradce vyhodnotí smlouvu jako problematickou, připraví si návazný interní krok.",
+    bullets: ["draft výpovědi", "poznámka", "checklist", "úkol pro poradce"],
+    icon: CheckSquare,
+    panelTitle: "Návazná akce",
+    panelRows: [
+      ["Slabé místo", "nízké krytí příjmu"],
+      ["Akce", "ověřit varianty"],
+      ["Podklad", "poznámka + checklist"],
+      ["Vlastník", "poradce"],
+    ],
+    panelFooter: "Nejde o automatické rozhodnutí",
+    tone: "amber",
+  },
+  {
+    title: "Finanční analýza",
+    eyebrow: "Ruční i převzatá data",
+    description: "Data ze smluv se dají převzít do analýzy a doplnit ručně podle rozhovoru s klientem.",
+    bullets: ["rezerva", "cashflow", "zajištění", "investice", "penze", "bydlení", "priority"],
+    icon: BarChart3,
+    panelTitle: "Finanční analýza",
+    panelRows: [
+      ["Cashflow", "+33 000 Kč"],
+      ["Rezerva", "3,2 měsíce"],
+      ["Zajištění", "k ověření"],
+      ["Priority", "rezerva, penze, bydlení"],
+    ],
+    panelFooter: "Lze vyplnit i čistě ručně",
+    tone: "emerald",
+  },
+  {
+    title: "Finanční plán dle EFPA",
+    eyebrow: "Strukturovaný výstup",
+    description: "Aidvisora připraví strukturu plánu: situaci, cíle, mezery, priority a další kroky.",
+    bullets: ["výchozí situace", "cíle klienta", "zjištěné mezery", "priority k posouzení", "další kroky"],
+    icon: Layers,
+    panelTitle: "Návrh finančního plánu",
+    panelRows: [
+      ["Kapitola", "Cíle a situace"],
+      ["Mezera", "rezerva a zajištění"],
+      ["Postup", "k posouzení poradcem"],
+      ["Forma", "HTML / PDF výstup"],
+    ],
+    panelFooter: "Metodická struktura EFPA",
+    tone: "indigo",
+  },
+  {
+    title: "Schválení poradcem",
+    eyebrow: "Kontrola odpovědnou osobou",
+    description: "Poradce plán zkontroluje, upraví, doplní vlastní závěry a teprve poté ho schválí.",
+    bullets: ["zkontrolovat", "upravit", "schválit", "připravit k prezentaci"],
+    icon: ShieldCheck,
+    panelTitle: "Schvalovací režim",
+    panelRows: [
+      ["Stav", "čeká na kontrolu"],
+      ["Úpravy", "2 komentáře"],
+      ["Schvaluje", "poradce"],
+      ["Výstup", "připraven k prezentaci"],
+    ],
+    panelFooter: "Finální vyhodnocení dělá poradce",
+    tone: "rose",
+  },
+  {
+    title: "Prezentace klientovi",
+    eyebrow: "Navázání realizací",
+    description: "Schválený plán poradce prezentuje klientovi a naváže realizací, servisem nebo další schůzkou.",
+    bullets: ["ukázat plán", "vysvětlit souvislosti", "navázat realizací", "servisní follow-up"],
+    icon: PlayCircle,
+    panelTitle: "Prezentace plánu",
+    panelRows: [
+      ["Výstup", "schválený plán"],
+      ["Schůzka", "prezentace klientovi"],
+      ["Další krok", "realizace / servis"],
+      ["Follow-up", "termín v kalendáři"],
+    ],
+    panelFooter: "Poradce vede klientský rozhovor",
+    tone: "emerald",
+  },
 ] as const;
 
 export default function PremiumLandingPage() {
@@ -606,6 +731,7 @@ export default function PremiumLandingPage() {
           </Link>
 
           <div className="hidden lg:flex items-center gap-8 font-inter text-xl font-semibold text-slate-400">
+            <a href="#workflow" className="hover:text-white transition-colors">Workflow</a>
             <a href="#showcase" className="hover:text-white transition-colors">Ukázky</a>
             <a href="#vyhody" className="hover:text-white transition-colors">Funkce a ekosystém</a>
             <a href="#cenik" className="hover:text-white transition-colors">Ceník</a>
@@ -747,8 +873,11 @@ export default function PremiumLandingPage() {
                 <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#0b1021] px-6 py-12 text-center md:px-10 md:py-16">
                   <div className="absolute left-1/2 top-0 h-52 w-52 -translate-x-1/2 rounded-full bg-indigo-500/20 blur-[80px]" aria-hidden />
                   <div className="relative z-10 mx-auto max-w-2xl">
-                    <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border border-indigo-500/25 bg-indigo-500/10 text-indigo-300">
-                      <FileText size={28} />
+                    <div
+                      className="mx-auto mb-6 flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-2xl border border-white/20 bg-white p-2.5 shadow-[0_8px_30px_rgba(90,75,255,0.2)]"
+                      aria-hidden
+                    >
+                      <AiAssistantBrandIcon size={52} variant="colorOnWhite" className="max-h-full w-auto" />
                     </div>
                     <h3 className="mb-4 font-jakarta text-2xl font-extrabold text-white md:text-3xl">
                       Nahrajte smlouvu a spusťte AI Review.
@@ -1028,6 +1157,70 @@ export default function PremiumLandingPage() {
         </div>
       </section>
 
+      {/* === ADVISOR WORKFLOW === */}
+      <section
+        id="workflow"
+        className="relative z-20 scroll-mt-24 overflow-hidden border-t border-white/10 bg-[#080c1d] px-5 py-24 md:px-8 md:py-32"
+      >
+        <div className="absolute left-1/2 top-0 h-[460px] w-[900px] -translate-x-1/2 rounded-full bg-indigo-600/10 blur-[130px]" aria-hidden />
+        <div className="absolute bottom-0 right-0 h-[420px] w-[420px] rounded-full bg-emerald-500/10 blur-[120px]" aria-hidden />
+
+        <div className="relative z-10 mx-auto max-w-[1500px]">
+          <ScrollReveal>
+            <div className="mx-auto mb-12 max-w-4xl text-center md:mb-16">
+              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-500/15 px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-widest text-indigo-300">
+                <BarChart3 size={13} /> Workflow poradce
+              </div>
+              <h2 className="mb-5 font-jakarta text-3xl font-extrabold leading-tight tracking-tight text-white md:text-5xl">
+                Z první schůzky a smluv klienta vznikne profesionální finanční plán.
+              </h2>
+              <p className="mx-auto max-w-3xl text-base font-medium leading-relaxed text-slate-400 md:text-xl">
+                Aidvisora pomůže poradci načíst smlouvy, převzít data do finanční analýzy, odhalit slabá místa a připravit výstup v podobě finančního plánu dle metodiky EFPA — vždy pod kontrolou poradce.
+              </p>
+            </div>
+          </ScrollReveal>
+
+          <ScrollReveal delay={80}>
+            <div className="mb-8 grid gap-4 rounded-[2rem] border border-white/10 bg-white/[0.03] p-4 shadow-[0_30px_90px_-45px_rgba(79,70,229,0.65)] backdrop-blur-xl md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:items-center md:p-6">
+              <div className="rounded-2xl border border-indigo-400/20 bg-indigo-500/10 p-5">
+                <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-indigo-300">Cesta s AI Review</p>
+                <p className="text-sm font-semibold leading-relaxed text-slate-200">
+                  Dokumenty se vytěží do polí, poradce je zkontroluje a údaje může převzít do finanční analýzy.
+                </p>
+              </div>
+              <div className="hidden h-px w-16 bg-gradient-to-r from-indigo-400 to-emerald-400 md:block" aria-hidden />
+              <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-5">
+                <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-emerald-300">Ruční cesta bez AI Review</p>
+                <p className="text-sm font-semibold leading-relaxed text-slate-200">
+                  Finanční analýzu lze vytvořit i bez AI Review, čistě z ručně zadaných klientských údajů.
+                </p>
+              </div>
+            </div>
+          </ScrollReveal>
+
+          <div className="relative">
+            <div className="pointer-events-none absolute left-6 right-6 top-12 hidden h-px bg-gradient-to-r from-indigo-400/0 via-indigo-400/45 to-emerald-400/0 xl:block" aria-hidden />
+            <ol className="relative grid list-none grid-cols-1 gap-5 p-0 md:grid-cols-2 xl:grid-cols-7">
+              {ADVISOR_WORKFLOW_STEPS.map((step, index) => (
+                <li key={step.title} className="relative">
+                  <ScrollReveal delay={index * 45}>
+                    <AdvisorWorkflowCard step={step} stepNumber={index + 1} />
+                  </ScrollReveal>
+                </li>
+              ))}
+            </ol>
+          </div>
+
+          <ScrollReveal delay={160}>
+            <div className="mx-auto mt-10 max-w-4xl rounded-3xl border border-white/10 bg-[#0b1021]/80 p-6 text-center shadow-2xl shadow-indigo-950/20 md:p-8">
+              <p className="text-sm font-semibold leading-relaxed text-slate-300 md:text-base">
+                Aidvisora připraví podklady, strukturu a návrh výstupu. Finální vyhodnocení, úpravy a schválení provádí poradce.
+              </p>
+            </div>
+          </ScrollReveal>
+        </div>
+      </section>
+
       {/* === PRODUCT SHOWCASE === */}
       <section
         id="showcase"
@@ -1094,7 +1287,10 @@ export default function PremiumLandingPage() {
                       </div>
                     </ScrollReveal>
                     <ScrollReveal delay={80}>
-                      <div className="mx-auto w-full">
+                      <div
+                        className="mx-auto w-full"
+                        style={{ maxWidth: LANDING_MOCK_CANVAS_WIDTH }}
+                      >
                         <s.Demo />
                       </div>
                     </ScrollReveal>
@@ -1183,7 +1379,7 @@ export default function PremiumLandingPage() {
             </div>
 
             <div
-              className={`grid transition-all duration-[800ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${
+              className={`grid transition-all transition-duration-[800ms] transition-timing-function-[cubic-bezier(0.16,1,0.3,1)] ${
                 isCoverageRevealed ? "grid-rows-[1fr] opacity-100 reveal-active" : "grid-rows-[0fr] opacity-0"
               }`}
             >
@@ -1217,13 +1413,7 @@ export default function PremiumLandingPage() {
                               ))}
                             </div>
                           ) : (
-                            <div
-                              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border ${
-                                feature.iconSurface === "white"
-                                  ? "border-white bg-white p-2"
-                                  : "border-indigo-500/20 bg-indigo-500/10 text-indigo-400"
-                              }`}
-                            >
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/90 bg-white p-2 shadow-sm">
                               {feature.logoSrc ? (
                                 <Image
                                   src={feature.logoSrc}
@@ -1233,7 +1423,7 @@ export default function PremiumLandingPage() {
                                   className="h-8 w-8 object-contain"
                                 />
                               ) : (
-                                <Icon className="text-indigo-400" size={24} strokeWidth={2} />
+                                <Icon className="text-indigo-600" size={24} strokeWidth={2} />
                               )}
                             </div>
                           )}
@@ -1615,6 +1805,110 @@ export default function PremiumLandingPage() {
 // === Lokalní helpery (mimo hlavní komponentu pro čitelnost) ===
 
 type LandingFaqItem = (typeof LANDING_FAQS)[number];
+
+function AdvisorWorkflowCard({
+  step,
+  stepNumber,
+}: {
+  step: AdvisorWorkflowStep;
+  stepNumber: number;
+}) {
+  const toneClass = {
+    indigo: {
+      badge: "border-indigo-400/25 bg-indigo-400/10 text-indigo-300",
+      icon: "border-indigo-400/25 bg-indigo-500/15 text-indigo-300",
+      rail: "from-indigo-500/30 to-indigo-400/5",
+      footer: "border-indigo-400/20 bg-indigo-500/10 text-indigo-200",
+    },
+    emerald: {
+      badge: "border-emerald-400/25 bg-emerald-400/10 text-emerald-300",
+      icon: "border-emerald-400/25 bg-emerald-500/15 text-emerald-300",
+      rail: "from-emerald-500/30 to-emerald-400/5",
+      footer: "border-emerald-400/20 bg-emerald-500/10 text-emerald-200",
+    },
+    amber: {
+      badge: "border-amber-400/25 bg-amber-400/10 text-amber-300",
+      icon: "border-amber-400/25 bg-amber-500/15 text-amber-300",
+      rail: "from-amber-500/30 to-amber-400/5",
+      footer: "border-amber-400/20 bg-amber-500/10 text-amber-200",
+    },
+    blue: {
+      badge: "border-blue-400/25 bg-blue-400/10 text-blue-300",
+      icon: "border-blue-400/25 bg-blue-500/15 text-blue-300",
+      rail: "from-blue-500/30 to-blue-400/5",
+      footer: "border-blue-400/20 bg-blue-500/10 text-blue-200",
+    },
+    rose: {
+      badge: "border-rose-400/25 bg-rose-400/10 text-rose-300",
+      icon: "border-rose-400/25 bg-rose-500/15 text-rose-300",
+      rail: "from-rose-500/30 to-rose-400/5",
+      footer: "border-rose-400/20 bg-rose-500/10 text-rose-200",
+    },
+  }[step.tone];
+
+  const Icon = step.icon;
+
+  return (
+    <article className="flex h-full min-h-[560px] flex-col rounded-[2rem] border border-white/10 bg-[#0b1021]/85 p-4 shadow-[0_20px_70px_-35px_rgba(0,0,0,0.9)] backdrop-blur-xl transition-colors hover:border-white/20 sm:p-5 xl:min-h-[640px]">
+      <div className="mb-5 flex items-start justify-between gap-3">
+        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border ${toneClass.icon}`}>
+          <Icon size={22} strokeWidth={2.5} />
+        </div>
+        <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-widest ${toneClass.badge}`}>
+          {String(stepNumber).padStart(2, "0")}
+        </span>
+      </div>
+
+      <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">{step.eyebrow}</p>
+      <h3 className="mb-3 font-jakarta text-xl font-extrabold leading-tight text-white xl:text-lg 2xl:text-xl">
+        {step.title}
+      </h3>
+      <p className="mb-5 text-sm font-medium leading-relaxed text-slate-400 xl:text-[13px] 2xl:text-sm">
+        {step.description}
+      </p>
+
+      <div className="mb-5 flex flex-wrap gap-1.5">
+        {step.bullets.map((bullet) => (
+          <span
+            key={bullet}
+            className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] font-bold text-slate-300"
+          >
+            {bullet}
+          </span>
+        ))}
+      </div>
+
+      <div className="mt-auto overflow-hidden rounded-2xl border border-slate-200 bg-[#f4f6fb] text-slate-800 shadow-inner">
+        <div className="flex items-center gap-1.5 border-b border-slate-200 bg-white px-3 py-2">
+          <span className="h-2 w-2 rounded-full bg-rose-400" />
+          <span className="h-2 w-2 rounded-full bg-amber-400" />
+          <span className="h-2 w-2 rounded-full bg-emerald-400" />
+          <span className="ml-auto truncate text-[9px] font-bold uppercase tracking-widest text-slate-400">
+            Aidvisora
+          </span>
+        </div>
+        <div className={`h-1 bg-gradient-to-r ${toneClass.rail}`} aria-hidden />
+        <div className="p-3">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <p className="font-jakarta text-sm font-extrabold leading-tight text-[#0b1021]">{step.panelTitle}</p>
+            <Sparkles size={14} className="shrink-0 text-indigo-500" />
+          </div>
+          <div className="space-y-2">
+            {step.panelRows.map(([label, value]) => (
+              <div key={label} className="rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">{label}</p>
+                <p className="mt-0.5 truncate text-[13px] font-extrabold text-slate-800">{value}</p>
+              </div>
+            ))}
+          </div>
+          <p className={`mt-3 rounded-xl border px-3 py-2 text-[11px] font-extrabold leading-snug ${toneClass.footer}`}>
+            {step.panelFooter}
+          </p>
+        </div>
+      </div>
+    </article>
+  );
+}
 
 function FaqAccordionItem({
   faq,

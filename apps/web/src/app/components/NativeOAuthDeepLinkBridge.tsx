@@ -166,9 +166,8 @@ export function NativeOAuthDeepLinkBridge() {
 
     (async () => {
       // Dynamic import — tenhle kód poběží jen na iOS/Android WebView.
-      const [{ App }, { Browser }, { Preferences }, { createClient }, { getNativeWebAppBaseUrl }] = await Promise.all([
+      const [{ App }, { Preferences }, { createClient }, { getNativeWebAppBaseUrl }] = await Promise.all([
         import("@capacitor/app"),
-        import("@capacitor/browser"),
         import("@capacitor/preferences"),
         import("@/lib/supabase/client"),
         import("@/lib/url/native-web-app-base"),
@@ -201,23 +200,14 @@ export function NativeOAuthDeepLinkBridge() {
         return `${origin}/auth/callback?${qs.toString()}`;
       };
 
+      /**
+       * Po návratu OAuth custom scheme / universal link je SFSafariViewController
+       * u většiny běhů už zavřený. `Browser.close()` pak na iOS hází
+       * „No active window to close!“ a zahlcuje Capacitor log — nevoláme ho.
+       * Krátká pauza nechá dokončit dismiss animaci před `location.replace`.
+       */
       const closeBrowserAndAwaitDismissed = async (): Promise<void> => {
-        const listenerRef: { current: { remove: () => Promise<void> } | null } = { current: null };
-        const finishedPromise = new Promise<void>((resolve) => {
-          Browser.addListener("browserFinished", () => resolve())
-            .then((h) => {
-              listenerRef.current = h;
-            })
-            .catch(() => resolve());
-        });
-        await Browser.close().catch(() => {});
-        await Promise.race([
-          finishedPromise,
-          new Promise<void>((resolve) => setTimeout(resolve, 1200)),
-        ]);
-        try {
-          await listenerRef.current?.remove();
-        } catch {}
+        await new Promise<void>((resolve) => setTimeout(resolve, 200));
       };
 
       const handleOpenUrl = async (rawUrl: string) => {

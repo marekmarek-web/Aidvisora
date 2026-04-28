@@ -139,3 +139,18 @@ Po `Archive`:
 - [ ] App Store Connect → TestFlight → přidat build do **Internal Testing Group**.
 - [ ] Nainstalovat na iPhone → **Scan smoke test (§ 9)** musí projít.
 - [ ] Přidat **What to Test** poznámku (seznam opravených + nových tras, typicky scan + AI Review).
+
+## 11. Simulátor: „Application failed preflight checks“ (FBSOpenApplication)
+
+Xcode občas nespustí appku a v logu je `FBSOpenApplicationErrorDomain` / `SBMainWorkspace` / důvod **Busy** a **Application failed preflight checks**. Často jde o stav simulátoru nebo start před hotovou plochou, ne o chybu v TypeScriptu.
+
+1. **Počkat na home screen** simulátoru, pak znovu **Run** (SpringBoard občas odmítne spuštění během bootu).
+2. **Jiné zařízení** v seznamu destinací (např. jiný iPhone než úplně nový model / beta OS), případně vytvořit nový simulátor ve **Window → Devices and Simulators**.
+3. V simulátoru: **Device → Erase All Content and Settings…**, nebo appku smazat z plochy a znovu **Product → Run**.
+4. **Xcode** → schéma **App** → **Edit Scheme…** → **Run** → **Arguments** → odškrtnout případné **prázdné** proměnné v Environment Variables (prázdná položka umí shodit launch i na betách).
+5. **Product → Clean Build Folder**, případně v terminálu zkusit:  
+   `xcrun simctl shutdown all`  
+   pak znovu spustit simulátor a Run.
+6. V repozitáři má **App** explicitní build závislost na **AidvisorShareExtension** (aby se extension vždy sestavil před embednutím do `App.app`).
+
+Když nic z toho nepomůže, ověř **Signing** (vybraný tým) a soubor `GoogleService-Info.plist` v `App/` podle `ios` dokumentace; bez něj může build selžou dřív, ale při chybějícím nebo neplatném profilu se někdy projeví až spuštění.

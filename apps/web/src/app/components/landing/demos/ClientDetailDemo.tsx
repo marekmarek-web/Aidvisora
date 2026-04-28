@@ -224,7 +224,7 @@ export function ClientDetailDemo() {
             }
           `}</style>
 
-          <div className="mx-auto h-full max-w-[1200px] overflow-y-auto px-6 pb-6 pt-6">
+          <div className="h-full w-full overflow-y-auto px-6 pb-6 pt-6">
             <div className="space-y-5">
               <div className="client-card relative overflow-hidden p-6">
                 <div className="flex flex-col justify-between gap-6 lg:flex-row">
