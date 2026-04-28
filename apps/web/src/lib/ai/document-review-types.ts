@@ -430,6 +430,12 @@ export type DocumentReviewEnvelope = z.infer<typeof documentReviewEnvelopeSchema
    */
   requiresAdvisorDecision?: boolean;
   advisorNotes?: string[];
+  /** Advisor-declared upload intent (e.g. modelation); set during contract validation. */
+  userDeclaredDocumentIntent?: {
+    isModelation: boolean;
+    declaredByAdvisor?: true;
+    declaredAtUpload?: string;
+  } | null;
   /**
    * Phase 2 — Packet segmentation metadata.
    * Present when the upload was identified as a multi-document bundle.
@@ -440,6 +446,28 @@ export type DocumentReviewEnvelope = z.infer<typeof documentReviewEnvelopeSchema
    * Supplements the flat extractedFields and generic parties record.
    */
   participants?: ParticipantRecord[] | null;
+  /**
+   * Multi-insured rows with optional per-person premium (normalizer / modelation output).
+   * Not in the base Zod schema; may be attached during contract validation or learning flows.
+   */
+  insuredPersons?: Array<{
+    order?: number;
+    fullName?: string | null;
+    birthDate?: string | null;
+    monthlyPremium?: string | number | null;
+  }> | null;
+  /**
+   * Aggregated premium block (contract validator / learning validators).
+   * Mirrors CRM-facing totals alongside extractedFields.totalMonthlyPremium.
+   */
+  premium?: {
+    frequency?: string;
+    totalMonthlyPremium?: string | number | null;
+    totalAnnualPremium?: string | number | null;
+    source?: string;
+    calculationBreakdown?: Array<{ label: string; amount: number; frequency?: string }>;
+    validationWarnings?: string[];
+  } | null;
   /**
    * Phase 3 — Structured insured risks per participant.
    * Supplements the flat coverages/insuredRisks extractedFields.

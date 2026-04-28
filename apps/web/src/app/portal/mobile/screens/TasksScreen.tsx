@@ -419,6 +419,7 @@ export function TasksScreen({
   tasks,
   taskCounts,
   taskFilter,
+  contacts: _contacts,
   deviceClass,
   refreshing = false,
   onFilterChange,
@@ -426,7 +427,7 @@ export function TasksScreen({
   onDeleteTask,
   onQuickOverdueFix,
 }: TasksScreenProps) {
-  void contacts;
+  void _contacts;
 
   const todayStr = localCalendarTodayYmd();
   const [search, setSearch] = useState("");

@@ -21,6 +21,7 @@ export * from "./contracts";
 export * from "./contract-upload-reviews";
 export * from "./client-payment-setups";
 export * from "./contract-review-corrections";
+export * from "./ai-review-learning";
 export * from "./document-extractions";
 export * from "./board-views";
 export * from "./board-labels";
