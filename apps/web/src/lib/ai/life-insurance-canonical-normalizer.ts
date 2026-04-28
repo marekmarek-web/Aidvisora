@@ -29,14 +29,71 @@ import { derivePublishHintsFromPacket } from "./document-packet-segmentation";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return v != null && typeof v === "object" && !Array.isArray(v);
+}
+
+function hasAnyKey(obj: Record<string, unknown>, keys: string[]): boolean {
+  return keys.some((key) => obj[key] != null);
+}
+
+function compactText(v: unknown): string | null {
+  if (v == null) return null;
+  if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") {
+    const s = String(v).trim();
+    return s.length > 0 ? s : null;
+  }
+  if (isPlainObject(v)) {
+    for (const key of ["value", "amount", "insuredAmount", "sumInsured", "benefit", "label", "name", "text", "parameter", "frequency", "notes"]) {
+      const nested = compactText(v[key]);
+      if (nested) return nested;
+    }
+  }
+  return null;
+}
+
+function arrayFromUnknown(raw: unknown, itemKeys: string[] = []): Array<Record<string, unknown>> {
+  if (Array.isArray(raw)) return raw.flatMap((item) => arrayFromUnknown(item, itemKeys));
+  if (typeof raw === "string" && raw.trim()) {
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      return arrayFromUnknown(parsed, itemKeys);
+    } catch {
+      return [];
+    }
+  }
+  if (isPlainObject(raw)) {
+    if (hasAnyKey(raw, itemKeys)) return [raw];
+    const nested =
+      raw.items ??
+      raw.rows ??
+      raw.risks ??
+      raw.coverages ??
+      raw.coverageLines ??
+      raw.benefits ??
+      raw.riders ??
+      raw.selectedRisks ??
+      raw.insuranceRisks ??
+      raw.insuredRisks ??
+      raw.insuredPersons ??
+      raw.insuredPeople ??
+      raw.participants ??
+      raw.persons ??
+      raw.people;
+    const fromNested = arrayFromUnknown(nested, itemKeys);
+    if (fromNested.length > 0) return fromNested;
+    return Object.values(raw).flatMap((item) => arrayFromUnknown(item, itemKeys));
+  }
+  return [];
+}
+
 function fieldVal(ef: DocumentReviewEnvelope["extractedFields"], key: string): string | null {
   const f = ef[key];
   if (!f) return null;
   if (f.status === "missing" || f.status === "not_found" || f.status === "not_applicable") return null;
   const v = f.value;
   if (v == null) return null;
-  const s = String(v).trim();
-  return s.length > 0 ? s : null;
+  return compactText(v);
 }
 
 function fieldValNum(ef: DocumentReviewEnvelope["extractedFields"], key: string): number | string | null {
@@ -46,8 +103,7 @@ function fieldValNum(ef: DocumentReviewEnvelope["extractedFields"], key: string)
   const v = f.value;
   if (v == null) return null;
   if (typeof v === "number") return v;
-  const s = String(v).trim();
-  return s.length > 0 ? s : null;
+  return compactText(v);
 }
 
 function fieldConf(ef: DocumentReviewEnvelope["extractedFields"], key: string): number {
@@ -61,6 +117,7 @@ function pageOf(ef: DocumentReviewEnvelope["extractedFields"], key: string): num
 
 function roleFromString(raw: string): ParticipantRole {
   const r = raw.toLowerCase();
+  if (r.includes("second_insured") || r.includes("2.") || r.includes("druh")) return "second_insured";
   if (r.includes("pojistník") || r.includes("policyholder")) return "policyholder";
   if (r.includes("pojištěn") || r.includes("insured")) return "insured";
   if (r.includes("zákonný") || r.includes("legal_representative") || r.includes("representative")) return "legal_representative";
@@ -119,33 +176,34 @@ function defaultPrimaryRoleForDocType(
 function extractParticipants(env: DocumentReviewEnvelope): ParticipantRecord[] {
   const ef = env.extractedFields ?? {};
   const participants: ParticipantRecord[] = [];
+  const personItemKeys = ["fullName", "name", "firstName", "lastName", "role", "typ", "birthDate", "dateOfBirth", "personalId"];
 
-  // Case B: structured insuredPersons field (AI may return JSON array in .value)
-  const insuredPersonsRaw = ef["insuredPersons"]?.value;
-  if (insuredPersonsRaw != null && typeof insuredPersonsRaw === "string") {
-    try {
-      const parsed = JSON.parse(insuredPersonsRaw) as unknown;
-      if (Array.isArray(parsed)) {
-        for (const person of parsed) {
-          if (typeof person === "object" && person !== null) {
-            const p = person as Record<string, unknown>;
-            const role = roleFromString(String(p.role ?? p.typ ?? ""));
-            participants.push({
-              role,
-              fullName: p.fullName != null ? String(p.fullName) : (p.name != null ? String(p.name) : null),
-              birthDate: p.birthDate != null ? String(p.birthDate) : null,
-              maskedPersonalId: p.personalId != null ? String(p.personalId) : null,
-              address: p.address != null ? String(p.address) : null,
-              email: p.email != null ? String(p.email) : null,
-              phone: p.phone != null ? String(p.phone) : null,
-              occupation: p.occupation != null ? String(p.occupation) : null,
-              confidence: 0.75,
-            });
-          }
-        }
-      }
-    } catch {
-      // not a JSON array — treat as plain string below
+  for (const existing of env.participants ?? []) {
+    if (existing?.fullName) participants.push(existing);
+  }
+
+  // Case B: structured person fields (AI may return JSON string, native array, object wrapper, or single object)
+  for (const fieldKey of ["insuredPersons", "insuredPerson", "insuredPeople", "participants", "persons", "people", "mainInsured", "additionalInsured"]) {
+    const raw = ef[fieldKey]?.value;
+    for (const p of arrayFromUnknown(raw, personItemKeys)) {
+    const role = roleFromString(String(p.role ?? p.typ ?? "insured"));
+    const fullName =
+      compactText(p.fullName) ??
+      compactText(p.name) ??
+      ([compactText(p.firstName), compactText(p.lastName)].filter(Boolean).join(" ").trim() || null);
+    if (!fullName) continue;
+    if (participants.some((existing) => existing.fullName?.toLowerCase() === fullName.toLowerCase())) continue;
+    participants.push({
+      role,
+      fullName,
+      birthDate: compactText(p.birthDate) ?? compactText(p.dateOfBirth),
+      maskedPersonalId: compactText(p.personalId) ?? compactText(p.maskedPersonalId),
+      address: compactText(p.address),
+      email: compactText(p.email),
+      phone: compactText(p.phone),
+      occupation: compactText(p.occupation),
+      confidence: 0.75,
+    });
     }
   }
 
@@ -236,6 +294,17 @@ function extractParticipants(env: DocumentReviewEnvelope): ParticipantRecord[] {
     });
   }
 
+  const secondInsuredName = fieldVal(ef, "secondInsuredName") ?? fieldVal(ef, "insuredPerson2");
+  if (secondInsuredName && !participants.some((p) => p.fullName?.toLowerCase() === secondInsuredName.toLowerCase())) {
+    participants.push({
+      role: "second_insured",
+      fullName: secondInsuredName,
+      birthDate: fieldVal(ef, "secondInsuredBirthDate"),
+      maskedPersonalId: fieldVal(ef, "secondInsuredPersonalId"),
+      confidence: 0.7,
+    });
+  }
+
   // Add beneficiary if present and not already in list
   const benefRaw = ef["beneficiaries"]?.value;
   if (benefRaw != null && typeof benefRaw === "string" && benefRaw.trim().length > 0) {
@@ -267,41 +336,45 @@ function extractParticipants(env: DocumentReviewEnvelope): ParticipantRecord[] {
 function extractInsuredRisks(env: DocumentReviewEnvelope, participants: ParticipantRecord[]): InsuredRiskRecord[] {
   const ef = env.extractedFields ?? {};
   const risks: InsuredRiskRecord[] = [];
+  const riskItemKeys = ["riskType", "type", "code", "riskLabel", "label", "name", "insuredAmount", "sumInsured", "benefitAmount", "limit", "monthlyBenefit", "premium"];
 
   // Try structured coverages / riders / insuredRisks fields
-  for (const fieldKey of ["insuredRisks", "coverages", "riders"]) {
+  for (const fieldKey of ["insuredRisks", "coverages", "coverageLines", "benefits", "riders", "selectedRisks", "insuranceRisks"]) {
     const raw = ef[fieldKey]?.value;
     if (raw == null) continue;
 
-    if (typeof raw === "string") {
-      try {
-        const parsed = JSON.parse(raw) as unknown;
-        if (Array.isArray(parsed)) {
-          for (const item of parsed) {
-            if (typeof item !== "object" || item === null) continue;
-            const r = item as Record<string, unknown>;
-            const linkedName =
-              (r.person != null ? String(r.person) : null) ??
-              (r.insuredPerson != null ? String(r.insuredPerson) : null) ??
-              participants.find((p) => p.role === "insured" || p.role === "policyholder")?.fullName ??
-              null;
-            risks.push({
-              linkedParticipantName: linkedName,
-              linkedParticipantRole: participants.find(
-                (p) => p.fullName != null && p.fullName === linkedName
-              )?.role ?? null,
-              riskType: String(r.type ?? r.riskType ?? r.code ?? "unknown"),
-              riskLabel: String(r.label ?? r.name ?? r.riskLabel ?? r.type ?? "—"),
-              insuredAmount: r.amount != null ? (r.amount as string | number) : (r.insuredAmount != null ? (r.insuredAmount as string | number) : null),
-              termEnd: r.termEnd != null ? String(r.termEnd) : (r.endDate != null ? String(r.endDate) : null),
-              premium: r.premium != null ? (r.premium as string | number) : null,
-              notes: r.notes != null ? String(r.notes) : null,
-            });
-          }
-        }
-      } catch {
-        // not parseable — skip
-      }
+    for (const r of arrayFromUnknown(raw, riskItemKeys)) {
+      const linkedName =
+        compactText(r.person) ??
+        compactText(r.insuredPerson) ??
+        compactText(r.linkedParticipant) ??
+        compactText(r.linkedParticipantName) ??
+        participants.find((p) => p.role === "insured" || p.role === "policyholder")?.fullName ??
+        null;
+      risks.push({
+        linkedParticipantName: linkedName,
+        linkedParticipantRole: participants.find(
+          (p) => p.fullName != null && p.fullName === linkedName
+        )?.role ?? null,
+        riskType: compactText(r.type) ?? compactText(r.riskType) ?? compactText(r.code) ?? "unknown",
+        riskLabel: compactText(r.label) ?? compactText(r.name) ?? compactText(r.riskLabel) ?? compactText(r.type) ?? "Riziko",
+        insuredAmount:
+          compactText(r.amount) ??
+          compactText(r.insuredAmount) ??
+          compactText(r.sumInsured) ??
+          compactText(r.benefitAmount) ??
+          compactText(r.limit) ??
+          compactText(r.monthlyBenefit),
+        termEnd: compactText(r.termEnd) ?? compactText(r.endDate) ?? compactText(r.duration),
+        premium: compactText(r.premium) ?? compactText(r.riskPremium),
+        parameter:
+          compactText(r.parameter) ??
+          compactText(r.frequency) ??
+          compactText(r.benefitFrequency) ??
+          compactText(r.waitingPeriod) ??
+          compactText(r.deductible),
+        notes: compactText(r.notes) ?? compactText(r.note) ?? compactText(r.conditions),
+      });
     }
   }
 

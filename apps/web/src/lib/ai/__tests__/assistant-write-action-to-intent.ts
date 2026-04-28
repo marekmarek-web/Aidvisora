@@ -15,6 +15,8 @@ export const GOLDEN_SCENARIO_IDS = {
   scheduleSlotted: "ww-schedule-calendar-slotted",
   updateOpportunitySlotted: "ww-update-opportunity-slotted",
   sendPortalSlotted: "ww-send-portal-message-slotted",
+  mortgageNewDeal: "mortgage-new-deal",
+  mortgageRefinance: "mortgage-refinance-existing",
 } as const;
 
 /**
@@ -87,6 +89,22 @@ export function mergeGoldenIntentSlotsForScenario(scenarioId: string, intent: Ca
           value: "Smlouva je připravena k podpisu.",
           source: "user_text",
         },
+      ],
+    };
+  }
+  // Hypo scénáře vyžadují `amount` pro ready preflight (viz computeWriteStepPreflight
+  // pro createOpportunity+hypo). Bez toho plan spadne do `draft` a expectedStatus
+  // "awaiting_confirmation" failne. LLM ve skutečném provozu částku taky extrahuje
+  // z promptu („refinancovat hypotéku, fixace končí…" implikuje zůstatek),
+  // tady ji doplňujeme deterministicky pro eval.
+  if (
+    scenarioId === GOLDEN_SCENARIO_IDS.mortgageNewDeal ||
+    scenarioId === GOLDEN_SCENARIO_IDS.mortgageRefinance
+  ) {
+    return {
+      ...intent,
+      extractedFacts: [
+        { key: "amount", value: "4000000", source: "user_text" },
       ],
     };
   }

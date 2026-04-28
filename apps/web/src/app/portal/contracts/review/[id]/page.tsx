@@ -14,6 +14,7 @@ import {
   confirmManualField,
   confirmAllPendingFields,
   persistFinalContractOverride,
+  persistManualReviewWarningState,
 } from "@/app/actions/contract-review";
 import { useToast } from "@/app/components/Toast";
 import { useConfirm } from "@/app/components/ConfirmDialog";
@@ -528,6 +529,19 @@ export default function ContractReviewDetailPage() {
     [id, toast, load]
   );
 
+  const handleManualReviewWarningState = useCallback(
+    async (warningText: string, state: "confirmed" | "ignored") => {
+      const result = await persistManualReviewWarningState(id, warningText, state);
+      if (result.ok) {
+        toast.showToast(state === "confirmed" ? "Kontrola potvrzena." : "Kontrola ignorována.", "success");
+        load();
+      } else {
+        toast.showToast(result.error ?? "Stav kontroly se nepodařilo uložit.", "error");
+      }
+    },
+    [id, load, toast]
+  );
+
   const handleLinkToClientDocuments = useCallback(
     async (visibleToClient: boolean) => {
       setLinkDocBusy(true);
@@ -748,6 +762,7 @@ export default function ContractReviewDetailPage() {
         onSelectClient={handleSelectClient}
         onConfirmCreateNew={handleConfirmCreateNew}
         onConfirmFinalContract={handleConfirmFinalContract}
+        onManualReviewWarningState={handleManualReviewWarningState}
         onConfirmPendingField={handleConfirmPendingField}
         onConfirmManualField={handleConfirmManualField}
         onConfirmAllPendingFields={handleConfirmAllPendingFields}

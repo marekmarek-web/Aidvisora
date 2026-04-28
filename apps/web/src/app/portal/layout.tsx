@@ -139,9 +139,33 @@ export default async function PortalLayout({
   // Uvolní plnou výšku viewportu pro PDF + extrahovaný panel a zamezí dvojité hlavičce.
   const isAIReviewDetail =
     !!pathnameForMobileSlot && /^\/portal\/contracts\/review\/[^/]+$/.test(pathnameForMobileSlot);
+  /**
+   * Výpovědi (`/portal/terminations/*`) nejsou mapované v `MobilePortalClient` —
+   * dřív URL zůstala v adresní řádce, ale do shellu spadl výchozí Přehled.
+   * Stejně jako u desktopu vykreslíme plný `page.tsx` (RSC + průvodce / detail),
+   * jen bez `PortalShell` / mobilní spodní navigace.
+   */
+  const isTerminationsStandaloneMobile =
+    !!pathnameForMobileSlot && pathnameForMobileSlot.startsWith("/portal/terminations");
   /** Quick actions načte klient (`useQuickActionsItems` v QuickNewMenu) — šetří DB round-trip v layoutu. */
   const initialQuickActions = undefined;
   if (mobileUiEnabled) {
+    if (isTerminationsStandaloneMobile) {
+      return (
+        <>
+          <Script id="portal-theme-storage-preflight" strategy="beforeInteractive">
+            {PORTAL_THEME_STORAGE_PREFLIGHT}
+          </Script>
+          <PortalThemeProvider>
+            <PortalAppProviders>
+              <MaintenanceBanner />
+              <PortalDunningBanner state={dunningState} />
+              {children}
+            </PortalAppProviders>
+          </PortalThemeProvider>
+        </>
+      );
+    }
     return (
       <>
         <Script id="portal-theme-storage-preflight" strategy="beforeInteractive">

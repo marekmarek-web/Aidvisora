@@ -238,7 +238,9 @@ function resolveOutputMode(extractedPayload: Record<string, unknown>): string | 
   const dc = extractedPayload?.documentClassification as Record<string, unknown> | undefined;
   const lifecycle = dc?.lifecycleStatus as string | undefined;
   if (lifecycle === "modelation" || lifecycle === "illustration") return "modelation";
-  if (lifecycle === "proposal") return "precontract";
+  // Proposal / offer is a product record candidate after advisor approval.
+  // Do not downgrade it to `precontract`, which would mark every field do_not_apply.
+  if (lifecycle === "proposal" || lifecycle === "offer") return "signature_ready_proposal";
   const primary = dc?.primaryType as string | undefined;
   if (
     primary === "payslip" ||

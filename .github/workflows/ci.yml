@@ -37,6 +37,14 @@ jobs:
         working-directory: apps/web
         run: pnpm lint
 
+      # Non-blocking na CI (release buildy v Xcode/Gradle volají s --require-release).
+      # Chytá rozbitý tvar GoogleService-Info.plist / google-services.json před tím,
+      # než na to spadne native build. Chybějící soubory v CI jsou WARN, protože
+      # CI běží bez secretů (decryption až v mobile release pipeline).
+      - name: FCM / APNs config assert (advisory)
+        run: node apps/web/scripts/assert-fcm-config.mjs
+        continue-on-error: true
+
       - name: Compliance copy check (advisory)
         run: pnpm compliance:copy-check
         continue-on-error: true

@@ -167,7 +167,11 @@ function warningsFromLegacy(root: Record<string, unknown>): Array<{ code: string
   }
   const mf = root.missingFields;
   if (Array.isArray(mf)) {
-    const msg = mf.map((x) => String(x)).filter(Boolean).join("; ");
+    const msg = mf
+      .map((x) => String(x).trim())
+      .filter((x) => x && !/výstup zpracování vyžaduje ověření|podrobnost ke kontrole/i.test(x))
+      .filter((x, index, arr) => arr.findIndex((y) => y.toLowerCase() === x.toLowerCase()) === index)
+      .join("; ");
     if (msg) {
       out.push({
         code: "missing_fields_hint",

@@ -420,8 +420,10 @@ export type ExtractionDocument = {
       riskType?: string;
       riskLabel?: string;
       insuredAmount?: string | number;
+      parameter?: string | number;
       premium?: string | number;
       termEnd?: string;
+      notes?: string;
     }> | null;
     /** Health questionnaire sections */
     healthQuestionnaires?: Array<{

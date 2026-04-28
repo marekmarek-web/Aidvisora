@@ -356,6 +356,8 @@ const FIELD_LABELS: Record<string, string> = {
   intermediaryName: "Zprostředkovatel",
   intermediaryCode: "Kód zprostředkovatele",
   intermediaryCompany: "Společnost zprostředkovatele",
+  intermediaryEmail: "E-mail zprostředkovatele",
+  intermediaryPhone: "Telefon zprostředkovatele",
   requestedDocuments: "Požadované dokumenty",
   requiredDocuments: "Požadované dokumenty",
   serviceNotes: "Servisní poznámky",
@@ -841,6 +843,21 @@ export function formatExtractedValue(v: unknown): string {
     const obj = v as Record<string, unknown>;
     // Extraction envelope cell: {value, confidence, status} — surface the value
     if ("value" in obj) return formatExtractedValue(obj.value);
+    const riskName = obj.riskLabel ?? obj.label ?? obj.name ?? obj.riskType ?? obj.type ?? obj.title;
+    const amount = obj.insuredAmount ?? obj.sumInsured ?? obj.amount ?? obj.benefit;
+    const parameter = obj.parameter ?? obj.frequency ?? obj.benefitFrequency;
+    const premium = obj.premium ?? obj.riskPremium;
+    const notes = obj.notes ?? obj.note;
+    if (riskName != null || amount != null || parameter != null || premium != null || notes != null) {
+      const parts = [
+        riskName != null ? formatExtractedValue(riskName) : null,
+        amount != null ? `pojistná částka ${formatExtractedValue(amount)}` : null,
+        parameter != null ? `parametr ${formatExtractedValue(parameter)}` : null,
+        premium != null ? `pojistné ${formatExtractedValue(premium)}` : null,
+        notes != null ? `poznámka ${formatExtractedValue(notes)}` : null,
+      ].filter((s): s is string => Boolean(s && s !== "—"));
+      return parts.length ? parts.join(" · ") : "—";
+    }
     // Named objects: surface name/label/title
     const named = obj.name ?? obj.label ?? obj.title ?? obj.text;
     if (named != null) return formatExtractedValue(named);
@@ -2090,12 +2107,19 @@ export function mapApiToExtractionDocument(
           occupation: typeof p.occupation === "string" ? p.occupation : undefined,
         })) : null,
         insuredRisks: Array.isArray(ir) ? ir.map((r) => ({
-          linkedParticipant: typeof r.linkedParticipant === "string" ? r.linkedParticipant : undefined,
+          linkedParticipant:
+            typeof r.linkedParticipant === "string"
+              ? r.linkedParticipant
+              : typeof r.linkedParticipantName === "string"
+                ? r.linkedParticipantName
+                : undefined,
           riskType: typeof r.riskType === "string" ? r.riskType : undefined,
           riskLabel: typeof r.riskLabel === "string" ? r.riskLabel : undefined,
           insuredAmount: r.insuredAmount as string | number | undefined,
+          parameter: r.parameter as string | number | undefined,
           premium: r.premium as string | number | undefined,
           termEnd: typeof r.termEnd === "string" ? r.termEnd : undefined,
+          notes: typeof r.notes === "string" ? r.notes : undefined,
         })) : null,
         healthQuestionnaires: Array.isArray(hq) ? hq.map((q) => ({
           linkedParticipant: typeof q.linkedParticipant === "string" ? q.linkedParticipant : undefined,

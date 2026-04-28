@@ -109,16 +109,12 @@
 	<key>UIStatusBarStyle</key>
 	<string>UIStatusBarStyleDarkContent</string>
 	<!--
-	    WKAppBoundDomains remains documented for future App-Bound Domains use,
-	    but `ios.limitsNavigationsToAppBoundDomains` is intentionally disabled:
-	    Google OAuth relies on Capacitor JS bridge injection after the Safari
-	    callback, and iOS can block that injection in App-Bound mode.
+	    WKAppBoundDomains is intentionally NOT declared. If present, iOS can
+	    opt WebKit into App-Bound mode and block Capacitor JS bridge injection
+	    ("Ignoring user script injection for non app-bound domain"), which
+	    breaks Google OAuth after Safari returns to the app. Capacitor's
+	    limitsNavigationsToAppBoundDomains stays false; OAuth needs the bridge.
 	-->
-	<key>WKAppBoundDomains</key>
-	<array>
-		<string>aidvisora.cz</string>
-		<string>www.aidvisora.cz</string>
-	</array>
 	<!--
 	    Schemes we want to openURL from the WebView (tel:, mailto:, maps:,
 	    itms-apps: for Store listing). iOS 9+ requires an explicit allowlist

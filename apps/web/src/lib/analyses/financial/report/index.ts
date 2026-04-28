@@ -60,6 +60,7 @@ export function buildPremiumReportHTML(
   const theme: ReportTheme = options?.theme ?? 'elegant';
   const branding = options?.branding ?? {};
   const includeCompany = options?.includeCompany ?? data.includeCompany ?? false;
+  const embedded = options?.embedded ?? false;
   const sectionCounter = { n: 1 };
 
   const investments = recomputeInvestmentsFv(
@@ -100,10 +101,19 @@ export function buildPremiumReportHTML(
 
   sections.push(renderSignatures(ctx));
 
-  const sidebar = renderSidebar(ctx);
+  const sidebar = embedded ? '' : renderSidebar(ctx);
   const printChrome = renderPrintAdvisorChrome(branding);
   const themeCSS = getThemeCSS(theme);
   const themeFonts = getThemeFonts(theme);
+  const embeddedCSS = embedded
+    ? `
+@media screen{
+  body{display:block!important}
+  .main{margin-left:0!important;width:100%!important}
+  .main .page-inner{max-width:960px}
+}
+`
+    : '';
 
   return `<!DOCTYPE html>
 <html lang="cs">
@@ -112,7 +122,7 @@ export function buildPremiumReportHTML(
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${esc(financialAnalysisReportTitle(data.client?.name ?? 'Klient'))}</title>
   ${themeFonts}
-  <style>${themeCSS}</style>
+  <style>${themeCSS}${embeddedCSS}</style>
 </head>
 <body>
   ${printChrome}
@@ -120,7 +130,7 @@ export function buildPremiumReportHTML(
   <main class="main">
     ${sections.join('\n')}
   </main>
-  ${SIDEBAR_JS}
+  ${embedded ? '' : SIDEBAR_JS}
 </body>
 </html>`;
 }

@@ -64,6 +64,11 @@ function formatAmount(v: string | number | undefined): string {
   return String(v);
 }
 
+function formatOptionalValue(v: string | number | undefined): string | null {
+  if (v == null || v === "") return null;
+  return String(v);
+}
+
 // ─── Section wrapper ─────────────────────────────────────────────────────────
 
 function Section({
@@ -321,21 +326,25 @@ function InsuredRisksSection({ risks }: { risks: NonNullable<CanonicalFields["in
               </span>
             )}
           </div>
+          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-[color:var(--wp-text-secondary)]">
           {r.linkedParticipant && (
-            <span className="text-xs text-[color:var(--wp-text-secondary)]">
+            <span>
               Pojištěný: {r.linkedParticipant}
             </span>
           )}
           {r.termEnd && (
-            <span className="text-xs text-[color:var(--wp-text-secondary)] ml-1">
+            <span>
               do {normalizeDateForAdvisorDisplay(r.termEnd)}
             </span>
           )}
-          {r.premium != null && (
-            <span className="text-xs text-[color:var(--wp-text-secondary)] ml-2">
-              · pojistné {formatAmount(r.premium)}
-            </span>
+          {formatOptionalValue(r.parameter) && (
+            <span>Parametr: {formatOptionalValue(r.parameter)}</span>
           )}
+          {r.premium != null && (
+            <span>Pojistné: {formatAmount(r.premium)}</span>
+          )}
+          {r.notes && <span>Poznámka: {r.notes}</span>}
+          </div>
         </div>
       ))}
     </Section>

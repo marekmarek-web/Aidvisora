@@ -467,7 +467,18 @@ export function buildAdvisorReviewViewModel(args: BuildArgs): AdvisorReviewViewM
     if (v.message) manualChecklist.push(humanizeReviewReasonLine(v.message));
   }
 
-  const uniqueManual = [...new Set(manualChecklist.map((s) => s.trim()).filter(Boolean))].slice(0, 24);
+  const uniqueManual: string[] = [];
+  const seenManual = new Set<string>();
+  for (const item of manualChecklist) {
+    const normalized = item.trim().replace(/\s+/g, " ");
+    if (!normalized) continue;
+    if (normalized === "Podrobnost ke kontrole" || normalized === "Kontrola dokumentu") continue;
+    const dedupeKey = normalized.toLowerCase();
+    if (seenManual.has(dedupeKey)) continue;
+    seenManual.add(dedupeKey);
+    uniqueManual.push(normalized);
+    if (uniqueManual.length >= 24) break;
+  }
 
   const brief = sanitizeAdvisorBrief(llmExecutiveBrief, envelope) ?? buildDeterministicBrief(envelope, recognition);
   const paymentSyncPreview = buildPaymentSyncPreview(envelope);

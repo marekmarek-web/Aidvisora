@@ -323,6 +323,7 @@ type Props = {
   onConfirmCreateNew?: () => void;
   /** Persist "final contract" override to server so it survives reload. */
   onConfirmFinalContract?: (gateReasons: string[]) => void | Promise<void>;
+  onManualReviewWarningState?: (warningText: string, state: "confirmed" | "ignored") => void | Promise<void>;
   /** Fáze 11: Per-field pending confirmation */
   onConfirmPendingField?: (fieldKey: string, scope: "contact" | "contract" | "payment") => Promise<void>;
   /** Fáze 12: Ruční doplnění manual_required polí */
@@ -351,6 +352,7 @@ export function AIReviewExtractionShell({
   onSelectClient,
   onConfirmCreateNew,
   onConfirmFinalContract,
+  onManualReviewWarningState,
   onConfirmPendingField,
   onConfirmManualField,
   onConfirmAllPendingFields,
@@ -1051,6 +1053,7 @@ export function AIReviewExtractionShell({
               onConfirmManualField={onConfirmManualField}
               onConfirmAllPendingFields={onConfirmAllPendingFields}
               onConfirmCreateNew={onConfirmCreateNew}
+              onManualReviewWarningState={onManualReviewWarningState}
               onApproveAndApply={onApproveAndApply}
               onSelectClient={onSelectClient}
               editedFields={state.editedFields}

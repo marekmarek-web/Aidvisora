@@ -1,7 +1,7 @@
 /**
  * Katalog rychlých akcí pro tlačítko „+ Nový“ v headeru a postranní Zap nabídku.
  * Jediný zdroj pravdy – sdílený mezi PortalShell, PortalSidebar a stránkou Nastavení.
- * icon: název pro mapování na Lucide ikonu v QuickNewMenu (UserPlus, Briefcase, CheckSquare, CalendarPlus, …).
+ * icon: název pro mapování na Lucide ikonu v QuickNewMenu (UserPlus, Briefcase, FileText, FileX2, …).
  * iconColor: Tailwind třída pro barvu ikony (text-blue-500, text-amber-500, …).
  */
 export type QuickActionId =
@@ -34,10 +34,9 @@ export type QuickActionItem = {
     | "CalendarPlus"
     | "Calendar"
     | "Network"
-    | "StickyNote"
     | "FileText"
-    | "Building"
-    | "ScrollText";
+    | "FileX2"
+    | "Building";
   /** Tailwind text color třída pro ikonu */
   iconColor?: string;
   /** Tailwind třídy pro hover animaci (1:1 jako sidebar), např. group-hover:scale-110 */
@@ -46,7 +45,7 @@ export type QuickActionItem = {
 
 /** Výchozí pořadí: nejpoužívanější nahoře; „Dokument“ až dole. */
 export const QUICK_ACTIONS_CATALOG: QuickActionItem[] = [
-  { id: "note", label: "Rychlý zápisek", href: "/portal/notes", iconName: "StickyNote", iconColor: "text-amber-500", hoverAnim: "group-hover:translate-x-1" },
+  { id: "note", label: "Rychlý zápisek", href: "/portal/notes", iconName: "FileText", iconColor: "text-amber-500", hoverAnim: "group-hover:translate-x-1" },
   { id: "new_task", label: "Rychlý úkol", href: "/portal/tasks#new-task-form", iconName: "CheckSquare", iconColor: "text-emerald-500", hoverAnim: "group-hover:rotate-12 group-hover:scale-110" },
   { id: "new_meeting", label: "Nová schůzka", href: "/portal/calendar?new=1", iconName: "CalendarPlus", iconColor: "text-indigo-500", hoverAnim: "group-hover:-translate-y-1 group-hover:scale-110" },
   { id: "new_contact", label: "Nový klient", href: "/portal/contacts?newClient=1", iconName: "UserPlus", iconColor: "text-blue-500", hoverAnim: "group-hover:scale-110" },
@@ -54,9 +53,9 @@ export const QUICK_ACTIONS_CATALOG: QuickActionItem[] = [
     id: "termination_intake",
     label: "Výpověď smlouvy",
     href: "/portal/terminations/new?source=quick",
-    iconName: "ScrollText",
+    iconName: "FileX2",
     iconColor: "text-rose-500",
-    hoverAnim: "group-hover:translate-x-0.5",
+    hoverAnim: "group-hover:-translate-y-0.5 group-hover:scale-110",
   },
   { id: "new_deal", label: "Nový obchod", href: "/portal/pipeline", iconName: "Briefcase", iconColor: "text-amber-500", hoverAnim: "group-hover:rotate-[-12deg] group-hover:scale-110" },
   { id: "calendar", label: "Kalendář", href: "/portal/calendar", iconName: "Calendar", iconColor: "text-slate-500", hoverAnim: "group-hover:-translate-y-1 group-hover:scale-110" },

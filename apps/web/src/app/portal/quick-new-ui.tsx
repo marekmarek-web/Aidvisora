@@ -11,10 +11,9 @@ import {
   CalendarPlus,
   Calendar,
   Network,
-  StickyNote,
   FileText,
+  FileX2,
   Building,
-  ScrollText,
 } from "lucide-react";
 import type { QuickActionId, QuickActionItem, QuickActionsConfig } from "@/lib/quick-actions";
 import { useQuickActionsItems } from "@/lib/quick-actions/useQuickActionsItems";
@@ -27,10 +26,9 @@ const ICON_MAP = {
   CalendarPlus,
   Calendar,
   Network,
-  StickyNote,
   FileText,
+  FileX2,
   Building,
-  ScrollText,
 } as const;
 
 const ICON_HOVER_ANIM: Partial<Record<QuickActionId, string>> = {
@@ -43,7 +41,7 @@ const ICON_HOVER_ANIM: Partial<Record<QuickActionId, string>> = {
   note: "group-hover:translate-x-1",
   document: "group-hover:scale-110",
   household: "group-hover:-translate-y-1",
-  termination_intake: "group-hover:translate-x-0.5",
+  termination_intake: "group-hover:-translate-y-0.5 group-hover:scale-110",
 };
 
 export function QuickNewItemIcon({ item }: { item: QuickActionItem }) {

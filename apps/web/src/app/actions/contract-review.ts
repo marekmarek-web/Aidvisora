@@ -220,6 +220,33 @@ export async function persistFinalContractOverride(
   return { ok: true };
 }
 
+export async function persistManualReviewWarningState(
+  reviewId: string,
+  warningText: string,
+  state: "confirmed" | "ignored"
+): Promise<ContractReviewActionResult> {
+  const auth = await requireAuthInAction();
+  if (!hasPermission(auth.roleName, "documents:write")) {
+    return { ok: false, error: "Nemáte oprávnění." };
+  }
+  const row = await getContractReviewById(reviewId, auth.tenantId);
+  if (!row) return { ok: false, error: "Položka nenalezena." };
+  if (row.reviewStatus === "applied") return { ok: true };
+
+  const clean = warningText.trim().replace(/\s+/g, " ");
+  if (!clean) return { ok: false, error: "Chybí text kontroly." };
+
+  const existing = Array.isArray(row.ignoredWarnings) ? (row.ignoredWarnings as string[]) : [];
+  const confirmedKey = `manual_review:confirmed:${clean}`;
+  const ignoredKey = `manual_review:ignored:${clean}`;
+  const next = existing.filter((item) => item !== confirmedKey && item !== ignoredKey);
+  next.push(state === "confirmed" ? confirmedKey : ignoredKey);
+  await updateContractReview(reviewId, auth.tenantId, {
+    ignoredWarnings: Array.from(new Set(next)),
+  });
+  return { ok: true };
+}
+
 /** Schválí kontrolu a hned zapisuje draft akce do CRM (dva kroky v jednom volání). */
 export async function approveAndApplyContractReview(
   id: string,

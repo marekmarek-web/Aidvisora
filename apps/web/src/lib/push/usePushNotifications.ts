@@ -116,11 +116,13 @@ export function usePushNotifications(options: UsePushNotificationsOptions = {}) 
 
   const isNative = useMemo(() => Capacitor.isNativePlatform(), []);
   const platform = useMemo(() => Capacitor.getPlatform(), []);
-  // v1.0 release scope: push on Android is still gated until we ship
-  // `apps/web/android/app/google-services.json`. FirebaseMessaging on Android
-  // without that file would crash on register. For v1.1, drop this gate and
-  // add the file. See docs/release-v1-decisions.md.
-  const isSupportedPlatform = platform === "ios";
+  // v1.1: Android push enabled. Gradle build still requires
+  // `apps/web/android/app/google-services.json` (injected from
+  // GOOGLE_SERVICES_JSON_B64 in the mobile release pipeline). If the file
+  // is missing at build time, Gradle fails before the app ever runs; if it
+  // is present but malformed, `FirebaseMessaging.getToken()` rejects and we
+  // surface the graceful error below. See docs/runbook-push.md §Android.
+  const isSupportedPlatform = platform === "ios" || platform === "android";
   const isSupported = isNative && isSupportedPlatform;
 
   const markSoftPromptSeen = useCallback(() => {

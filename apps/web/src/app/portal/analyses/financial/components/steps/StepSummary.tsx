@@ -9,7 +9,7 @@ import { uploadDocument } from "@/app/actions/documents";
 import { setFinancialAnalysisLastExportedAt } from "@/app/actions/financial-analyses";
 import { getAdvisorReportBranding } from "@/app/actions/preferences";
 import clsx from "clsx";
-import { FileText, Printer, CloudUpload, StickyNote, Monitor, TrendingUp, HelpCircle, Eye, Share2, X } from "lucide-react";
+import { FileText, Printer, CloudUpload, StickyNote, Monitor, TrendingUp, HelpCircle, Eye, Share2, X, Download } from "lucide-react";
 import { getClientPortfolioForContact } from "@/app/actions/contracts";
 import {
   buildFaCanonicalInvestmentOverviewRows,
@@ -131,12 +131,13 @@ export function StepSummary() {
     };
   }, [data.clientId]);
 
-  const generateHTML = useCallback(async () => {
+  const generateHTML = useCallback(async (options?: { embedded?: boolean }) => {
     const branding = await getAdvisorReportBranding().catch(() => FALLBACK_BRANDING);
     return buildReportHTML(data, {
       ...reportOptions,
       branding,
       theme: selectedTheme,
+      embedded: options?.embedded,
       canonicalInvestmentOverview: crmInvestments.length > 0 ? crmInvestments : undefined,
     });
   }, [data, reportOptions, selectedTheme, crmInvestments]);
@@ -148,7 +149,7 @@ export function StepSummary() {
     setExportError(null);
     setIsPreparingPreview(true);
     try {
-      let html = await generateHTML();
+      let html = await generateHTML({ embedded: true });
       html = await embedLocalImages(html);
       setPreviewHtml(html);
     } catch (error) {
@@ -163,11 +164,8 @@ export function StepSummary() {
     setExportError(null);
     setIsSharing(true);
     try {
-      let html = previewHtml;
-      if (!html) {
-        html = await generateHTML();
-        html = await embedLocalImages(html);
-      }
+      let html = await generateHTML();
+      html = await embedLocalImages(html);
       const filename = financialAnalysisReportFilename(clientName, "html");
       const blob = new Blob([html], { type: "text/html;charset=utf-8" });
       const file = new File([blob], filename, { type: "text/html" });
@@ -457,7 +455,7 @@ export function StepSummary() {
           <ThemeSelector value={selectedTheme} onChange={handleThemeChange} />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-4">
           <button
             type="button"
             onClick={handleOpenPreview}
@@ -473,38 +471,45 @@ export function StepSummary() {
           </button>
           <button
             type="button"
-            onClick={isMobileClient ? handleShareReport : handleDownloadHTML}
+            onClick={handleShareReport}
+            disabled={isSharing}
+            aria-busy={isSharing}
+            className="flex min-h-[56px] items-center gap-3 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-5 py-3 font-bold text-[color:var(--wp-text)] transition-colors hover:bg-[color:var(--wp-surface-muted)] disabled:opacity-60"
+          >
+            <Share2 className="w-5 h-5 flex-shrink-0" />
+            <div className="text-left">
+              <div className="text-sm font-bold">{isSharing ? "Sdílím\u2026" : "Sdílet / Uložit"}</div>
+              <div className="text-xs font-normal opacity-75">Odeslat přes systém nebo uložit do Files</div>
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={handleDownloadHTML}
             disabled={isSharing || isDownloading}
             aria-busy={isSharing || isDownloading}
             className="flex min-h-[56px] items-center gap-3 rounded-xl border border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-5 py-3 font-bold text-[color:var(--wp-text)] transition-colors hover:bg-[color:var(--wp-surface-muted)] disabled:opacity-60"
           >
-            {isMobileClient ? <Share2 className="w-5 h-5 flex-shrink-0" /> : <Monitor className="w-5 h-5 flex-shrink-0" />}
+            {isMobileClient ? <Download className="w-5 h-5 flex-shrink-0" /> : <Monitor className="w-5 h-5 flex-shrink-0" />}
             <div className="text-left">
-              <div className="text-sm font-bold">
-                {isMobileClient
-                  ? (isSharing ? "Sdílím\u2026" : "Sdílet / Uložit")
-                  : (isDownloading ? "Stahuji\u2026" : "Stáhnout (HTML)")}
-              </div>
+              <div className="text-sm font-bold">{isDownloading ? "Stahuji\u2026" : "Stáhnout HTML"}</div>
               <div className="text-xs font-normal opacity-75">
-                {isMobileClient ? "Odeslat přes systém nebo do Files" : "HTML soubor k otevření v prohlížeči"}
+                HTML soubor k otevření v prohlížeči
               </div>
             </div>
           </button>
-          {!isMobileClient && (
-            <button
-              type="button"
-              onClick={handlePrintReport}
-              disabled={isPreparingPrint}
-              aria-busy={isPreparingPrint}
-              className="flex min-h-[56px] items-center gap-3 rounded-xl bg-[color:var(--wp-button-bg)] px-5 py-3 font-bold text-white transition-colors hover:bg-[color:var(--wp-primary-hover)] disabled:opacity-60"
-            >
-              <Printer className="w-5 h-5 flex-shrink-0" />
-              <div className="text-left">
-                <div className="text-sm font-bold">{isPreparingPrint ? "Připravuji\u2026" : "PDF (Tisk)"}</div>
-                <div className="text-xs font-normal opacity-75">Tiskový dialog pro PDF</div>
-              </div>
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={handlePrintReport}
+            disabled={isPreparingPrint}
+            aria-busy={isPreparingPrint}
+            className="flex min-h-[56px] items-center gap-3 rounded-xl bg-[color:var(--wp-button-bg)] px-5 py-3 font-bold text-white transition-colors hover:bg-[color:var(--wp-primary-hover)] disabled:opacity-60"
+          >
+            <Printer className="w-5 h-5 flex-shrink-0" />
+            <div className="text-left">
+              <div className="text-sm font-bold">{isPreparingPrint ? "Připravuji\u2026" : "Stáhnout PDF"}</div>
+              <div className="text-xs font-normal opacity-75">Otevře tisk / Uložit jako PDF</div>
+            </div>
+          </button>
         </div>
 
         <div className="flex flex-wrap justify-center items-center gap-3">
@@ -539,7 +544,7 @@ export function StepSummary() {
           role="dialog"
           aria-modal="true"
           aria-label="Náhled reportu"
-          className="fixed inset-0 z-[100] flex flex-col bg-[color:var(--wp-bg)]"
+          className="fixed inset-0 z-[9999] flex flex-col bg-[color:var(--wp-bg)]"
         >
           <div
             className="flex items-center justify-between gap-2 border-b border-[color:var(--wp-surface-card-border)] bg-[color:var(--wp-surface-card)] px-3 py-2"
@@ -572,7 +577,7 @@ export function StepSummary() {
             title="Náhled finančního reportu"
             className="flex-1 w-full border-0 bg-white"
             style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-            sandbox="allow-same-origin allow-popups"
+            sandbox="allow-same-origin allow-scripts allow-popups"
           />
         </div>
       )}

@@ -7,7 +7,8 @@
       "drizzle-orm": "0.36.4"
     },
     "patchedDependencies": {
-      "@supernotes/capacitor-send-intent@7.0.0": "patches/@supernotes__capacitor-send-intent@7.0.0.patch"
+      "@supernotes/capacitor-send-intent@7.0.0": "patches/@supernotes__capacitor-send-intent@7.0.0.patch",
+      "@capacitor-firebase/messaging@8.2.0": "patches/@capacitor-firebase__messaging@8.2.0.patch"
     }
   },
   "scripts": {
@@ -46,5 +47,5 @@
   "engines": {
     "node": ">=20.9"
   },
-  "packageManager": "pnpm@9.0.0"
+  "packageManager": "pnpm@10.33.2"
 }
