@@ -5,8 +5,8 @@ import type { ContractRow } from "@/app/actions/contracts";
 const SEGMENT_SET = new Set<string>([...contractSegments]);
 
 /**
- * Map DB payment type to a canonical contract segment when `segment` is missing.
- * platební instrukce mají být v portfoliu u skupiny odpovídající produktu.
+ * Map DB payment type to a canonical contract segment when `segment` is missing
+ * (přehledy / krytí — ne samostatná karta v „Moje portfolio“).
  */
 export function paymentTypeToFallbackSegment(
   paymentType: ClientPaymentSetupPaymentType | string | null | undefined
@@ -88,8 +88,8 @@ export type PaymentSetupForPortfolioRow = {
 };
 
 /**
- * Syntetická „smlouva“ pro klientské portfolio z řádku `client_payment_setups`.
- * `id` = UUID platebního pokynu (slouží pro deep link /client/portfolio/:id).
+ * Mapování řádku `client_payment_setups` na tvar podobný `ContractRow` (utility).
+ * Klientské „Moje portfolio“ tyto řádky neslučuje — platební pokyny jsou v záložce Platby.
  */
 export function contractRowFromPaymentSetup(
   contactId: string,

@@ -30,9 +30,6 @@ import { breadcrumbContractAiReviewMissingSourceReview } from "@/lib/observabili
 import { ensureUserProfileRowForAdvisor } from "@/lib/db/ensure-user-profile-for-contract-fk";
 import { recomputeBjForContract } from "@/lib/bj/recompute-bj-for-contract";
 import { classifyProduct, type ProductCategory } from "@/lib/ai/product-categories";
-import { contractRowFromPaymentSetup } from "@/lib/client-portfolio/payment-setup-portfolio-synth";
-import { selectStandalonePaymentSetupsForClientContact } from "@/lib/client-portfolio/standalone-payment-setups-query";
-
 export type ContractRow = {
   id: string;
   contactId: string;
@@ -235,26 +232,8 @@ export async function getClientPortfolioForContact(contactId: string): Promise<C
       }
     }
 
-    /**
-     * Platební instrukce bez záznamu ve `contracts` (nebo s číslem, které v portfoliu žádná
-     * publikovaná smlouva neeviduje) se zobrazí jako samostatné položky. Jen doplňujeme read model.
-     */
-    const contractNumbersCovered = new Set(
-      mapped.map((c) => c.contractNumber?.trim()).filter((n): n is string => !!n)
-    );
-    const standalonePaymentSetups = await selectStandalonePaymentSetupsForClientContact(tx, {
-      tenantId: auth.tenantId,
-      contactIds: [contactId],
-      contractNumbersWithPublishedRows: contractNumbersCovered,
-    });
-    const syntheticRows = standalonePaymentSetups.map((ps) => contractRowFromPaymentSetup(contactId, ps));
-
-    const sortKey = (c: ContractRow) => {
-      const s = c.startDate?.trim();
-      if (s) return s;
-      return c.createdAt ? c.createdAt.toISOString().slice(0, 10) : "0000-00-00";
-    };
-    return [...mapped, ...syntheticRows].sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+    // Platební pokyny (`client_payment_setups`) patří do záložky Platby, ne jako samostatné karty v „Moje portfolio“.
+    return mapped;
   });
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import {
   Calendar,
   Phone,
@@ -208,6 +208,9 @@ function groupSlotsByDay(slots: Slot[]): DayGroup[] {
   return arr;
 }
 
+/** Klientský mobilní shell lockuje scroll na document — při odkazu ze zpráv musí rezervace scrollovat. */
+const MOBILE_PORTAL_VIEWPORT_LOCK_CLASS = "aidv-mobile-portal-viewport-lock";
+
 function formatDayHumanLong(ymd: string, time: string): string {
   const [y, m, d] = ymd.split("-");
   const utcForDay = new Date(Date.UTC(Number(y), Number(m) - 1, Number(d), 12, 0, 0));
@@ -266,6 +269,10 @@ export function PublicBookingClient({ token }: { token: string }) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useLayoutEffect(() => {
+    document.documentElement.classList.remove(MOBILE_PORTAL_VIEWPORT_LOCK_CLASS);
+  }, []);
 
   const dayGroups = useMemo<DayGroup[]>(
     () => (meta ? groupSlotsByDay(meta.slots) : []),
@@ -376,7 +383,7 @@ export function PublicBookingClient({ token }: { token: string }) {
     .join("");
 
   return (
-    <div className="min-h-screen bg-[#f4f7f9] font-lato text-slate-800 selection:bg-indigo-500 selection:text-white">
+    <div className="flex min-h-[100dvh] flex-col bg-[#f4f7f9] font-lato text-slate-800 selection:bg-indigo-500 selection:text-white lg:min-h-screen">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&family=Plus+Jakarta+Sans:wght@500;700;800;900&display=swap');
         .font-lato { font-family: 'Lato', sans-serif; }
@@ -395,7 +402,7 @@ export function PublicBookingClient({ token }: { token: string }) {
         }
       `}</style>
 
-      <header className="bg-white/80 backdrop-blur-md border-b border-slate-100 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between sticky top-0 z-30">
+      <header className="shrink-0 bg-white/80 backdrop-blur-md border-b border-slate-100 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between sticky top-0 z-30">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black text-xs shrink-0">
             {advisorInitials || "A"}
@@ -416,7 +423,7 @@ export function PublicBookingClient({ token }: { token: string }) {
         </span>
       </header>
 
-      <main className="max-w-[1200px] mx-auto p-4 sm:p-8 pb-28 lg:pb-8">
+      <main className="max-w-[1200px] mx-auto w-full flex-1 min-h-0 overflow-y-auto overscroll-y-contain p-4 sm:p-8 pb-28 lg:flex-none lg:overflow-visible lg:pb-8">
         {step < 4 ? (
           <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
             {/* Wizard column */}
@@ -455,7 +462,7 @@ export function PublicBookingClient({ token }: { token: string }) {
               </div>
 
               {/* Step card */}
-              <div className="bg-white rounded-[24px] sm:rounded-[32px] border border-slate-100 shadow-sm p-5 sm:p-10 relative overflow-hidden min-h-[500px]">
+              <div className="bg-white rounded-[24px] sm:rounded-[32px] border border-slate-100 shadow-sm p-5 sm:p-10 relative sm:min-h-[500px]">
                 {step === 1 && (
                   <div>
                     <h2 className="text-xl sm:text-2xl font-display font-black text-slate-900 mb-2">
